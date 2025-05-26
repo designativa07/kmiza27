@@ -33,6 +33,7 @@ async function bootstrap() {
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Host: ${host}`);
   console.log(`🚪 Port: ${port}`);
+  console.log('🔧 CORS Fix: 2025-05-26T03:20:00Z - Frontend URL updated');
   
   await app.listen(port, host);
   
