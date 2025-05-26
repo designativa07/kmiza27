@@ -1,0 +1,45 @@
+# 🐳 Dockerfile para Backend NestJS - Easypanel
+FROM node:18-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache curl python3 make g++
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Quebrar cache - versão 1.0 (BACKEND DEPLOY)
+RUN echo "Backend build version 1.0 - $(date)"
+
+# Download direto do GitHub e cópia específica do backend
+RUN cd /tmp && \
+    git clone https://github.com/designativa07/kmiza27.git repo && \
+    cp -r /tmp/repo/backend/. /app/ && \
+    rm -rf /tmp/repo
+
+# Instalar dependências
+RUN npm ci --legacy-peer-deps
+
+# Build da aplicação NestJS
+RUN npm run build
+
+# Limpar cache do npm
+RUN npm cache clean --force
+
+# Expor porta
+EXPOSE 3000
+
+# Configurar variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV DB_HOST=195.200.0.191
+ENV DB_PORT=5433
+ENV DB_USERNAME=postgres
+ENV DB_PASSWORD=8F1DC9A7F9CE32C4D32E88A1C5FF7
+ENV DB_DATABASE=kmiza27
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Comando para iniciar a aplicação
+CMD ["npm", "run", "start:prod"] 
