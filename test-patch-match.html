@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste PATCH Match</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Teste PATCH Match</h1>
+    
+    <button onclick="testPatchMatch()">Testar PATCH Match ID 10</button>
+    <button onclick="testGetMatches()">Testar GET Matches</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testGetMatches() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch('http://localhost:3000/matches');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ GET /matches - SUCESSO</h3>
+                        <p><strong>Total de jogos:</strong> ${data.length}</p>
+                        <p><strong>Primeiro jogo:</strong> ${data[0] ? JSON.stringify(data[0], null, 2) : 'Nenhum'}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ GET /matches - ERRO</h3>
+                        <p>${error.message}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+        
+        async function testPatchMatch() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const payload = {
+                    home_team_id: 1,
+                    away_team_id: 2,
+                    competition_id: 1,
+                    match_date: new Date().toISOString(),
+                    status: 'scheduled',
+                    broadcast_channels: ['Globo', 'SporTV']
+                };
+                
+                console.log('🔍 Enviando payload:', payload);
+                
+                const response = await fetch('http://localhost:3000/matches/10', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ PATCH /matches/10 - SUCESSO</h3>
+                            <p><strong>Resposta:</strong></p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    ` + resultsDiv.innerHTML;
+                } else {
+                    const errorText = await response.text();
+                    resultsDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ PATCH /matches/10 - ERRO ${response.status}</h3>
+                            <p><strong>Erro:</strong> ${errorText}</p>
+                        </div>
+                    ` + resultsDiv.innerHTML;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ PATCH /matches/10 - ERRO</h3>
+                        <p>${error.message}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+    </script>
+</body>
+</html> 

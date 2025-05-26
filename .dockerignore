@@ -1,0 +1,101 @@
+# 🐳 .dockerignore para kmiza27-chatbot
+# Arquivos e diretórios a serem ignorados no build Docker
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node modules (serão instalados no container)
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+admin-panel/node_modules/
+
+# Lock files (para evitar conflitos de versão)
+package-lock.json
+backend/package-lock.json
+frontend/package-lock.json
+yarn.lock
+backend/yarn.lock
+frontend/yarn.lock
+
+# Build outputs
+backend/dist/
+frontend/.next/
+frontend/out/
+admin-panel/dist/
+
+# Logs
+*.log
+logs/
+backend/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage/
+backend/coverage/
+frontend/coverage/
+*.test.js
+*.spec.js
+
+# Documentation
+README*.md
+DEMO.md
+MELHORIAS*.md
+UPLOAD*.md
+COMPETICOES*.md
+WEBHOOK*.md
+*.md
+
+# Scripts de teste e configuração local
+test-*.js
+configure-webhook-*.js
+clear-*.js
+ngrok.exe
+ngrok.zip
+
+# Arquivos temporários
+*.tmp
+*.temp
+.cache/
+
+# Frontend específico
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Admin panel
+admin-panel/
+
+# Uploads e arquivos grandes
+uploads/
+escudos.zip
+*.zip
+*.sql
+
+# PowerShell scripts
+*.ps1
+*.bat 

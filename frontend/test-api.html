@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste API Kmiza27</title>
+</head>
+<body>
+    <h1>Teste de Conexão com API</h1>
+    <button onclick="testMatches()">Testar Jogos</button>
+    <button onclick="testTeams()">Testar Times</button>
+    <div id="result"></div>
+
+    <script>
+        async function testMatches() {
+            try {
+                console.log('Testando conexão com /matches...');
+                const response = await fetch('http://localhost:3000/matches');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Dados recebidos:', data.length, 'jogos');
+                document.getElementById('result').innerHTML = `
+                    <h3>✅ Sucesso!</h3>
+                    <p>Total de jogos: ${data.length}</p>
+                    <p>Primeiro jogo: ${data[0]?.home_team?.name} vs ${data[0]?.away_team?.name}</p>
+                `;
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('result').innerHTML = `
+                    <h3>❌ Erro!</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+
+        async function testTeams() {
+            try {
+                console.log('Testando conexão com /teams...');
+                const response = await fetch('http://localhost:3000/teams');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Dados recebidos:', data.length, 'times');
+                document.getElementById('result').innerHTML = `
+                    <h3>✅ Sucesso!</h3>
+                    <p>Total de times: ${data.length}</p>
+                    <p>Primeiro time: ${data[0]?.name}</p>
+                `;
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('result').innerHTML = `
+                    <h3>❌ Erro!</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 

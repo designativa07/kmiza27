@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Conexão - UserStats</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Conexão - UserStats API</h1>
+    
+    <button onclick="testUserStats()">Testar /users/stats</button>
+    <button onclick="testMatches()">Testar /matches</button>
+    <button onclick="testTeams()">Testar /teams</button>
+    <button onclick="testCompetitions()">Testar /competitions</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testUserStats() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                console.log('🔄 Testando /users/stats...');
+                
+                const response = await fetch('http://localhost:3000/users/stats', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                console.log('📊 Status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Dados:', data);
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ /users/stats - SUCESSO</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Dados:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                ` + resultsDiv.innerHTML;
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ /users/stats - ERRO</h3>
+                        <p><strong>Erro:</strong> ${error.message}</p>
+                        <p><strong>Tipo:</strong> ${error.name}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+        
+        async function testMatches() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch('http://localhost:3000/matches');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ /matches - SUCESSO</h3>
+                        <p><strong>Total de jogos:</strong> ${data.length}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ /matches - ERRO</h3>
+                        <p>${error.message}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+        
+        async function testTeams() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch('http://localhost:3000/teams');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ /teams - SUCESSO</h3>
+                        <p><strong>Total de times:</strong> ${data.length}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ /teams - ERRO</h3>
+                        <p>${error.message}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+        
+        async function testCompetitions() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch('http://localhost:3000/competitions');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ /competitions - SUCESSO</h3>
+                        <p><strong>Total de competições:</strong> ${data.length}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ /competitions - ERRO</h3>
+                        <p>${error.message}</p>
+                    </div>
+                ` + resultsDiv.innerHTML;
+            }
+        }
+        
+        // Testar automaticamente ao carregar a página
+        window.onload = function() {
+            setTimeout(() => {
+                testUserStats();
+            }, 1000);
+        };
+    </script>
+</body>
+</html> 

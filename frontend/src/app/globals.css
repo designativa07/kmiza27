@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* ===== SISTEMA DE TEMAS SIMPLIFICADO ===== */
+
+/* Tema claro (padrão) */
+html, html[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --text-primary: #000000;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+}
+
+/* Tema escuro */
+html.dark, html[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+}
+
+/* Aplicar estilos base */
+body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Cards e containers */
+.bg-white, .bg-gray-50, .bg-gray-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Textos */
+.text-gray-900 {
+  color: var(--text-primary) !important;
+}
+
+.text-gray-700 {
+  color: var(--text-secondary) !important;
+}
+
+.text-gray-500 {
+  color: var(--text-muted) !important;
+}
+
+/* Bordas */
+.border-gray-200, .border-gray-300 {
+  border-color: var(--border-color) !important;
+}
+
+/* ===== MELHORIAS DE FORMULÁRIOS ===== */
+
+/* Inputs, textareas e selects com padding melhorado */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="number"], 
+input[type="tel"], 
+input[type="url"], 
+input[type="date"], 
+input[type="datetime-local"], 
+input[type="time"], 
+textarea, 
+select {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  padding: 0.75rem 1rem !important; /* py-3 px-4 */
+}
+
+/* Inputs menores (como filtros) */
+.form-input-sm {
+  padding: 0.5rem 0.75rem !important; /* py-2 px-3 */
+}
+
+/* Placeholders */
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Labels */
+label {
+  color: var(--text-primary) !important;
+}
+
+/* ===== SIDEBAR (MANTER ESCURA) ===== */
+
+/* Sidebar deve manter o fundo escuro mesmo no modo claro */
+.sidebar-dark {
+  background-color: #1f2937 !important;
+}
+
+/* ===== BADGES E TAGS ===== */
+
+/* Badges com cores específicas mantêm suas cores */
+.bg-green-100 {
+  background-color: #dcfce7 !important;
+}
+
+.bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.bg-yellow-100 {
+  background-color: #fef3c7 !important;
+}
+
+.bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+.bg-purple-100 {
+  background-color: #f3e8ff !important;
+}
+
+/* ===== TABELAS COMPACTAS ===== */
+
+/* Linhas de tabela mais compactas */
+.table-compact td {
+  padding-top: 0.75rem !important; /* py-3 */
+  padding-bottom: 0.75rem !important;
+}
+
+.table-compact th {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* ===== MODO ESCURO - AJUSTES ESPECÍFICOS ===== */
+
+html.dark .bg-green-100 {
+  background-color: #166534 !important;
+}
+
+html.dark .bg-blue-100 {
+  background-color: #1e40af !important;
+}
+
+html.dark .bg-yellow-100 {
+  background-color: #a16207 !important;
+}
+
+html.dark .bg-red-100 {
+  background-color: #dc2626 !important;
+}
+
+html.dark .bg-purple-100 {
+  background-color: #7c3aed !important;
+}
+
+html.dark .bg-indigo-100 {
+  background-color: #4f46e5 !important;
+}
+
+/* Textos de badges em modo escuro */
+html.dark .text-green-800 {
+  color: #dcfce7 !important;
+}
+
+html.dark .text-blue-800 {
+  color: #dbeafe !important;
+}
+
+html.dark .text-yellow-800 {
+  color: #fef3c7 !important;
+}
+
+html.dark .text-red-800 {
+  color: #fee2e2 !important;
+}
+
+html.dark .text-purple-800 {
+  color: #f3e8ff !important;
+}
+
+html.dark .text-indigo-800 {
+  color: #e0e7ff !important;
+}
+
+html.dark .text-gray-800 {
+  color: var(--text-primary) !important;
+}
+
+/* ===== UTILITÁRIOS ===== */
+
+/* Garantir que elementos importantes tenham contraste adequado */
+.force-white-bg {
+  background-color: #ffffff !important;
+}
+
+.force-black-text {
+  color: #000000 !important;
+}
+
+.force-dark-bg {
+  background-color: #1f2937 !important;
+}
+
+.force-light-text {
+  color: #f8fafc !important;
+}
+
+/* ===== SCROLLBARS ===== */
+
+/* Scrollbars personalizadas para modo escuro */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

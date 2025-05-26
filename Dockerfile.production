@@ -1,0 +1,91 @@
+# 🐳 Dockerfile Otimizado para Produção - kmiza27-chatbot
+# Multi-stage build para reduzir tamanho da imagem
+
+# ==========================================
+# Stage 1: Build Dependencies
+# ==========================================
+FROM node:18-alpine AS dependencies
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    libc6-compat
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+COPY yarn.lock* ./
+
+# Instalar dependências
+RUN npm ci --only=production && npm cache clean --force
+
+# ==========================================
+# Stage 2: Build Application
+# ==========================================
+FROM node:18-alpine AS builder
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    libc6-compat
+
+WORKDIR /app
+
+# Copiar dependências da stage anterior
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copiar código fonte
+COPY . .
+
+# Build da aplicação
+RUN npm run build
+
+# ==========================================
+# Stage 3: Production Runtime
+# ==========================================
+FROM node:18-alpine AS production
+
+# Instalar dependências mínimas para runtime
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    && addgroup -g 1001 -S nodejs \
+    && adduser -S nestjs -u 1001
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar dependências de produção
+COPY --from=dependencies --chown=nestjs:nodejs /app/node_modules ./node_modules
+
+# Copiar aplicação buildada
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+
+# Copiar arquivos necessários
+COPY --chown=nestjs:nodejs database/ ./database/
+
+# Criar diretórios necessários
+RUN mkdir -p /app/logs && chown nestjs:nodejs /app/logs
+
+# Configurar usuário não-root
+USER nestjs
+
+# Expor porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Usar dumb-init para gerenciar processos
+ENTRYPOINT ["dumb-init", "--"]
+
+# Comando para iniciar a aplicação
+CMD ["node", "dist/main.js"] 
