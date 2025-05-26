@@ -1,58 +1,38 @@
-# 🎨 Dockerfile para Frontend Next.js - Easypanel (EMERGÊNCIA - PORTA 3002 + API FIX)
+# 🎨 Dockerfile para Frontend Next.js - Easypanel (PRODUÇÃO OTIMIZADA)
 FROM node:18-alpine
 
-# Instalar dependências do sistema incluindo procps para debugging
-RUN apk add --no-cache curl git procps
+# Instalar dependências do sistema
+RUN apk add --no-cache curl git
 
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Quebrar cache - versão 8.13 (EMERGÊNCIA - PORTA 3002 + API URL CORRIGIDA - FORCE REBUILD)
-RUN echo "Frontend build version 8.13 - EMERGENCY PORT 3002 + API URL FIXED - FORCE REBUILD - $(date)"
+# Quebrar cache - versão 8.14 (PRODUÇÃO OTIMIZADA - LOGS REDUZIDOS)
+RUN echo "Frontend build version 8.14 - PRODUCTION OPTIMIZED - $(date)"
 
 # Download direto do GitHub e cópia específica do frontend
-RUN echo "=== DOWNLOADING FRONTEND FROM GITHUB ===" && \
-    cd /tmp && \
+RUN cd /tmp && \
     git clone https://github.com/designativa07/kmiza27.git repo && \
-    echo "✅ Frontend directory has files, copying..." && \
     cp -r /tmp/repo/frontend/. /app/ && \
-    rm -rf /tmp/repo && \
-    echo "=== FILES COPIED ===" && \
-    ls -la /app/ && \
-    echo "=== CHECKING PUBLIC DIRECTORY ===" && \
-    if [ -d "/app/public" ]; then \
-        echo "✅ Public directory exists:" && \
-        ls -la /app/public/; \
-    else \
-        echo "⚠️ Public directory not found, will create later"; \
-    fi
+    rm -rf /tmp/repo
 
 # Instalar dependências do frontend
-RUN echo "🔧 Installing frontend dependencies..." && \
-    npm ci --legacy-peer-deps
+RUN npm ci --legacy-peer-deps --silent
 
 # Build da aplicação Next.js com variável de ambiente correta
-RUN echo "🔨 Building Next.js application with correct API URL..." && \
-    NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host" \
+RUN NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host" \
     NODE_ENV=production \
     DISABLE_ESLINT_PLUGIN=true \
-    npm run build && \
-    echo "=== BUILD COMPLETED ===" && \
-    ls -la /app/.next/
+    npm run build
 
 # Copiar arquivos standalone para diretório limpo
-RUN echo "📦 Setting up standalone application..." && \
-    cp -r /app/.next/standalone /app/standalone && \
+RUN cp -r /app/.next/standalone /app/standalone && \
     cp -r /app/.next/static /app/standalone/.next/static && \
     if [ -d "/app/public" ]; then \
-        echo "✅ Public directory found, copying..." && \
         cp -r /app/public /app/standalone/public; \
     else \
-        echo "⚠️ Public directory not found, creating empty one..." && \
         mkdir -p /app/standalone/public; \
-    fi && \
-    echo "=== STANDALONE SETUP COMPLETED ===" && \
-    ls -la /app/standalone/
+    fi
 
 # Limpar arquivos desnecessários
 RUN rm -rf /app/node_modules /app/.next /app/src && \
@@ -61,78 +41,25 @@ RUN rm -rf /app/node_modules /app/.next /app/src && \
 # Mover para diretório standalone
 WORKDIR /app/standalone
 
-# Criar script de startup com método mais robusto
+# Criar script de startup otimizado
 RUN echo '#!/bin/sh' > /app/standalone/startup.sh && \
-    echo 'set -e' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo '# FORÇAR PORTA 3002 E API URL - EMERGÊNCIA' >> /app/standalone/startup.sh && \
     echo 'export PORT=3002' >> /app/standalone/startup.sh && \
     echo 'export HOSTNAME="0.0.0.0"' >> /app/standalone/startup.sh && \
     echo 'export NODE_ENV=production' >> /app/standalone/startup.sh && \
     echo 'export NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo '# Função para log com timestamp' >> /app/standalone/startup.sh && \
-    echo 'log() {' >> /app/standalone/startup.sh && \
-    echo '    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] $1" >&2' >> /app/standalone/startup.sh && \
-    echo '}' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo '# Forçar saída imediata' >> /app/standalone/startup.sh && \
-    echo 'exec 2>&1' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "=== EMERGENCY MODE - FORCING PORT 3002 + API URL ==="' >> /app/standalone/startup.sh && \
-    echo 'log "⚠️  AVOIDING EASYPANEL (3000) AND BACKEND (3001) CONFLICTS"' >> /app/standalone/startup.sh && \
-    echo 'log "✅ FORCED PORT: $PORT"' >> /app/standalone/startup.sh && \
-    echo 'log "✅ FORCED HOSTNAME: $HOSTNAME"' >> /app/standalone/startup.sh && \
-    echo 'log "✅ FORCED API URL: $NEXT_PUBLIC_API_URL"' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "=== CONTAINER STARTING - DEBUG MODE ==="' >> /app/standalone/startup.sh && \
-    echo 'log "Node version: $(node --version)"' >> /app/standalone/startup.sh && \
-    echo 'log "Current directory: $(pwd)"' >> /app/standalone/startup.sh && \
-    echo 'log "Process ID: $$"' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "=== DIRECTORY CONTENTS ==="' >> /app/standalone/startup.sh && \
-    echo 'ls -la >&2' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "=== CHECKING SERVER.JS ==="' >> /app/standalone/startup.sh && \
-    echo 'if [ -f "server.js" ]; then' >> /app/standalone/startup.sh && \
-    echo '    log "✅ server.js exists"' >> /app/standalone/startup.sh && \
-    echo '    log "File size: $(stat -c%s server.js) bytes"' >> /app/standalone/startup.sh && \
-    echo 'else' >> /app/standalone/startup.sh && \
-    echo '    log "❌ ERROR: server.js not found!"' >> /app/standalone/startup.sh && \
-    echo '    exit 1' >> /app/standalone/startup.sh && \
-    echo 'fi' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "=== STARTING NEXT.JS SERVER ON PORT 3002 WITH CORRECT API ==="' >> /app/standalone/startup.sh && \
-    echo 'log "⚠️  EMERGENCY: AVOIDING CONFLICTS + API URL FIXED"' >> /app/standalone/startup.sh && \
-    echo 'log "Command: node server.js"' >> /app/standalone/startup.sh && \
-    echo 'log "Port: $PORT"' >> /app/standalone/startup.sh && \
-    echo 'log "Hostname: $HOSTNAME"' >> /app/standalone/startup.sh && \
-    echo 'log "API URL: $NEXT_PUBLIC_API_URL"' >> /app/standalone/startup.sh && \
-    echo '' >> /app/standalone/startup.sh && \
-    echo 'log "✅ Starting server..."' >> /app/standalone/startup.sh && \
-    echo 'exec node server.js' >> /app/standalone/startup.sh
+    echo 'echo "🚀 Frontend v8.14 starting on port $PORT with API: $NEXT_PUBLIC_API_URL" >&2' >> /app/standalone/startup.sh && \
+    echo 'exec node server.js' >> /app/standalone/startup.sh && \
+    chmod +x /app/standalone/startup.sh
 
-# Tornar executável
-RUN chmod +x /app/standalone/startup.sh
-
-# Criar entrypoint simples
-RUN echo '#!/bin/sh' > /app/standalone/entrypoint.sh && \
-    echo 'echo "🚨 EMERGENCY ENTRYPOINT v8.13: Starting at $(date)" >&2' >> /app/standalone/entrypoint.sh && \
-    echo 'echo "🚨 FORCING PORT 3002 TO AVOID CONFLICTS" >&2' >> /app/standalone/entrypoint.sh && \
-    echo 'echo "🚨 FORCING API URL: https://kmizabot.h4xd66.easypanel.host" >&2' >> /app/standalone/entrypoint.sh && \
-    echo 'exec /app/standalone/startup.sh 2>&1' >> /app/standalone/entrypoint.sh
-
-RUN chmod +x /app/standalone/entrypoint.sh
-
-# Expor porta do Next.js (FORÇADA PARA 3002)
+# Expor porta do Next.js
 EXPOSE 3002
 
-# Configurar variáveis de ambiente (FORÇADAS PARA EVITAR CONFLITO + API URL)
+# Configurar variáveis de ambiente
 ENV PORT=3002
 ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
 ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"
 
-# Usar entrypoint que força logs
-ENTRYPOINT ["/bin/sh", "/app/standalone/entrypoint.sh"] 
+# Usar startup script otimizado
+CMD ["/bin/sh", "/app/standalone/startup.sh"] 
