@@ -1,13 +1,8 @@
 // Configuração da API
-// Build timestamp: 2025-05-26T02:30:00Z - FORCE REBUILD
+// Build timestamp: 2025-05-26T02:45:00Z - HARDCODE PRODUCTION URL
 const getApiUrl = (): string => {
-  // Em produção, usar a URL do backend no Easypanel
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_API_URL || 'https://kmizabot.h4xd66.easypanel.host';
-  }
-  
-  // Em desenvolvimento, usar localhost
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  // HARDCODE: Sempre usar a URL de produção para resolver o problema de cache
+  return 'https://kmizabot.h4xd66.easypanel.host';
 };
 
 export const API_BASE_URL = getApiUrl();
@@ -108,9 +103,8 @@ export const imageUrl = (path: string): string => {
   return `${API_BASE_URL}${path}`;
 };
 
-console.log('🔧 API Configuration:', {
+console.log('🔧 API Configuration HARDCODED:', {
   baseUrl: API_BASE_URL,
-  environment: process.env.NODE_ENV,
-  publicApiUrl: process.env.NEXT_PUBLIC_API_URL,
-  buildTimestamp: '2025-05-26T02:30:00Z'
+  hardcoded: true,
+  buildTimestamp: '2025-05-26T02:45:00Z'
 }); 
