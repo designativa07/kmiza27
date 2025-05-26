@@ -7,8 +7,8 @@ RUN apk add --no-cache curl git procps
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Quebrar cache - versão 8.12 (EMERGÊNCIA - PORTA 3002 + API URL CORRIGIDA)
-RUN echo "Frontend build version 8.12 - EMERGENCY PORT 3002 + API URL FIXED - $(date)"
+# Quebrar cache - versão 8.13 (EMERGÊNCIA - PORTA 3002 + API URL CORRIGIDA - FORCE REBUILD)
+RUN echo "Frontend build version 8.13 - EMERGENCY PORT 3002 + API URL FIXED - FORCE REBUILD - $(date)"
 
 # Download direto do GitHub e cópia específica do frontend
 RUN echo "=== DOWNLOADING FRONTEND FROM GITHUB ===" && \
@@ -117,7 +117,7 @@ RUN chmod +x /app/standalone/startup.sh
 
 # Criar entrypoint simples
 RUN echo '#!/bin/sh' > /app/standalone/entrypoint.sh && \
-    echo 'echo "🚨 EMERGENCY ENTRYPOINT v8.12: Starting at $(date)" >&2' >> /app/standalone/entrypoint.sh && \
+    echo 'echo "🚨 EMERGENCY ENTRYPOINT v8.13: Starting at $(date)" >&2' >> /app/standalone/entrypoint.sh && \
     echo 'echo "🚨 FORCING PORT 3002 TO AVOID CONFLICTS" >&2' >> /app/standalone/entrypoint.sh && \
     echo 'echo "🚨 FORCING API URL: https://kmizabot.h4xd66.easypanel.host" >&2' >> /app/standalone/entrypoint.sh && \
     echo 'exec /app/standalone/startup.sh 2>&1' >> /app/standalone/entrypoint.sh
