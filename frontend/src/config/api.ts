@@ -1,4 +1,5 @@
 // Configuração da API
+// Build timestamp: 2025-05-26T02:30:00Z - FORCE REBUILD
 const getApiUrl = (): string => {
   // Em produção, usar a URL do backend no Easypanel
   if (process.env.NODE_ENV === 'production') {
@@ -111,4 +112,5 @@ console.log('🔧 API Configuration:', {
   baseUrl: API_BASE_URL,
   environment: process.env.NODE_ENV,
   publicApiUrl: process.env.NEXT_PUBLIC_API_URL,
+  buildTimestamp: '2025-05-26T02:30:00Z'
 }); 
