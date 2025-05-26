@@ -1,4 +1,4 @@
-# Dockerfile para Frontend - Build: 2025-05-26T02:50:00Z
+# Dockerfile para Frontend - Build: 2025-05-26T03:10:00Z
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
@@ -51,6 +51,6 @@ ENV PORT=3002
 ENV HOSTNAME="0.0.0.0"
 
 # Force rebuild timestamp
-ENV BUILD_TIMESTAMP="2025-05-26T02:50:00Z"
+ENV BUILD_TIMESTAMP="2025-05-26T03:10:00Z"
 
 CMD ["node", "server.js"] 

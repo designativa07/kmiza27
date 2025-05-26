@@ -1,13 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configuração para produção - Build: 2025-05-26T02:50:00Z
+  // Configuração para produção - Build: 2025-05-26T03:10:00Z
   output: 'standalone',
-  
-  // Configurar API URL baseado no ambiente
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://kmizabot.h4xd66.easypanel.host' : 'http://localhost:3000'),
-  },
   
   // Configurações de imagem
   images: {
