@@ -16,8 +16,11 @@ async function bootstrap() {
       'https://kmizabot.h4xd66.easypanel.host',
       'https://kmiza27-evolution.h4xd66.easypanel.host'
     ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   });
   
   // Servir arquivos estáticos da pasta uploads
