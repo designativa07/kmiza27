@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TrophyIcon, ChartBarIcon, UsersIcon, CalendarIcon, EyeIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
   id: number
@@ -144,8 +144,8 @@ export default function StandingsManager() {
     
     try {
       const url = selectedGroup 
-        ? `http://localhost:3000/standings/competition/${selectedCompetition}?group=${selectedGroup}`
-        : `http://localhost:3000/standings/competition/${selectedCompetition}`
+        ? API_ENDPOINTS.standings.byCompetition(selectedCompetition, selectedGroup)
+        : API_ENDPOINTS.standings.byCompetition(selectedCompetition)
       
       const response = await fetch(url)
       if (response.ok) {
@@ -161,7 +161,7 @@ export default function StandingsManager() {
     if (!selectedCompetition) return
     
     try {
-      const response = await fetch(`http://localhost:3000/standings/competition/${selectedCompetition}/groups`)
+      const response = await fetch(API_ENDPOINTS.standings.groups(selectedCompetition))
       if (response.ok) {
         const data = await response.json()
         setGroups(data)
@@ -175,7 +175,7 @@ export default function StandingsManager() {
     if (!selectedCompetition || !selectedTeam) return
     
     try {
-      const response = await fetch(`http://localhost:3000/standings/competition/${selectedCompetition}/team/${selectedTeam}/stats`)
+      const response = await fetch(API_ENDPOINTS.standings.teamStats(selectedCompetition, selectedTeam))
       if (response.ok) {
         const data = await response.json()
         setTeamStats(data)
@@ -189,7 +189,7 @@ export default function StandingsManager() {
     if (!selectedCompetition || !h2hTeam1 || !h2hTeam2) return
     
     try {
-      const response = await fetch(`http://localhost:3000/standings/competition/${selectedCompetition}/head-to-head?team1=${h2hTeam1}&team2=${h2hTeam2}`)
+      const response = await fetch(API_ENDPOINTS.standings.headToHead(selectedCompetition, h2hTeam1, h2hTeam2))
       if (response.ok) {
         const data = await response.json()
         setHeadToHead(data)
@@ -203,7 +203,7 @@ export default function StandingsManager() {
     if (!selectedCompetition) return
     
     try {
-      const response = await fetch(`http://localhost:3000/standings/competition/${selectedCompetition}/rounds`)
+      const response = await fetch(API_ENDPOINTS.standings.rounds(selectedCompetition))
       if (response.ok) {
         const data = await response.json()
         console.log('Rodadas carregadas:', data) // Debug
@@ -223,7 +223,7 @@ export default function StandingsManager() {
     if (!selectedCompetition || !selectedRound) return
     
     try {
-      const response = await fetch(`http://localhost:3000/standings/competition/${selectedCompetition}/round/${selectedRound}/matches`)
+      const response = await fetch(API_ENDPOINTS.standings.roundMatches(selectedCompetition, selectedRound))
       if (response.ok) {
         const data = await response.json()
         setRoundMatches(data)
@@ -252,7 +252,7 @@ export default function StandingsManager() {
     return (
       <img 
         className="h-6 w-6 rounded-md object-cover" 
-        src={`http://localhost:3000${team.logo_url}`} 
+        src={imageUrl(team.logo_url)} 
         alt={`Escudo ${team.name}`}
         onError={(e) => {
           const target = e.target as HTMLImageElement

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
   id: number
@@ -365,7 +365,7 @@ export default function MatchesManager() {
     return (
       <img 
         className="h-6 w-6 rounded-md object-cover" 
-        src={`http://localhost:3000${team.logo_url}`} 
+        src={imageUrl(team.logo_url)} 
         alt={`Escudo ${team.name}`}
         onError={(e) => {
           const target = e.target as HTMLImageElement

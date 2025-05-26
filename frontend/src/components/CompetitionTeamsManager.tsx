@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
   id: number
@@ -163,7 +163,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
     return (
       <img 
         className="h-8 w-8 rounded-md object-cover" 
-        src={`http://localhost:3000${team.logo_url}`} 
+        src={imageUrl(team.logo_url)} 
         alt={`Escudo ${team.name}`}
         onError={(e) => {
           const target = e.target as HTMLImageElement

@@ -151,7 +151,7 @@ export default function TeamsManager() {
       founded_year: team.founded_year?.toString() || '',
       logo_url: team.logo_url || ''
     })
-    setPreviewUrl(team.logo_url ? `http://localhost:3000${team.logo_url}` : '')
+    setPreviewUrl(team.logo_url ? imageUrl(team.logo_url) : '')
     setShowModal(true)
   }
 
@@ -225,7 +225,7 @@ export default function TeamsManager() {
                           {team.logo_url && (
                             <img 
                               className="h-6 w-6 rounded-md mr-3 object-cover" 
-                              src={`http://localhost:3000${team.logo_url}`} 
+                              src={imageUrl(team.logo_url)} 
                               alt={`Escudo ${team.name}`}
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none'
