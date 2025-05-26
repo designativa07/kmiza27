@@ -40,7 +40,7 @@ export default function CompetitionsManager() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('API_ENDPOINTS.competitions.list()')
+      const response = await fetch(API_ENDPOINTS.competitions.list())
       if (response.ok) {
         const data = await response.json()
         setCompetitions(data)
@@ -57,7 +57,7 @@ export default function CompetitionsManager() {
     try {
       const url = editingCompetition 
         ? `API_ENDPOINTS.competitions.list()/${editingCompetition.id}`
-        : 'API_ENDPOINTS.competitions.list()'
+        : API_ENDPOINTS.competitions.list()
       
       const method = editingCompetition ? 'PATCH' : 'POST'
       

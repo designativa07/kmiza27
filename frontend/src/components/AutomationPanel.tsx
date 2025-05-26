@@ -31,7 +31,7 @@ export default function AutomationPanel() {
 
   const fetchConfigs = async () => {
     try {
-      const response = await fetch('API_ENDPOINTS.botConfig.list()')
+      const response = await fetch(API_ENDPOINTS.botConfig.list())
       if (response.ok) {
         const data = await response.json()
         setConfigs(data)
@@ -72,7 +72,7 @@ export default function AutomationPanel() {
   const resetDefaults = async () => {
     setSaving(true)
     try {
-      const response = await fetch('API_ENDPOINTS.botConfig.list()/reset-defaults', {
+      const response = await fetch(API_ENDPOINTS.botConfig.resetDefaults(), {
         method: 'POST',
       })
 

@@ -95,9 +95,9 @@ export default function MatchesManager() {
       console.log('🔄 Iniciando carregamento de dados...')
       
       const [matchesRes, teamsRes, competitionsRes] = await Promise.all([
-        fetch('API_ENDPOINTS.matches.list()'),
-        fetch('API_ENDPOINTS.teams.list()'),
-        fetch('API_ENDPOINTS.competitions.list()')
+        fetch(API_ENDPOINTS.matches.list()),
+        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.competitions.list())
       ])
       
       console.log('📊 Status das requisições:', {
@@ -213,7 +213,7 @@ export default function MatchesManager() {
     try {
       const url = editingMatch 
         ? `API_ENDPOINTS.matches.list()/${editingMatch.id}`
-        : 'API_ENDPOINTS.matches.list()'
+        : API_ENDPOINTS.matches.list()
       
       const method = editingMatch ? 'PATCH' : 'POST'
       
