@@ -9,11 +9,11 @@ async function bootstrap() {
   // Configurar CORS para permitir acesso do frontend e Easypanel
   app.enableCors({
     origin: [
-      'http://localhost:3001', 
-      'http://127.0.0.1:3001',
-      'http://192.168.0.43:3001',
-      'https://kmiza27-kmizabot.h4xd66.easypanel.host',
-      'https://kmiza27-frontend.h4xd66.easypanel.host',
+      'http://localhost:3002', 
+      'http://127.0.0.1:3002',
+      'http://192.168.0.43:3002',
+      'https://kmizafront.h4xd66.easypanel.host',
+      'https://kmizabot.h4xd66.easypanel.host',
       'https://kmiza27-evolution.h4xd66.easypanel.host'
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
