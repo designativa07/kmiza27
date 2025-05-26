@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface BotConfig {
   id: number
@@ -30,7 +31,7 @@ export default function AutomationPanel() {
 
   const fetchConfigs = async () => {
     try {
-      const response = await fetch('http://localhost:3000/bot-config')
+      const response = await fetch('API_ENDPOINTS.botConfig.list()')
       if (response.ok) {
         const data = await response.json()
         setConfigs(data)
@@ -46,7 +47,7 @@ export default function AutomationPanel() {
   const updateConfig = async (id: number, value: string) => {
     setSaving(true)
     try {
-      const response = await fetch(`http://localhost:3000/bot-config/${id}`, {
+      const response = await fetch(`API_ENDPOINTS.botConfig.list()/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export default function AutomationPanel() {
   const resetDefaults = async () => {
     setSaving(true)
     try {
-      const response = await fetch('http://localhost:3000/bot-config/reset-defaults', {
+      const response = await fetch('API_ENDPOINTS.botConfig.list()/reset-defaults', {
         method: 'POST',
       })
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface Team {
   id: number
@@ -94,9 +95,9 @@ export default function MatchesManager() {
       console.log('🔄 Iniciando carregamento de dados...')
       
       const [matchesRes, teamsRes, competitionsRes] = await Promise.all([
-        fetch('http://localhost:3000/matches'),
-        fetch('http://localhost:3000/teams'),
-        fetch('http://localhost:3000/competitions')
+        fetch('API_ENDPOINTS.matches.list()'),
+        fetch('API_ENDPOINTS.teams.list()'),
+        fetch('API_ENDPOINTS.competitions.list()')
       ])
       
       console.log('📊 Status das requisições:', {
@@ -211,8 +212,8 @@ export default function MatchesManager() {
     e.preventDefault()
     try {
       const url = editingMatch 
-        ? `http://localhost:3000/matches/${editingMatch.id}`
-        : 'http://localhost:3000/matches'
+        ? `API_ENDPOINTS.matches.list()/${editingMatch.id}`
+        : 'API_ENDPOINTS.matches.list()'
       
       const method = editingMatch ? 'PATCH' : 'POST'
       
@@ -314,7 +315,7 @@ export default function MatchesManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este jogo?')) {
       try {
-        await fetch(`http://localhost:3000/matches/${id}`, {
+        await fetch(`API_ENDPOINTS.matches.list()/${id}`, {
           method: 'DELETE',
         })
         fetchData()

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { UserIcon, UserGroupIcon, HeartIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface UserStats {
   total: number
@@ -32,7 +33,7 @@ export default function UserStats() {
     try {
       console.log('🔄 UserStats: Iniciando requisição para /users/stats...')
       
-      const response = await fetch('http://localhost:3000/users/stats', {
+      const response = await fetch(API_ENDPOINTS.users.stats(), {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

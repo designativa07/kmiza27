@@ -27,6 +27,7 @@ import SystemSettings from './SystemSettings'
 import ThemeToggle from './ThemeToggle'
 import WhatsAppConversations from './WhatsAppConversations'
 import AutomationPanel from './AutomationPanel'
+import { API_ENDPOINTS } from '../config/api'
 
 
 const navigation = [
@@ -61,12 +62,12 @@ export default function Dashboard() {
     try {
       console.log('🔄 Dashboard: Carregando estatísticas reais...')
       
-      // Buscar dados reais de múltiplas APIs (removendo chatbot/status que está causando erro)
+      // Buscar dados reais de múltiplas APIs
       const responses = await Promise.allSettled([
-        fetch('http://localhost:3000/whatsapp/status'),
-        fetch('http://localhost:3000/users'),
-        fetch('http://localhost:3000/teams'),
-        fetch('http://localhost:3000/matches')
+        fetch(API_ENDPOINTS.whatsapp.status()),
+        fetch(API_ENDPOINTS.users.list()),
+        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.matches.list())
       ])
       
       let whatsappData = null

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TrophyIcon, ChartBarIcon, UsersIcon, CalendarIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface Team {
   id: number
@@ -123,7 +124,7 @@ export default function StandingsManager() {
 
   const fetchCompetitions = async () => {
     try {
-      const response = await fetch('http://localhost:3000/competitions')
+      const response = await fetch('API_ENDPOINTS.competitions.list()')
       if (response.ok) {
         const data = await response.json()
         setCompetitions(data)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, UserIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface User {
   id: number
@@ -38,7 +39,7 @@ export default function UsersManager() {
     try {
       console.log('🔄 UsersManager: Carregando usuários da API...')
       
-      const response = await fetch('http://localhost:3000/users')
+      const response = await fetch(API_ENDPOINTS.users.list())
       console.log('📊 UsersManager: Status da resposta:', response.status)
       
       if (!response.ok) {
@@ -62,7 +63,7 @@ export default function UsersManager() {
     try {
       if (editingUser) {
         // Atualizar usuário existente
-        const response = await fetch(`http://localhost:3000/users/${editingUser.id}`, {
+        const response = await fetch(API_ENDPOINTS.users.byId(editingUser.id), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -75,7 +76,7 @@ export default function UsersManager() {
         }
       } else {
         // Criar novo usuário
-        const response = await fetch('http://localhost:3000/users', {
+        const response = await fetch(API_ENDPOINTS.users.list(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -122,7 +123,7 @@ export default function UsersManager() {
       try {
         console.log('🗑️ UsersManager: Excluindo usuário ID:', id)
         
-        const response = await fetch(`http://localhost:3000/users/${id}`, {
+        const response = await fetch(API_ENDPOINTS.users.byId(id), {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ export default function UsersManager() {
       
       console.log('🔄 UsersManager: Alterando status do usuário ID:', id, 'para:', !user.is_active)
       
-      const response = await fetch(`http://localhost:3000/users/${id}`, {
+      const response = await fetch(API_ENDPOINTS.users.byId(id), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

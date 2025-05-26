@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
   id: number
@@ -39,7 +40,7 @@ export default function TeamsManager() {
 
   const fetchTeams = async () => {
     try {
-      const response = await fetch('http://localhost:3000/teams')
+      const response = await fetch('API_ENDPOINTS.teams.list()')
       const data = await response.json()
       setTeams(data)
     } catch (error) {
@@ -71,7 +72,7 @@ export default function TeamsManager() {
       const formData = new FormData()
       formData.append('escudo', selectedFile)
 
-      const response = await fetch(`http://localhost:3000/teams/${teamId}/upload-escudo`, {
+      const response = await fetch(`API_ENDPOINTS.teams.list()/${teamId}/upload-escudo`, {
         method: 'POST',
         body: formData,
       })
@@ -93,8 +94,8 @@ export default function TeamsManager() {
     e.preventDefault()
     try {
       const url = editingTeam 
-        ? `http://localhost:3000/teams/${editingTeam.id}`
-        : 'http://localhost:3000/teams'
+        ? `API_ENDPOINTS.teams.list()/${editingTeam.id}`
+        : 'API_ENDPOINTS.teams.list()'
       
       const method = editingTeam ? 'PATCH' : 'POST'
       
@@ -157,7 +158,7 @@ export default function TeamsManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este time?')) {
       try {
-        await fetch(`http://localhost:3000/teams/${id}`, {
+        await fetch(`API_ENDPOINTS.teams.list()/${id}`, {
           method: 'DELETE',
         })
         fetchTeams()

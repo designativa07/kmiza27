@@ -11,6 +11,7 @@ import {
   XCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface SendProgress {
   notificationId: number
@@ -78,7 +79,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/notifications/${notificationId}/progress`)
+      const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/progress`)
       if (response.ok) {
         const data = await response.json()
         // Mapear os dados do backend para o formato esperado pelo frontend
@@ -102,7 +103,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
 
   const fetchReport = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/notifications/${notificationId}/report`)
+      const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/report`)
       if (response.ok) {
         const data = await response.json()
         // Mapear os dados do backend para o formato esperado pelo frontend
@@ -141,7 +142,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
   const handleStart = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:3000/notifications/${notificationId}/send`, {
+      const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/send`, {
         method: 'POST'
       })
       if (response.ok) {
@@ -157,7 +158,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
   const handlePause = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:3000/notifications/${notificationId}/pause`, {
+      const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/pause`, {
         method: 'POST'
       })
       if (response.ok) {
@@ -173,7 +174,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
   const handleResume = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:3000/notifications/${notificationId}/resume`, {
+      const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/resume`, {
         method: 'POST'
       })
       if (response.ok) {
@@ -190,7 +191,7 @@ export default function NotificationSendControl({ notificationId, onClose }: Not
     if (confirm('Tem certeza que deseja cancelar o envio?')) {
       setLoading(true)
       try {
-        const response = await fetch(`http://localhost:3000/notifications/${notificationId}/cancel`, {
+        const response = await fetch(`API_ENDPOINTS.notifications.list()/${notificationId}/cancel`, {
           method: 'POST'
         })
         if (response.ok) {

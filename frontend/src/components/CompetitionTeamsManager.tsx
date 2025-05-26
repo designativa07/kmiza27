@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface Team {
   id: number
@@ -55,9 +56,9 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
       setLoading(true)
       
       const [competitionRes, teamsRes, competitionTeamsRes] = await Promise.all([
-        fetch(`http://localhost:3000/competitions/${competitionId}`),
-        fetch('http://localhost:3000/teams'),
-        fetch(`http://localhost:3000/competitions/${competitionId}/teams`)
+        fetch(`API_ENDPOINTS.competitions.list()/${competitionId}`),
+        fetch('API_ENDPOINTS.teams.list()'),
+        fetch(`API_ENDPOINTS.competitions.list()/${competitionId}/teams`)
       ])
 
       if (competitionRes.ok) {
@@ -85,7 +86,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
     if (selectedTeams.length === 0) return
 
     try {
-      const response = await fetch(`http://localhost:3000/competitions/${competitionId}/teams`, {
+      const response = await fetch(`API_ENDPOINTS.competitions.list()/${competitionId}/teams`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
   const handleRemoveTeam = async (competitionTeamId: number) => {
     if (confirm('Tem certeza que deseja remover este time da competição?')) {
       try {
-        const response = await fetch(`http://localhost:3000/competitions/${competitionId}/teams/${competitionTeamId}`, {
+        const response = await fetch(`API_ENDPOINTS.competitions.list()/${competitionId}/teams/${competitionTeamId}`, {
           method: 'DELETE',
         })
 

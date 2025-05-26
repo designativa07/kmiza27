@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, BellIcon, PlayIcon, PauseIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 import NotificationSendControl from './NotificationSendControl'
 
 interface Notification {
@@ -51,7 +52,7 @@ export default function NotificationsManager() {
     try {
       console.log('🔄 Carregando notificações reais...')
       
-      const response = await fetch('http://localhost:3000/notifications')
+      const response = await fetch('API_ENDPOINTS.notifications.list()')
       
       if (!response.ok) {
         throw new Error(`Erro ao carregar notificações: ${response.status}`)
@@ -102,7 +103,7 @@ export default function NotificationsManager() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:3000/notifications/stats')
+      const response = await fetch('API_ENDPOINTS.notifications.list()/stats')
       
       if (response.ok) {
         const data = await response.json()
@@ -127,8 +128,8 @@ export default function NotificationsManager() {
       }
 
       const url = editingNotification 
-        ? `http://localhost:3000/notifications/${editingNotification.id}`
-        : 'http://localhost:3000/notifications'
+        ? `API_ENDPOINTS.notifications.list()/${editingNotification.id}`
+        : 'API_ENDPOINTS.notifications.list()'
       
       const method = editingNotification ? 'PATCH' : 'POST'
       
@@ -187,7 +188,7 @@ export default function NotificationsManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir esta notificação?')) {
       try {
-        const response = await fetch(`http://localhost:3000/notifications/${id}`, {
+        const response = await fetch(`API_ENDPOINTS.notifications.list()/${id}`, {
           method: 'DELETE',
         })
 

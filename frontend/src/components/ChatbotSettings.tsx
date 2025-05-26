@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 
 interface SystemStatus {
   status: string
@@ -26,7 +27,7 @@ export default function ChatbotSettings() {
 
   const fetchSystemStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3000/chatbot/status')
+      const response = await fetch('API_ENDPOINTS.chatbot.status()')
       const data = await response.json()
       setSystemStatus(data)
     } catch (error) {
@@ -39,7 +40,7 @@ export default function ChatbotSettings() {
     
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3000/chatbot/test-message', {
+      const response = await fetch('API_ENDPOINTS.chatbot.testMessage()', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

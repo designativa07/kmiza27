@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 import CompetitionTeamsManager from './CompetitionTeamsManager'
 
 interface Competition {
@@ -39,7 +40,7 @@ export default function CompetitionsManager() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/competitions')
+      const response = await fetch('API_ENDPOINTS.competitions.list()')
       if (response.ok) {
         const data = await response.json()
         setCompetitions(data)
@@ -55,8 +56,8 @@ export default function CompetitionsManager() {
     e.preventDefault()
     try {
       const url = editingCompetition 
-        ? `http://localhost:3000/competitions/${editingCompetition.id}`
-        : 'http://localhost:3000/competitions'
+        ? `API_ENDPOINTS.competitions.list()/${editingCompetition.id}`
+        : 'API_ENDPOINTS.competitions.list()'
       
       const method = editingCompetition ? 'PATCH' : 'POST'
       
@@ -106,7 +107,7 @@ export default function CompetitionsManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir esta competição?')) {
       try {
-        await fetch(`http://localhost:3000/competitions/${id}`, {
+        await fetch(`API_ENDPOINTS.competitions.list()/${id}`, {
           method: 'DELETE',
         })
         fetchData()
