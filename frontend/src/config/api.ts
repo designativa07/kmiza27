@@ -1,5 +1,5 @@
 // Configuração da API
-// Build timestamp: 2025-05-26T03:10:00Z - FINAL HARDCODE FIX
+// Build timestamp: 2025-05-26T03:25:00Z - URLS FIXED + CORS FIX
 const getApiUrl = (): string => {
   // HARDCODE: Sempre usar a URL de produção para resolver o problema de cache
   return 'https://kmizabot.h4xd66.easypanel.host';
@@ -106,6 +106,6 @@ export const imageUrl = (path: string): string => {
 console.log('🔧 API Configuration HARDCODED:', {
   baseUrl: API_BASE_URL,
   hardcoded: true,
-  buildTimestamp: '2025-05-26T03:10:00Z',
+  buildTimestamp: '2025-05-26T03:25:00Z',
   finalFix: true
 }); 
