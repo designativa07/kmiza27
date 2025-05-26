@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configuração para produção
+  // Configuração para produção - Build: 2025-05-26T02:50:00Z
   output: 'standalone',
   
   // Configurar API URL baseado no ambiente
@@ -26,9 +26,6 @@ const nextConfig: NextConfig = {
   // Configurações de produção
   poweredByHeader: false,
   compress: true,
-  
-  // Remover configurações experimentais problemáticas
-  swcMinify: true,
 };
 
 export default nextConfig;
