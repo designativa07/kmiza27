@@ -1,4 +1,4 @@
-# 🎨 Dockerfile para Frontend Next.js - Easypanel (PRODUÇÃO OTIMIZADA)
+# 🎨 Dockerfile para Frontend Next.js - Easypanel (FINAL FIX - 2025-05-26T03:15:00Z)
 FROM node:18-alpine
 
 # Instalar dependências do sistema
@@ -7,8 +7,8 @@ RUN apk add --no-cache curl git
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Quebrar cache - versão 8.14 (PRODUÇÃO OTIMIZADA - LOGS REDUZIDOS)
-RUN echo "Frontend build version 8.14 - PRODUCTION OPTIMIZED - $(date)"
+# Quebrar cache - versão FINAL (HARDCODE API URL FIX)
+RUN echo "Frontend build FINAL FIX - 2025-05-26T03:15:00Z - $(date)"
 
 # Download direto do GitHub e cópia específica do frontend
 RUN cd /tmp && \
@@ -41,13 +41,13 @@ RUN rm -rf /app/node_modules /app/.next /app/src && \
 # Mover para diretório standalone
 WORKDIR /app/standalone
 
-# Criar script de startup otimizado
+# Criar script de startup otimizado com timestamp
 RUN echo '#!/bin/sh' > /app/standalone/startup.sh && \
     echo 'export PORT=3002' >> /app/standalone/startup.sh && \
     echo 'export HOSTNAME="0.0.0.0"' >> /app/standalone/startup.sh && \
     echo 'export NODE_ENV=production' >> /app/standalone/startup.sh && \
     echo 'export NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"' >> /app/standalone/startup.sh && \
-    echo 'echo "🚀 Frontend v8.14 starting on port $PORT with API: $NEXT_PUBLIC_API_URL" >&2' >> /app/standalone/startup.sh && \
+    echo 'echo "🚀 Frontend FINAL FIX 2025-05-26T03:15:00Z starting on port $PORT with API: $NEXT_PUBLIC_API_URL" >&2' >> /app/standalone/startup.sh && \
     echo 'exec node server.js' >> /app/standalone/startup.sh && \
     chmod +x /app/standalone/startup.sh
 
@@ -60,6 +60,7 @@ ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
 ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"
+ENV BUILD_TIMESTAMP="2025-05-26T03:15:00Z"
 
 # Usar startup script otimizado
 CMD ["/bin/sh", "/app/standalone/startup.sh"] 
