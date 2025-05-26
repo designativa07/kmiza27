@@ -57,7 +57,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
       
       const [competitionRes, teamsRes, competitionTeamsRes] = await Promise.all([
         fetch(`API_ENDPOINTS.competitions.list()/${competitionId}`),
-        fetch('API_ENDPOINTS.teams.list()'),
+        fetch(API_ENDPOINTS.teams.list()),
         fetch(`API_ENDPOINTS.competitions.list()/${competitionId}/teams`)
       ])
 

@@ -27,7 +27,7 @@ export default function ChatbotSettings() {
 
   const fetchSystemStatus = async () => {
     try {
-      const response = await fetch('API_ENDPOINTS.chatbot.status()')
+      const response = await fetch(API_ENDPOINTS.chatbot.status())
       const data = await response.json()
       setSystemStatus(data)
     } catch (error) {
@@ -40,7 +40,7 @@ export default function ChatbotSettings() {
     
     setLoading(true)
     try {
-      const response = await fetch('API_ENDPOINTS.chatbot.testMessage()', {
+      const response = await fetch(API_ENDPOINTS.chatbot.testMessage(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

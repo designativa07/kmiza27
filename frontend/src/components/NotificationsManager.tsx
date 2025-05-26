@@ -52,7 +52,7 @@ export default function NotificationsManager() {
     try {
       console.log('🔄 Carregando notificações reais...')
       
-      const response = await fetch('API_ENDPOINTS.notifications.list()')
+      const response = await fetch(API_ENDPOINTS.notifications.list())
       
       if (!response.ok) {
         throw new Error(`Erro ao carregar notificações: ${response.status}`)
@@ -103,7 +103,7 @@ export default function NotificationsManager() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('API_ENDPOINTS.notifications.list()/stats')
+      const response = await fetch(API_ENDPOINTS.notifications.stats())
       
       if (response.ok) {
         const data = await response.json()
@@ -129,7 +129,7 @@ export default function NotificationsManager() {
 
       const url = editingNotification 
         ? `API_ENDPOINTS.notifications.list()/${editingNotification.id}`
-        : 'API_ENDPOINTS.notifications.list()'
+        : API_ENDPOINTS.notifications.list()
       
       const method = editingNotification ? 'PATCH' : 'POST'
       

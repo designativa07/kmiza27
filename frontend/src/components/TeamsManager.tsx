@@ -40,7 +40,7 @@ export default function TeamsManager() {
 
   const fetchTeams = async () => {
     try {
-      const response = await fetch('API_ENDPOINTS.teams.list()')
+      const response = await fetch(API_ENDPOINTS.teams.list())
       const data = await response.json()
       setTeams(data)
     } catch (error) {
@@ -72,7 +72,7 @@ export default function TeamsManager() {
       const formData = new FormData()
       formData.append('escudo', selectedFile)
 
-      const response = await fetch(`API_ENDPOINTS.teams.list()/${teamId}/upload-escudo`, {
+      const response = await fetch(API_ENDPOINTS.teams.uploadLogo(teamId), {
         method: 'POST',
         body: formData,
       })
@@ -94,8 +94,8 @@ export default function TeamsManager() {
     e.preventDefault()
     try {
       const url = editingTeam 
-        ? `API_ENDPOINTS.teams.list()/${editingTeam.id}`
-        : 'API_ENDPOINTS.teams.list()'
+        ? API_ENDPOINTS.teams.byId(editingTeam.id)
+        : API_ENDPOINTS.teams.list()
       
       const method = editingTeam ? 'PATCH' : 'POST'
       
@@ -158,7 +158,7 @@ export default function TeamsManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este time?')) {
       try {
-        await fetch(`API_ENDPOINTS.teams.list()/${id}`, {
+        await fetch(API_ENDPOINTS.teams.byId(id), {
           method: 'DELETE',
         })
         fetchTeams()
