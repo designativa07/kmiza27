@@ -48,11 +48,14 @@ export default function AdminsManager() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log('🔄 Iniciando criação de administrador:', formData)
+    
     try {
       setCreateLoading(true)
       setCreateError(null)
       
-      await authService.createAdmin(formData)
+      const result = await authService.createAdmin(formData)
+      console.log('✅ Administrador criado com sucesso:', result)
       
       // Limpar formulário
       setFormData({
@@ -68,8 +71,10 @@ export default function AdminsManager() {
       await loadAdmins()
       
     } catch (err: any) {
-      console.error('Erro ao criar administrador:', err)
-      setCreateError(err.response?.data?.message || 'Erro ao criar administrador')
+      console.error('❌ Erro ao criar administrador:', err)
+      console.error('Response data:', err.response?.data)
+      console.error('Response status:', err.response?.status)
+      setCreateError(err.response?.data?.message || err.message || 'Erro ao criar administrador')
     } finally {
       setCreateLoading(false)
     }

@@ -31,7 +31,7 @@ import ThemeToggle from './ThemeToggle'
 import WhatsAppConversations from './WhatsAppConversations'
 import AutomationPanel from './AutomationPanel'
 import { API_ENDPOINTS } from '../config/api'
-import StatusPage from '../app/status/page'
+import StatusContent from './StatusContent'
 
 
 const navigation = [
@@ -161,7 +161,7 @@ export default function Dashboard() {
       case 'Notificações':
         return <NotificationsManager />
       case 'Status do Sistema':
-        return <StatusPage />
+        return <StatusContent />
       case 'Configurações':
         return <SystemSettings />
       default:
