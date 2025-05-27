@@ -89,8 +89,8 @@ Valor: https://kmizabot.h4xd66.easypanel.host
 
 #### **Deploy Normal (com cache)**
 ```bash
-# Usar Dockerfile.backend.optimized
-# Usar Dockerfile.frontend.optimized
+# Usar Dockerfile.backend (já otimizado)
+# Usar Dockerfile.frontend (já otimizado)
 ```
 
 #### **Force Rebuild (sem cache)**
@@ -240,7 +240,7 @@ Com essas otimizações:
 
 ## 🔗 **Próximos Passos**
 
-1. **Substituir Dockerfiles atuais** pelos otimizados
+1. **Usar Dockerfiles otimizados** (já atualizados)
 2. **Configurar build arguments** no Easypanel
 3. **Implementar health checks** melhorados
 4. **Testar deploy** com as novas configurações
