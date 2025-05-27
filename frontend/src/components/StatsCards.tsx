@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { UsersIcon, TrophyIcon, CalendarIcon, ChatBubbleLeftRightIcon, ChartBarIcon, HeartIcon, ClockIcon } from '@heroicons/react/24/outline'
 import AdvancedCharts from './AdvancedCharts'
 import WhatsAppConversations from './WhatsAppConversations'
+import StatusCard from './StatusCard'
 
 interface StatsProps {
   stats: {
@@ -169,6 +170,11 @@ export default function StatsCards({ stats }: StatsProps) {
               </div>
             ))}
           </dl>
+
+          {/* Status do Sistema */}
+          <div className="mt-8">
+            <StatusCard />
+          </div>
 
           {/* Gráfico de atividade recente */}
           <div className="mt-8">
