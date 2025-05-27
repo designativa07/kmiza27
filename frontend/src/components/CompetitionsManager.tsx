@@ -56,7 +56,7 @@ export default function CompetitionsManager() {
     e.preventDefault()
     try {
       const url = editingCompetition 
-        ? `API_ENDPOINTS.competitions.list()/${editingCompetition.id}`
+        ? `${API_ENDPOINTS.competitions.list()}/${editingCompetition.id}`
         : API_ENDPOINTS.competitions.list()
       
       const method = editingCompetition ? 'PATCH' : 'POST'
@@ -107,7 +107,7 @@ export default function CompetitionsManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir esta competição?')) {
       try {
-        await fetch(`API_ENDPOINTS.competitions.list()/${id}`, {
+        await fetch(`${API_ENDPOINTS.competitions.list()}/${id}`, {
           method: 'DELETE',
         })
         fetchData()
