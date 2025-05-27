@@ -10,7 +10,8 @@ import {
   TrophyIcon,
   CalendarIcon,
   TvIcon,
-  BellIcon
+  BellIcon,
+  ServerIcon
 } from '@heroicons/react/24/outline'
 import Sidebar from './Sidebar'
 import StatsCards from './StatsCards'
@@ -30,6 +31,7 @@ import ThemeToggle from './ThemeToggle'
 import WhatsAppConversations from './WhatsAppConversations'
 import AutomationPanel from './AutomationPanel'
 import { API_ENDPOINTS } from '../config/api'
+import StatusPage from '../app/status/page'
 
 
 const navigation = [
@@ -43,6 +45,7 @@ const navigation = [
   { name: 'Conversas WhatsApp', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
   { name: 'Automação IA', href: '#', icon: CogIcon, current: false },
   { name: 'Notificações', href: '#', icon: BellIcon, current: false },
+  { name: 'Status do Sistema', href: '#', icon: ServerIcon, current: false },
   { name: 'Chatbot', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
   { name: 'Configurações', href: '#', icon: CogIcon, current: false },
 ]
@@ -157,6 +160,8 @@ export default function Dashboard() {
         return <BroadcastManager />
       case 'Notificações':
         return <NotificationsManager />
+      case 'Status do Sistema':
+        return <StatusPage />
       case 'Configurações':
         return <SystemSettings />
       default:
