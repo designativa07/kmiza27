@@ -16,6 +16,7 @@
     "test": "cd backend && npm run test",
     "test:e2e": "cd backend && npm run test:e2e",
     "deploy:check": "node scripts/check-deploy.js",
+    "deploy:status": "node scripts/check-deploy-status.js",
     "deploy:health": "curl -f https://kmizabot.h4xd66.easypanel.host/health && curl -f https://kmizafrontend.h4xd66.easypanel.host/api/health",
     "cache:clear": "cd backend && npm cache clean --force && cd ../frontend && npm cache clean --force",
     "private:setup": "bash scripts/generate-deploy-keys.sh",

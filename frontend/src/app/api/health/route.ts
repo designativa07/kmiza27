@@ -9,13 +9,12 @@ export async function GET() {
     commit: process.env.GIT_COMMIT || 'unknown',
     port: process.env.PORT || 3002,
     environment: process.env.NODE_ENV || 'development',
-    api: {
-      url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-      status: 'configured'
-    },
-    nextjs: {
-      version: '15.4.0',
-      mode: process.env.NODE_ENV === 'production' ? 'standalone' : 'development'
+    api_url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    features: {
+      auth: true,
+      admin_panel: true,
+      user_management: true,
+      admin_creation: true
     }
   });
 } 
