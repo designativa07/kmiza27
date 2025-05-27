@@ -14,7 +14,10 @@
     "start:frontend": "cd frontend && npm start",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test": "cd backend && npm run test",
-    "test:e2e": "cd backend && npm run test:e2e"
+    "test:e2e": "cd backend && npm run test:e2e",
+    "deploy:check": "node scripts/check-deploy.js",
+    "deploy:health": "curl -f https://kmizabot.h4xd66.easypanel.host/health && curl -f https://kmizafrontend.h4xd66.easypanel.host/api/health",
+    "cache:clear": "cd backend && npm cache clean --force && cd ../frontend && npm cache clean --force"
   },
   "keywords": [
     "chatbot",
