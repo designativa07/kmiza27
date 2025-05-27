@@ -10,6 +10,11 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('admins')
+  getAdminUsers() {
+    return this.usersService.getAdminUsers();
+  }
+
   @Get('stats')
   getStats() {
     return this.usersService.getUserStats();
@@ -28,6 +33,16 @@ export class UsersController {
   @Post()
   createUser(@Body() createUserDto: { phoneNumber: string; name?: string }) {
     return this.usersService.createUser(createUserDto.phoneNumber, createUserDto.name);
+  }
+
+  @Post('create-admin')
+  createAdminUser(@Body() createAdminDto: {
+    name: string;
+    email?: string;
+    phone_number?: string;
+    password: string;
+  }) {
+    return this.usersService.createAdminUser(createAdminDto);
   }
 
   @Post('find-or-create')
@@ -52,8 +67,24 @@ export class UsersController {
   }
 
   @Patch(':id')
-  updateUser(@Param('id') id: string, @Body() updateData: { name?: string; phone_number?: string; is_active?: boolean }) {
+  updateUser(@Param('id') id: string, @Body() updateData: { 
+    name?: string; 
+    phone_number?: string; 
+    is_active?: boolean;
+    is_admin?: boolean;
+    email?: string;
+  }) {
     return this.usersService.updateUser(+id, updateData);
+  }
+
+  @Patch(':id/promote-admin')
+  promoteToAdmin(@Param('id') id: string) {
+    return this.usersService.promoteToAdmin(+id);
+  }
+
+  @Patch(':id/demote-admin')
+  demoteFromAdmin(@Param('id') id: string) {
+    return this.usersService.demoteFromAdmin(+id);
   }
 
   @Delete(':id')
