@@ -25,6 +25,8 @@
     "status:watch": "watch -n 10 'npm run status'",
     "deploy:force": "node scripts/force-deploy.js",
     "deploy:verify": "node scripts/force-deploy.js",
+    "uploads:check": "node scripts/check-uploads.js",
+    "uploads:verify": "node scripts/check-uploads.js",
     "cache:clear": "cd backend && npm cache clean --force && cd ../frontend && npm cache clean --force",
     "private:setup": "bash scripts/generate-deploy-keys.sh",
     "private:test": "ssh -T git@github.com",
