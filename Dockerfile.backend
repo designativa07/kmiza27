@@ -7,13 +7,18 @@ RUN apk add --no-cache libc6-compat python3 make g++ git curl
 
 WORKDIR /app
 
-# Cache busting com commit hash real
+# Cache busting com timestamp real
 ARG CACHEBUST=1
 ARG GIT_COMMIT=main
-RUN echo "Build: $CACHEBUST - Commit: $GIT_COMMIT - $(date)" > /app/build-info.txt
+ARG BUILD_TIMESTAMP
+RUN echo "Build: $CACHEBUST - Commit: $GIT_COMMIT - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
 
-# Clone específico do commit
+# Clone específico do commit e verificar mudanças
 RUN git clone --depth 1 --branch $GIT_COMMIT https://github.com/designativa07/kmiza27.git /tmp/repo
+
+# Forçar invalidação de cache baseado no conteúdo real
+RUN cd /tmp/repo && git log --oneline -1 > /app/latest-commit.txt
+RUN cd /tmp/repo/backend && find . -name "*.ts" -o -name "*.json" | head -10 | xargs ls -la > /app/files-hash.txt
 
 # Copiar apenas package files primeiro (melhor cache)
 RUN cp /tmp/repo/backend/package*.json ./
