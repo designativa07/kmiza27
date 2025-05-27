@@ -1,0 +1,75 @@
+# 🎨 Dockerfile Frontend Otimizado - Anti-Cache Issues
+# Multi-stage build para melhor cache management
+
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat git curl
+
+WORKDIR /app
+
+# Cache busting com commit hash real
+ARG CACHEBUST=1
+ARG GIT_COMMIT=main
+ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+RUN echo "Build: $CACHEBUST - Commit: $GIT_COMMIT - API: $NEXT_PUBLIC_API_URL - $(date)" > /app/build-info.txt
+
+# Clone específico do commit
+RUN git clone --depth 1 --branch $GIT_COMMIT https://github.com/designativa07/kmiza27.git /tmp/repo
+
+# Copiar apenas package files primeiro (melhor cache)
+COPY /tmp/repo/frontend/package*.json ./
+RUN rm -rf node_modules package-lock.json
+RUN npm ci --legacy-peer-deps
+
+# Stage 2: Builder
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Copiar dependências do stage anterior
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /tmp/repo/frontend ./
+
+# Configurar variáveis de build
+ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NODE_ENV=production
+ENV DISABLE_ESLINT_PLUGIN=true
+
+# Build da aplicação Next.js
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Instalar apenas dependências de runtime
+RUN apk add --no-cache curl dumb-init
+
+# Criar usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copiar arquivos necessários do build
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Configurar usuário
+USER nextjs
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3002
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_OPTIONS="--max-old-space-size=512"
+
+# Health check otimizado
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3002/api/health || curl -f http://localhost:3002 || exit 1
+
+# Expor porta
+EXPOSE 3002
+
+# Usar dumb-init para melhor signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"] 
