@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Team } from '../../entities';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,14 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
+      relations: ['favorite_team'],
+      order: { created_at: 'DESC' }
+    });
+  }
+
+  async getAdminUsers(): Promise<User[]> {
+    return this.userRepository.find({
+      where: { is_admin: true },
       relations: ['favorite_team'],
       order: { created_at: 'DESC' }
     });
@@ -48,6 +57,31 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
+  async createAdminUser(userData: {
+    name: string;
+    email?: string;
+    phone_number?: string;
+    password: string;
+  }): Promise<User> {
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(userData.password, saltRounds);
+
+    const adminUser = this.userRepository.create({
+      name: userData.name,
+      email: userData.email,
+      phone_number: userData.phone_number,
+      password_hash,
+      is_admin: true,
+      is_active: true,
+      preferences: {
+        notifications: true,
+        language: 'pt-BR'
+      }
+    });
+
+    return this.userRepository.save(adminUser);
+  }
+
   async findOrCreateUser(phoneNumber: string, name?: string): Promise<User> {
     let user = await this.findByPhone(phoneNumber);
     
@@ -69,6 +103,44 @@ export class UsersService {
   async updateUser(id: number, updateData: Partial<User>): Promise<User | null> {
     await this.userRepository.update(id, updateData);
     return this.findOne(id);
+  }
+
+  async promoteToAdmin(id: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.findOne(id);
+      if (!user) {
+        return { success: false, message: 'Usuário não encontrado' };
+      }
+
+      if (user.is_admin) {
+        return { success: false, message: 'Usuário já é administrador' };
+      }
+
+      await this.userRepository.update(id, { is_admin: true });
+      return { success: true, message: 'Usuário promovido a administrador com sucesso' };
+    } catch (error) {
+      console.error('Erro ao promover usuário:', error);
+      return { success: false, message: 'Erro ao promover usuário' };
+    }
+  }
+
+  async demoteFromAdmin(id: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.findOne(id);
+      if (!user) {
+        return { success: false, message: 'Usuário não encontrado' };
+      }
+
+      if (!user.is_admin) {
+        return { success: false, message: 'Usuário não é administrador' };
+      }
+
+      await this.userRepository.update(id, { is_admin: false });
+      return { success: true, message: 'Privilégios de administrador removidos com sucesso' };
+    } catch (error) {
+      console.error('Erro ao remover privilégios de admin:', error);
+      return { success: false, message: 'Erro ao remover privilégios de admin' };
+    }
   }
 
   async deleteUser(id: number): Promise<{ success: boolean; message: string }> {
@@ -109,11 +181,13 @@ export class UsersService {
     active: number;
     withFavoriteTeam: number;
     recentInteractions: number;
+    admins: number;
   }> {
     const { Not, IsNull, MoreThan } = require('typeorm');
     
     const total = await this.userRepository.count();
     const active = await this.userRepository.count({ where: { is_active: true } });
+    const admins = await this.userRepository.count({ where: { is_admin: true } });
     const withFavoriteTeam = await this.userRepository
       .createQueryBuilder('user')
       .where('user.favorite_team_id IS NOT NULL')
@@ -126,6 +200,6 @@ export class UsersService {
       where: { updated_at: MoreThan(yesterday) }
     });
 
-    return { total, active, withFavoriteTeam, recentInteractions };
+    return { total, active, withFavoriteTeam, recentInteractions, admins };
   }
 } 
