@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   ChartBarIcon, 
   UsersIcon, 
@@ -19,6 +20,7 @@ import CompetitionsManager from './CompetitionsManager'
 import MatchesManager from './MatchesManager'
 import StandingsManager from './StandingsManager'
 import UsersManager from './UsersManager'
+import AdminsManager from './AdminsManager'
 import ChatbotSettings from './ChatbotSettings'
 import BroadcastManager from './BroadcastManager'
 import NotificationsManager from './NotificationsManager'
@@ -37,6 +39,7 @@ const navigation = [
   { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
   { name: 'Classificações', href: '#', icon: ChartBarIcon, current: false },
   { name: 'Usuários', href: '#', icon: UsersIcon, current: false },
+  { name: 'Administradores', href: '#', icon: UsersIcon, current: false },
   { name: 'Conversas WhatsApp', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
   { name: 'Automação IA', href: '#', icon: CogIcon, current: false },
   { name: 'Notificações', href: '#', icon: BellIcon, current: false },
@@ -45,6 +48,7 @@ const navigation = [
 ]
 
 export default function Dashboard() {
+  const { user, logout, isAuthenticated } = useAuth()
   const [currentPage, setCurrentPage] = useState('Dashboard')
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -52,6 +56,14 @@ export default function Dashboard() {
     totalMatches: 0,
     activeConversations: 0
   })
+
+  // Verificar autenticação
+  useEffect(() => {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     // Carregar estatísticas do backend
@@ -133,6 +145,8 @@ export default function Dashboard() {
         return <StandingsManager />
       case 'Usuários':
         return <UsersManager />
+      case 'Administradores':
+        return <AdminsManager />
       case 'Conversas WhatsApp':
         return <WhatsAppConversations />
       case 'Automação IA':
@@ -174,8 +188,29 @@ export default function Dashboard() {
             <div className="flex flex-1 justify-center">
               <GlobalSearch onNavigate={setCurrentPage} />
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
               <ThemeToggle />
+              {user && (
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {user.name || user.username}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Administrador
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      logout()
+                      window.location.href = '/login'
+                    }}
+                    className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Sair
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

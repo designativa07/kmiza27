@@ -19,7 +19,19 @@
     "deploy:health": "curl -f https://kmizabot.h4xd66.easypanel.host/health && curl -f https://kmizafrontend.h4xd66.easypanel.host/api/health",
     "cache:clear": "cd backend && npm cache clean --force && cd ../frontend && npm cache clean --force",
     "private:setup": "bash scripts/generate-deploy-keys.sh",
-    "private:test": "ssh -T git@github.com"
+    "private:test": "ssh -T git@github.com",
+    "docker:build": "docker-compose build --no-cache",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:logs": "docker-compose logs -f --tail=50",
+    "docker:status": "docker-compose ps",
+    "rebuild": "bash scripts/rebuild-services.sh",
+    "rebuild:backend": "bash scripts/rebuild-services.sh backend",
+    "rebuild:frontend": "bash scripts/rebuild-services.sh frontend",
+    "rebuild:win": "powershell -ExecutionPolicy Bypass -File scripts/rebuild-services.ps1",
+    "rebuild:win:backend": "powershell -ExecutionPolicy Bypass -File scripts/rebuild-services.ps1 backend",
+    "rebuild:win:frontend": "powershell -ExecutionPolicy Bypass -File scripts/rebuild-services.ps1 frontend"
   },
   "keywords": [
     "chatbot",

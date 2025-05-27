@@ -1,10 +1,5 @@
-import AdminLayout from '@/components/layout/AdminLayout'
-import DashboardOverview from '@/components/dashboard/DashboardOverview'
+import Dashboard from '@/components/Dashboard'
 
 export default function Home() {
-  return (
-    <AdminLayout>
-      <DashboardOverview />
-    </AdminLayout>
-  )
+  return <Dashboard />
 }

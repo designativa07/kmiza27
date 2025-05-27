@@ -61,6 +61,12 @@ USER nestjs
 # Variáveis de ambiente
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV BUILD_TIMESTAMP=$CACHEBUST
+ENV GIT_COMMIT=$GIT_COMMIT
+
+# Configurações para restart automático
+ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV RESTART_POLICY=always
 
 # Health check otimizado
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, UserIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, UserIcon, ChatBubbleLeftRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
+import { authService } from '@/services/authService'
 
 interface User {
   id: number
@@ -14,6 +15,7 @@ interface User {
     slug: string
   }
   is_active: boolean
+  is_admin?: boolean
   updated_at?: string
   preferences?: any
   whatsapp_status: string
@@ -180,6 +182,39 @@ export default function UsersManager() {
     }
   }
 
+  const toggleAdminStatus = async (id: number) => {
+    try {
+      const user = users.find(u => u.id === id)
+      if (!user) return
+      
+      const action = user.is_admin ? 'rebaixar' : 'promover'
+      const confirmMessage = user.is_admin 
+        ? 'Tem certeza que deseja remover os privilégios de administrador deste usuário?'
+        : 'Tem certeza que deseja promover este usuário a administrador?'
+      
+      if (!confirm(confirmMessage)) return
+      
+      console.log(`🔄 UsersManager: ${action} usuário ID:`, id)
+      
+      if (user.is_admin) {
+        await authService.demoteFromAdmin(id)
+      } else {
+        await authService.promoteToAdmin(id)
+      }
+      
+      console.log(`✅ UsersManager: Usuário ${action}do com sucesso`)
+      
+      // Atualizar interface
+      setUsers(users.map(u => 
+        u.id === id ? { ...u, is_admin: !u.is_admin } : u
+      ))
+      
+    } catch (error) {
+      console.error(`❌ UsersManager: Erro ao alterar privilégios de admin:`, error)
+      alert('Erro ao alterar privilégios de administrador. Tente novamente.')
+    }
+  }
+
   const getStatusBadge = (isActive: boolean) => {
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -315,6 +350,9 @@ export default function UsersManager() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tipo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status WhatsApp
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -357,6 +395,27 @@ export default function UsersManager() {
                           className="cursor-pointer"
                         >
                           {getStatusBadge(user.is_active)}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => toggleAdminStatus(user.id)}
+                          className="cursor-pointer"
+                        >
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.is_admin 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.is_admin ? (
+                              <>
+                                <UserGroupIcon className="h-3 w-3 mr-1" />
+                                Admin
+                              </>
+                            ) : (
+                              'Usuário'
+                            )}
+                          </span>
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
