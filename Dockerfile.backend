@@ -17,8 +17,8 @@ RUN git clone --depth 1 --branch $GIT_COMMIT https://github.com/designativa07/km
 
 # Copiar apenas package files primeiro (melhor cache)
 RUN cp /tmp/repo/backend/package*.json ./
-RUN rm -rf node_modules package-lock.json
-RUN npm ci --only=production --legacy-peer-deps
+RUN rm -rf node_modules
+RUN npm install --only=production --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
@@ -27,6 +27,9 @@ WORKDIR /app
 # Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /tmp/repo/backend ./
+
+# Instalar dependências de desenvolvimento para build
+RUN npm install --legacy-peer-deps
 
 # Build da aplicação
 RUN npm run build
