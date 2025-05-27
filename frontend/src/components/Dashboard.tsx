@@ -135,7 +135,7 @@ export default function Dashboard() {
       case 'Dashboard':
         return (
           <div className="space-y-8">
-            <StatsCards stats={stats} />
+            <StatsCards stats={stats} onNavigate={setCurrentPage} />
           </div>
         )
       case 'Times':
@@ -167,7 +167,7 @@ export default function Dashboard() {
       default:
         return (
           <div className="space-y-8">
-            <StatsCards stats={stats} />
+            <StatsCards stats={stats} onNavigate={setCurrentPage} />
           </div>
         )
     }
