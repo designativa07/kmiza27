@@ -32,6 +32,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { StandingsModule } from './modules/standings/standings.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { BotConfigModule } from './modules/bot-config/bot-config.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { BotConfigModule } from './modules/bot-config/bot-config.module';
     StandingsModule,
     WhatsAppModule,
     BotConfigModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
