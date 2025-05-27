@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { UsersIcon, TrophyIcon, CalendarIcon, ChatBubbleLeftRightIcon, ChartBarIcon, HeartIcon, ClockIcon } from '@heroicons/react/24/outline'
 import AdvancedCharts from './AdvancedCharts'
-import WhatsAppConversations from './WhatsAppConversations'
 import StatusCard from './StatusCard'
 
 interface StatsProps {
@@ -13,11 +12,11 @@ interface StatsProps {
     totalMatches: number
     activeConversations: number
   }
+  onNavigate?: (page: string) => void
 }
 
-export default function StatsCards({ stats }: StatsProps) {
+export default function StatsCards({ stats, onNavigate }: StatsProps) {
   const [showAdvancedCharts, setShowAdvancedCharts] = useState(false)
-  const [showWhatsAppConversations, setShowWhatsAppConversations] = useState(false)
 
   // Primeira linha de cards (dados principais)
   const mainStatsData = [
@@ -73,7 +72,7 @@ export default function StatsCards({ stats }: StatsProps) {
       icon: ChatBubbleLeftRightIcon,
       change: 'Em tempo real',
       changeType: 'neutral',
-      onClick: () => setShowWhatsAppConversations(true),
+      onClick: () => onNavigate && onNavigate('Conversas WhatsApp'),
     },
   ]
 
@@ -253,21 +252,6 @@ export default function StatsCards({ stats }: StatsProps) {
         <AdvancedCharts />
       )}
 
-      {/* Modal/Seção de Conversas WhatsApp */}
-      {showWhatsAppConversations && (
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Conversas WhatsApp em Tempo Real</h3>
-            <button
-              onClick={() => setShowWhatsAppConversations(false)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Fechar
-            </button>
-          </div>
-          <WhatsAppConversations />
-        </div>
-      )}
     </div>
   )
 } 
