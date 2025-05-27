@@ -1,5 +1,5 @@
-# 🎨 Dockerfile Frontend Otimizado - Anti-Cache Issues
-# Multi-stage build para melhor cache management
+# 🎨 Dockerfile Frontend Otimizado - Auto Commit Detection
+# Multi-stage build com captura automática de commit
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
@@ -9,17 +9,22 @@ WORKDIR /app
 
 # Cache busting com timestamp real
 ARG CACHEBUST=1
-ARG GIT_COMMIT=main
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
 ARG BUILD_TIMESTAMP
-RUN echo "Build: $CACHEBUST - Commit: $GIT_COMMIT - API: $NEXT_PUBLIC_API_URL - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
+RUN echo "Build: $CACHEBUST - API: $NEXT_PUBLIC_API_URL - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
 
-# Clone específico do commit e verificar mudanças
-RUN git clone --depth 1 --branch $GIT_COMMIT https://github.com/designativa07/kmiza27.git /tmp/repo
+# Clone do repositório atual
+RUN git clone https://github.com/designativa07/kmiza27.git /tmp/repo
 
-# Forçar invalidação de cache baseado no conteúdo real
-RUN cd /tmp/repo && git log --oneline -1 > /app/latest-commit.txt
-RUN cd /tmp/repo/frontend && find . -name "*.tsx" -o -name "*.ts" -o -name "*.json" | head -10 | xargs ls -la > /app/files-hash.txt
+# Capturar commit automaticamente do repositório clonado
+RUN cd /tmp/repo && \
+    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
+    echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
+    echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
+    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
+    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> /app/build-vars.env && \
+    echo "Commit capturado: $GIT_COMMIT_AUTO" && \
+    git log --oneline -1
 
 # Copiar apenas package files primeiro (melhor cache)
 RUN cp /tmp/repo/frontend/package*.json ./
@@ -30,18 +35,31 @@ RUN npm install --legacy-peer-deps
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências do stage anterior
+# Copiar dependências e variáveis do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/build-vars.env ./build-vars.env
 COPY --from=deps /tmp/repo/frontend ./
 
-# Configurar variáveis de build
+# Carregar e configurar variáveis de build
+RUN . ./build-vars.env && \
+    echo "Usando commit: $GIT_COMMIT" && \
+    echo "Usando timestamp: $BUILD_TIMESTAMP" && \
+    echo "Usando API URL: $NEXT_PUBLIC_API_URL" && \
+    export GIT_COMMIT && \
+    export BUILD_TIMESTAMP && \
+    export NEXT_PUBLIC_API_URL
+
+# Configurar variáveis de build para Next.js
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
 ENV DISABLE_ESLINT_PLUGIN=true
 
-# Build da aplicação Next.js
-RUN npm run build
+# Build da aplicação Next.js com variáveis carregadas
+RUN . ./build-vars.env && \
+    export GIT_COMMIT && \
+    export BUILD_TIMESTAMP && \
+    npm run build
 
 # Criar pasta public se não existir
 RUN mkdir -p ./public
@@ -61,19 +79,26 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/build-vars.env ./build-vars.env
+
+# Criar script de inicialização que carrega as variáveis
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo '. /app/build-vars.env' >> /app/start.sh && \
+    echo 'export GIT_COMMIT' >> /app/start.sh && \
+    echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_API_URL' >> /app/start.sh && \
+    echo 'echo "Iniciando frontend com commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
 # Configurar usuário
 USER nextjs
 
-# Variáveis de ambiente
+# Variáveis de ambiente fixas
 ENV NODE_ENV=production
 ENV PORT=3002
 ENV HOSTNAME="0.0.0.0"
 ENV NODE_OPTIONS="--max-old-space-size=512"
-ENV BUILD_TIMESTAMP=$CACHEBUST
-ENV GIT_COMMIT=$GIT_COMMIT
-
-# Configurações para restart automático
 ENV RESTART_POLICY=always
 
 # Health check otimizado
@@ -85,4 +110,4 @@ EXPOSE 3002
 
 # Usar dumb-init para melhor signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server.js"] 
+CMD ["/app/start.sh"] 
