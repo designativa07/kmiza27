@@ -26,6 +26,7 @@
     "deploy:auto": "node scripts/auto-deploy-easypanel.js",
     "deploy:verify": "node scripts/check-deploy.js",
     "deploy:force": "node scripts/force-deploy.js",
+    "deploy:setup": "node scripts/setup-easypanel-autodeploy.js",
     "webhook:configure": "node configure-webhook-easypanel.js",
     "webhook:check": "node check-webhook.js",
     "fix-commit": "node scripts/fix-commit-status.js",

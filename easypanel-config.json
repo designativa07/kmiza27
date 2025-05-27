@@ -1,0 +1,25 @@
+{
+  "easypanel": {
+    "auto_deploy": true,
+    "github_webhook": true,
+    "services": {
+      "backend": {
+        "name": "kmizabot",
+        "dockerfile": "Dockerfile.backend",
+        "url": "https://kmizabot.h4xd66.easypanel.host",
+        "health_endpoint": "/health"
+      },
+      "frontend": {
+        "name": "kmizafrontend",
+        "dockerfile": "Dockerfile.frontend",
+        "url": "https://kmizafrontend.h4xd66.easypanel.host",
+        "health_endpoint": "/api/health"
+      }
+    }
+  },
+  "github": {
+    "repository": "designativa07/kmiza27",
+    "branch": "main"
+  },
+  "last_updated": "2025-05-27T23:15:44.423Z"
+}
