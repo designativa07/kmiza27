@@ -1,15 +1,14 @@
 # Force Rebuild - Kmiza27
 # Este arquivo muda a cada commit para forçar invalidação de cache
 
-Build Timestamp: 2025-05-27T19:05:00Z
-Commit: feat-painel-original-restaurado-login
+Build Timestamp: 2025-05-27T19:10:00Z
+Commit: fix-localhost-urls-production
 Features: auth, admin-panel, user-management, admin-creation
-Cache Buster: 1732734300
+Cache Buster: 1732734600
 
 # Mudanças neste commit:
-- Painel administrativo original restaurado
-- Sistema de login integrado
-- Página Administradores adicionada
-- Funcionalidades de promoção/rebaixamento de admin
+- URLs localhost corrigidas para produção
+- Health check com URL correta da API
+- AuthService com fallback para produção
 - Cache busting melhorado
-- Health checks com versioning 
+- Sistema anti-cache implementado 

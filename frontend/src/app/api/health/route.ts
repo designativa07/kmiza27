@@ -9,7 +9,7 @@ export async function GET() {
     commit: process.env.GIT_COMMIT || 'unknown',
     port: process.env.PORT || 3002,
     environment: process.env.NODE_ENV || 'development',
-    api_url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    api_url: process.env.NEXT_PUBLIC_API_URL || 'https://kmizabot.h4xd66.easypanel.host',
     features: {
       auth: true,
       admin_panel: true,

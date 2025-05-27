@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { LoginCredentials, LoginResponse, User, UserStats, CreateAdminData } from '@/types/auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://kmizabot.h4xd66.easypanel.host';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
