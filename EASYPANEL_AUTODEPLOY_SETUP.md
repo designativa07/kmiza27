@@ -1,4 +1,3 @@
-
 # 🔧 Configuração de Auto-Deploy no EasyPanel
 
 ## 🎯 Problema Atual
@@ -25,36 +24,48 @@
 #### Para o Backend (kmizabot):
 1. Acesse o EasyPanel Dashboard
 2. Vá para o app **kmizabot**
-3. Aba **"Source"** ou **"Git"**
+3. Aba **"Fonte"** (Source)
 4. Configure:
-   - **Repository**: `https://github.com/designativa07/kmiza27`
-   - **Branch**: `main`
-   - **Auto Deploy**: ✅ **ATIVAR**
+   - **Fonte**: Selecione **"Github"**
+   - **Proprietário**: `designativa07`
+   - **Repositório**: `kmiza27`
+   - **Ramo**: `main`
+   - **Caminho de Build**: `/` (raiz do projeto)
    - **Dockerfile**: `Dockerfile.backend`
-   - **Build Context**: `.` (raiz do projeto)
 
 #### Para o Frontend (kmizafrontend):
 1. Vá para o app **kmizafrontend**
-2. Aba **"Source"** ou **"Git"**
+2. Aba **"Fonte"** (Source)
 3. Configure:
-   - **Repository**: `https://github.com/designativa07/kmiza27`
-   - **Branch**: `main`
-   - **Auto Deploy**: ✅ **ATIVAR**
+   - **Fonte**: Selecione **"Github"**
+   - **Proprietário**: `designativa07`
+   - **Repositório**: `kmiza27`
+   - **Ramo**: `main`
+   - **Caminho de Build**: `/` (raiz do projeto)
    - **Dockerfile**: `Dockerfile.frontend`
-   - **Build Context**: `.` (raiz do projeto)
 
-### 3. Configurar Build Settings
+### 3. Configurar Auto-Deploy
 
-#### Para ambos os serviços:
-1. Aba **"Build"** ou **"Settings"**
-2. **Build Arguments** (opcional, mas recomendado):
-   ```
-   CACHEBUST=${TIMESTAMP}
-   ```
-3. **Auto Restart**: ✅ **ATIVAR**
-4. **Health Check**: ✅ **ATIVAR**
+#### Procure por uma dessas opções no EasyPanel:
+- **"Auto Deploy"** ou **"Deploy Automático"**
+- **"Webhook"** ou **"GitHub Webhook"**
+- **"Continuous Deployment"** ou **"CD"**
+- **"Auto Rebuild"** ou **"Rebuild Automático"**
 
-### 4. Testar Auto-Deploy
+#### Locais onde pode estar:
+1. **Aba "Implantações"** (Deployments)
+2. **Aba "Ambiente"** (Environment)
+3. **Aba "Avançado"** (Advanced)
+4. **Seção "Webhook" ou "Git"**
+
+### 4. Configurações Adicionais
+
+#### Se houver opções de Build:
+- **Build Arguments**: (opcional)
+- **Auto Restart**: ✅ Ativar se disponível
+- **Health Check**: ✅ Ativar se disponível
+
+### 5. Testar Auto-Deploy
 
 #### Após configurar:
 1. Faça uma mudança pequena no código
@@ -68,33 +79,50 @@
 4. Verifique se o rebuild iniciou automaticamente no EasyPanel
 5. Verifique se o commit foi atualizado nos health endpoints
 
+## 🔍 Como Encontrar Auto-Deploy no Seu EasyPanel
+
+### Método 1: Verificar todas as abas
+Procure em cada aba do seu serviço:
+- ✅ **Visão Geral** - pode ter toggle de auto-deploy
+- ✅ **Fonte** - onde você está agora
+- ✅ **Implantações** - configurações de deploy
+- ✅ **Ambiente** - variáveis e configurações
+- ✅ **Domínios** - configurações de domínio
+- ✅ **Avançado** - configurações avançadas
+
+### Método 2: Procurar por palavras-chave
+Procure por textos como:
+- "Auto Deploy"
+- "Webhook"
+- "GitHub Integration"
+- "Continuous Deployment"
+- "Auto Rebuild"
+
+### Método 3: Verificar configurações do repositório
+Na aba **Fonte**, depois de configurar o repositório, pode aparecer:
+- Toggle para "Auto Deploy"
+- Opção "Deploy on Push"
+- Configuração de "Webhook URL"
+
 ## 🚨 Troubleshooting
 
-### Se o auto-deploy não funcionar:
+### Se não encontrar a opção de Auto-Deploy:
 
-1. **Verificar Webhook do GitHub**:
-   - Vá em Settings > Webhooks
-   - Clique no webhook criado
-   - Aba "Recent Deliveries"
-   - Verifique se há entregas com status 200
+1. **Verificar se o repositório está conectado corretamente**:
+   - Proprietário: `designativa07`
+   - Repositório: `kmiza27`
+   - Ramo: `main`
 
-2. **Verificar Logs do EasyPanel**:
-   - Vá para o app no EasyPanel
-   - Aba "Logs" ou "Build Logs"
-   - Procure por erros de build
+2. **Salvar configurações primeiro**:
+   - Clique em **"Salvar"** na aba Fonte
+   - Aguarde a conexão com GitHub ser estabelecida
 
-3. **Verificar Configuração do Repositório**:
-   - Confirme que o repositório está público ou o EasyPanel tem acesso
-   - Verifique se a branch está correta
-   - Confirme que os Dockerfiles existem no caminho especificado
+3. **Verificar outras abas**:
+   - A opção pode aparecer após salvar a configuração do repositório
 
-### Se ainda não funcionar:
-
-1. **Método Alternativo - GitHub Actions**:
-   Podemos configurar GitHub Actions para fazer deploy via API do EasyPanel
-
-2. **Webhook Manual**:
-   Configurar webhook personalizado que chama API do EasyPanel
+4. **Verificar versão do EasyPanel**:
+   - Versões mais antigas podem ter interface diferente
+   - A funcionalidade pode estar em local diferente
 
 ## ✅ Resultado Esperado
 
