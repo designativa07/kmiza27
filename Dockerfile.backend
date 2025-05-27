@@ -7,8 +7,8 @@ RUN apk add --no-cache curl python3 make g++ git
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Quebrar cache - versão 1.1 (BACKEND DEPLOY + GIT FIX)
-RUN echo "Backend build version 1.1 - $(date)"
+# Quebrar cache - versão 1.2 (BACKEND DEPLOY + NPM FIX)
+RUN echo "Backend build version 1.2 - $(date)"
 
 # Download direto do GitHub e cópia específica do backend
 RUN cd /tmp && \
@@ -16,8 +16,8 @@ RUN cd /tmp && \
     cp -r /tmp/repo/backend/. /app/ && \
     rm -rf /tmp/repo
 
-# Instalar dependências
-RUN npm ci --legacy-peer-deps
+# Instalar dependências (fresh install para resolver conflitos)
+RUN rm -f package-lock.json && npm install --legacy-peer-deps
 
 # Build da aplicação NestJS
 RUN npm run build
