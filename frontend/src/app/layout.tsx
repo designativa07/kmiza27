@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kmiza27 Chatbot - Painel Administrativo",
   description: "Painel administrativo para gerenciar o chatbot de futebol Kmiza27",
+  keywords: "chatbot, futebol, administração, kmiza27",
+  authors: [{ name: "Kmiza27 Team" }],
+  robots: "noindex, nofollow", // Não indexar páginas administrativas
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
@@ -23,11 +29,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>
+          <ProtectedRoute>
+            {children}
+          </ProtectedRoute>
+        </AuthProvider>
       </body>
     </html>
   );

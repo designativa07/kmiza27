@@ -1,260 +1,250 @@
-# 🤖 kmiza27-chatbot
+# 🤖⚽ Kmiza27 ChatBot - Sistema Administrativo Completo
 
-Chatbot inteligente para WhatsApp com IA integrada, especializado em informações de futebol brasileiro.
+[![Next.js](https://img.shields.io/badge/Next.js-15.4.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-10.0.0-red?style=for-the-badge&logo=nestjs)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
-## 📋 Sobre o Projeto
+> **ChatBot inteligente de futebol com dashboard administrativo moderno e sistema de autenticação completo.**
 
-O **kmiza27-chatbot** é um sistema completo de chatbot para WhatsApp que utiliza inteligência artificial para responder automaticamente a perguntas sobre futebol brasileiro. O sistema é composto por um backend em NestJS, frontend em Next.js e integração com a Evolution API para WhatsApp.
+## 🎯 **Sobre o Projeto**
 
-### 🎯 Funcionalidades
+O **Kmiza27** é um chatbot especializado em futebol que oferece informações em tempo real sobre jogos, estatísticas de times e jogadores. O sistema inclui um **dashboard administrativo completo** para gerenciamento de usuários e administradores.
 
-- 🤖 **Chatbot com IA**: Respostas inteligentes usando OpenAI
-- ⚽ **Especializado em Futebol**: Informações sobre times, jogos e competições
-- 📱 **WhatsApp Integration**: Integração completa com WhatsApp via Evolution API
-- 🎨 **Interface Web**: Dashboard para gerenciar conversas e configurações
-- 📊 **Analytics**: Estatísticas de uso e engajamento
-- 🔔 **Notificações**: Sistema de notificações automáticas para jogos
+### ✨ **Principais Funcionalidades**
 
-### 🏗️ Arquitetura
+- 🤖 **ChatBot Inteligente** - Respostas automáticas sobre futebol
+- 🔐 **Sistema de Autenticação** - Login seguro com JWT
+- 📊 **Dashboard Administrativo** - Interface moderna para gestão
+- 👥 **Gerenciamento de Usuários** - CRUD completo com filtros
+- 🛡️ **Controle de Administradores** - Criação e gestão de admins
+- 📱 **Interface Responsiva** - Design mobile-first
+- ⚡ **Tempo Real** - Estatísticas atualizadas automaticamente
+
+## 🏗️ **Arquitetura do Sistema**
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   WhatsApp      │◄──►│  Evolution API   │◄──►│   Backend       │
-│   (Usuários)    │    │  (Webhook)       │    │   (NestJS)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                         │
-                                                         ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │◄──►│   Database       │◄──►│   OpenAI API    │
-│   (Next.js)     │    │   (PostgreSQL)   │    │   (IA)          │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│                 │    │                 │    │                 │
+│   Frontend      │◄──►│    Backend      │◄──►│   PostgreSQL    │
+│   (Next.js)     │    │   (NestJS)      │    │   Database      │
+│   Port: 3002    │    │   Port: 3000    │    │   Port: 5433    │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🚀 Tecnologias
+### 🔧 **Stack Tecnológica**
 
-### Backend
-- **NestJS** - Framework Node.js
-- **TypeScript** - Linguagem de programação
-- **PostgreSQL** - Banco de dados
-- **TypeORM** - ORM para banco de dados
-- **OpenAI API** - Inteligência artificial
+#### **Frontend**
+- **Next.js 15** - Framework React com SSR
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Framework CSS utilitário
+- **Heroicons** - Biblioteca de ícones
+- **Axios** - Cliente HTTP
 
-### Frontend
-- **Next.js 15** - Framework React
-- **TypeScript** - Linguagem de programação
-- **Tailwind CSS** - Framework CSS
-- **Shadcn/ui** - Componentes UI
+#### **Backend**
+- **NestJS** - Framework Node.js escalável
+- **TypeORM** - ORM para TypeScript
+- **JWT** - Autenticação por tokens
+- **bcrypt** - Hash de senhas
+- **Class Validator** - Validação de dados
 
-### Infraestrutura
-- **Evolution API** - Integração WhatsApp
-- **Hostinger VPS** - Hospedagem
-- **Easypanel** - Gerenciamento de containers
-- **ngrok** - Túnel para desenvolvimento
+#### **Banco de Dados**
+- **PostgreSQL** - Banco relacional
+- **TypeORM Migrations** - Controle de versão do DB
 
-## 📦 Instalação
+## 🚀 **Instalação e Configuração**
 
-### Pré-requisitos
+### **Pré-requisitos**
+- Node.js 18+ 
+- PostgreSQL 15+
+- npm ou yarn
 
-- Node.js 18+
-- PostgreSQL
-- Conta OpenAI (para IA)
-- Evolution API configurada
-
-### 1. Clone o repositório
-
+### **1. Clone o Repositório**
 ```bash
 git clone https://github.com/designativa07/kmiza27.git
 cd kmiza27
 ```
 
-### 2. Configuração do Backend
-
+### **2. Instale as Dependências**
 ```bash
-cd backend
+# Instalar dependências do projeto
 npm install
 
-# Copie e configure as variáveis de ambiente
-cp .env.example .env
+# Instalar dependências do backend
+cd backend && npm install
+
+# Instalar dependências do frontend
+cd ../frontend && npm install
 ```
 
-Configure o arquivo `.env`:
+### **3. Configuração do Banco de Dados**
 
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/kmiza27"
-
-# OpenAI
-OPENAI_API_KEY="sua_chave_openai"
-
-# Evolution API
-EVOLUTION_API_URL="https://sua-evolution-api.com"
-EVOLUTION_API_KEY="sua_chave_evolution"
-EVOLUTION_INSTANCE="sua_instancia"
-
-# Ambiente
-NODE_ENV="development"
-PORT=3000
-```
-
-### 3. Configuração do Frontend
+Crie um banco PostgreSQL e configure as variáveis de ambiente:
 
 ```bash
-cd frontend
-npm install
+# backend/.env
+DATABASE_HOST=localhost
+DATABASE_PORT=5433
+DATABASE_USERNAME=seu_usuario
+DATABASE_PASSWORD=sua_senha
+DATABASE_NAME=kmiza27_db
 
-# Copie e configure as variáveis de ambiente
-cp .env.example .env.local
+JWT_SECRET=seu_jwt_secret_super_seguro
+JWT_EXPIRES_IN=24h
 ```
 
-Configure o arquivo `.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL="http://localhost:3000"
-```
-
-### 4. Executar o projeto
-
+### **4. Execute as Migrações**
 ```bash
-# Backend (terminal 1)
 cd backend
-npm run start:dev
+npm run migration:run
+```
 
-# Frontend (terminal 2)
-cd frontend
+### **5. Inicie os Serviços**
+```bash
+# No diretório raiz
 npm run dev
 ```
 
-## 🔧 Configuração do Webhook
+Isso iniciará:
+- **Backend**: http://localhost:3000
+- **Frontend**: http://localhost:3002
 
-### Desenvolvimento (com ngrok)
+## 🎛️ **Dashboard Administrativo**
 
-1. Instale e configure o ngrok
-2. Execute: `ngrok http 3000`
-3. Configure o webhook:
+### **Acesso ao Sistema**
+1. Acesse: `http://localhost:3002`
+2. Faça login com as credenciais:
+   - **Usuário**: `admin_kmiza27`
+   - **Senha**: `admin@kmiza27`
 
-```bash
-node configure-webhook-ngrok.js
+### **Funcionalidades Disponíveis**
+
+#### 📊 **Dashboard Principal**
+- Cards de estatísticas em tempo real
+- Lista de usuários recentes
+- Ações rápidas para navegação
+- Métricas de engajamento
+
+#### 👥 **Gerenciamento de Usuários**
+- Listagem completa com paginação
+- Filtros por status (ativo/inativo)
+- Busca por nome, email ou telefone
+- Promoção/rebaixamento de administradores
+- Exclusão de usuários com confirmação
+
+#### 🛡️ **Administradores**
+- Visualização em grid de cards
+- Criação de novos administradores
+- Formulário com validação completa
+- Gestão de permissões
+
+## 📱 **Interface e Design**
+
+### **Design System**
+- **Cores**: Gradientes azul/roxo e laranja/vermelho
+- **Tipografia**: Geist Sans
+- **Ícones**: Heroicons
+- **Responsividade**: Mobile-first
+- **Estados**: Loading, erro, sucesso, vazio
+
+### **Componentes Principais**
+- `AdminLayout` - Layout com sidebar e header
+- `StatsCard` - Cards de estatísticas coloridos
+- `ProtectedRoute` - Proteção de rotas
+- `LoadingSpinner` - Estados de carregamento
+
+## 🛡️ **Segurança**
+
+### **Autenticação**
+- ✅ JWT com expiração de 24h
+- ✅ Verificação automática de tokens
+- ✅ Proteção de todas as rotas
+- ✅ Logout com limpeza de dados
+
+### **Autorização**
+- ✅ Controle de acesso por roles
+- ✅ Middleware de autenticação
+- ✅ Validação de permissões
+
+### **Dados**
+- ✅ Hash de senhas com bcrypt
+- ✅ Validação de inputs
+- ✅ Sanitização de dados
+- ✅ Headers de segurança
+
+## 📦 **Deploy**
+
+### **Easypanel (Recomendado)**
+
+O sistema está otimizado para deploy no Easypanel com apenas **2 aplicações**:
+
+#### **1. Backend (kmiza27-backend)**
+```dockerfile
+# Usar Dockerfile existente
+PORT: 3000
+ENV: production
 ```
 
-### Produção (VPS)
-
-```bash
-# Defina a URL de produção
-export NODE_ENV=production
-export PRODUCTION_URL=https://sua-url-producao.com
-
-# Configure o webhook
-node configure-webhook-auto.js
+#### **2. Frontend (kmiza27-frontend)**
+```dockerfile
+# Build Next.js
+PORT: 3002
+ENV: production
+NEXT_PUBLIC_API_URL: https://api.seudominio.com
 ```
 
-## 🤖 Como Usar
+### **Variáveis de Ambiente**
 
-### Comandos do Chatbot
-
-O chatbot responde a perguntas em linguagem natural sobre:
-
-- **Próximos jogos**: "Próximo jogo do Flamengo"
-- **Informações de times**: "Informações do Palmeiras"
-- **Tabela de classificação**: "Tabela do Brasileirão"
-- **Jogos de hoje**: "Jogos de hoje"
-
-### Exemplos de Uso
-
-```
-Usuário: "Flamengo"
-Bot: ⚽ PRÓXIMO JOGO DO FLAMENGO ⚽
-     📅 Data: 26/05/2025
-     ⏰ Horário: 20:00
-     🏆 Competição: Brasileirão Série A
-     🆚 Adversário: Palmeiras
-     🏟️ Estádio: Maracanã
-```
-
-## 📊 API Endpoints
-
-### Chatbot
-- `POST /chatbot/webhook` - Webhook para receber mensagens
-- `GET /chatbot/status` - Status do chatbot
-- `POST /chatbot/test-message` - Testar mensagem
-
-### WhatsApp
-- `GET /whatsapp/conversations` - Listar conversas
-- `POST /whatsapp/send` - Enviar mensagem
-- `GET /whatsapp/status` - Status da conexão
-
-### Teams & Matches
-- `GET /teams` - Listar times
-- `GET /matches` - Listar partidas
-- `GET /competitions` - Listar competições
-
-## 🚀 Deploy
-
-### Usando Easypanel (Recomendado)
-
-Para deploy completo em produção, siga o guia detalhado: **[`EASYPANEL-DEPLOY.md`](./EASYPANEL-DEPLOY.md)**
-
-**Resumo do processo:**
-
-1. **Instalar Easypanel na VPS**:
-```bash
-curl -sSL https://get.docker.com | sh
-docker run --rm -it \
-  -v /etc/easypanel:/etc/easypanel \
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  easypanel/easypanel setup
-```
-
-2. **Criar projeto e serviços**:
-   - PostgreSQL database
-   - Redis cache
-   - Backend app (NestJS)
-   - Frontend app (Next.js)
-
-3. **Deploy via GitHub**:
-   - Conecte o repositório
-   - Configure Dockerfile
-   - Deploy automático
-
-4. **Configure webhook**:
-```bash
-node configure-webhook-easypanel.js
-```
-
-**Vantagens do Easypanel:**
-- ✅ Interface visual intuitiva
-- ✅ SSL automático (Let's Encrypt)
-- ✅ Deploy automático via Git
-- ✅ Zero downtime deployments
-- ✅ Backup automático
-- ✅ Monitoramento integrado
-
-### Variáveis de Ambiente para Produção
-
+#### **Backend**
 ```env
+DATABASE_HOST=seu_host_postgres
+DATABASE_PORT=5432
+DATABASE_USERNAME=usuario
+DATABASE_PASSWORD=senha
+DATABASE_NAME=kmiza27_prod
+JWT_SECRET=jwt_secret_producao
 NODE_ENV=production
-DATABASE_URL=sua_url_postgresql_producao
-OPENAI_API_KEY=sua_chave_openai
-EVOLUTION_API_URL=https://kmiza27-evolution.h4xd66.easypanel.host
-EVOLUTION_API_KEY=95DC243F41B2-4858-B0F1-FF49D8C46A85
-PRODUCTION_URL=https://sua-url-producao.com
 ```
 
-## 🔒 Segurança
+#### **Frontend**
+```env
+NEXT_PUBLIC_API_URL=https://api.seudominio.com
+NEXT_PUBLIC_APP_NAME=Kmiza27 ChatBot
+NODE_ENV=production
+```
 
-- ✅ Validação de webhooks
-- ✅ Sanitização de inputs
-- ✅ Rate limiting
-- ✅ Variáveis de ambiente para dados sensíveis
-- ✅ HTTPS obrigatório em produção
+## 🧪 **Testes**
 
-## 📈 Monitoramento
+### **Executar Testes**
+```bash
+# Backend
+cd backend
+npm run test
 
-- **Logs estruturados** com Winston
-- **Health checks** automáticos
-- **Métricas de performance**
-- **Alertas de erro**
+# Frontend
+cd frontend
+npm run test
+```
 
-## 🤝 Contribuição
+### **Testes de Integração**
+```bash
+# Testar autenticação
+npm run test:auth
+
+# Testar API
+npm run test:api
+```
+
+## 📚 **Documentação**
+
+- 📖 [**Guia de Autenticação**](./AUTENTICACAO_ADMIN.md)
+- 🎛️ [**Dashboard Completo**](./DASHBOARD_ADMINISTRATIVO_COMPLETO.md)
+- 🔄 [**Migração Frontend**](./MIGRACAO_FRONTEND_AUTH.md)
+- 🚀 [**Deploy Easypanel**](./DEPLOY_ADMIN_EASYPANEL.md)
+
+## 🤝 **Contribuição**
 
 1. Fork o projeto
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
@@ -262,24 +252,24 @@ PRODUCTION_URL=https://sua-url-producao.com
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
 
-## 📝 Licença
+## 📄 **Licença**
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## 📞 Suporte
+## 👨‍💻 **Autor**
 
-- **Issues**: [GitHub Issues](https://github.com/designativa07/kmiza27/issues)
-- **Documentação**: [Wiki do projeto](https://github.com/designativa07/kmiza27/wiki)
-
-## 🏆 Status do Projeto
-
-- ✅ Backend funcional
-- ✅ Frontend responsivo
-- ✅ Integração WhatsApp
-- ✅ IA integrada
-- ✅ Deploy em produção
-- 🔄 Melhorias contínuas
+**Designativa07**
+- GitHub: [@designativa07](https://github.com/designativa07)
+- Projeto: [Kmiza27](https://github.com/designativa07/kmiza27)
 
 ---
 
-**Desenvolvido com ❤️ para a comunidade de futebol brasileiro** ⚽ 
+## 🎉 **Status do Projeto**
+
+✅ **Sistema de Autenticação**: Completo  
+✅ **Dashboard Administrativo**: Completo  
+✅ **Gerenciamento de Usuários**: Completo  
+✅ **Interface Responsiva**: Completo  
+✅ **Deploy Ready**: Pronto para produção  
+
+**O Kmiza27 está pronto para uso em produção!** 🚀⚽ 
