@@ -38,6 +38,9 @@ ENV DISABLE_ESLINT_PLUGIN=true
 # Build da aplicação Next.js
 RUN npm run build
 
+# Criar pasta public se não existir
+RUN mkdir -p ./public
+
 # Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
