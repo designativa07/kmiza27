@@ -1,66 +1,75 @@
-# 🎨 Dockerfile para Frontend Next.js - Easypanel (FINAL FIX - 2025-05-26T03:15:00Z)
-FROM node:18-alpine
+# 🎨 Dockerfile Frontend Otimizado - Anti-Cache Issues
+# Multi-stage build para melhor cache management
 
-# Instalar dependências do sistema
-RUN apk add --no-cache curl git
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat git curl
 
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Quebrar cache - versão FINAL (HARDCODE API URL FIX)
-RUN echo "Frontend build FINAL FIX - 2025-05-26T03:15:00Z - $(date)"
+# Cache busting com commit hash real
+ARG CACHEBUST=1
+ARG GIT_COMMIT=main
+ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+RUN echo "Build: $CACHEBUST - Commit: $GIT_COMMIT - API: $NEXT_PUBLIC_API_URL - $(date)" > /app/build-info.txt
 
-# Download direto do GitHub e cópia específica do frontend
-RUN cd /tmp && \
-    git clone https://github.com/designativa07/kmiza27.git repo && \
-    cp -r /tmp/repo/frontend/. /app/ && \
-    rm -rf /tmp/repo
+# Clone específico do commit
+RUN git clone --depth 1 --branch $GIT_COMMIT https://github.com/designativa07/kmiza27.git /tmp/repo
 
-# Instalar dependências do frontend
-RUN npm ci --legacy-peer-deps --silent
+# Copiar apenas package files primeiro (melhor cache)
+RUN cp /tmp/repo/frontend/package*.json ./
+RUN rm -rf node_modules package-lock.json
+RUN npm ci --legacy-peer-deps
 
-# Build da aplicação Next.js com variável de ambiente correta
-RUN NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host" \
-    NODE_ENV=production \
-    DISABLE_ESLINT_PLUGIN=true \
-    npm run build
+# Stage 2: Builder
+FROM node:18-alpine AS builder
+WORKDIR /app
 
-# Copiar arquivos standalone para diretório limpo
-RUN cp -r /app/.next/standalone /app/standalone && \
-    cp -r /app/.next/static /app/standalone/.next/static && \
-    if [ -d "/app/public" ]; then \
-        cp -r /app/public /app/standalone/public; \
-    else \
-        mkdir -p /app/standalone/public; \
-    fi
+# Copiar dependências do stage anterior
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /tmp/repo/frontend ./
 
-# Limpar arquivos desnecessários
-RUN rm -rf /app/node_modules /app/.next /app/src && \
-    npm cache clean --force
-
-# Mover para diretório standalone
-WORKDIR /app/standalone
-
-# Criar script de startup otimizado com timestamp
-RUN echo '#!/bin/sh' > /app/standalone/startup.sh && \
-    echo 'export PORT=3002' >> /app/standalone/startup.sh && \
-    echo 'export HOSTNAME="0.0.0.0"' >> /app/standalone/startup.sh && \
-    echo 'export NODE_ENV=production' >> /app/standalone/startup.sh && \
-    echo 'export NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"' >> /app/standalone/startup.sh && \
-    echo 'echo "🚀 Frontend FINAL FIX 2025-05-26T03:15:00Z starting on port $PORT with API: $NEXT_PUBLIC_API_URL" >&2' >> /app/standalone/startup.sh && \
-    echo 'exec node server.js' >> /app/standalone/startup.sh && \
-    chmod +x /app/standalone/startup.sh
-
-# Expor porta do Next.js
-EXPOSE 3002
-
-# Configurar variáveis de ambiente
-ENV PORT=3002
+# Configurar variáveis de build
+ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
+ENV DISABLE_ESLINT_PLUGIN=true
+
+# Build da aplicação Next.js
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Instalar apenas dependências de runtime
+RUN apk add --no-cache curl dumb-init
+
+# Criar usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copiar arquivos necessários do build
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Configurar usuário
+USER nextjs
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3002
 ENV HOSTNAME="0.0.0.0"
 ENV NODE_OPTIONS="--max-old-space-size=512"
-ENV NEXT_PUBLIC_API_URL="https://kmizabot.h4xd66.easypanel.host"
-ENV BUILD_TIMESTAMP="2025-05-26T03:15:00Z"
 
-# Usar startup script otimizado
-CMD ["/bin/sh", "/app/standalone/startup.sh"] 
+# Health check otimizado
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3002/api/health || curl -f http://localhost:3002 || exit 1
+
+# Expor porta
+EXPOSE 3002
+
+# Usar dumb-init para melhor signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"] 
