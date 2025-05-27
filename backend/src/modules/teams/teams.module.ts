@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
 import { Team } from '../../entities';
@@ -12,7 +12,7 @@ import { Team } from '../../entities';
     TypeOrmModule.forFeature([Team]),
     MulterModule.register({
       storage: diskStorage({
-        destination: './uploads/escudos',
+        destination: join(process.cwd(), 'uploads', 'escudos'),
         filename: (req, file, callback) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
           const ext = extname(file.originalname);

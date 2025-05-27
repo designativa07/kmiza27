@@ -50,6 +50,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 
+# Criar pastas necessárias com permissões corretas
+RUN mkdir -p /app/uploads/escudos /app/logs /app/temp && \
+    chown -R nestjs:nodejs /app/uploads /app/logs /app/temp && \
+    chmod -R 755 /app/uploads /app/logs /app/temp
+
 # Configurar usuário
 USER nestjs
 
