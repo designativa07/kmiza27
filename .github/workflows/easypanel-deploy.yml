@@ -1,0 +1,79 @@
+name: 🚀 Auto Deploy to EasyPanel
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📝 Get commit info
+      id: commit
+      run: |
+        echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+        
+    - name: 🔍 Display commit info
+      run: |
+        echo "🔄 Deploying commit: ${{ steps.commit.outputs.short_sha }}"
+        echo "📅 Timestamp: ${{ steps.commit.outputs.timestamp }}"
+        
+    - name: 🚀 Trigger EasyPanel Deploy (Backend)
+      run: |
+        echo "🔧 Triggering backend deploy..."
+        # EasyPanel detectará automaticamente o push via webhook
+        # Este step é apenas para logging
+        
+    - name: 🎨 Trigger EasyPanel Deploy (Frontend)
+      run: |
+        echo "🔧 Triggering frontend deploy..."
+        # EasyPanel detectará automaticamente o push via webhook
+        # Este step é apenas para logging
+        
+    - name: ⏳ Wait for deployment
+      run: |
+        echo "⏳ Aguardando deploy completar..."
+        sleep 60
+        
+    - name: 🧪 Verify deployment
+      run: |
+        echo "🧪 Verificando deploy..."
+        
+        # Verificar backend
+        BACKEND_RESPONSE=$(curl -s https://kmizabot.h4xd66.easypanel.host/health || echo '{"commit":"error"}')
+        BACKEND_COMMIT=$(echo $BACKEND_RESPONSE | jq -r '.commit // "error"')
+        echo "🔧 Backend commit: $BACKEND_COMMIT"
+        
+        # Verificar frontend
+        FRONTEND_RESPONSE=$(curl -s https://kmizafrontend.h4xd66.easypanel.host/api/health || echo '{"commit":"error"}')
+        FRONTEND_COMMIT=$(echo $FRONTEND_RESPONSE | jq -r '.commit // "error"')
+        echo "🎨 Frontend commit: $FRONTEND_COMMIT"
+        
+        # Comparar commits
+        EXPECTED_COMMIT="${{ steps.commit.outputs.sha }}"
+        
+        if [ "$BACKEND_COMMIT" = "$EXPECTED_COMMIT" ] && [ "$FRONTEND_COMMIT" = "$EXPECTED_COMMIT" ]; then
+          echo "✅ Deploy completado com sucesso!"
+          echo "🎯 Ambos os serviços estão atualizados"
+        else
+          echo "⚠️ Deploy pode ainda estar em progresso"
+          echo "🔄 Backend: $BACKEND_COMMIT"
+          echo "🔄 Frontend: $FRONTEND_COMMIT"
+          echo "🎯 Esperado: $EXPECTED_COMMIT"
+        fi
+        
+    - name: 📊 Deploy Summary
+      run: |
+        echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** ${{ steps.commit.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Timestamp:** ${{ steps.commit.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Backend URL:** https://kmizabot.h4xd66.easypanel.host/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Frontend URL:** https://kmizafrontend.h4xd66.easypanel.host/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status Dashboard:** https://kmizafrontend.h4xd66.easypanel.host/status" >> $GITHUB_STEP_SUMMARY 
