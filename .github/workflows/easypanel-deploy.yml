@@ -47,26 +47,47 @@ jobs:
         echo "🧪 Verificando deploy..."
         
         # Verificar backend
-        BACKEND_RESPONSE=$(curl -s https://kmizabot.h4xd66.easypanel.host/health || echo '{"commit":"error"}')
-        BACKEND_COMMIT=$(echo $BACKEND_RESPONSE | jq -r '.commit // "error"')
+        echo "🔧 Testando backend..."
+        BACKEND_RESPONSE=$(curl -s -f https://kmizabot.h4xd66.easypanel.host/health || echo '{"commit":"error","status":"offline"}')
+        echo "Backend response: $BACKEND_RESPONSE"
+        
+        # Verificar se é JSON válido antes de usar jq
+        if echo "$BACKEND_RESPONSE" | jq empty 2>/dev/null; then
+          BACKEND_COMMIT=$(echo $BACKEND_RESPONSE | jq -r '.commit // "error"')
+        else
+          BACKEND_COMMIT="error"
+          echo "⚠️ Backend response não é JSON válido"
+        fi
         echo "🔧 Backend commit: $BACKEND_COMMIT"
         
-        # Verificar frontend
-        FRONTEND_RESPONSE=$(curl -s https://kmizafrontend.h4xd66.easypanel.host/api/health || echo '{"commit":"error"}')
-        FRONTEND_COMMIT=$(echo $FRONTEND_RESPONSE | jq -r '.commit // "error"')
+        # Verificar frontend (URL corrigida)
+        echo "🎨 Testando frontend..."
+        FRONTEND_RESPONSE=$(curl -s -f https://kmizafront.h4xd66.easypanel.host/api/health || echo '{"commit":"error","status":"offline"}')
+        echo "Frontend response: $FRONTEND_RESPONSE"
+        
+        # Verificar se é JSON válido antes de usar jq
+        if echo "$FRONTEND_RESPONSE" | jq empty 2>/dev/null; then
+          FRONTEND_COMMIT=$(echo $FRONTEND_RESPONSE | jq -r '.commit // "error"')
+        else
+          FRONTEND_COMMIT="error"
+          echo "⚠️ Frontend response não é JSON válido"
+        fi
         echo "🎨 Frontend commit: $FRONTEND_COMMIT"
         
-        # Comparar commits
-        EXPECTED_COMMIT="${{ steps.commit.outputs.sha }}"
+        # Comparar commits (usando short SHA para compatibilidade)
+        EXPECTED_COMMIT="${{ steps.commit.outputs.short_sha }}"
+        
+        echo "📋 Comparação de commits:"
+        echo "🎯 Esperado: $EXPECTED_COMMIT"
+        echo "🔧 Backend: $BACKEND_COMMIT"
+        echo "🎨 Frontend: $FRONTEND_COMMIT"
         
         if [ "$BACKEND_COMMIT" = "$EXPECTED_COMMIT" ] && [ "$FRONTEND_COMMIT" = "$EXPECTED_COMMIT" ]; then
           echo "✅ Deploy completado com sucesso!"
           echo "🎯 Ambos os serviços estão atualizados"
         else
-          echo "⚠️ Deploy pode ainda estar em progresso"
-          echo "🔄 Backend: $BACKEND_COMMIT"
-          echo "🔄 Frontend: $FRONTEND_COMMIT"
-          echo "🎯 Esperado: $EXPECTED_COMMIT"
+          echo "⚠️ Deploy pode ainda estar em progresso ou houve erro"
+          # Não falhar o workflow por isso, apenas reportar
         fi
         
     - name: 📊 Deploy Summary
@@ -75,5 +96,5 @@ jobs:
         echo "- **Commit:** ${{ steps.commit.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Timestamp:** ${{ steps.commit.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Backend URL:** https://kmizabot.h4xd66.easypanel.host/health" >> $GITHUB_STEP_SUMMARY
-        echo "- **Frontend URL:** https://kmizafrontend.h4xd66.easypanel.host/api/health" >> $GITHUB_STEP_SUMMARY
-        echo "- **Status Dashboard:** https://kmizafrontend.h4xd66.easypanel.host/status" >> $GITHUB_STEP_SUMMARY 
+        echo "- **Frontend URL:** https://kmizafront.h4xd66.easypanel.host/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status Dashboard:** https://kmizafront.h4xd66.easypanel.host" >> $GITHUB_STEP_SUMMARY 
