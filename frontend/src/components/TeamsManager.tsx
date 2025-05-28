@@ -25,6 +25,7 @@ export default function TeamsManager() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [uploading, setUploading] = useState(false)
+  const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload')
   const [formData, setFormData] = useState({
     name: '',
     short_name: '',
@@ -54,13 +55,22 @@ export default function TeamsManager() {
     const file = e.target.files?.[0]
     if (file) {
       setSelectedFile(file)
-      
-      // Criar preview da imagem
       const reader = new FileReader()
       reader.onload = (e) => {
         setPreviewUrl(e.target?.result as string)
       }
       reader.readAsDataURL(file)
+      setFormData(prev => ({ ...prev, logo_url: '' }))
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    
+    if (name === 'logo_url' && value) {
+      setSelectedFile(null)
+      setPreviewUrl(value)
     }
   }
 
@@ -113,9 +123,17 @@ export default function TeamsManager() {
       if (response.ok) {
         const savedTeam = await response.json()
         
-        // Se há arquivo selecionado, fazer upload
         if (selectedFile) {
-          await uploadEscudo(savedTeam.id)
+          const uploadedPath = await uploadEscudo(savedTeam.id)
+          if (uploadedPath) {
+            await fetch(API_ENDPOINTS.teams.byId(savedTeam.id), {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ logo_url: uploadedPath })
+            })
+          }
         }
         
         fetchTeams()
@@ -131,6 +149,7 @@ export default function TeamsManager() {
     setEditingTeam(null)
     setSelectedFile(null)
     setPreviewUrl('')
+    setLogoInputType('upload')
     setFormData({
       name: '',
       short_name: '',
@@ -145,13 +164,22 @@ export default function TeamsManager() {
     setEditingTeam(team)
     setFormData({
       name: team.name,
-      short_name: team.short_name,
+      short_name: team.short_name || '',
       city: team.city || '',
       state: team.state || '',
       founded_year: team.founded_year?.toString() || '',
       logo_url: team.logo_url || ''
     })
-    setPreviewUrl(team.logo_url ? imageUrl(team.logo_url) : '')
+    
+    if (team.logo_url) {
+      if (team.logo_url.startsWith('http') || team.logo_url.startsWith('https')) {
+        setLogoInputType('url')
+      } else {
+        setLogoInputType('upload')
+      }
+      setPreviewUrl(team.logo_url.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${team.logo_url}` : team.logo_url)
+    }
+    
     setShowModal(true)
   }
 
@@ -329,45 +357,96 @@ export default function TeamsManager() {
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">Escudo do Time</label>
                   
-                  {/* Preview da imagem */}
+                  <div className="mb-3">
+                    <div className="flex space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="logoInputType"
+                          value="upload"
+                          checked={logoInputType === 'upload'}
+                          onChange={(e) => {
+                            setLogoInputType('upload')
+                            setFormData(prev => ({ ...prev, logo_url: '' }))
+                            setPreviewUrl('')
+                          }}
+                          className="mr-2"
+                        />
+                        Upload de Arquivo
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="logoInputType"
+                          value="url"
+                          checked={logoInputType === 'url'}
+                          onChange={(e) => {
+                            setLogoInputType('url')
+                            setSelectedFile(null)
+                            setPreviewUrl('')
+                          }}
+                          className="mr-2"
+                        />
+                        URL Externa
+                      </label>
+                    </div>
+                  </div>
+                  
                   {previewUrl && (
                     <div className="mb-3">
                       <img 
                         src={previewUrl} 
                         alt="Preview do escudo" 
                         className="h-20 w-20 object-cover rounded-lg border border-gray-300"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-team.png'
+                        }}
                       />
                     </div>
                   )}
                   
-                  {/* Input de arquivo */}
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                    <div className="space-y-1 text-center">
-                      <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="flex text-sm text-gray-600">
-                        <label htmlFor="escudo-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                          <span>Enviar escudo</span>
-                          <input
-                            id="escudo-upload"
-                            name="escudo-upload"
-                            type="file"
-                            className="sr-only"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                          />
-                        </label>
-                        <p className="pl-1">ou arraste e solte</p>
+                  {logoInputType === 'upload' ? (
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                      <div className="space-y-1 text-center">
+                        <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="flex text-sm text-gray-600">
+                          <label htmlFor="escudo-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                            <span>Enviar escudo</span>
+                            <input
+                              id="escudo-upload"
+                              name="escudo-upload"
+                              type="file"
+                              className="sr-only"
+                              accept="image/*"
+                              onChange={handleFileChange}
+                            />
+                          </label>
+                          <p className="pl-1">ou arraste e solte</p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, GIF, SVG até 5MB
+                        </p>
+                        {selectedFile && (
+                          <p className="text-xs text-green-600">
+                            Arquivo selecionado: {selectedFile.name}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG, GIF, SVG até 5MB
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="url"
+                        name="logo_url"
+                        value={formData.logo_url}
+                        onChange={handleInputChange}
+                        placeholder="https://exemplo.com/escudo.png"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Cole a URL direta de uma imagem hospedada externamente
                       </p>
                     </div>
-                  </div>
-                  
-                  {selectedFile && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      Arquivo selecionado: {selectedFile.name}
-                    </p>
                   )}
                 </div>
                 
