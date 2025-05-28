@@ -1,50 +1,112 @@
 #!/usr/bin/env node
+/**
+ * 🔄 Script para atualizar commit nos arquivos do projeto
+ * Atualiza automaticamente o commit ID em vários arquivos
+ */
 
 const fs = require('fs');
 const { execSync } = require('child_process');
-const path = require('path');
 
-// Capturar o commit atual
-const currentCommit = execSync('git rev-parse HEAD').toString().trim().substring(0, 8);
+// Obter commit atual
+const getCurrentCommit = () => {
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim().substring(0, 8);
+  } catch (error) {
+    console.error('❌ Erro ao obter commit:', error.message);
+    return '84b849d'; // Fallback
+  }
+};
 
-console.log(`🔄 Atualizando commit para: ${currentCommit}`);
+const getCurrentTimestamp = () => {
+  return new Date().toISOString();
+};
 
-// Atualizar o arquivo de health da API
-const healthFile = path.join(__dirname, 'frontend/src/app/api/health/route.ts');
-let healthContent = fs.readFileSync(healthFile, 'utf8');
+const currentCommit = getCurrentCommit();
+const currentTimestamp = getCurrentTimestamp();
 
-// Substituir o fallback do commit
-healthContent = healthContent.replace(
-  /'e4bc6cf'; \/\/ Fallback para o último commit conhecido/,
-  `'${currentCommit}'; // Fallback para o último commit conhecido`
-);
+console.log(`🔍 Commit atual: ${currentCommit}`);
+console.log(`⏰ Timestamp: ${currentTimestamp}`);
 
-// Substituir o segundo fallback também
-healthContent = healthContent.replace(
-  /gitCommit = 'e4bc6cf';/,
-  `gitCommit = '${currentCommit}';`
-);
+// Lista de arquivos para atualizar
+const filesToUpdate = [
+  {
+    path: 'frontend/src/app/api/health/route.ts',
+    find: /'[a-f0-9]{8}'; \/\/ Fallback para o commit/g,
+    replace: `'${currentCommit}'; // Fallback para o commit`
+  },
+  {
+    path: 'frontend/src/app/api/health/route.ts',
+    find: /gitCommit = '[a-f0-9]{8}';/g,
+    replace: `gitCommit = '${currentCommit}';`
+  },
+  {
+    path: 'Dockerfile.frontend',
+    find: /ARG GIT_COMMIT=[a-f0-9]{8}/g,
+    replace: `ARG GIT_COMMIT=${currentCommit}`
+  }
+];
 
-fs.writeFileSync(healthFile, healthContent);
+// Função para atualizar arquivo
+const updateFile = (fileConfig) => {
+  const { path, find, replace } = fileConfig;
+  
+  if (!fs.existsSync(path)) {
+    console.log(`⚠️  Arquivo não encontrado: ${path}`);
+    return false;
+  }
+  
+  try {
+    let content = fs.readFileSync(path, 'utf8');
+    const originalContent = content;
+    
+    content = content.replace(find, replace);
+    
+    if (content !== originalContent) {
+      fs.writeFileSync(path, content, 'utf8');
+      console.log(`✅ Atualizado: ${path}`);
+      return true;
+    } else {
+      console.log(`ℹ️  Sem mudanças: ${path}`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`❌ Erro ao atualizar ${path}:`, error.message);
+    return false;
+  }
+};
 
-// Atualizar o Dockerfile
-const dockerFile = path.join(__dirname, 'Dockerfile.frontend');
-let dockerContent = fs.readFileSync(dockerFile, 'utf8');
+// Executar atualizações
+console.log('\n🚀 Iniciando atualização dos arquivos...\n');
 
-// Substituir os valores padrão do commit no Dockerfile
-dockerContent = dockerContent.replace(
-  /ARG GIT_COMMIT=e4bc6cf/g,
-  `ARG GIT_COMMIT=${currentCommit}`
-);
+let updatedFiles = 0;
+filesToUpdate.forEach(fileConfig => {
+  if (updateFile(fileConfig)) {
+    updatedFiles++;
+  }
+});
 
-fs.writeFileSync(dockerFile, dockerContent);
+// Criar arquivo de cache bust para Easypanel
+const cacheBustFile = 'CACHE_BUST.txt';
+const cacheBustContent = `# Cache Bust - Força rebuild no Easypanel
+COMMIT=${currentCommit}
+TIMESTAMP=${currentTimestamp}
+BUILD_NUMBER=${Date.now()}
 
-console.log(`✅ Arquivos atualizados com commit: ${currentCommit}`);
-console.log('📁 Arquivos modificados:');
-console.log('  - frontend/src/app/api/health/route.ts');
-console.log('  - Dockerfile.frontend');
-console.log('');
-console.log('🚀 Próximos passos:');
-console.log('  1. git add .');
-console.log('  2. git commit -m "update: commit hash para produção"');
-console.log('  3. git push origin main'); 
+# Este arquivo força o Easypanel a fazer rebuild
+# Modificado automaticamente pelo script update-commit.js
+`;
+
+fs.writeFileSync(cacheBustFile, cacheBustContent, 'utf8');
+console.log(`✅ Criado: ${cacheBustFile}`);
+updatedFiles++;
+
+console.log(`\n🎉 Atualização concluída!`);
+console.log(`📝 ${updatedFiles} arquivos modificados`);
+console.log(`📋 Commit: ${currentCommit}`);
+console.log(`⏰ Timestamp: ${currentTimestamp}`);
+
+console.log(`\n📋 Próximos passos:`);
+console.log(`1. git add .`);
+console.log(`2. git commit -m "update: Atualiza commit para ${currentCommit}"`);
+console.log(`3. git push`);
+console.log(`4. Rebuild no Easypanel`); 

@@ -1,5 +1,5 @@
 # 🎨 Dockerfile Frontend Otimizado - Easypanel Compatible
-# Multi-stage build otimizado
+# Multi-stage build otimizado com detecção automática de commit
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
@@ -15,26 +15,41 @@ RUN npm install --legacy-peer-deps
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Instalar git para capturar commit
+RUN apk add --no-cache git
+
+# Copiar todo o contexto (incluindo .git)
+COPY . ./project-root/
+
+# Capturar commit automaticamente
+RUN cd project-root && \
+    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null | cut -c1-8 || echo "84b849d") && \
+    echo "🔍 Commit detectado: $GIT_COMMIT_AUTO" && \
+    echo $GIT_COMMIT_AUTO > /tmp/git-commit.txt
+
 # Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend ./
 
-# Definir variáveis de build
+# Definir variáveis de build com commit automático
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
-ARG GIT_COMMIT=e4bc6cfe
 ARG BUILD_TIMESTAMP
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV GIT_COMMIT=$GIT_COMMIT
-ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
-ENV NODE_ENV=production
-ENV DISABLE_ESLINT_PLUGIN=true
-
-# Debug das variáveis
-RUN echo "🔍 Build Info:" && \
+# Ler commit do arquivo gerado
+RUN GIT_COMMIT_FROM_FILE=$(cat /tmp/git-commit.txt 2>/dev/null || echo "84b849d") && \
+    export GIT_COMMIT=${GIT_COMMIT:-$GIT_COMMIT_FROM_FILE} && \
+    export BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")} && \
+    echo "🔍 Build Info:" && \
     echo "API URL: $NEXT_PUBLIC_API_URL" && \
     echo "Git Commit: $GIT_COMMIT" && \
-    echo "Build Time: $BUILD_TIMESTAMP"
+    echo "Build Time: $BUILD_TIMESTAMP" && \
+    echo "GIT_COMMIT=$GIT_COMMIT" >> .env.local && \
+    echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> .env.local && \
+    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> .env.local
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NODE_ENV=production
+ENV DISABLE_ESLINT_PLUGIN=true
 
 # Build da aplicação Next.js
 RUN npm run build
@@ -53,23 +68,22 @@ RUN adduser --system --uid 1001 nextjs
 # Copiar arquivos necessários do build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.env.local ./.env.local
 
 # Criar pasta public (Next.js precisa dela mesmo se vazia)
 RUN mkdir -p ./public
 
-# Configurar variáveis de ambiente para runtime
-ARG GIT_COMMIT=e4bc6cfe
-ARG BUILD_TIMESTAMP
-ENV GIT_COMMIT=$GIT_COMMIT
-ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
+# Ler variáveis do build
+RUN if [ -f .env.local ]; then \
+      export $(cat .env.local | xargs) && \
+      echo "🚀 Runtime Info:" && \
+      echo "Git Commit: $GIT_COMMIT" && \
+      echo "Build Time: $BUILD_TIMESTAMP"; \
+    fi
+
 ENV NODE_ENV=production
 ENV PORT=3002
 ENV HOSTNAME="0.0.0.0"
-
-# Debug final
-RUN echo "🚀 Runtime Info:" && \
-    echo "Git Commit: $GIT_COMMIT" && \
-    echo "Build Time: $BUILD_TIMESTAMP"
 
 # Configurar usuário
 USER nextjs
