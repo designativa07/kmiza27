@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, Req } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 
 @Controller('chatbot')
@@ -6,8 +6,21 @@ export class ChatbotController {
   constructor(private readonly chatbotService: ChatbotService) {}
 
   @Post('webhook')
-  async webhook(@Body() body: any) {
+  async webhook(@Body() body: any, @Headers() headers: any, @Req() req: any) {
     try {
+      // ✅ CORREÇÃO UTF-8: Log detalhado para debug de caracteres especiais
+      console.log('📥 Webhook Headers:', {
+        'content-type': headers['content-type'],
+        'content-length': headers['content-length'],
+        'charset': headers['content-type']?.includes('charset') ? 'presente' : 'ausente'
+      });
+      
+      // ✅ Validar se body foi parseado corretamente
+      if (!body || typeof body !== 'object') {
+        console.log('❌ Body inválido ou não parseado:', body);
+        return { error: 'Invalid JSON body', received: body };
+      }
+      
       console.log('📥 Webhook recebido:', JSON.stringify(body, null, 2));
       
       // Processar diferentes tipos de eventos

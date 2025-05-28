@@ -20,6 +20,19 @@ async function bootstrap() {
     credentials: true,
   });
   
+  // ✅ CORREÇÃO UTF-8: Configurar middleware JSON com charset UTF-8 para suportar acentos
+  app.use('/chatbot/webhook', (req, res, next) => {
+    // Garantir que o Content-Type seja interpretado como UTF-8
+    if (req.headers['content-type'] && !req.headers['content-type'].includes('charset')) {
+      req.headers['content-type'] = 'application/json; charset=utf-8';
+    }
+    
+    // Configurar response para UTF-8
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    next();
+  });
+  
   // Servir arquivos estáticos da pasta uploads
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
@@ -34,6 +47,7 @@ async function bootstrap() {
   console.log(`🌐 Host: ${host}`);
   console.log(`🚪 Port: ${port}`);
   console.log('🔧 CORS Fix: 2025-05-26T03:20:00Z - Frontend URL updated');
+  console.log('✅ UTF-8 Fix: 2025-05-26T04:00:00Z - Chatbot webhook with charset UTF-8');
   
   await app.listen(port, host);
   
