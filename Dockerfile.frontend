@@ -40,14 +40,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/build-vars.env ./build-vars.env
 COPY --from=deps /tmp/repo/frontend ./
 
-# Carregar e configurar variáveis de build
+# Carregar variáveis de build
 RUN . ./build-vars.env && \
     echo "Usando commit: $GIT_COMMIT" && \
     echo "Usando timestamp: $BUILD_TIMESTAMP" && \
-    echo "Usando API URL: $NEXT_PUBLIC_API_URL" && \
-    export GIT_COMMIT && \
-    export BUILD_TIMESTAMP && \
-    export NEXT_PUBLIC_API_URL
+    echo "Usando API URL: $NEXT_PUBLIC_API_URL"
 
 # Configurar variáveis de build para Next.js
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
@@ -88,6 +85,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
     echo 'export NEXT_PUBLIC_API_URL' >> /app/start.sh && \
     echo 'echo "Iniciando frontend com commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'echo "Build timestamp: $BUILD_TIMESTAMP"' >> /app/start.sh && \
     echo 'node server.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 

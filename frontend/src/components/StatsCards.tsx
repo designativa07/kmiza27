@@ -172,7 +172,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
 
           {/* Status do Sistema */}
           <div className="mt-8">
-            <StatusCard />
+            <StatusCard onNavigate={onNavigate} />
           </div>
 
           {/* Gráfico de atividade recente */}

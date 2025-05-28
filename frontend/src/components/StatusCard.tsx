@@ -9,7 +9,6 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import Link from 'next/link';
 
 interface ServiceStatus {
   name: string;
@@ -22,7 +21,11 @@ interface ServiceStatus {
   error?: string;
 }
 
-export default function StatusCard() {
+interface StatusCardProps {
+  onNavigate?: (page: string) => void;
+}
+
+export default function StatusCard({ onNavigate }: StatusCardProps) {
   const [services, setServices] = useState<ServiceStatus[]>([
     {
       name: 'Backend API',
@@ -187,12 +190,21 @@ export default function StatusCard() {
               <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             
-            <Link
-              href="/status"
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Ver Detalhes
-            </Link>
+            {onNavigate ? (
+              <button
+                onClick={() => onNavigate('Status do Sistema')}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Ver Detalhes
+              </button>
+            ) : (
+              <a
+                href="/status"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Ver Detalhes
+              </a>
+            )}
           </div>
         </div>
 
