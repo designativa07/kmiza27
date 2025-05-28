@@ -9,4 +9,5 @@ export * from './user.entity';
 export * from './chatbot-conversation.entity';
 export * from './notification.entity';
 export * from './notification-delivery.entity';
-export * from './system-settings.entity'; 
+export * from './system-settings.entity';
+export * from './channel.entity'; 

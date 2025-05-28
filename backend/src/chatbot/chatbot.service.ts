@@ -4,11 +4,13 @@ import { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
 import { Match } from '../entities/match.entity';
 import { Competition } from '../entities/competition.entity';
+import { CompetitionTeam } from '../entities/competition-team.entity';
 import { Stadium } from '../entities/stadium.entity';
 import { Round } from '../entities/round.entity';
 import { User } from '../entities/user.entity';
 import { OpenAIService } from './openai.service';
 import { EvolutionService } from './evolution.service';
+import { FootballDataService } from './football-data.service';
 import { UsersService } from '../modules/users/users.service';
 
 @Injectable()
@@ -20,8 +22,11 @@ export class ChatbotService {
     private matchesRepository: Repository<Match>,
     @InjectRepository(Competition)
     private competitionsRepository: Repository<Competition>,
+    @InjectRepository(CompetitionTeam)
+    private competitionTeamsRepository: Repository<CompetitionTeam>,
     private openAIService: OpenAIService,
     private evolutionService: EvolutionService,
+    private footballDataService: FootballDataService,
     private usersService: UsersService,
   ) {}
 
@@ -58,8 +63,40 @@ export class ChatbotService {
           response = await this.getTodayMatches();
           break;
 
+        case 'matches_week':
+          response = await this.getWeekMatches();
+          break;
+
         case 'competition_info':
           response = await this.getCompetitionInfo(analysis.competition ?? '');
+          break;
+
+        case 'team_position':
+          response = await this.getTeamPosition(analysis.team ?? '');
+          break;
+
+        case 'last_match':
+          response = await this.getLastMatch(analysis.team ?? '');
+          break;
+
+        case 'broadcast_info':
+          response = await this.getBroadcastInfo(analysis.team ?? '');
+          break;
+
+        case 'team_statistics':
+          response = await this.footballDataService.getTeamStatistics(analysis.team ?? '');
+          break;
+
+        case 'top_scorers':
+          response = await this.footballDataService.getTopScorers(analysis.competition);
+          break;
+
+        case 'channels_info':
+          response = await this.footballDataService.getChannelInfo();
+          break;
+
+        case 'competition_stats':
+          response = await this.footballDataService.getCompetitionStats(analysis.competition ?? '');
           break;
 
         default:
@@ -94,7 +131,7 @@ export class ChatbotService {
 🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, Santos, Botafogo, etc.`;
       }
 
-      // Buscar próximo jogo
+      // Buscar próximo jogo com informações de transmissão
       const nextMatch = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
@@ -122,6 +159,12 @@ export class ChatbotService {
       const opponent = isHome ? nextMatch.away_team.name : nextMatch.home_team.name;
       const venue = isHome ? 'em casa' : 'fora de casa';
 
+      // Informações de transmissão
+      let broadcastInfo = '';
+      if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels)) {
+        broadcastInfo = `\n📺 **Transmissão:** ${nextMatch.broadcast_channels.join(', ')}`;
+      }
+
       return `⚽ **PRÓXIMO JOGO DO ${team.name.toUpperCase()}** ⚽
 
 📅 **Data:** ${formattedDate}
@@ -130,7 +173,7 @@ export class ChatbotService {
 🆚 **Adversário:** ${opponent}
 🏟️ **Estádio:** ${nextMatch.stadium?.name || 'A definir'}
 📍 **Rodada:** ${nextMatch.round?.name || 'A definir'}
-🏠 **Mando:** ${venue}
+🏠 **Mando:** ${venue}${broadcastInfo}
 
 Bora torcer! 🔥⚽`;
 
@@ -170,22 +213,57 @@ Bora torcer! 🔥⚽`;
   }
 
   private async getCompetitionTable(competitionName: string): Promise<string> {
-    // Por enquanto, retorna uma tabela simulada
-    // TODO: Implementar tabela real quando houver dados de classificação
-    return `📊 **TABELA DO BRASILEIRÃO SÉRIE A** 📊
+    try {
+      // Buscar a competição
+      const competition = await this.competitionsRepository
+        .createQueryBuilder('competition')
+        .where('LOWER(competition.name) LIKE LOWER(:name)', { name: `%${competitionName}%` })
+        .orWhere('LOWER(competition.slug) LIKE LOWER(:name)', { name: `%${competitionName}%` })
+        .getOne();
 
-🥇 1º - Flamengo - 45 pts
-🥈 2º - Palmeiras - 42 pts  
-🥉 3º - Botafogo - 38 pts
-4º - São Paulo - 35 pts
-5º - Corinthians - 33 pts
-6º - Atlético-MG - 30 pts
-7º - Internacional - 28 pts
-8º - Grêmio - 25 pts
+      if (!competition) {
+        return `❌ Competição "${competitionName}" não encontrada.
 
-📱 Para ver a tabela completa, acesse: www.cbf.com.br
+🔍 Tente com: Brasileirão, Libertadores, Copa do Brasil, etc.`;
+      }
 
-⚽ Quer saber sobre o próximo jogo de algum time? É só perguntar!`;
+      // Buscar classificação real da competição
+      const standings = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.team', 'team')
+        .where('ct.competition = :competitionId', { competitionId: competition.id })
+        .orderBy('ct.points', 'DESC')
+        .addOrderBy('ct.goal_difference', 'DESC')
+        .addOrderBy('ct.goals_for', 'DESC')
+        .limit(10) // Top 10
+        .getMany();
+
+      if (standings.length === 0) {
+        return `📊 **TABELA - ${competition.name.toUpperCase()}** 📊
+
+😔 Ainda não há dados de classificação disponíveis para esta competição.
+
+⚽ Quer saber sobre jogos ou outras informações?`;
+      }
+
+      let response = `📊 **TABELA - ${competition.name.toUpperCase()}** 📊\n\n`;
+
+      standings.forEach((standing, index) => {
+        const position = index + 1;
+        const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
+        
+        response += `${emoji} ${standing.team.name} - ${standing.points} pts\n`;
+        response += `   J:${standing.played} V:${standing.won} E:${standing.drawn} D:${standing.lost} SG:${standing.goal_difference}\n\n`;
+      });
+
+      response += `⚽ Quer saber sobre o próximo jogo de algum time? É só perguntar!`;
+
+      return response;
+
+    } catch (error) {
+      console.error('Erro ao buscar tabela da competição:', error);
+      return '❌ Erro ao buscar tabela da competição.';
+    }
   }
 
   private async getTodayMatches(): Promise<string> {
@@ -230,6 +308,56 @@ Bora torcer! 🔥⚽`;
     }
   }
 
+  private async getWeekMatches(): Promise<string> {
+    try {
+      const today = new Date();
+      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const weekMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where('match.match_date >= :start', { start: today })
+        .andWhere('match.match_date <= :end', { end: nextWeek })
+        .andWhere('match.status = :status', { status: 'scheduled' })
+        .orderBy('match.match_date', 'ASC')
+        .limit(15)
+        .getMany();
+
+      if (weekMatches.length === 0) {
+        return `📅 **JOGOS DA SEMANA** 📅
+
+😔 Não há jogos agendados para os próximos 7 dias.
+
+⚽ Quer saber sobre algum time específico?`;
+      }
+
+      let response = `📅 **JOGOS DA SEMANA** 📅\n\n`;
+
+      weekMatches.forEach(match => {
+        const date = new Date(match.match_date);
+        const formattedDate = date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        response += `📅 ${formattedDate} - ${time}\n`;
+        response += `🏆 ${match.competition.name}\n`;
+        response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n`;
+        if (match.stadium) {
+          response += `🏟️ ${match.stadium.name}\n`;
+        }
+        response += `\n`;
+      });
+
+      return response;
+
+    } catch (error) {
+      console.error('Erro ao buscar jogos da semana:', error);
+      return '❌ Erro ao buscar jogos da semana.';
+    }
+  }
+
   private async getCompetitionInfo(competitionName: string): Promise<string> {
     try {
       const competition = await this.competitionsRepository
@@ -256,16 +384,184 @@ Bora torcer! 🔥⚽`;
     }
   }
 
+  private async getTeamPosition(teamName: string): Promise<string> {
+    try {
+      const team = await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .getOne();
+
+      if (!team) {
+        return `❌ Time "${teamName}" não encontrado.`;
+      }
+
+      // Buscar posição do time nas competições ativas
+      const positions = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.competition', 'competition')
+        .where('ct.team = :teamId', { teamId: team.id })
+        .andWhere('competition.is_active = :active', { active: true })
+        .getMany();
+
+      if (positions.length === 0) {
+        return `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊
+
+😔 O time não está participando de competições ativas no momento.`;
+      }
+
+      let response = `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊\n\n`;
+
+      positions.forEach(pos => {
+        response += `🏆 **${pos.competition.name}**\n`;
+        response += `📍 ${pos.position}º lugar - ${pos.points} pontos\n`;
+        response += `⚽ J:${pos.played} V:${pos.won} E:${pos.drawn} D:${pos.lost}\n`;
+        response += `🥅 GP:${pos.goals_for} GC:${pos.goals_against} SG:${pos.goal_difference}\n\n`;
+      });
+
+      return response;
+
+    } catch (error) {
+      console.error('Erro ao buscar posição do time:', error);
+      return '❌ Erro ao buscar posição do time.';
+    }
+  }
+
+  private async getLastMatch(teamName: string): Promise<string> {
+    try {
+      const team = await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .getOne();
+
+      if (!team) {
+        return `❌ Time "${teamName}" não encontrado.`;
+      }
+
+      // Buscar último jogo
+      const lastMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: 'finished' })
+        .orderBy('match.match_date', 'DESC')
+        .getOne();
+
+      if (!lastMatch) {
+        return `😔 Não encontrei jogos finalizados para o **${team.name}**.`;
+      }
+
+      const date = new Date(lastMatch.match_date);
+      const formattedDate = date.toLocaleDateString('pt-BR');
+
+      const isHome = lastMatch.home_team.id === team.id;
+      const opponent = isHome ? lastMatch.away_team.name : lastMatch.home_team.name;
+      const teamScore = isHome ? lastMatch.home_score : lastMatch.away_score;
+      const opponentScore = isHome ? lastMatch.away_score : lastMatch.home_score;
+      
+      const result = teamScore > opponentScore ? '✅ VITÓRIA' : 
+                    teamScore < opponentScore ? '❌ DERROTA' : '🟡 EMPATE';
+
+      return `⚽ **ÚLTIMO JOGO DO ${team.name.toUpperCase()}** ⚽
+
+📅 **Data:** ${formattedDate}
+🏆 **Competição:** ${lastMatch.competition.name}
+🆚 **Adversário:** ${opponent}
+📊 **Placar:** ${lastMatch.home_team.name} ${lastMatch.home_score} x ${lastMatch.away_score} ${lastMatch.away_team.name}
+🏟️ **Estádio:** ${lastMatch.stadium?.name || 'N/A'}
+📍 **Rodada:** ${lastMatch.round?.name || 'N/A'}
+
+${result}`;
+
+    } catch (error) {
+      console.error('Erro ao buscar último jogo:', error);
+      return '❌ Erro ao buscar último jogo.';
+    }
+  }
+
+  private async getBroadcastInfo(teamName: string): Promise<string> {
+    try {
+      const team = await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .getOne();
+
+      if (!team) {
+        return `❌ Time "${teamName}" não encontrado.`;
+      }
+
+      // Buscar próximos jogos com informações de transmissão
+      const upcomingMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: 'scheduled' })
+        .andWhere('match.match_date >= :now', { now: new Date() })
+        .orderBy('match.match_date', 'ASC')
+        .limit(3)
+        .getMany();
+
+      if (upcomingMatches.length === 0) {
+        return `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺
+
+😔 Não há jogos futuros agendados.`;
+      }
+
+      let response = `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺\n\n`;
+
+      upcomingMatches.forEach(match => {
+        const date = new Date(match.match_date);
+        const formattedDate = date.toLocaleDateString('pt-BR');
+        const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        const isHome = match.home_team.id === team.id;
+        const opponent = isHome ? match.away_team.name : match.home_team.name;
+
+        response += `📅 ${formattedDate} - ${time}\n`;
+        response += `🆚 ${team.name} vs ${opponent}\n`;
+        response += `🏆 ${match.competition.name}\n`;
+        
+        if (match.broadcast_channels && Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
+          response += `📺 ${match.broadcast_channels.join(', ')}\n`;
+        } else {
+          response += `📺 Transmissão a confirmar\n`;
+        }
+        response += `\n`;
+      });
+
+      return response;
+
+    } catch (error) {
+      console.error('Erro ao buscar informações de transmissão:', error);
+      return '❌ Erro ao buscar informações de transmissão.';
+    }
+  }
+
   private getWelcomeMessage(): string {
     return `👋 **Olá! Sou o Kmiza27 Bot** ⚽
 
 🤖 Posso te ajudar com informações sobre futebol:
 
 ⚽ **Próximos jogos** - "Próximo jogo do Flamengo"
-ℹ️ **Info do time** - "Informações do Palmeiras"  
+🏁 **Último jogo** - "Último jogo do Palmeiras"
+ℹ️ **Info do time** - "Informações do Corinthians"  
 📊 **Tabelas** - "Tabela do Brasileirão"
+📍 **Posição** - "Posição do São Paulo"
+📈 **Estatísticas** - "Estatísticas do Santos"
+🥇 **Artilheiros** - "Artilheiros do Brasileirão"
 📅 **Jogos hoje** - "Jogos de hoje"
-🏆 **Competições** - "Copa Libertadores"
+📺 **Transmissão** - "Onde passa o jogo do Botafogo"
+📡 **Canais** - "Lista de canais"
+🗓️ **Jogos da semana** - "Jogos da semana"
+🏆 **Competições** - "Estatísticas da Libertadores"
 
 💬 **O que você gostaria de saber?**`;
   }
