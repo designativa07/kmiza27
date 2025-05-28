@@ -1,71 +1,49 @@
-# 🎨 Dockerfile Frontend Otimizado - Auto Commit Detection
-# Multi-stage build com captura automática de commit
+# 🎨 Dockerfile Frontend Otimizado - Easypanel Compatible
+# Multi-stage build otimizado
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat git curl
+RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Cache busting com timestamp real
-ARG CACHEBUST=1
-ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
-ARG BUILD_TIMESTAMP
-RUN echo "Build: $CACHEBUST - API: $NEXT_PUBLIC_API_URL - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
-
-# Clone do repositório atual
-RUN git clone https://github.com/designativa07/kmiza27.git /tmp/repo
-
-# Capturar commit automaticamente do repositório clonado
-RUN cd /tmp/repo && \
-    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
-    echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
-    echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
-    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
-    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> /app/build-vars.env && \
-    echo "Commit capturado: $GIT_COMMIT_AUTO" && \
-    git log --oneline -1
-
-# Copiar apenas package files primeiro (melhor cache)
-RUN cp /tmp/repo/frontend/package*.json ./
-RUN rm -rf node_modules
+# Copiar package files
+COPY frontend/package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências e variáveis do stage anterior
+# Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/build-vars.env ./build-vars.env
-COPY --from=deps /tmp/repo/frontend ./
+COPY frontend ./
 
-# Carregar variáveis de build
-RUN . ./build-vars.env && \
-    echo "Usando commit: $GIT_COMMIT" && \
-    echo "Usando timestamp: $BUILD_TIMESTAMP" && \
-    echo "Usando API URL: $NEXT_PUBLIC_API_URL"
-
-# Configurar variáveis de build para Next.js
+# Definir variáveis de build
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+ARG GIT_COMMIT=e4bc6cfe
+ARG BUILD_TIMESTAMP
+
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
 ENV NODE_ENV=production
 ENV DISABLE_ESLINT_PLUGIN=true
 
-# Build da aplicação Next.js com variáveis carregadas
-RUN . ./build-vars.env && \
-    export GIT_COMMIT && \
-    export BUILD_TIMESTAMP && \
-    npm run build
+# Debug das variáveis
+RUN echo "🔍 Build Info:" && \
+    echo "API URL: $NEXT_PUBLIC_API_URL" && \
+    echo "Git Commit: $GIT_COMMIT" && \
+    echo "Build Time: $BUILD_TIMESTAMP"
 
-# Criar pasta public se não existir
-RUN mkdir -p ./public
+# Build da aplicação Next.js
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Instalar apenas dependências de runtime
+# Instalar dependências de runtime
 RUN apk add --no-cache curl dumb-init
 
 # Criar usuário não-root
@@ -76,36 +54,30 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/build-vars.env ./build-vars.env
 
-# Criar script de inicialização que carrega as variáveis
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo '. /app/build-vars.env' >> /app/start.sh && \
-    echo 'export GIT_COMMIT' >> /app/start.sh && \
-    echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
-    echo 'export NEXT_PUBLIC_API_URL' >> /app/start.sh && \
-    echo 'echo "Iniciando frontend com commit: $GIT_COMMIT"' >> /app/start.sh && \
-    echo 'echo "Build timestamp: $BUILD_TIMESTAMP"' >> /app/start.sh && \
-    echo 'node server.js' >> /app/start.sh && \
-    chmod +x /app/start.sh
+# Configurar variáveis de ambiente para runtime
+ARG GIT_COMMIT=e4bc6cfe
+ARG BUILD_TIMESTAMP
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
+ENV NODE_ENV=production
+ENV PORT=3002
+ENV HOSTNAME="0.0.0.0"
+
+# Debug final
+RUN echo "🚀 Runtime Info:" && \
+    echo "Git Commit: $GIT_COMMIT" && \
+    echo "Build Time: $BUILD_TIMESTAMP"
 
 # Configurar usuário
 USER nextjs
 
-# Variáveis de ambiente fixas
-ENV NODE_ENV=production
-ENV PORT=3002
-ENV HOSTNAME="0.0.0.0"
-ENV NODE_OPTIONS="--max-old-space-size=512"
-ENV RESTART_POLICY=always
-
-# Health check otimizado
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3002/api/health || curl -f http://localhost:3002 || exit 1
+    CMD curl -f http://localhost:3002/api/health || exit 1
 
 # Expor porta
 EXPOSE 3002
 
-# Usar dumb-init para melhor signal handling
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["/app/start.sh"] 
+# Iniciar aplicação
+CMD ["node", "server.js"] 
