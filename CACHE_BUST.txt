@@ -1,0 +1,7 @@
+# Cache Bust - Força rebuild no Easypanel
+COMMIT=84b849df
+TIMESTAMP=2025-05-28T16:48:14.960Z
+BUILD_NUMBER=1748450894964
+
+# Este arquivo força o Easypanel a fazer rebuild
+# Modificado automaticamente pelo script update-commit.js
