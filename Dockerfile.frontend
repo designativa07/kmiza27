@@ -1,5 +1,5 @@
 # 🎨 Dockerfile Frontend Otimizado - Easypanel Compatible
-# Multi-stage build otimizado com detecção automática de commit
+# Multi-stage build otimizado
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
@@ -18,41 +18,37 @@ WORKDIR /app
 # Instalar git para capturar commit
 RUN apk add --no-cache git
 
-# Copiar todo o contexto (incluindo .git)
+# Copiar contexto para detectar commit
 COPY . ./project-root/
 
-# Capturar commit automaticamente
+# Detectar commit e definir variáveis
 RUN cd project-root && \
-    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null | cut -c1-8 || echo "84b849d") && \
-    echo "🔍 Commit detectado: $GIT_COMMIT_AUTO" && \
-    echo $GIT_COMMIT_AUTO > /tmp/git-commit.txt
+    GIT_COMMIT_DETECTED=$(git rev-parse HEAD 2>/dev/null | cut -c1-8 || echo "e8316d9") && \
+    BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
+    echo "🔍 Git Commit detectado: $GIT_COMMIT_DETECTED" && \
+    echo "⏰ Build Time: $BUILD_TIME" && \
+    echo "export GIT_COMMIT=\"$GIT_COMMIT_DETECTED\"" > /tmp/build-vars.sh && \
+    echo "export BUILD_TIMESTAMP=\"$BUILD_TIME\"" >> /tmp/build-vars.sh
 
 # Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend ./
 
-# Definir variáveis de build com commit automático
+# Definir variáveis de build
 ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
-ARG BUILD_TIMESTAMP
-
-# Ler commit do arquivo gerado
-RUN GIT_COMMIT_FROM_FILE=$(cat /tmp/git-commit.txt 2>/dev/null || echo "84b849d") && \
-    export GIT_COMMIT=${GIT_COMMIT:-$GIT_COMMIT_FROM_FILE} && \
-    export BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")} && \
-    echo "🔍 Build Info:" && \
-    echo "API URL: $NEXT_PUBLIC_API_URL" && \
-    echo "Git Commit: $GIT_COMMIT" && \
-    echo "Build Time: $BUILD_TIMESTAMP" && \
-    echo "GIT_COMMIT=$GIT_COMMIT" >> .env.local && \
-    echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> .env.local && \
-    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> .env.local
-
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
 ENV DISABLE_ESLINT_PLUGIN=true
 
-# Build da aplicação Next.js
-RUN npm run build
+# Aplicar variáveis detectadas e fazer build
+RUN . /tmp/build-vars.sh && \
+    export GIT_COMMIT && \
+    export BUILD_TIMESTAMP && \
+    echo "🚀 Fazendo build com:" && \
+    echo "  Commit: $GIT_COMMIT" && \
+    echo "  API URL: $NEXT_PUBLIC_API_URL" && \
+    echo "  Build Time: $BUILD_TIMESTAMP" && \
+    npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
@@ -68,18 +64,18 @@ RUN adduser --system --uid 1001 nextjs
 # Copiar arquivos necessários do build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/.env.local ./.env.local
+COPY --from=builder --chown=nextjs:nodejs /tmp/build-vars.sh ./
 
 # Criar pasta public (Next.js precisa dela mesmo se vazia)
 RUN mkdir -p ./public
 
-# Ler variáveis do build
-RUN if [ -f .env.local ]; then \
-      export $(cat .env.local | xargs) && \
-      echo "🚀 Runtime Info:" && \
-      echo "Git Commit: $GIT_COMMIT" && \
-      echo "Build Time: $BUILD_TIMESTAMP"; \
-    fi
+# Configurar variáveis de runtime
+RUN . ./build-vars.sh && \
+    echo "GIT_COMMIT=$GIT_COMMIT" >> .env.production.local && \
+    echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> .env.production.local && \
+    echo "🚀 Runtime configurado:" && \
+    echo "  Commit: $GIT_COMMIT" && \
+    echo "  Build Time: $BUILD_TIMESTAMP"
 
 ENV NODE_ENV=production
 ENV PORT=3002

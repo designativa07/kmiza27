@@ -5,21 +5,35 @@ import { join } from 'path';
 export async function GET() {
   const buildTime = process.env.BUILD_TIMESTAMP || new Date().toISOString();
   
-  // Função para ler variáveis do .env.local se existir
+  // Função para ler variáveis do .env.production.local se existir
   const getBuildVars = () => {
     try {
-      const envPath = join(process.cwd(), '.env.local');
-      const envContent = readFileSync(envPath, 'utf8');
-      const vars: Record<string, string> = {};
+      const envPaths = [
+        join(process.cwd(), '.env.production.local'),
+        join(process.cwd(), '.env.local')
+      ];
       
-      envContent.split('\n').forEach(line => {
-        const [key, value] = line.split('=');
-        if (key && value) {
-          vars[key.trim()] = value.trim();
+      for (const envPath of envPaths) {
+        try {
+          const envContent = readFileSync(envPath, 'utf8');
+          const vars: Record<string, string> = {};
+          
+          envContent.split('\n').forEach(line => {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              vars[key.trim()] = value.trim();
+            }
+          });
+          
+          if (Object.keys(vars).length > 0) {
+            return vars;
+          }
+        } catch {
+          // Continuar para o próximo arquivo
         }
-      });
+      }
       
-      return vars;
+      return {};
     } catch {
       return {};
     }
@@ -34,11 +48,11 @@ export async function GET() {
                   process.env.RENDER_GIT_COMMIT ||
                   process.env.RAILWAY_GIT_COMMIT_SHA ||
                   process.env.COMMIT_SHA ||
-                  '84b849d'; // Fallback final
+                  'e8316d9'; // Fallback atual
   
   // Se ainda for unknown, usar o commit do build
   if (gitCommit === 'unknown' || !gitCommit) {
-    gitCommit = buildVars.GIT_COMMIT || '84b849d';
+    gitCommit = buildVars.GIT_COMMIT || 'e8316d9';
   }
   
   // Truncar para 8 caracteres se for muito longo
@@ -65,7 +79,8 @@ export async function GET() {
     nodeVersion: process.version,
     buildInfo: {
       autoDetected: !!buildVars.GIT_COMMIT,
-      source: buildVars.GIT_COMMIT ? 'docker-build' : 'fallback'
+      source: buildVars.GIT_COMMIT ? 'docker-build' : 'fallback',
+      fallbackCommit: 'e8316d9'
     }
   });
 } 
