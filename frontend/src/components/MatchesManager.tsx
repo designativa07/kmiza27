@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, ChangeEvent } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { Combobox } from '@headlessui/react'
 
 interface Team {
   id: number
@@ -39,6 +40,46 @@ interface Match {
   phase?: string
 }
 
+// Componente auxiliar para autocomplete de times
+function TeamAutocomplete({ teams, value, onChange, label }: { teams: Team[], value: string, onChange: (id: string) => void, label: string }) {
+  const [query, setQuery] = useState('')
+  const filteredTeams = query === '' ? teams : teams.filter(team => team.name.toLowerCase().includes(query.toLowerCase()))
+  const selectedTeam = teams.find(team => team.id.toString() === value)
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-900">{label}</label>
+      <Combobox value={selectedTeam} onChange={(team: Team) => onChange(team.id.toString())}>
+        <div className="relative mt-1">
+          <Combobox.Input
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+            displayValue={(team: Team) => team?.name || ''}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+            placeholder="Digite para buscar..."
+          />
+          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            {filteredTeams.length === 0 && query !== '' ? (
+              <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                Nenhum time encontrado
+              </div>
+            ) : (
+              filteredTeams.map((team: Team) => (
+                <Combobox.Option
+                  key={team.id}
+                  value={team}
+                  className={({ active }: { active: boolean }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-600 text-white' : 'text-gray-900'}`}
+                >
+                  {team.name}
+                </Combobox.Option>
+              ))
+            )}
+          </Combobox.Options>
+        </div>
+      </Combobox>
+    </div>
+  )
+}
+
 export default function MatchesManager() {
   const [matches, setMatches] = useState<Match[]>([])
   const [filteredMatches, setFilteredMatches] = useState<Match[]>([])
@@ -71,7 +112,9 @@ export default function MatchesManager() {
     phase: '',
     match_date: '',
     status: 'scheduled',
-    broadcast_channels: ''
+    broadcast_channels: '',
+    home_score: undefined,
+    away_score: undefined
   })
 
   useEffect(() => {
@@ -227,7 +270,9 @@ export default function MatchesManager() {
         match_date: new Date(formData.match_date).toISOString(),
         status: formData.status,
         broadcast_channels: formData.broadcast_channels ? 
-          formData.broadcast_channels.split(',').map(s => s.trim()) : []
+          formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+        home_score: formData.home_score,
+        away_score: formData.away_score
       }
       
       console.log('🔍 Frontend - Enviando payload:', payload);
@@ -265,7 +310,9 @@ export default function MatchesManager() {
       phase: '',
       match_date: '',
       status: 'scheduled',
-      broadcast_channels: ''
+      broadcast_channels: '',
+      home_score: undefined,
+      away_score: undefined
     })
   }
 
@@ -307,7 +354,9 @@ export default function MatchesManager() {
       phase: match.phase || '',
       match_date: new Date(match.match_date).toISOString().slice(0, 16),
       status: match.status,
-      broadcast_channels: processBroadcastChannels(match.broadcast_channels)
+      broadcast_channels: processBroadcastChannels(match.broadcast_channels),
+      home_score: match.home_score,
+      away_score: match.away_score
     })
     setShowModal(true)
   }
@@ -772,31 +821,36 @@ export default function MatchesManager() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Time da Casa</label>
-                    <select
-                      required
-                      value={formData.home_team_id}
-                      onChange={(e) => setFormData({ ...formData, home_team_id: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    >
-                      <option value="">Selecione...</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>{team.name}</option>
-                      ))}
-                    </select>
+                    <TeamAutocomplete teams={teams} value={formData.home_team_id} onChange={(id) => setFormData({ ...formData, home_team_id: id })} label="Time da Casa" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Time Visitante</label>
-                    <select
-                      required
-                      value={formData.away_team_id}
-                      onChange={(e) => setFormData({ ...formData, away_team_id: e.target.value })}
+                    <TeamAutocomplete teams={teams} value={formData.away_team_id} onChange={(id) => setFormData({ ...formData, away_team_id: id })} label="Time Visitante" />
+                  </div>
+                </div>
+                {/* Campos de placar */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Placar Casa</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.home_score ?? ''}
+                      onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : Number(e.target.value) })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    >
-                      <option value="">Selecione...</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>{team.name}</option>
-                      ))}
-                    </select>
+                      placeholder="Gols do time da casa"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Placar Visitante</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.away_score ?? ''}
+                      onChange={(e) => setFormData({ ...formData, away_score: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      placeholder="Gols do time visitante"
+                    />
                   </div>
                 </div>
                 
