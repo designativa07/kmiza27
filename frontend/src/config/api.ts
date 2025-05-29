@@ -100,7 +100,10 @@ export const API_ENDPOINTS = {
 export const imageUrl = (path: string): string => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  return `${API_BASE_URL}${path}`;
+  
+  // Garantir que o path comece com uma barra
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE_URL}${cleanPath}`;
 };
 
 console.log('🔧 API Configuration HARDCODED:', {

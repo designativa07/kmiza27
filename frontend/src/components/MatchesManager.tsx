@@ -113,8 +113,8 @@ export default function MatchesManager() {
     match_date: '',
     status: 'scheduled',
     broadcast_channels: '',
-    home_score: undefined,
-    away_score: undefined
+    home_score: undefined as number | undefined,
+    away_score: undefined as number | undefined
   })
 
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function MatchesManager() {
     e.preventDefault()
     try {
       const url = editingMatch 
-        ? `API_ENDPOINTS.matches.list()/${editingMatch.id}`
+        ? `${API_ENDPOINTS.matches.list()}/${editingMatch.id}`
         : API_ENDPOINTS.matches.list()
       
       const method = editingMatch ? 'PATCH' : 'POST'
@@ -311,8 +311,8 @@ export default function MatchesManager() {
       match_date: '',
       status: 'scheduled',
       broadcast_channels: '',
-      home_score: undefined,
-      away_score: undefined
+      home_score: undefined as number | undefined,
+      away_score: undefined as number | undefined
     })
   }
 
@@ -820,11 +820,9 @@ export default function MatchesManager() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Time da Casa</label>
                     <TeamAutocomplete teams={teams} value={formData.home_team_id} onChange={(id) => setFormData({ ...formData, home_team_id: id })} label="Time da Casa" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Time Visitante</label>
                     <TeamAutocomplete teams={teams} value={formData.away_team_id} onChange={(id) => setFormData({ ...formData, away_team_id: id })} label="Time Visitante" />
                   </div>
                 </div>
