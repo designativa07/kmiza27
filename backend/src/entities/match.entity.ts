@@ -85,18 +85,6 @@ export class Match {
   @Column({ type: 'jsonb', nullable: true })
   match_stats: any;
 
-  @Column({ type: 'int', nullable: true, default: 0 })
-  home_yellow_cards: number;
-
-  @Column({ type: 'int', nullable: true, default: 0 })
-  away_yellow_cards: number;
-
-  @Column({ type: 'int', nullable: true, default: 0 })
-  home_red_cards: number;
-
-  @Column({ type: 'int', nullable: true, default: 0 })
-  away_red_cards: number;
-
   @CreateDateColumn()
   created_at: Date;
 
