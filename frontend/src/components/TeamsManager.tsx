@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
@@ -19,6 +19,8 @@ interface Team {
 
 export default function TeamsManager() {
   const [teams, setTeams] = useState<Team[]>([])
+  const [filteredTeams, setFilteredTeams] = useState<Team[]>([])
+  const [paginatedTeams, setPaginatedTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
@@ -26,6 +28,15 @@ export default function TeamsManager() {
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [uploading, setUploading] = useState(false)
   const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload')
+  
+  // Estados do filtro
+  const [searchTerm, setSearchTerm] = useState('')
+  const [stateFilter, setStateFilter] = useState('')
+  
+  // Estados da paginação
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  
   const [formData, setFormData] = useState({
     name: '',
     short_name: '',
@@ -38,6 +49,65 @@ export default function TeamsManager() {
   useEffect(() => {
     fetchTeams()
   }, [])
+
+  useEffect(() => {
+    applyFilters()
+  }, [teams, searchTerm, stateFilter])
+
+  useEffect(() => {
+    applyPagination()
+  }, [filteredTeams, currentPage, itemsPerPage])
+
+  const applyFilters = () => {
+    let filtered = [...teams]
+
+    // Filtro por termo de busca
+    if (searchTerm) {
+      filtered = filtered.filter(team => 
+        team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        team.short_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        team.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        team.state?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por estado
+    if (stateFilter) {
+      filtered = filtered.filter(team => 
+        team.state?.toLowerCase().includes(stateFilter.toLowerCase())
+      )
+    }
+
+    setFilteredTeams(filtered)
+    setCurrentPage(1) // Reset para primeira página quando filtrar
+  }
+
+  const applyPagination = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    setPaginatedTeams(filteredTeams.slice(startIndex, endIndex))
+  }
+
+  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage)
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    }
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStateFilter('')
+  }
+
+  const getUniqueStates = () => {
+    const states = new Set<string>()
+    teams.forEach(team => {
+      if (team.state) states.add(team.state)
+    })
+    return Array.from(states).sort()
+  }
 
   const fetchTeams = async () => {
     try {
@@ -196,6 +266,167 @@ export default function TeamsManager() {
     }
   }
 
+  const PaginationControls = () => {
+    const getPageNumbers = () => {
+      const pages = []
+      const maxVisiblePages = 5
+      
+      if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        if (currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(totalPages)
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1)
+          pages.push('...')
+          for (let i = totalPages - 3; i <= totalPages; i++) {
+            pages.push(i)
+          }
+        } else {
+          pages.push(1)
+          pages.push('...')
+          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(totalPages)
+        }
+      }
+      
+      return pages
+    }
+
+    return (
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Próximo
+          </button>
+        </div>
+        
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div className="flex items-center space-x-4">
+            <p className="text-sm text-gray-700">
+              Mostrando{' '}
+              <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
+              {' '}até{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * itemsPerPage, filteredTeams.length)}
+              </span>
+              {' '}de{' '}
+              <span className="font-medium">{filteredTeams.length}</span>
+              {' '}resultados
+            </p>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-700">Itens por página:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              {/* Botão Primeira Página */}
+              <button
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Primeira página"
+              >
+                <span className="sr-only">Primeira página</span>
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Botão Anterior */}
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Página anterior"
+              >
+                <span className="sr-only">Anterior</span>
+                <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+              
+              {/* Números das páginas */}
+              {getPageNumbers().map((page, index) => (
+                <button
+                  key={index}
+                  onClick={() => typeof page === 'number' ? goToPage(page) : undefined}
+                  disabled={page === '...'}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                    page === currentPage
+                      ? 'z-10 bg-indigo-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+                      : page === '...'
+                      ? 'text-gray-700 ring-1 ring-inset ring-gray-300 cursor-default'
+                      : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              {/* Botão Próximo */}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Próxima página"
+              >
+                <span className="sr-only">Próximo</span>
+                <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+              
+              {/* Botão Última Página */}
+              <button
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Última página"
+              >
+                <span className="sr-only">Última página</span>
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414zm6 0a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L14.586 10l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return <div className="text-center">Carregando times...</div>
   }
@@ -218,6 +449,51 @@ export default function TeamsManager() {
             <PlusIcon className="h-4 w-4 inline mr-1" />
             Adicionar Time
           </button>
+        </div>
+      </div>
+
+      {/* Filtros e Busca */}
+      <div className="mt-6 bg-white shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nome, nome curto, cidade..."
+              className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Filtro por Estado */}
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="">Todos os estados</option>
+            {getUniqueStates().map((state) => (
+              <option key={state} value={state}>{state}</option>
+            ))}
+          </select>
+
+          {/* Botão Limpar Filtros */}
+          <div className="flex items-center justify-end">
+            <button
+              onClick={clearFilters}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        </div>
+        
+        <div className="mt-3 flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            {filteredTeams.length} times encontrados
+          </span>
         </div>
       </div>
 
@@ -246,7 +522,7 @@ export default function TeamsManager() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {teams.map((team) => (
+                  {paginatedTeams.map((team) => (
                     <tr key={team.id}>
                       <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex items-center">
@@ -293,6 +569,9 @@ export default function TeamsManager() {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Paginação */}
+              {totalPages > 1 && <PaginationControls />}
             </div>
           </div>
         </div>
