@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "mkdir -p public && git rev-parse --short HEAD > public/commit.txt",
+    "prebuild": "mkdir -p public && echo \"${COMMIT_HASH:-unknown}\" > public/commit.txt",
     "dev": "next dev --turbopack -p 3002",
     "build": "BUILD_TIMESTAMP=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\") GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo \"unknown\") next build",
     "build:win": "set BUILD_TIMESTAMP=%date:~-4,4%-%date:~-10,2%-%date:~-7,2%T%time:~0,2%:%time:~3,2%:%time:~6,2%Z && for /f \"tokens=*\" %i in ('git rev-parse HEAD 2^>nul ^|^| echo unknown') do set GIT_COMMIT=%i && next build",
