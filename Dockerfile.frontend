@@ -1,44 +1,63 @@
-# 🎨 Dockerfile Frontend Otimizado - Easypanel Compatible
-# Multi-stage build simplificado e robusto
+# 🎨 Dockerfile Frontend Otimizado - Auto Commit Detection
+# Multi-stage build com captura automática de commit
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat git
 
 WORKDIR /app
 
+# Cache busting com timestamp real
+ARG CACHEBUST=1
+ARG BUILD_TIMESTAMP
+RUN echo "Build: $CACHEBUST - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
+
+# Clone do repositório atual
+RUN git clone https://github.com/designativa07/kmiza27.git /tmp/repo
+
+# Capturar commit automaticamente do repositório clonado
+RUN cd /tmp/repo && \
+    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
+    echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
+    echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
+    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
+    echo "Commit capturado: $GIT_COMMIT_AUTO" && \
+    git log --oneline -1
+
 # Copiar package files
-COPY frontend/package*.json ./
+RUN cp /tmp/repo/frontend/package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências do stage anterior
+# Copiar dependências e variáveis do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend ./
+COPY --from=deps /app/build-vars.env ./build-vars.env
+COPY --from=deps /tmp/repo/frontend ./
 
-# Definir variáveis de build
-ARG NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
-ARG GIT_COMMIT=908471e
-ARG BUILD_TIMESTAMP
+# Carregar variáveis de build
+RUN . ./build-vars.env && \
+    echo "Usando commit: $GIT_COMMIT" && \
+    echo "Usando timestamp: $BUILD_TIMESTAMP"
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV GIT_COMMIT=$GIT_COMMIT
-ENV COMMIT_HASH=$GIT_COMMIT
-ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
-ENV NODE_ENV=production
-ENV DISABLE_ESLINT_PLUGIN=true
-
-# Debug das variáveis
-RUN echo "🔍 Build Info:" && \
+# Definir variáveis de build a partir do arquivo
+RUN . ./build-vars.env && \
+    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
+    export NODE_ENV=production && \
+    export DISABLE_ESLINT_PLUGIN=true && \
+    echo "🔍 Build Info:" && \
     echo "API URL: $NEXT_PUBLIC_API_URL" && \
     echo "Git Commit: $GIT_COMMIT" && \
     echo "Build Time: $BUILD_TIMESTAMP"
 
 # Build da aplicação Next.js
-RUN npm run build
+RUN . ./build-vars.env && \
+    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
+    export NODE_ENV=production && \
+    export DISABLE_ESLINT_PLUGIN=true && \
+    npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
@@ -54,23 +73,22 @@ RUN adduser --system --uid 1001 nextjs
 # Copiar arquivos necessários do build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/build-vars.env ./build-vars.env
 
 # Criar pasta public (Next.js precisa dela mesmo se vazia)
 RUN mkdir -p ./public
 
-# Configurar variáveis de ambiente para runtime
-ARG GIT_COMMIT=908471e
-ARG BUILD_TIMESTAMP
-ENV GIT_COMMIT=$GIT_COMMIT
-ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
-ENV NODE_ENV=production
-ENV PORT=3002
-ENV HOSTNAME="0.0.0.0"
-
-# Debug final
-RUN echo "🚀 Runtime Info:" && \
-    echo "Git Commit: $GIT_COMMIT" && \
-    echo "Build Time: $BUILD_TIMESTAMP"
+# Criar script de inicialização que carrega as variáveis
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo '. /app/build-vars.env' >> /app/start.sh && \
+    echo 'export GIT_COMMIT' >> /app/start.sh && \
+    echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
+    echo 'export NODE_ENV=production' >> /app/start.sh && \
+    echo 'export PORT=3002' >> /app/start.sh && \
+    echo 'export HOSTNAME="0.0.0.0"' >> /app/start.sh && \
+    echo 'echo "Iniciando frontend com commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
 # Configurar usuário
 USER nextjs
@@ -82,5 +100,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Expor porta
 EXPOSE 3002
 
-# Iniciar aplicação
-CMD ["node", "server.js"] 
+# Usar script de inicialização
+CMD ["/app/start.sh"] 
