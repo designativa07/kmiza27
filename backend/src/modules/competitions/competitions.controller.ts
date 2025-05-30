@@ -1,20 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { CompetitionsService } from './competitions.service';
 import { Competition } from '../../entities';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
+import { CreateCompetitionDto } from './dto/create-competition.dto';
+import { UpdateCompetitionDto } from './dto/update-competition.dto';
 
 @Controller('competitions')
 export class CompetitionsController {
   constructor(private readonly competitionsService: CompetitionsService) {}
 
   @Post()
-  create(@Body() createCompetitionDto: Partial<Competition>) {
+  create(@Body() createCompetitionDto: CreateCompetitionDto) {
     return this.competitionsService.create(createCompetitionDto);
   }
 
   @Get()
-  findAll() {
-    return this.competitionsService.findAll();
+  async findAll(@Res() res: Response) {
+    const competitions = await this.competitionsService.findAll();
+    
+    // Adicionar headers para evitar cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    return res.json(competitions);
   }
 
   @Get(':id')
@@ -28,8 +40,22 @@ export class CompetitionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCompetitionDto: Partial<Competition>) {
-    return this.competitionsService.update(+id, updateCompetitionDto);
+  async update(@Param('id') id: string, @Body() updateCompetitionDto: UpdateCompetitionDto, @Res() res: Response) {
+    console.log('🔍 PATCH /competitions/:id - Dados recebidos:', {
+      id,
+      updateCompetitionDto
+    });
+    
+    const updatedCompetition = await this.competitionsService.update(+id, updateCompetitionDto);
+    
+    // Adicionar headers para evitar cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    return res.json(updatedCompetition);
   }
 
   @Post(':id/teams')

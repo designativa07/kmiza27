@@ -26,6 +26,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: UsersIcon,
       change: 'Online agora',
       changeType: 'neutral',
+      onClick: () => onNavigate && onNavigate('Usuários'),
     },
     {
       name: 'Com Time Favorito',
@@ -33,6 +34,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: HeartIcon,
       change: 'Configurado',
       changeType: 'neutral',
+      onClick: () => onNavigate && onNavigate('Estatísticas de Usuários'),
     },
     {
       name: 'Interações Recentes (24h)',
@@ -40,6 +42,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: ClockIcon,
       change: 'Últimas 24h',
       changeType: 'neutral',
+      onClick: () => onNavigate && onNavigate('Conversas WhatsApp'),
     },
   ]
 
@@ -51,6 +54,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: UsersIcon,
       change: '+12%',
       changeType: 'increase',
+      onClick: () => onNavigate && onNavigate('Usuários'),
     },
     {
       name: 'Times Cadastrados',
@@ -58,6 +62,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: TrophyIcon,
       change: `${stats.totalTeams} times`,
       changeType: 'neutral',
+      onClick: () => onNavigate && onNavigate('Times'),
     },
     {
       name: 'Jogos Cadastrados',
@@ -65,6 +70,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: CalendarIcon,
       change: '+5 hoje',
       changeType: 'increase',
+      onClick: () => onNavigate && onNavigate('Jogos'),
     },
     {
       name: 'Conversas Ativas',
@@ -83,7 +89,10 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
         {mainStatsData.map((item) => (
           <div
             key={item.name}
-            className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow sm:px-6 sm:pt-6"
+            className={`relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow sm:px-6 sm:pt-6 ${
+              item.onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''
+            }`}
+            onClick={item.onClick}
           >
             <dt>
               <div className="absolute rounded-md bg-indigo-500 p-3">
@@ -107,7 +116,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
               <div className="absolute inset-x-0 bottom-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-600 px-4 py-4 sm:px-6">
                 <div className="text-sm">
                   <span className="font-medium text-indigo-600 hover:text-indigo-500">
-                    {item.name === 'Conversas Ativas' ? 'Ver conversas' : 'Ver detalhes'}
+                    {item.onClick ? 'Ver detalhes →' : 'Ver detalhes'}
                   </span>
                 </div>
               </div>

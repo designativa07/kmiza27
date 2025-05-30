@@ -17,6 +17,8 @@ export interface StandingEntry {
   goal_difference: number;
   form: string;
   group_name?: string;
+  red_cards: number;
+  yellow_cards: number;
 }
 
 export interface HeadToHeadStats {
@@ -81,6 +83,8 @@ export class StandingsService {
       goal_difference: number;
       form: string;
       group_name?: string;
+      red_cards: number;
+      yellow_cards: number;
     }>();
 
     // Inicializar estatísticas para todos os times
@@ -96,7 +100,9 @@ export class StandingsService {
         goals_against: 0,
         goal_difference: 0,
         form: '',
-        group_name: ct.group_name
+        group_name: ct.group_name,
+        red_cards: 0,
+        yellow_cards: 0
       });
     });
 
@@ -116,12 +122,20 @@ export class StandingsService {
         homeStats.goals_for += homeScore;
         homeStats.goals_against += awayScore;
         homeStats.goal_difference = homeStats.goals_for - homeStats.goals_against;
+        
+        // Adicionar cartões do time da casa
+        homeStats.yellow_cards += match.home_yellow_cards || 0;
+        homeStats.red_cards += match.home_red_cards || 0;
 
         // Atualizar estatísticas do time visitante
         awayStats.played++;
         awayStats.goals_for += awayScore;
         awayStats.goals_against += homeScore;
         awayStats.goal_difference = awayStats.goals_for - awayStats.goals_against;
+        
+        // Adicionar cartões do time visitante
+        awayStats.yellow_cards += match.away_yellow_cards || 0;
+        awayStats.red_cards += match.away_red_cards || 0;
 
         // Determinar resultado e atualizar pontos
         if (homeScore > awayScore) {
@@ -162,20 +176,42 @@ export class StandingsService {
           return groupA.localeCompare(groupB);
         }
         
-        // Dentro do mesmo grupo (ou sem grupos), ordenar por critérios técnicos
+        // Critérios de desempate do Brasileirão 2025
         // 1. Por pontos (decrescente)
         if (a.points !== b.points) {
           return b.points - a.points;
         }
-        // 2. Por saldo de gols (decrescente)
+        
+        // 2. Por número de vitórias (decrescente)
+        if (a.won !== b.won) {
+          return b.won - a.won;
+        }
+        
+        // 3. Por saldo de gols (decrescente)
         if (a.goal_difference !== b.goal_difference) {
           return b.goal_difference - a.goal_difference;
         }
-        // 3. Por gols marcados (decrescente)
+        
+        // 4. Por gols marcados (decrescente)
         if (a.goals_for !== b.goals_for) {
           return b.goals_for - a.goals_for;
         }
-        // 4. Por nome do time (alfabética)
+        
+        // 5. Confronto direto (apenas entre 2 times)
+        // Implementar confronto direto aqui
+        // TODO: Será implementado de forma assíncrona em uma versão futura
+        
+        // 6. Menor número de cartões vermelhos (decrescente - menos cartões = melhor)
+        if (a.red_cards !== b.red_cards) {
+          return a.red_cards - b.red_cards;
+        }
+        
+        // 7. Menor número de cartões amarelos (decrescente - menos cartões = melhor)
+        if (a.yellow_cards !== b.yellow_cards) {
+          return a.yellow_cards - b.yellow_cards;
+        }
+        
+        // 8. Por nome do time (alfabética) - critério final
         return a.team.name.localeCompare(b.team.name);
       });
 
@@ -207,7 +243,9 @@ export class StandingsService {
           goals_against: stats.goals_against,
           goal_difference: stats.goal_difference,
           form: stats.form,
-          group_name: stats.group_name
+          group_name: stats.group_name,
+          red_cards: stats.red_cards,
+          yellow_cards: stats.yellow_cards
         });
       });
     });
@@ -444,5 +482,69 @@ export class StandingsService {
     });
 
     return form;
+  }
+
+  private async calculateHeadToHead(competitionId: number, team1Id: number, team2Id: number): Promise<number> {
+    // Buscar confrontos diretos entre os dois times
+    const matches = await this.matchRepository.find({
+      where: [
+        {
+          competition: { id: competitionId },
+          home_team: { id: team1Id },
+          away_team: { id: team2Id },
+          status: MatchStatus.FINISHED
+        },
+        {
+          competition: { id: competitionId },
+          home_team: { id: team2Id },
+          away_team: { id: team1Id },
+          status: MatchStatus.FINISHED
+        }
+      ],
+      relations: ['home_team', 'away_team']
+    });
+
+    let team1Points = 0;
+    let team2Points = 0;
+    let team1Goals = 0;
+    let team2Goals = 0;
+
+    matches.forEach(match => {
+      const isTeam1Home = match.home_team.id === team1Id;
+      const team1Score = isTeam1Home ? match.home_score : match.away_score;
+      const team2Score = isTeam1Home ? match.away_score : match.home_score;
+
+      team1Goals += team1Score || 0;
+      team2Goals += team2Score || 0;
+
+      if (team1Score > team2Score) {
+        team1Points += 3;
+      } else if (team2Score > team1Score) {
+        team2Points += 3;
+      } else {
+        team1Points += 1;
+        team2Points += 1;
+      }
+    });
+
+    // Retorna: 1 se team1 é melhor, -1 se team2 é melhor, 0 se empate
+    if (team1Points !== team2Points) {
+      return team1Points > team2Points ? 1 : -1;
+    }
+    
+    // Se pontos iguais, verificar saldo de gols no confronto direto
+    const team1GoalDiff = team1Goals - team2Goals;
+    const team2GoalDiff = team2Goals - team1Goals;
+    
+    if (team1GoalDiff !== team2GoalDiff) {
+      return team1GoalDiff > team2GoalDiff ? 1 : -1;
+    }
+    
+    // Se saldo igual, verificar gols marcados
+    if (team1Goals !== team2Goals) {
+      return team1Goals > team2Goals ? 1 : -1;
+    }
+    
+    return 0; // Empate total no confronto direto
   }
 } 

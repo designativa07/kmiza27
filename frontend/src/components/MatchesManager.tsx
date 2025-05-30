@@ -198,7 +198,11 @@ export default function MatchesManager() {
     broadcast_channels: '',
     channel_ids: [] as number[],
     home_score: undefined as number | undefined,
-    away_score: undefined as number | undefined
+    away_score: undefined as number | undefined,
+    home_yellow_cards: undefined as number | undefined,
+    away_yellow_cards: undefined as number | undefined,
+    home_red_cards: undefined as number | undefined,
+    away_red_cards: undefined as number | undefined
   })
 
   useEffect(() => {
@@ -221,11 +225,19 @@ export default function MatchesManager() {
     try {
       console.log('🔄 Iniciando carregamento de dados...')
       
+      // Adicionar timestamp para evitar cache
+      const timestamp = new Date().getTime()
+      const cacheHeaders = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+      
       const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.matches.list()),
-        fetch(API_ENDPOINTS.teams.list()),
-        fetch(API_ENDPOINTS.competitions.list()),
-        fetch(API_ENDPOINTS.channels.list())
+        fetch(`${API_ENDPOINTS.matches.list()}?t=${timestamp}`, { headers: cacheHeaders }),
+        fetch(`${API_ENDPOINTS.teams.list()}?t=${timestamp}`, { headers: cacheHeaders }),
+        fetch(`${API_ENDPOINTS.competitions.list()}?t=${timestamp}`, { headers: cacheHeaders }),
+        fetch(`${API_ENDPOINTS.channels.list()}?t=${timestamp}`, { headers: cacheHeaders })
       ])
       
       console.log('📊 Status das requisições:', {
@@ -331,16 +343,57 @@ export default function MatchesManager() {
   const getUniqueRounds = () => {
     const rounds = new Set<string>()
     matches.forEach(match => {
-      if (match.round?.name) rounds.add(match.round.name)
-      if (match.group_name) rounds.add(match.group_name)
+      // Apenas adicionar rodadas que são números ou começam com "Rodada"
+      if (match.round?.name) {
+        const roundName = match.round.name
+        // Verificar se é uma rodada numérica ou contém "Rodada"
+        if (/^\d+$/.test(roundName) || roundName.toLowerCase().includes('rodada')) {
+          rounds.add(roundName)
+        }
+      }
+      // Adicionar group_name apenas se não for uma fase
+      if (match.group_name) {
+        const groupName = match.group_name
+        // Verificar se não é uma fase (não contém palavras como "final", "semi", "oitavas", etc.)
+        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória']
+        const isPhase = phaseKeywords.some(keyword => 
+          groupName.toLowerCase().includes(keyword)
+        )
+        if (!isPhase) {
+          rounds.add(groupName)
+        }
+      }
     })
-    return Array.from(rounds).sort()
+    return Array.from(rounds).sort((a, b) => {
+      // Ordenar numericamente se ambos forem números
+      const numA = parseInt(a.replace(/\D/g, ''))
+      const numB = parseInt(b.replace(/\D/g, ''))
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB
+      }
+      // Caso contrário, ordenar alfabeticamente
+      return a.localeCompare(b)
+    })
   }
 
   const getUniquePhases = () => {
     const phases = new Set<string>()
     matches.forEach(match => {
-      if (match.phase) phases.add(match.phase)
+      // Adicionar phase se existir
+      if (match.phase) {
+        phases.add(match.phase)
+      }
+      // Adicionar group_name se for uma fase (contém palavras-chave de fase)
+      if (match.group_name) {
+        const groupName = match.group_name
+        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória', 'playoff']
+        const isPhase = phaseKeywords.some(keyword => 
+          groupName.toLowerCase().includes(keyword)
+        )
+        if (isPhase) {
+          phases.add(groupName)
+        }
+      }
     })
     return Array.from(phases).sort()
   }
@@ -367,7 +420,11 @@ export default function MatchesManager() {
           formData.broadcast_channels.split(',').map(s => s.trim()) : [],
         channel_ids: formData.channel_ids,
         home_score: formData.home_score,
-        away_score: formData.away_score
+        away_score: formData.away_score,
+        home_yellow_cards: formData.home_yellow_cards,
+        away_yellow_cards: formData.away_yellow_cards,
+        home_red_cards: formData.home_red_cards,
+        away_red_cards: formData.away_red_cards
       }
       
       console.log('🔍 Frontend - Enviando payload:', payload);
@@ -376,22 +433,34 @@ export default function MatchesManager() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         body: JSON.stringify(payload),
       })
 
       if (response.ok) {
         console.log('✅ Frontend - Resposta OK');
-        fetchData()
+        
+        // Fechar modal e resetar form primeiro
         setShowModal(false)
         setEditingMatch(null)
         resetForm()
+        
+        // Aguardar um pouco para garantir que a transação foi commitada no banco
+        setTimeout(() => {
+          console.log('🔄 Recarregando dados após atualização...');
+          fetchData()
+        }, 500) // 500ms de delay
+        
       } else {
         const errorText = await response.text();
         console.error('❌ Frontend - Erro na resposta:', response.status, errorText);
+        alert(`Erro ao salvar: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('❌ Frontend - Erro ao salvar jogo:', error)
+      alert('Erro ao salvar jogo. Tente novamente.')
     }
   }
 
@@ -408,7 +477,11 @@ export default function MatchesManager() {
       broadcast_channels: '',
       channel_ids: [],
       home_score: undefined as number | undefined,
-      away_score: undefined as number | undefined
+      away_score: undefined as number | undefined,
+      home_yellow_cards: undefined as number | undefined,
+      away_yellow_cards: undefined as number | undefined,
+      home_red_cards: undefined as number | undefined,
+      away_red_cards: undefined as number | undefined
     })
   }
 
@@ -453,7 +526,11 @@ export default function MatchesManager() {
       broadcast_channels: processBroadcastChannels(match.broadcast_channels),
       channel_ids: match.channel_ids || [],
       home_score: match.home_score,
-      away_score: match.away_score
+      away_score: match.away_score,
+      home_yellow_cards: (match as any).home_yellow_cards,
+      away_yellow_cards: (match as any).away_yellow_cards,
+      home_red_cards: (match as any).home_red_cards,
+      away_red_cards: (match as any).away_red_cards
     })
     setShowModal(true)
   }
@@ -707,6 +784,20 @@ export default function MatchesManager() {
           </button>
           <button
             type="button"
+            onClick={() => {
+              setLoading(true)
+              fetchData()
+            }}
+            className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+            title="Atualizar dados"
+          >
+            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Atualizar
+          </button>
+          <button
+            type="button"
             onClick={() => setShowModal(true)}
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
@@ -945,6 +1036,54 @@ export default function MatchesManager() {
                       onChange={(e) => setFormData({ ...formData, away_score: e.target.value === '' ? undefined : Number(e.target.value) })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                       placeholder="Gols do time visitante"
+                    />
+                  </div>
+                </div>
+                
+                {/* Campos de cartões */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Cartões Amarelos Casa</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.home_yellow_cards ?? ''}
+                      onChange={(e) => setFormData({ ...formData, home_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Cartões Vermelhos Casa</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.home_red_cards ?? ''}
+                      onChange={(e) => setFormData({ ...formData, home_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Cartões Amarelos Visitante</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.away_yellow_cards ?? ''}
+                      onChange={(e) => setFormData({ ...formData, away_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Cartões Vermelhos Visitante</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.away_red_cards ?? ''}
+                      onChange={(e) => setFormData({ ...formData, away_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      placeholder="0"
                     />
                   </div>
                 </div>
