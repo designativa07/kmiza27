@@ -162,11 +162,11 @@ export default function ChannelsManager() {
 
   // Funções utilitárias
   const getUniqueCategories = () => {
-    const categories = new Set<string>()
+    const types = new Set<string>()
     channels.forEach(channel => {
-      if (channel.type) categories.add(channel.type)
+      if (channel.type) types.add(channel.type)
     })
-    return Array.from(categories).sort()
+    return Array.from(types).sort()
   }
 
   const clearFilters = () => {
@@ -301,9 +301,9 @@ export default function ChannelsManager() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
             >
-              <option value="">Todas as categorias</option>
-              {getUniqueCategories().map((category) => (
-                <option key={category} value={category}>{category}</option>
+              <option value="">Todos os tipos</option>
+              {getUniqueCategories().map((type) => (
+                <option key={type} value={type}>{type}</option>
               ))}
             </select>
           </div>
@@ -347,7 +347,7 @@ export default function ChannelsManager() {
             )}
             {typeFilter && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Categoria: {typeFilter}
+                Tipo: {typeFilter}
                 <button
                   type="button"
                   onClick={() => setTypeFilter('')}
@@ -382,7 +382,7 @@ export default function ChannelsManager() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Canal</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Categoria</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Website</th>
                     <th className="relative px-6 py-3"><span className="sr-only">Ações</span></th>
