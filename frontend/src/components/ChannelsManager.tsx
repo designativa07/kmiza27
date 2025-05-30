@@ -169,6 +169,16 @@ export default function ChannelsManager() {
     return Array.from(types).sort()
   }
 
+  const formatChannelType = (type: string) => {
+    const typeLabels: Record<string, string> = {
+      'tv': 'TV Aberta',
+      'cable': 'TV por Assinatura', 
+      'streaming': 'Streaming',
+      'other': 'Outros'
+    }
+    return typeLabels[type] || type
+  }
+
   const clearFilters = () => {
     setSearchQuery('')
     setTypeFilter('')
@@ -303,7 +313,7 @@ export default function ChannelsManager() {
             >
               <option value="">Todos os tipos</option>
               {getUniqueCategories().map((type) => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type} value={type}>{formatChannelType(type)}</option>
               ))}
             </select>
           </div>
@@ -347,7 +357,7 @@ export default function ChannelsManager() {
             )}
             {typeFilter && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Tipo: {typeFilter}
+                Tipo: {formatChannelType(typeFilter)}
                 <button
                   type="button"
                   onClick={() => setTypeFilter('')}
@@ -409,7 +419,7 @@ export default function ChannelsManager() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {channel.type || '-'}
+                        {formatChannelType(channel.type) || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
