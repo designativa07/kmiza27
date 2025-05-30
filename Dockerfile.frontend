@@ -1,79 +1,100 @@
-# 🎨 Dockerfile Frontend Ultra-Simplificado
-# Foco apenas na captura correta do commit
+# 🐳 Dockerfile Frontend - Cópia Exata do Backend Funcional
+# Usando estrutura idêntica ao backend que sabemos que funciona
 
-# Stage 1: Build Info
-FROM alpine/git AS git-info
-WORKDIR /app
-RUN git clone https://github.com/designativa07/kmiza27.git repo
-RUN cd repo && \
-    echo "$(git rev-parse HEAD)" > /commit && \
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /timestamp && \
-    echo "Git Commit: $(cat /commit)" && \
-    echo "Build Time: $(cat /timestamp)"
-
-# Stage 2: Dependencies  
+# Stage 1: Dependencies
 FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat python3 make g++ git curl
+
 WORKDIR /app
-COPY frontend/package*.json ./
+
+# Cache busting com timestamp real
+ARG CACHEBUST=1
+ARG BUILD_TIMESTAMP
+RUN echo "Build: $CACHEBUST - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
+
+# Clone do repositório atual
+RUN git clone https://github.com/designativa07/kmiza27.git /tmp/repo
+
+# Capturar commit automaticamente do repositório clonado (IGUAL AO BACKEND)
+RUN cd /tmp/repo && \
+    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
+    echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
+    echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
+    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
+    echo "Commit capturado: $GIT_COMMIT_AUTO" && \
+    git log --oneline -1
+
+# Copiar apenas package files primeiro (melhor cache)
+RUN cp /tmp/repo/frontend/package*.json ./
+RUN rm -rf node_modules
 RUN npm install --legacy-peer-deps
 
-# Stage 3: Builder
+# Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar informações de build
-COPY --from=git-info /commit /commit
-COPY --from=git-info /timestamp /timestamp
+# Copiar dependências e variáveis do stage anterior (IGUAL AO BACKEND)
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend ./
+COPY --from=deps /app/build-vars.env ./build-vars.env
+COPY --from=deps /tmp/repo/frontend ./
 
-# Configurar variáveis para build
-ENV NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
-ENV NODE_ENV=production
+# Carregar variáveis de build (IGUAL AO BACKEND)
+RUN . ./build-vars.env && \
+    echo "Usando commit: $GIT_COMMIT" && \
+    echo "Usando timestamp: $BUILD_TIMESTAMP"
 
-# Build com variáveis capturadas
-RUN export GIT_COMMIT=$(cat /commit) && \
-    export BUILD_TIMESTAMP=$(cat /timestamp) && \
-    echo "Building with commit: $GIT_COMMIT" && \
-    echo "Building with timestamp: $BUILD_TIMESTAMP" && \
+# Configurar variáveis específicas do Next.js
+RUN . ./build-vars.env && \
+    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
+    export NODE_ENV=production && \
+    echo "Next.js Build with commit: $GIT_COMMIT"
+
+# Build da aplicação Next.js
+RUN . ./build-vars.env && \
+    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
+    export NODE_ENV=production && \
     npm run build
 
-# Stage 4: Runtime
+# Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Instalar curl para health check
-RUN apk add --no-cache curl
+# Instalar apenas dependências de runtime (IGUAL AO BACKEND)
+RUN apk add --no-cache curl dumb-init
 
-# Criar usuário
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# Criar usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Copiar build e informações
+# Copiar arquivos necessários (ADAPTADO PARA NEXT.JS)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=git-info /commit /commit
-COPY --from=git-info /timestamp /timestamp
+COPY --from=builder --chown=nextjs:nodejs /app/build-vars.env ./build-vars.env
 
-# Configurar variáveis de ambiente no runtime
-ENV NODE_ENV=production
-ENV PORT=3002
-ENV HOSTNAME=0.0.0.0
+# Criar script de inicialização que carrega as variáveis (IGUAL AO BACKEND)
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo '. /app/build-vars.env' >> /app/start.sh && \
+    echo 'export GIT_COMMIT' >> /app/start.sh && \
+    echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
+    echo 'echo "Iniciando frontend com commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
-# Script de inicialização simples
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'export GIT_COMMIT=$(cat /commit)' >> /start.sh && \
-    echo 'export BUILD_TIMESTAMP=$(cat /timestamp)' >> /start.sh && \
-    echo 'echo "🚀 Starting frontend with commit: $GIT_COMMIT"' >> /start.sh && \
-    echo 'exec node server.js' >> /start.sh && \
-    chmod +x /start.sh && \
-    chown nextjs:nodejs /start.sh
-
+# Configurar usuário
 USER nextjs
 
+# Variáveis de ambiente fixas
+ENV NODE_ENV=production
+ENV PORT=3002
+ENV HOSTNAME="0.0.0.0"
+
+# Health check otimizado (IGUAL AO BACKEND)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3002/api/health || exit 1
 
+# Expor porta
 EXPOSE 3002
 
-CMD ["/start.sh"] 
+# Usar dumb-init para melhor signal handling (IGUAL AO BACKEND)
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["/app/start.sh"] 
