@@ -44,7 +44,7 @@ import { AuthModule } from './modules/auth/auth.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || '195.200.0.191',
+      host: process.env.DB_HOST || 'h4xd66.easypanel.host',
       port: parseInt(process.env.DB_PORT || '5433', 10),
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || '8F1DC9A7F9CE32C4D32E88A1C5FF7',
@@ -65,7 +65,7 @@ import { AuthModule } from './modules/auth/auth.module';
         BotConfig,
         Channel
       ],
-      synchronize: true,
+      synchronize: false,
       logging: false,
       ssl: false,
       retryAttempts: 3,
