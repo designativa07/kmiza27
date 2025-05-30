@@ -298,8 +298,8 @@ export default function MatchesManager() {
 
     if (filters.round) {
       filtered = filtered.filter(match => 
-        match.round?.name?.toLowerCase().includes(filters.round.toLowerCase()) ||
-        match.group_name?.toLowerCase().includes(filters.round.toLowerCase())
+        match.round?.name === filters.round ||
+        match.group_name === filters.round
       )
     }
 
@@ -346,8 +346,8 @@ export default function MatchesManager() {
       // Apenas adicionar rodadas que são números ou começam com "Rodada"
       if (match.round?.name) {
         const roundName = match.round.name
-        // Verificar se é uma rodada numérica ou contém "Rodada"
-        if (/^\d+$/.test(roundName) || roundName.toLowerCase().includes('rodada')) {
+        // Verificar se é uma rodada numérica ou contém "Rodada" (case insensitive)
+        if (/^\d+$/.test(roundName) || /rodada/i.test(roundName)) {
           rounds.add(roundName)
         }
       }
