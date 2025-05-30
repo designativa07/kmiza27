@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TrashIcon, UsersIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
 
 interface Team {
@@ -9,6 +9,8 @@ interface Team {
   name: string
   short_name: string
   logo_url?: string
+  city?: string
+  state?: string
 }
 
 interface Competition {
@@ -41,15 +43,44 @@ interface CompetitionTeamsManagerProps {
 export default function CompetitionTeamsManager({ competitionId, onClose }: CompetitionTeamsManagerProps) {
   const [competitionTeams, setCompetitionTeams] = useState<CompetitionTeam[]>([])
   const [availableTeams, setAvailableTeams] = useState<Team[]>([])
+  const [filteredAvailableTeams, setFilteredAvailableTeams] = useState<Team[]>([])
   const [competition, setCompetition] = useState<Competition | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedTeams, setSelectedTeams] = useState<number[]>([])
   const [groupName, setGroupName] = useState('')
+  
+  // Estados para busca e filtros
+  const [searchQuery, setSearchQuery] = useState('')
+  const [stateFilter, setStateFilter] = useState('')
 
   useEffect(() => {
     fetchData()
   }, [competitionId])
+
+  // Effect para filtrar os times disponíveis
+  useEffect(() => {
+    const availableTeamsForSelection = getAvailableTeamsForSelection()
+    let filtered = availableTeamsForSelection
+
+    // Filtro por busca
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(team => 
+        team.name.toLowerCase().includes(query) ||
+        team.short_name.toLowerCase().includes(query) ||
+        (team.city && team.city.toLowerCase().includes(query)) ||
+        (team.state && team.state.toLowerCase().includes(query))
+      )
+    }
+
+    // Filtro por estado
+    if (stateFilter) {
+      filtered = filtered.filter(team => team.state === stateFilter)
+    }
+
+    setFilteredAvailableTeams(filtered)
+  }, [availableTeams, competitionTeams, searchQuery, stateFilter])
 
   const fetchData = async () => {
     try {
@@ -102,6 +133,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
         setShowAddModal(false)
         setSelectedTeams([])
         setGroupName('')
+        clearFilters()
       } else {
         console.error('Erro ao adicionar times')
       }
@@ -138,6 +170,18 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
     )
   }
 
+  const clearFilters = () => {
+    setSearchQuery('')
+    setStateFilter('')
+  }
+
+  const closeModal = () => {
+    setShowAddModal(false)
+    setSelectedTeams([])
+    setGroupName('')
+    clearFilters()
+  }
+
   const getAvailableTeamsForSelection = () => {
     const usedTeamIds = competitionTeams.map(ct => ct.team.id)
     return availableTeams.filter(team => !usedTeamIds.includes(team.id))
@@ -151,6 +195,16 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
     return Array.from(groups).sort()
   }
 
+  const getUniqueStates = () => {
+    const availableTeamsForSelection = getAvailableTeamsForSelection()
+    const states = new Set<string>()
+    availableTeamsForSelection.forEach(team => {
+      if (team.state) states.add(team.state)
+    })
+    return Array.from(states).sort()
+  }
+
+  // Componente TeamLogo
   const TeamLogo = ({ team }: { team: Team }) => {
     if (!team.logo_url) {
       return (
@@ -318,42 +372,106 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
                 />
               </div>
 
+              {/* Filtros de Busca */}
+              <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Buscar Times</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="relative">
+                      <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome, sigla, cidade..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <select
+                      value={stateFilter}
+                      onChange={(e) => setStateFilter(e.target.value)}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">Todos os estados</option>
+                      {getUniqueStates().map((state) => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Indicadores de filtros ativos */}
+                {(searchQuery || stateFilter) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {searchQuery && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Busca: "{searchQuery}"
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="ml-1 text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {stateFilter && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Estado: {stateFilter}
+                        <button
+                          type="button"
+                          onClick={() => setStateFilter('')}
+                          className="ml-1 text-green-600 hover:text-green-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selecionar Times ({selectedTeams.length} selecionados)
+                  Selecionar Times ({selectedTeams.length} selecionados) - {filteredAvailableTeams.length} encontrados
                 </label>
                 <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md">
-                  {getAvailableTeamsForSelection().map((team) => (
-                    <div
-                      key={team.id}
-                      className={`flex items-center p-3 cursor-pointer hover:bg-gray-50 ${
-                        selectedTeams.includes(team.id) ? 'bg-indigo-50 border-l-4 border-indigo-500' : ''
-                      }`}
-                      onClick={() => toggleTeamSelection(team.id)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedTeams.includes(team.id)}
-                        onChange={() => toggleTeamSelection(team.id)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-3"
-                      />
-                      <TeamLogo team={team} />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{team.name}</p>
-                        <p className="text-xs text-gray-500">{team.short_name}</p>
-                      </div>
+                  {filteredAvailableTeams.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      {searchQuery || stateFilter ? 'Nenhum time encontrado com os filtros aplicados' : 'Nenhum time disponível para adicionar'}
                     </div>
-                  ))}
+                  ) : (
+                    filteredAvailableTeams.map((team) => (
+                      <div
+                        key={team.id}
+                        className={`flex items-center p-3 cursor-pointer hover:bg-gray-50 ${
+                          selectedTeams.includes(team.id) ? 'bg-indigo-50 border-l-4 border-indigo-500' : ''
+                        }`}
+                        onClick={() => toggleTeamSelection(team.id)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTeams.includes(team.id)}
+                          onChange={() => toggleTeamSelection(team.id)}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-3"
+                        />
+                        <TeamLogo team={team} />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{team.name}</p>
+                          <p className="text-xs text-gray-500">{team.short_name}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
               <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => {
-                    setShowAddModal(false)
-                    setSelectedTeams([])
-                    setGroupName('')
-                  }}
+                  onClick={closeModal}
                   className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
                 >
                   Cancelar
