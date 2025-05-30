@@ -41,6 +41,7 @@ export default function StatusContent({ standalone = false }: StatusContentProps
   ]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [frontendCommit, setFrontendCommit] = useState<string | null>(null);
 
   const checkServiceStatus = async (service: ServiceStatus): Promise<ServiceStatus> => {
     const startTime = Date.now();
@@ -102,6 +103,14 @@ export default function StatusContent({ standalone = false }: StatusContentProps
     // Auto-refresh a cada 30 segundos
     const interval = setInterval(checkAllServices, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Busca o commit do frontend do arquivo público caso não venha do health
+    fetch('/commit.txt')
+      .then(res => res.text())
+      .then(text => setFrontendCommit(text.trim()))
+      .catch(() => setFrontendCommit(null));
   }, []);
 
   const getStatusIcon = (status: ServiceStatus['status']) => {
@@ -281,7 +290,9 @@ export default function StatusContent({ standalone = false }: StatusContentProps
                   <div>
                     <span className="text-gray-500 dark:text-gray-400">Commit:</span>
                     <p className="font-medium text-gray-900 dark:text-white font-mono">
-                      {formatCommit(service.commit)}
+                      {service.name === 'Frontend' && !service.commit && frontendCommit
+                        ? frontendCommit.substring(0, 8)
+                        : formatCommit(service.commit)}
                     </p>
                   </div>
                   
