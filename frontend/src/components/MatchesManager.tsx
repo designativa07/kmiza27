@@ -34,10 +34,92 @@ interface Match {
   home_score?: number
   away_score?: number
   broadcast_channels?: any
+  channel_ids?: number[]
   streaming_links?: any
   round?: { id: number; name: string }
   group_name?: string
   phase?: string
+}
+
+interface Channel {
+  id: number
+  name: string
+}
+
+// Componente para seleção múltipla de canais
+function ChannelMultiSelect({ 
+  channels, 
+  selectedIds, 
+  onChange, 
+  label 
+}: { 
+  channels: Channel[], 
+  selectedIds: number[], 
+  onChange: (ids: number[]) => void, 
+  label: string 
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  
+  const toggleChannel = (channelId: number) => {
+    if (selectedIds.includes(channelId)) {
+      onChange(selectedIds.filter(id => id !== channelId))
+    } else {
+      onChange([...selectedIds, channelId])
+    }
+  }
+  
+  const getSelectedChannelNames = () => {
+    return channels
+      .filter(channel => selectedIds.includes(channel.id))
+      .map(channel => channel.name)
+      .join(', ')
+  }
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-900 mb-2">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full text-left bg-white border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        {selectedIds.length === 0 
+          ? 'Selecione os canais...' 
+          : `${selectedIds.length} canais selecionados`
+        }
+        <span className="float-right">▼</span>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+          {channels.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Nenhum canal disponível</div>
+          ) : (
+            <>
+              <div className="px-3 py-2 text-xs text-gray-500 border-b">
+                {getSelectedChannelNames() || 'Nenhum canal selecionado'}
+              </div>
+              {channels.map((channel) => (
+                <div
+                  key={channel.id}
+                  className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => toggleChannel(channel.id)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(channel.id)}
+                    onChange={() => toggleChannel(channel.id)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">{channel.name}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Componente auxiliar para autocomplete de times
@@ -86,6 +168,7 @@ export default function MatchesManager() {
   const [paginatedMatches, setPaginatedMatches] = useState<Match[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [competitions, setCompetitions] = useState<Competition[]>([])
+  const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
@@ -113,6 +196,7 @@ export default function MatchesManager() {
     match_date: '',
     status: 'scheduled',
     broadcast_channels: '',
+    channel_ids: [] as number[],
     home_score: undefined as number | undefined,
     away_score: undefined as number | undefined
   })
@@ -137,16 +221,18 @@ export default function MatchesManager() {
     try {
       console.log('🔄 Iniciando carregamento de dados...')
       
-      const [matchesRes, teamsRes, competitionsRes] = await Promise.all([
+      const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
         fetch(API_ENDPOINTS.matches.list()),
         fetch(API_ENDPOINTS.teams.list()),
-        fetch(API_ENDPOINTS.competitions.list())
+        fetch(API_ENDPOINTS.competitions.list()),
+        fetch(API_ENDPOINTS.channels.list())
       ])
       
       console.log('📊 Status das requisições:', {
         matches: matchesRes.status,
         teams: teamsRes.status,
-        competitions: competitionsRes.status
+        competitions: competitionsRes.status,
+        channels: channelsRes.status
       })
       
       if (!matchesRes.ok) {
@@ -165,15 +251,23 @@ export default function MatchesManager() {
       const teamsData = await teamsRes.json()
       const competitionsData = await competitionsRes.json()
       
+      // Channels pode dar erro se não existir ainda no backend
+      let channelsData = []
+      if (channelsRes.ok) {
+        channelsData = await channelsRes.json()
+      }
+      
       console.log('✅ Dados carregados:', {
         jogos: matchesData.length,
         times: teamsData.length,
-        competições: competitionsData.length
+        competições: competitionsData.length,
+        canais: channelsData.length
       })
       
       setMatches(matchesData)
       setTeams(teamsData)
       setCompetitions(competitionsData)
+      setChannels(channelsData)
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
@@ -271,6 +365,7 @@ export default function MatchesManager() {
         status: formData.status,
         broadcast_channels: formData.broadcast_channels ? 
           formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+        channel_ids: formData.channel_ids,
         home_score: formData.home_score,
         away_score: formData.away_score
       }
@@ -311,6 +406,7 @@ export default function MatchesManager() {
       match_date: '',
       status: 'scheduled',
       broadcast_channels: '',
+      channel_ids: [],
       home_score: undefined as number | undefined,
       away_score: undefined as number | undefined
     })
@@ -355,6 +451,7 @@ export default function MatchesManager() {
       match_date: new Date(match.match_date).toISOString().slice(0, 16),
       status: match.status,
       broadcast_channels: processBroadcastChannels(match.broadcast_channels),
+      channel_ids: match.channel_ids || [],
       home_score: match.home_score,
       away_score: match.away_score
     })
@@ -928,13 +1025,23 @@ export default function MatchesManager() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Canais de TV (separados por vírgula)</label>
+                  <ChannelMultiSelect
+                    channels={channels}
+                    selectedIds={formData.channel_ids}
+                    onChange={(ids) => setFormData({ ...formData, channel_ids: ids })}
+                    label="Canais de Transmissão"
+                  />
+                </div>
+                
+                {/* Campo para canais em texto (compatibilidade) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">Canais Adicionais (texto)</label>
                   <input
                     type="text"
                     value={formData.broadcast_channels}
                     onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    placeholder="Ex: Globo, SporTV, ESPN"
+                    placeholder="Ex: Outros canais não cadastrados"
                   />
                 </div>
                 

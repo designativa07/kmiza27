@@ -56,6 +56,12 @@ export const API_ENDPOINTS = {
     teamById: (competitionId: number, teamId: number) => apiUrl(`competitions/${competitionId}/teams/${teamId}`),
   },
   
+  // Channels
+  channels: {
+    list: () => apiUrl('channels'),
+    byId: (id: number) => apiUrl(`channels/${id}`),
+  },
+  
   // Notifications
   notifications: {
     list: () => apiUrl('notifications'),

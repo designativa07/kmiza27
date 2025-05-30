@@ -20,6 +20,7 @@ import TeamsManager from './TeamsManager'
 import CompetitionsManager from './CompetitionsManager'
 import MatchesManager from './MatchesManager'
 import StandingsManager from './StandingsManager'
+import ChannelsManager from './ChannelsManager'
 import UsersManager from './UsersManager'
 import AdminsManager from './AdminsManager'
 import ChatbotSettings from './ChatbotSettings'
@@ -39,6 +40,7 @@ const navigation = [
   { name: 'Times', href: '#', icon: TrophyIcon, current: false },
   { name: 'Competições', href: '#', icon: TrophyIcon, current: false },
   { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
+  { name: 'Canais', href: '#', icon: TvIcon, current: false },
   { name: 'Classificações', href: '#', icon: ChartBarIcon, current: false },
   { name: 'Usuários', href: '#', icon: UsersIcon, current: false },
   { name: 'Administradores', href: '#', icon: UsersIcon, current: false },
@@ -144,6 +146,8 @@ export default function Dashboard() {
         return <CompetitionsManager />
       case 'Jogos':
         return <MatchesManager />
+      case 'Canais':
+        return <ChannelsManager />
       case 'Classificações':
         return <StandingsManager />
       case 'Usuários':
