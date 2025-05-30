@@ -17,7 +17,8 @@ import {
   ChatbotConversation, 
   Notification, 
   NotificationDelivery,
-  SystemSettings 
+  SystemSettings,
+  Channel
 } from './entities';
 import { BotConfig } from './entities/bot-config.entity';
 
@@ -27,6 +28,7 @@ import { TeamsModule } from './modules/teams/teams.module';
 import { MatchesModule } from './modules/matches/matches.module';
 import { UsersModule } from './modules/users/users.module';
 import { CompetitionsModule } from './modules/competitions/competitions.module';
+import { ChannelsModule } from './modules/channels/channels.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { StandingsModule } from './modules/standings/standings.module';
@@ -60,17 +62,25 @@ import { AuthModule } from './modules/auth/auth.module';
         Notification,
         NotificationDelivery,
         SystemSettings,
-        BotConfig
+        BotConfig,
+        Channel
       ],
-      synchronize: false,
+      synchronize: true,
       logging: false,
       ssl: false,
+      retryAttempts: 3,
+      retryDelay: 3000,
+      connectTimeoutMS: 20000,
+      extra: {
+        connectionTimeoutMillis: 20000,
+      }
     }),
     ChatbotModule,
     TeamsModule,
     MatchesModule,
     UsersModule,
     CompetitionsModule,
+    ChannelsModule,
     NotificationsModule,
     UploadModule,
     StandingsModule,

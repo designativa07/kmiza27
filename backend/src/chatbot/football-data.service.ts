@@ -198,10 +198,11 @@ export class FootballDataService {
 
       const channelsByType = new Map<string, Channel[]>();
       channels.forEach(channel => {
-        if (!channelsByType.has(channel.type)) {
-          channelsByType.set(channel.type, []);
+        const type = channel.type || 'other';
+        if (!channelsByType.has(type)) {
+          channelsByType.set(type, []);
         }
-        channelsByType.get(channel.type)!.push(channel);
+        channelsByType.get(type)!.push(channel);
       });
 
       const typeEmojis = {
