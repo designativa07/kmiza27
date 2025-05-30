@@ -54,9 +54,18 @@ export class MatchesService {
   }
 
   async findAll(): Promise<Match[]> {
-    return this.matchRepository.find({
-      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round']
+    console.log('🔍 MatchesService.findAll - Buscando todos os matches...');
+    
+    const matches = await this.matchRepository.find({
+      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round'],
+      order: {
+        match_date: 'ASC', // Ordenar por data, mais próximos primeiro
+        id: 'ASC' // Em caso de empate na data, ordenar por ID
+      }
     });
+    
+    console.log(`✅ MatchesService.findAll - ${matches.length} matches encontrados`);
+    return matches;
   }
 
   async findOne(id: number): Promise<Match | null> {

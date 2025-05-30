@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { MatchesService } from './matches.service';
 import { Match } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
@@ -14,8 +15,18 @@ export class MatchesController {
   }
 
   @Get()
-  findAll() {
-    return this.matchesService.findAll();
+  async findAll(@Res() res: Response) {
+    const matches = await this.matchesService.findAll();
+    
+    // Adicionar headers para evitar cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    
+    return res.json(matches);
   }
 
   @Get(':id')
@@ -24,12 +35,22 @@ export class MatchesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMatchDto: UpdateMatchDto) {
+  async update(@Param('id') id: string, @Body() updateMatchDto: UpdateMatchDto, @Res() res: Response) {
     console.log('🔍 PATCH /matches/:id - Dados recebidos:', {
       id,
       updateMatchDto
     });
-    return this.matchesService.update(+id, updateMatchDto);
+    
+    const updatedMatch = await this.matchesService.update(+id, updateMatchDto);
+    
+    // Adicionar headers para evitar cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    return res.json(updatedMatch);
   }
 
   @Delete(':id')

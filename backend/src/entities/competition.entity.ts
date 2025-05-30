@@ -43,6 +43,9 @@ export class Competition {
   @Column({ type: 'jsonb', nullable: true })
   rules: any;
 
+  @Column({ type: 'jsonb', nullable: true })
+  tiebreaker_criteria: any;
+
   @CreateDateColumn()
   created_at: Date;
 
