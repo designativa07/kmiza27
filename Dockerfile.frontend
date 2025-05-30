@@ -1,22 +1,18 @@
-# 🎨 Dockerfile Frontend Simplificado - Auto Commit Detection
-# Abordagem direta inspirada no backend que funciona
+# 🎨 Dockerfile Frontend Ultra-Simplificado
+# Foco apenas na captura correta do commit
 
-# Stage 1: Capture Build Info
-FROM node:18-alpine AS commit-capture
-RUN apk add --no-cache git
+# Stage 1: Build Info
+FROM alpine/git AS git-info
 WORKDIR /app
+RUN git clone https://github.com/designativa07/kmiza27.git repo
+RUN cd repo && \
+    echo "$(git rev-parse HEAD)" > /commit && \
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /timestamp && \
+    echo "Git Commit: $(cat /commit)" && \
+    echo "Build Time: $(cat /timestamp)"
 
-# Clone e capturar informações de build
-RUN git clone https://github.com/designativa07/kmiza27.git /repo && \
-    cd /repo && \
-    echo "GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo 'unknown')" > /build-info && \
-    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /build-info && \
-    echo "BUILD_DATE=$(date -u)" >> /build-info && \
-    cat /build-info
-
-# Stage 2: Dependencies
+# Stage 2: Dependencies  
 FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install --legacy-peer-deps
@@ -26,60 +22,58 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Copiar informações de build
-COPY --from=commit-capture /build-info /build-info
+COPY --from=git-info /commit /commit
+COPY --from=git-info /timestamp /timestamp
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend ./
 
-# Carregar e exportar variáveis
-RUN . /build-info && \
-    export GIT_COMMIT && \
-    export BUILD_TIMESTAMP && \
-    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
-    export NODE_ENV=production && \
-    echo "=== BUILD INFO ===" && \
-    echo "GIT_COMMIT: $GIT_COMMIT" && \
-    echo "BUILD_TIMESTAMP: $BUILD_TIMESTAMP" && \
-    echo "=================" && \
+# Configurar variáveis para build
+ENV NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+ENV NODE_ENV=production
+
+# Build com variáveis capturadas
+RUN export GIT_COMMIT=$(cat /commit) && \
+    export BUILD_TIMESTAMP=$(cat /timestamp) && \
+    echo "Building with commit: $GIT_COMMIT" && \
+    echo "Building with timestamp: $BUILD_TIMESTAMP" && \
     npm run build
 
-# Stage 4: Runner
+# Stage 4: Runtime
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Instalar dependências
-RUN apk add --no-cache curl dumb-init
+# Instalar curl para health check
+RUN apk add --no-cache curl
 
 # Criar usuário
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copiar arquivos e build info
+# Copiar build e informações
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=commit-capture /build-info /build-info
+COPY --from=git-info /commit /commit
+COPY --from=git-info /timestamp /timestamp
 
-# Configurar variáveis e script de inicialização
-RUN . /build-info && \
-    echo "#!/bin/sh" > /start.sh && \
-    echo ". /build-info" >> /start.sh && \
-    echo "export GIT_COMMIT" >> /start.sh && \
-    echo "export BUILD_TIMESTAMP" >> /start.sh && \
-    echo "export NODE_ENV=production" >> /start.sh && \
-    echo "export PORT=3002" >> /start.sh && \
-    echo "export HOSTNAME=0.0.0.0" >> /start.sh && \
-    echo "echo \"🚀 Frontend iniciando com commit: \$GIT_COMMIT\"" >> /start.sh && \
-    echo "node server.js" >> /start.sh && \
+# Configurar variáveis de ambiente no runtime
+ENV NODE_ENV=production
+ENV PORT=3002
+ENV HOSTNAME=0.0.0.0
+
+# Script de inicialização simples
+RUN echo '#!/bin/sh' > /start.sh && \
+    echo 'export GIT_COMMIT=$(cat /commit)' >> /start.sh && \
+    echo 'export BUILD_TIMESTAMP=$(cat /timestamp)' >> /start.sh && \
+    echo 'echo "🚀 Starting frontend with commit: $GIT_COMMIT"' >> /start.sh && \
+    echo 'exec node server.js' >> /start.sh && \
     chmod +x /start.sh && \
     chown nextjs:nodejs /start.sh
 
 USER nextjs
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3002/api/health || exit 1
 
 EXPOSE 3002
 
-# Iniciar com script
-ENTRYPOINT ["dumb-init", "--"]
 CMD ["/start.sh"] 
