@@ -7,12 +7,11 @@ import { API_ENDPOINTS } from '../config/api'
 interface Channel {
   id: number
   name: string
-  short_name: string
-  logo_url?: string
-  category?: string
-  website?: string
-  description?: string
-  is_active: boolean
+  logo?: string
+  channel_number?: string
+  channel_link?: string
+  type: string
+  active: boolean
   created_at: string
 }
 
@@ -26,7 +25,7 @@ export default function ChannelsManager() {
   
   // Estados para busca e filtros
   const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
   // Estados da paginação
@@ -35,12 +34,11 @@ export default function ChannelsManager() {
 
   const [formData, setFormData] = useState({
     name: '',
-    short_name: '',
-    logo_url: '',
-    category: '',
-    website: '',
-    description: '',
-    is_active: true
+    logo: '',
+    channel_number: '',
+    channel_link: '',
+    type: '',
+    active: true
   })
 
   useEffect(() => {
@@ -56,26 +54,25 @@ export default function ChannelsManager() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(channel => 
         channel.name.toLowerCase().includes(query) ||
-        channel.short_name.toLowerCase().includes(query) ||
-        (channel.category && channel.category.toLowerCase().includes(query)) ||
-        (channel.description && channel.description.toLowerCase().includes(query))
+        (channel.channel_number && channel.channel_number.toLowerCase().includes(query)) ||
+        (channel.type && channel.type.toLowerCase().includes(query))
       )
     }
 
-    // Filtro por categoria
-    if (categoryFilter) {
-      filtered = filtered.filter(channel => channel.category === categoryFilter)
+    // Filtro por tipo
+    if (typeFilter) {
+      filtered = filtered.filter(channel => channel.type === typeFilter)
     }
 
     // Filtro por status
     if (statusFilter) {
       filtered = filtered.filter(channel => 
-        statusFilter === 'active' ? channel.is_active : !channel.is_active
+        statusFilter === 'active' ? channel.active : !channel.active
       )
     }
 
     setFilteredChannels(filtered)
-  }, [channels, searchQuery, categoryFilter, statusFilter])
+  }, [channels, searchQuery, typeFilter, statusFilter])
 
   // Effect para paginação
   useEffect(() => {
@@ -129,12 +126,11 @@ export default function ChannelsManager() {
     setEditingChannel(null)
     setFormData({
       name: '',
-      short_name: '',
-      logo_url: '',
-      category: '',
-      website: '',
-      description: '',
-      is_active: true
+      logo: '',
+      channel_number: '',
+      channel_link: '',
+      type: '',
+      active: true
     })
   }
 
@@ -142,12 +138,11 @@ export default function ChannelsManager() {
     setEditingChannel(channel)
     setFormData({
       name: channel.name,
-      short_name: channel.short_name,
-      logo_url: channel.logo_url || '',
-      category: channel.category || '',
-      website: channel.website || '',
-      description: channel.description || '',
-      is_active: channel.is_active
+      logo: channel.logo || '',
+      channel_number: channel.channel_number || '',
+      channel_link: channel.channel_link || '',
+      type: channel.type || '',
+      active: channel.active
     })
     setShowModal(true)
   }
@@ -169,14 +164,14 @@ export default function ChannelsManager() {
   const getUniqueCategories = () => {
     const categories = new Set<string>()
     channels.forEach(channel => {
-      if (channel.category) categories.add(channel.category)
+      if (channel.type) categories.add(channel.type)
     })
     return Array.from(categories).sort()
   }
 
   const clearFilters = () => {
     setSearchQuery('')
-    setCategoryFilter('')
+    setTypeFilter('')
     setStatusFilter('')
     setCurrentPage(1)
   }
@@ -302,8 +297,8 @@ export default function ChannelsManager() {
           
           <div>
             <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
             >
               <option value="">Todas as categorias</option>
@@ -336,7 +331,7 @@ export default function ChannelsManager() {
         </div>
         
         {/* Indicadores de filtros ativos */}
-        {(searchQuery || categoryFilter || statusFilter) && (
+        {(searchQuery || typeFilter || statusFilter) && (
           <div className="mt-4 flex flex-wrap gap-2">
             {searchQuery && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -350,12 +345,12 @@ export default function ChannelsManager() {
                 </button>
               </span>
             )}
-            {categoryFilter && (
+            {typeFilter && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Categoria: {categoryFilter}
+                Categoria: {typeFilter}
                 <button
                   type="button"
-                  onClick={() => setCategoryFilter('')}
+                  onClick={() => setTypeFilter('')}
                   className="ml-1 text-green-600 hover:text-green-800"
                 >
                   ×
@@ -399,8 +394,8 @@ export default function ChannelsManager() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
-                            {channel.logo_url ? (
-                              <img className="h-10 w-10 rounded-lg object-cover" src={channel.logo_url} alt={channel.name} />
+                            {channel.logo ? (
+                              <img className="h-10 w-10 rounded-lg object-cover" src={channel.logo} alt={channel.name} />
                             ) : (
                               <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
                                 <TvIcon className="h-6 w-6 text-gray-400" />
@@ -409,25 +404,25 @@ export default function ChannelsManager() {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{channel.name}</div>
-                            <div className="text-sm text-gray-500">{channel.short_name}</div>
+                            <div className="text-sm text-gray-500">{channel.channel_number || '-'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {channel.category || '-'}
+                        {channel.type || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          channel.is_active
+                          channel.active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {channel.is_active ? 'Ativo' : 'Inativo'}
+                          {channel.active ? 'Ativo' : 'Inativo'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {channel.website ? (
-                          <a href={channel.website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-900">
+                        {channel.channel_link ? (
+                          <a href={channel.channel_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-900">
                             Visitar
                           </a>
                         ) : '-'}
@@ -482,71 +477,58 @@ export default function ChannelsManager() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Nome Curto</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.short_name}
-                    onChange={(e) => setFormData({ ...formData, short_name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    placeholder="Ex: GLB, STV"
-                  />
-                </div>
-                
-                <div>
                   <label className="block text-sm font-medium text-gray-900">Logo URL</label>
                   <input
                     type="url"
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                    value={formData.logo}
+                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    placeholder="https://exemplo.com/logo.png"
+                    placeholder="https://example.com/logo.png"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Categoria</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-4 py-3"
-                  >
-                    <option value="">Selecione uma categoria</option>
-                    <option value="Aberto">Aberto</option>
-                    <option value="Fechado">Fechado</option>
-                    <option value="Esportivo">Esportivo</option>
-                    <option value="Streaming">Streaming</option>
-                    <option value="Internacional">Internacional</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-900">Número do Canal</label>
+                  <input
+                    type="text"
+                    value={formData.channel_number}
+                    onChange={(e) => setFormData({ ...formData, channel_number: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    placeholder="Ex: 13, 23"
+                  />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Website</label>
+                  <label className="block text-sm font-medium text-gray-900">Link do Canal</label>
                   <input
                     type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    value={formData.channel_link}
+                    onChange={(e) => setFormData({ ...formData, channel_link: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                     placeholder="https://www.canal.com.br"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Descrição</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    placeholder="Descrição do canal..."
-                  />
+                  <label className="block text-sm font-medium text-gray-900">Tipo</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-4 py-3"
+                  >
+                    <option value="">Selecione um tipo</option>
+                    <option value="tv">TV Aberta</option>
+                    <option value="cable">TV por Assinatura</option>
+                    <option value="streaming">Streaming</option>
+                    <option value="other">Outros</option>
+                  </select>
                 </div>
                 
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    checked={formData.active}
+                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
                   <label className="ml-2 block text-sm text-gray-900">
