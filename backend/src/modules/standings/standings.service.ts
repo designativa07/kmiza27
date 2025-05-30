@@ -123,9 +123,9 @@ export class StandingsService {
         homeStats.goals_against += awayScore;
         homeStats.goal_difference = homeStats.goals_for - homeStats.goals_against;
         
-        // Adicionar cartões do time da casa
-        homeStats.yellow_cards += match.home_yellow_cards || 0;
-        homeStats.red_cards += match.home_red_cards || 0;
+        // Adicionar cartões do time da casa - TEMPORARIAMENTE COMENTADO
+        // homeStats.yellow_cards += match.home_yellow_cards || 0;
+        // homeStats.red_cards += match.home_red_cards || 0;
 
         // Atualizar estatísticas do time visitante
         awayStats.played++;
@@ -133,9 +133,9 @@ export class StandingsService {
         awayStats.goals_against += homeScore;
         awayStats.goal_difference = awayStats.goals_for - awayStats.goals_against;
         
-        // Adicionar cartões do time visitante
-        awayStats.yellow_cards += match.away_yellow_cards || 0;
-        awayStats.red_cards += match.away_red_cards || 0;
+        // Adicionar cartões do time visitante - TEMPORARIAMENTE COMENTADO
+        // awayStats.yellow_cards += match.away_yellow_cards || 0;
+        // awayStats.red_cards += match.away_red_cards || 0;
 
         // Determinar resultado e atualizar pontos
         if (homeScore > awayScore) {

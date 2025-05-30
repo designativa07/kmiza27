@@ -1,7 +1,12 @@
 // Configuração da API
-// Build timestamp: 2025-05-26T03:25:00Z - URLS FIXED + CORS FIX
+// Build timestamp: 2025-05-30T19:15:00Z - LOCAL DEVELOPMENT FIX
 const getApiUrl = (): string => {
-  // HARDCODE: Sempre usar a URL de produção para resolver o problema de cache
+  // Para desenvolvimento local, usar localhost:3000
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000';
+  }
+  
+  // Para produção, usar a URL de produção
   return 'https://kmizabot.h4xd66.easypanel.host';
 };
 

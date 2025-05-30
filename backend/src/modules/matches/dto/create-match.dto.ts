@@ -75,20 +75,4 @@ export class CreateMatchDto {
 
   @IsOptional()
   match_stats?: any;
-
-  @IsOptional()
-  @IsNumber()
-  home_yellow_cards?: number;
-
-  @IsOptional()
-  @IsNumber()
-  away_yellow_cards?: number;
-
-  @IsOptional()
-  @IsNumber()
-  home_red_cards?: number;
-
-  @IsOptional()
-  @IsNumber()
-  away_red_cards?: number;
 } 
