@@ -602,4 +602,226 @@ ${result}`;
       };
     }
   }
+
+  /**
+   * Método para testar o chatbot em desenvolvimento
+   * Simula o processamento de mensagens sem WhatsApp
+   */
+  async testMessage(message: string, phoneNumber: string = '5511999999999'): Promise<any> {
+    try {
+      console.log(`🧪 TESTE - Processando mensagem: "${message}"`);
+      
+      const startTime = Date.now();
+      const response = await this.processMessage(phoneNumber, message, 'Teste Dev');
+      const endTime = Date.now();
+      
+      return {
+        success: true,
+        input: {
+          message,
+          phoneNumber,
+          timestamp: new Date().toISOString()
+        },
+        output: {
+          response,
+          processingTime: `${endTime - startTime}ms`
+        },
+        debug: {
+          messageLength: message.length,
+          responseLength: response.length,
+          environment: 'development'
+        }
+      };
+    } catch (error) {
+      console.error('🧪 TESTE - Erro:', error);
+      return {
+        success: false,
+        input: {
+          message,
+          phoneNumber,
+          timestamp: new Date().toISOString()
+        },
+        error: {
+          message: error.message,
+          stack: error.stack
+        }
+      };
+    }
+  }
+
+  /**
+   * Método para testar múltiplas mensagens em sequência
+   */
+  async testMultipleMessages(messages: string[], phoneNumber: string = '5511999999999'): Promise<any> {
+    try {
+      console.log(`🧪 TESTE MÚLTIPLO - Processando ${messages.length} mensagens`);
+      
+      const results: any[] = [];
+      const startTime = Date.now();
+      
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+        console.log(`🧪 Testando mensagem ${i + 1}/${messages.length}: "${message}"`);
+        
+        const result = await this.testMessage(message, phoneNumber);
+        results.push({
+          index: i + 1,
+          ...result
+        });
+        
+        // Pequena pausa entre mensagens para simular uso real
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      const endTime = Date.now();
+      
+      return {
+        success: true,
+        summary: {
+          totalMessages: messages.length,
+          successfulMessages: results.filter((r: any) => r.success).length,
+          failedMessages: results.filter((r: any) => !r.success).length,
+          totalProcessingTime: `${endTime - startTime}ms`,
+          averageProcessingTime: `${Math.round((endTime - startTime) / messages.length)}ms`
+        },
+        results
+      };
+    } catch (error) {
+      console.error('🧪 TESTE MÚLTIPLO - Erro:', error);
+      return {
+        success: false,
+        error: {
+          message: error.message,
+          stack: error.stack
+        }
+      };
+    }
+  }
+
+  /**
+   * Método para testar cenários específicos do chatbot
+   */
+  async testScenarios(): Promise<any> {
+    try {
+      console.log('🧪 TESTE DE CENÁRIOS - Iniciando testes automáticos');
+      
+      const scenarios = [
+        {
+          name: 'Saudação',
+          messages: ['oi', 'olá', 'bom dia']
+        },
+        {
+          name: 'Próximo jogo',
+          messages: ['próximo jogo do flamengo', 'quando joga o palmeiras', 'próximo jogo corinthians']
+        },
+        {
+          name: 'Tabela',
+          messages: ['tabela do brasileirão', 'classificação brasileirao', 'tabela brasileiro']
+        },
+        {
+          name: 'Jogos hoje',
+          messages: ['jogos hoje', 'jogos de hoje', 'que jogos tem hoje']
+        },
+        {
+          name: 'Informações do time',
+          messages: ['informações do santos', 'info do botafogo', 'dados do são paulo']
+        },
+        {
+          name: 'Último jogo',
+          messages: ['último jogo do flamengo', 'resultado palmeiras', 'como foi o jogo do corinthians']
+        }
+      ];
+      
+      const results: any[] = [];
+      
+      for (const scenario of scenarios) {
+        console.log(`🧪 Testando cenário: ${scenario.name}`);
+        
+        const scenarioResult = await this.testMultipleMessages(scenario.messages);
+        results.push({
+          scenario: scenario.name,
+          ...scenarioResult
+        });
+      }
+      
+      return {
+        success: true,
+        testSummary: {
+          totalScenarios: scenarios.length,
+          successfulScenarios: results.filter((r: any) => r.success).length,
+          timestamp: new Date().toISOString()
+        },
+        scenarioResults: results
+      };
+    } catch (error) {
+      console.error('🧪 TESTE DE CENÁRIOS - Erro:', error);
+      return {
+        success: false,
+        error: {
+          message: error.message,
+          stack: error.stack
+        }
+      };
+    }
+  }
+
+  /**
+   * Método para verificar a saúde do sistema
+   */
+  async healthCheck(): Promise<any> {
+    try {
+      console.log('🏥 HEALTH CHECK - Verificando saúde do sistema');
+      
+      const checks = {
+        database: false,
+        openai: false,
+        evolution: false,
+        repositories: false
+      };
+      
+      // Verificar banco de dados
+      try {
+        const teamsCount = await this.teamsRepository.count();
+        const matchesCount = await this.matchesRepository.count();
+        const competitionsCount = await this.competitionsRepository.count();
+        
+        checks.database = true;
+        checks.repositories = teamsCount > 0 && matchesCount > 0 && competitionsCount > 0;
+      } catch (error) {
+        console.error('❌ Erro no banco de dados:', error.message);
+      }
+      
+      // Verificar OpenAI
+      try {
+        await this.openAIService.analyzeMessage('teste');
+        checks.openai = true;
+      } catch (error) {
+        console.error('❌ Erro no OpenAI:', error.message);
+      }
+      
+      // Verificar Evolution
+      try {
+        await this.evolutionService.getInstanceStatus();
+        checks.evolution = true;
+      } catch (error) {
+        console.error('❌ Erro no Evolution:', error.message);
+      }
+      
+      const allHealthy = Object.values(checks).every(check => check === true);
+      
+      return {
+        healthy: allHealthy,
+        checks,
+        timestamp: new Date().toISOString(),
+        status: allHealthy ? 'Todos os serviços funcionando' : 'Alguns serviços com problemas'
+      };
+    } catch (error) {
+      console.error('🏥 HEALTH CHECK - Erro:', error);
+      return {
+        healthy: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
 } 
