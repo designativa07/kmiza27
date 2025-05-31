@@ -824,4 +824,83 @@ ${result}`;
       };
     }
   }
+
+  /**
+   * Método para debug da tabela de classificação
+   */
+  async debugCompetitionTable(): Promise<any> {
+    try {
+      console.log('🔍 DEBUG - Verificando dados da tabela de classificação');
+      
+      // 1. Verificar competições disponíveis
+      const competitions = await this.competitionsRepository.find();
+      console.log('🏆 Competições encontradas:', competitions.map(c => ({ id: c.id, name: c.name, slug: c.slug })));
+      
+      // 2. Buscar especificamente o Brasileirão
+      const brasileirao = await this.competitionsRepository
+        .createQueryBuilder('competition')
+        .where('LOWER(competition.name) LIKE LOWER(:name)', { name: '%brasileir%' })
+        .orWhere('LOWER(competition.slug) LIKE LOWER(:name)', { name: '%brasileir%' })
+        .getOne();
+      
+      console.log('⚽ Brasileirão encontrado:', brasileirao);
+      
+      if (!brasileirao) {
+        return {
+          error: 'Brasileirão não encontrado',
+          competitions: competitions.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
+        };
+      }
+      
+      // 3. Verificar dados na tabela competition_teams
+      const competitionTeams = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.team', 'team')
+        .leftJoinAndSelect('ct.competition', 'competition')
+        .where('ct.competition = :competitionId', { competitionId: brasileirao.id })
+        .getMany();
+      
+      console.log('📊 Times na competição:', competitionTeams.length);
+      console.log('📋 Dados dos times:', competitionTeams.map(ct => ({
+        team: ct.team?.name,
+        points: ct.points,
+        played: ct.played,
+        won: ct.won,
+        drawn: ct.drawn,
+        lost: ct.lost
+      })));
+      
+      // 4. Verificar se há dados zerados
+      const teamsWithPoints = competitionTeams.filter(ct => ct.points > 0);
+      console.log('🎯 Times com pontos > 0:', teamsWithPoints.length);
+      
+      return {
+        success: true,
+        brasileirao: {
+          id: brasileirao.id,
+          name: brasileirao.name,
+          slug: brasileirao.slug
+        },
+        totalTeams: competitionTeams.length,
+        teamsWithPoints: teamsWithPoints.length,
+        sampleData: competitionTeams.slice(0, 5).map(ct => ({
+          team: ct.team?.name,
+          points: ct.points,
+          played: ct.played,
+          won: ct.won,
+          drawn: ct.drawn,
+          lost: ct.lost,
+          goalDifference: ct.goal_difference
+        }))
+      };
+      
+    } catch (error) {
+      console.error('🔍 DEBUG - Erro:', error);
+      return {
+        success: false,
+        error: error.message,
+        stack: error.stack
+      };
+    }
+  }
 } 
