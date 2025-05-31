@@ -68,6 +68,11 @@ export class ChatbotController {
     return await this.chatbotService.testMessage(message);
   }
 
+  @Get('debug/table')
+  async debugTable() {
+    return await this.chatbotService.debugCompetitionTable();
+  }
+
   // ========== ENDPOINTS LEGADOS (COMPATIBILIDADE) ==========
 
   @Post('test-message')
