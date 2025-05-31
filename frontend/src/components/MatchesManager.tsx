@@ -276,6 +276,9 @@ export default function MatchesManager() {
         canais: channelsData.length
       })
       
+      // Debug: verificar estrutura dos dados de matches
+      console.log('🔍 Debug - Primeiros 5 matches:', matchesData.slice(0, 5))
+      
       setMatches(matchesData)
       setTeams(teamsData)
       setCompetitions(competitionsData)
@@ -290,29 +293,49 @@ export default function MatchesManager() {
   }
 
   const applyFilters = () => {
+    console.log('🔍 Debug - Aplicando filtros:', filters)
+    console.log('🔍 Debug - Total de matches antes do filtro:', matches.length)
+    
     let filtered = [...matches]
 
     if (filters.competition) {
+      const beforeCount = filtered.length
       filtered = filtered.filter(match => match.competition.id.toString() === filters.competition)
+      console.log(`🔍 Debug - Filtro competição: ${beforeCount} -> ${filtered.length}`)
     }
 
     if (filters.round) {
+      const beforeCount = filtered.length
+      console.log('🔍 Debug - Filtro rodada aplicado:', filters.round)
+      console.log('🔍 Debug - Matches antes do filtro de rodada:', 
+        filtered.map((m: Match) => ({ id: m.id, round: m.round?.name, group: m.group_name }))
+      )
+      
       filtered = filtered.filter(match => 
         match.round?.name === filters.round ||
         match.group_name === filters.round
       )
-    }
-
-    if (filters.phase) {
-      filtered = filtered.filter(match => 
-        match.phase?.toLowerCase().includes(filters.phase.toLowerCase())
+      console.log(`🔍 Debug - Filtro rodada: ${beforeCount} -> ${filtered.length}`)
+      console.log('🔍 Debug - Matches após filtro de rodada:', 
+        filtered.map((m: Match) => ({ id: m.id, round: m.round?.name, group: m.group_name }))
       )
     }
 
-    if (filters.status) {
-      filtered = filtered.filter(match => match.status === filters.status)
+    if (filters.phase) {
+      const beforeCount = filtered.length
+      filtered = filtered.filter(match => 
+        match.phase?.toLowerCase().includes(filters.phase.toLowerCase())
+      )
+      console.log(`🔍 Debug - Filtro fase: ${beforeCount} -> ${filtered.length}`)
     }
 
+    if (filters.status) {
+      const beforeCount = filtered.length
+      filtered = filtered.filter(match => match.status === filters.status)
+      console.log(`🔍 Debug - Filtro status: ${beforeCount} -> ${filtered.length}`)
+    }
+
+    console.log('🔍 Debug - Total de matches após todos os filtros:', filtered.length)
     setFilteredMatches(filtered)
     setCurrentPage(1) // Reset para primeira página quando filtrar
   }
@@ -341,30 +364,41 @@ export default function MatchesManager() {
   }
 
   const getUniqueRounds = () => {
+    console.log('🔍 Debug - getUniqueRounds - Total de matches:', matches.length)
+    
     const rounds = new Set<string>()
     matches.forEach(match => {
       // Apenas adicionar rodadas que são números ou começam com "Rodada"
       if (match.round?.name) {
         const roundName = match.round.name
+        console.log('🔍 Debug - Verificando round:', roundName)
         // Verificar se é uma rodada numérica ou contém "Rodada" (case insensitive)
         if (/^\d+$/.test(roundName) || /rodada/i.test(roundName)) {
+          console.log('✅ Debug - Round aceita:', roundName)
           rounds.add(roundName)
+        } else {
+          console.log('❌ Debug - Round rejeitada:', roundName)
         }
       }
       // Adicionar group_name apenas se não for uma fase
       if (match.group_name) {
         const groupName = match.group_name
+        console.log('🔍 Debug - Verificando group_name:', groupName)
         // Verificar se não é uma fase (não contém palavras como "final", "semi", "oitavas", etc.)
         const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória']
         const isPhase = phaseKeywords.some(keyword => 
           groupName.toLowerCase().includes(keyword)
         )
         if (!isPhase) {
+          console.log('✅ Debug - Group aceito:', groupName)
           rounds.add(groupName)
+        } else {
+          console.log('❌ Debug - Group rejeitado (é fase):', groupName)
         }
       }
     })
-    return Array.from(rounds).sort((a, b) => {
+    
+    const sortedRounds = Array.from(rounds).sort((a, b) => {
       // Ordenar numericamente se ambos forem números
       const numA = parseInt(a.replace(/\D/g, ''))
       const numB = parseInt(b.replace(/\D/g, ''))
@@ -374,6 +408,9 @@ export default function MatchesManager() {
       // Caso contrário, ordenar alfabeticamente
       return a.localeCompare(b)
     })
+    
+    console.log('🔍 Debug - Rounds finais encontradas:', sortedRounds)
+    return sortedRounds
   }
 
   const getUniquePhases = () => {
@@ -538,7 +575,7 @@ export default function MatchesManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este jogo?')) {
       try {
-        await fetch(`API_ENDPOINTS.matches.list()/${id}`, {
+        await fetch(`${API_ENDPOINTS.matches.list()}/${id}`, {
           method: 'DELETE',
         })
         fetchData()
@@ -922,7 +959,7 @@ export default function MatchesManager() {
                           {/* Placar da casa */}
                           <div className="flex items-center space-x-2">
                             <span className="text-lg font-bold text-gray-900">
-                              {match.status === 'finished' && match.home_score !== undefined ? match.home_score : '-'}
+                              {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
                             </span>
                             
                             {/* VS */}
@@ -930,7 +967,7 @@ export default function MatchesManager() {
                             
                             {/* Placar visitante */}
                             <span className="text-lg font-bold text-gray-900">
-                              {match.status === 'finished' && match.away_score !== undefined ? match.away_score : '-'}
+                              {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
                             </span>
                           </div>
                           
