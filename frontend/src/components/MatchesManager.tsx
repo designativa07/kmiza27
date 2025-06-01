@@ -528,8 +528,9 @@ export default function MatchesManager() {
       return '';
     };
     
-    // Usar conversão simples para datetime-local
-    const formattedDate = new Date(match.match_date).toISOString().slice(0, 16);
+    // Converter data para formato datetime-local sem alterar timezone
+    // Remove o 'Z' e os milissegundos para usar no campo datetime-local
+    const formattedDate = match.match_date.replace('Z', '').replace(/\.\d{3}$/, '');
     
     const newFormData = {
       home_team_id: match.home_team.id.toString(),
