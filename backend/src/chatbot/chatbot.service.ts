@@ -244,17 +244,15 @@ Bora torcer! 🔥⚽`;
 
       let response = `📊 **TABELA - ${competition.name.toUpperCase()}** 📊\n\n`;
 
-      // Mostrar apenas os primeiros 10 times
-      const topStandings = standings.slice(0, 10);
-
-      topStandings.forEach((standing) => {
+      // Mostrar TODOS os times, mas apenas com posição e pontuação
+      standings.forEach((standing) => {
         const position = standing.position;
         const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
         
         response += `${emoji} ${standing.team.name} - ${standing.points} pts\n`;
-        response += `   J:${standing.played} V:${standing.won} E:${standing.drawn} D:${standing.lost} SG:${standing.goal_difference}\n\n`;
       });
 
+      response += `\n📊 Para tabela detalhada com estatísticas completas, acesse: kmiza27.com\n`;
       response += `⚽ Quer saber sobre o próximo jogo de algum time? É só perguntar!`;
 
       return response;
