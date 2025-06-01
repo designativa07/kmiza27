@@ -47,7 +47,7 @@ export default function AutomationPanel() {
   const updateConfig = async (id: number, value: string) => {
     setSaving(true)
     try {
-      const response = await fetch(`API_ENDPOINTS.botConfig.list()/${id}`, {
+      const response = await fetch(API_ENDPOINTS.botConfig.byId(id), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
