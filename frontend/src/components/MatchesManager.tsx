@@ -224,7 +224,6 @@ export default function MatchesManager() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      console.log('🔄 fetchData - Iniciando busca de dados...');
       
       // Buscar dados em paralelo
       const [matchesRes, teamsRes, competitionsRes, roundsRes, channelsRes] = await Promise.all([
@@ -242,8 +241,6 @@ export default function MatchesManager() {
 
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json()
-        console.log('🔄 fetchData - Matches recebidos:', matchesData.length);
-        console.log('🔄 fetchData - Primeiro match:', matchesData[0]);
         setMatches(matchesData)
       }
 
@@ -505,9 +502,6 @@ export default function MatchesManager() {
   }
 
   const handleEdit = (match: Match) => {
-    console.log('🔧 handleEdit - Match original:', match);
-    console.log('🔧 handleEdit - match_date original:', match.match_date);
-    
     setEditingMatch(match)
     
     const processBroadcastChannels = (channels: any): string => {
@@ -536,15 +530,11 @@ export default function MatchesManager() {
     
     // Converter data UTC para timezone local do usuário para o campo datetime-local
     const utcDate = new Date(match.match_date);
-    console.log('🔧 handleEdit - Data UTC:', utcDate);
     
     // Para campos datetime-local, precisamos ajustar para o timezone local
     // Subtraindo o offset do timezone para que o valor exibido seja correto
     const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
     const formattedDate = localDate.toISOString().slice(0, 16);
-    
-    console.log('🔧 handleEdit - Data local ajustada:', localDate);
-    console.log('🔧 handleEdit - Data formatada para form:', formattedDate);
     
     const newFormData = {
       home_team_id: match.home_team.id.toString(),
@@ -565,7 +555,6 @@ export default function MatchesManager() {
       away_red_cards: (match as any).away_red_cards
     };
     
-    console.log('🔧 handleEdit - FormData que será setado:', newFormData);
     setFormData(newFormData);
     setShowModal(true)
   }
