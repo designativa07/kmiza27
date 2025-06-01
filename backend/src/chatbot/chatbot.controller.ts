@@ -29,102 +29,98 @@ export class ChatbotController {
       console.log('- body.event:', body.event);
       console.log('- body.data.message keys:', body.data?.message ? Object.keys(body.data.message) : 'N/A');
 
-      // Formato 1: Evolution API com messageType
-      if (body.data && body.data.message && body.data.message.messageType === 'textMessage') {
-        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
-        messageText = body.data.message.textMessage.text;
-        pushName = body.data.pushName;
-        console.log('✅ Formato 1 detectado: Evolution API com messageType');
-      }
-      // Formato 2: Evolution API com conversation
-      else if (body.data && body.data.message && body.data.message.conversation) {
-        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
-        messageText = body.data.message.conversation;
-        pushName = body.data.pushName;
-        console.log('✅ Formato 2 detectado: Evolution API com conversation');
-      }
-      // Formato 3: Evolution API com event
-      else if (body.event === 'messages.upsert' && body.data && body.data.key && body.data.message) {
-        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
-        if (body.data.message.conversation) {
-          messageText = body.data.message.conversation;
-        } else if (body.data.message.extendedTextMessage?.text) {
-          messageText = body.data.message.extendedTextMessage.text;
-        }
-        pushName = body.data.pushName;
-        console.log('✅ Formato 3 detectado: Evolution API com event');
-      }
-      // Formato 4: Formato direto
-      else if (body.phoneNumber && body.message) {
-        phoneNumber = body.phoneNumber;
-        messageText = body.message;
-        pushName = body.pushName;
-        console.log('✅ Formato 4 detectado: Formato direto');
-      }
-      // Formato 5: Tentar extrair de qualquer estrutura
-      else {
-        console.log('🔍 Tentando extrair dados de estrutura não reconhecida...');
+      // Buscar recursivamente por campos conhecidos em TODA a estrutura
+      const findInObject = (obj: any, path = ''): void => {
+        if (typeof obj !== 'object' || obj === null) return;
         
-        // Buscar recursivamente por campos conhecidos
-        const findInObject = (obj: any, path = ''): any => {
-          if (typeof obj !== 'object' || obj === null) return null;
+        for (const [key, value] of Object.entries(obj)) {
+          const currentPath = path ? `${path}.${key}` : key;
           
-          for (const [key, value] of Object.entries(obj)) {
-            const currentPath = path ? `${path}.${key}` : key;
-            
-            // Procurar por telefone
-            if (key === 'remoteJid' && typeof value === 'string' && value.includes('@s.whatsapp.net')) {
-              phoneNumber = value.replace('@s.whatsapp.net', '');
-              console.log(`📞 Telefone encontrado em: ${currentPath}`);
-            }
-            
-            // Procurar por texto da mensagem
-            if ((key === 'conversation' || key === 'text') && typeof value === 'string' && value.trim()) {
-              messageText = value;
-              console.log(`💬 Texto encontrado em: ${currentPath}`);
-            }
-            
-            // Procurar por nome
-            if (key === 'pushName' && typeof value === 'string') {
-              pushName = value;
-              console.log(`👤 Nome encontrado em: ${currentPath}`);
-            }
-            
-            // Buscar recursivamente
-            if (typeof value === 'object') {
-              findInObject(value, currentPath);
-            }
+          // Procurar por telefone
+          if (key === 'remoteJid' && typeof value === 'string' && value.includes('@s.whatsapp.net')) {
+            phoneNumber = value.replace('@s.whatsapp.net', '');
+            console.log(`📞 Telefone encontrado em: ${currentPath} = ${phoneNumber}`);
           }
-        };
-        
-        findInObject(body);
-        
-        if (phoneNumber && messageText) {
-          console.log('✅ Formato 5 detectado: Extração recursiva bem-sucedida');
+          
+          // Procurar por texto da mensagem (múltiplas possibilidades)
+          if ((key === 'conversation' || key === 'text' || key === 'body') && typeof value === 'string' && value.trim()) {
+            messageText = value.trim();
+            console.log(`💬 Texto encontrado em: ${currentPath} = "${messageText}"`);
+          }
+          
+          // Procurar por nome
+          if (key === 'pushName' && typeof value === 'string') {
+            pushName = value;
+            console.log(`👤 Nome encontrado em: ${currentPath} = ${pushName}`);
+          }
+          
+          // Buscar recursivamente
+          if (typeof value === 'object') {
+            findInObject(value, currentPath);
+          }
         }
-      }
+      };
+      
+      // Executar busca recursiva
+      findInObject(body);
 
       console.log(`📊 Resultado da análise:`);
       console.log(`- Telefone: ${phoneNumber || 'NÃO ENCONTRADO'}`);
       console.log(`- Mensagem: ${messageText || 'NÃO ENCONTRADA'}`);
       console.log(`- Nome: ${pushName || 'NÃO ENCONTRADO'}`);
 
-      if (phoneNumber && messageText) {
-        console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
+      // Se não encontrou dados, tentar extrair de forma mais agressiva
+      if (!phoneNumber || !messageText) {
+        console.log('🔍 Tentativa de extração agressiva...');
+        
+        // Procurar qualquer string que pareça com telefone
+        const phoneRegex = /(\d{10,15})@s\.whatsapp\.net/;
+        const textRegex = /"(conversation|text|body)"\s*:\s*"([^"]+)"/;
+        
+        const bodyStr = JSON.stringify(body);
+        
+        const phoneMatch = bodyStr.match(phoneRegex);
+        if (phoneMatch) {
+          phoneNumber = phoneMatch[1];
+          console.log(`📞 Telefone extraído por regex: ${phoneNumber}`);
+        }
+        
+        const textMatch = bodyStr.match(textRegex);
+        if (textMatch) {
+          messageText = textMatch[2];
+          console.log(`💬 Texto extraído por regex: "${messageText}"`);
+        }
+      }
+
+      // FORÇAR processamento se tiver pelo menos um telefone válido
+      if (phoneNumber && phoneNumber.length >= 10) {
+        // Se não tem mensagem, usar uma mensagem padrão
+        if (!messageText) {
+          messageText = 'oi';
+          console.log('💬 Usando mensagem padrão: "oi"');
+        }
+        
+        console.log(`📱 PROCESSANDO MENSAGEM de ${phoneNumber}: "${messageText}"`);
         console.log(`👤 Nome: ${pushName || 'Não informado'}`);
         
-        const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName || undefined);
-        
-        console.log(`🤖 Resposta gerada: "${response.substring(0, 100)}..."`);
-        
-        // Enviar resposta
-        const sent = await this.chatbotService.sendMessage(phoneNumber, response);
-        console.log(`📤 Mensagem enviada: ${sent ? 'Sucesso' : 'Falha'}`);
-        
-        return { success: true, message: 'Mensagem processada com sucesso' };
+        try {
+          const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName || undefined);
+          
+          console.log(`🤖 Resposta gerada: "${response.substring(0, 100)}..."`);
+          
+          // Enviar resposta
+          const sent = await this.chatbotService.sendMessage(phoneNumber, response);
+          console.log(`📤 Mensagem enviada: ${sent ? 'Sucesso' : 'Falha'}`);
+          
+          return { success: true, message: 'Mensagem processada com sucesso', processed: true };
+        } catch (error) {
+          console.error('❌ Erro ao processar mensagem:', error);
+          return { success: true, message: 'Erro no processamento', error: error.message };
+        }
       } else {
-        console.log('⚠️ Não foi possível extrair telefone e/ou mensagem do webhook');
-        return { success: true, message: 'Webhook processado - dados insuficientes' };
+        console.log('⚠️ Não foi possível extrair telefone válido do webhook');
+        console.log('📋 Estrutura completa do body:', JSON.stringify(body, null, 2));
+        return { success: true, message: 'Webhook recebido mas sem dados válidos', processed: false };
       }
       
     } catch (error) {
