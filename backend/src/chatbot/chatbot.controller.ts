@@ -10,25 +10,70 @@ export class ChatbotController {
     try {
       console.log('📨 Webhook recebido:', JSON.stringify(body, null, 2));
       
-      // Verificar se é uma mensagem de texto
-      if (body.data && body.data.message && body.data.message.messageType === 'textMessage') {
-        const phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
-        const message = body.data.message.textMessage.text;
-        const pushName = body.data.pushName;
+      let phoneNumber: string | null = null;
+      let messageText: string | null = null;
+      let pushName: string | null = null;
 
-        console.log(`📱 Processando mensagem de ${phoneNumber}: "${message}"`);
+      // Formato 1: Evolution API com messageType
+      if (body.data && body.data.message && body.data.message.messageType === 'textMessage') {
+        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
+        messageText = body.data.message.textMessage.text;
+        pushName = body.data.pushName;
+        console.log('✅ Formato 1 detectado: Evolution API com messageType');
+      }
+      // Formato 2: Evolution API com conversation
+      else if (body.data && body.data.message && body.data.message.conversation) {
+        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
+        messageText = body.data.message.conversation;
+        pushName = body.data.pushName;
+        console.log('✅ Formato 2 detectado: Evolution API com conversation');
+      }
+      // Formato 3: Evolution API com event
+      else if (body.event === 'messages.upsert' && body.data && body.data.key && body.data.message) {
+        phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
+        if (body.data.message.conversation) {
+          messageText = body.data.message.conversation;
+        } else if (body.data.message.extendedTextMessage?.text) {
+          messageText = body.data.message.extendedTextMessage.text;
+        }
+        pushName = body.data.pushName;
+        console.log('✅ Formato 3 detectado: Evolution API com event');
+      }
+      // Formato 4: Formato direto
+      else if (body.phoneNumber && body.message) {
+        phoneNumber = body.phoneNumber;
+        messageText = body.message;
+        pushName = body.pushName;
+        console.log('✅ Formato 4 detectado: Formato direto');
+      }
+
+      if (phoneNumber && messageText) {
+        console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
+        console.log(`👤 Nome: ${pushName || 'Não informado'}`);
         
-        const response = await this.chatbotService.processMessage(phoneNumber, message, pushName);
+        const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName);
+        
+        console.log(`🤖 Resposta gerada: "${response.substring(0, 100)}..."`);
         
         // Enviar resposta
-        await this.chatbotService.sendMessage(phoneNumber, response);
+        const sent = await this.chatbotService.sendMessage(phoneNumber, response);
+        console.log(`📤 Mensagem enviada: ${sent ? 'Sucesso' : 'Falha'}`);
         
         return { success: true, message: 'Mensagem processada com sucesso' };
+      } else {
+        console.log('⚠️ Formato de mensagem não reconhecido ou não é mensagem de texto');
+        console.log('📋 Estrutura recebida:', {
+          hasData: !!body.data,
+          hasMessage: !!body.data?.message,
+          messageKeys: body.data?.message ? Object.keys(body.data.message) : [],
+          hasKey: !!body.data?.key,
+          event: body.event
+        });
+        return { success: true, message: 'Webhook processado - formato não reconhecido' };
       }
       
-      return { success: true, message: 'Webhook processado' };
     } catch (error) {
-      console.error('Erro no webhook:', error);
+      console.error('❌ Erro no webhook:', error);
       return { success: false, error: error.message };
     }
   }
