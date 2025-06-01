@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
@@ -17,6 +17,8 @@ import { BotConfigService } from '../modules/bot-config/bot-config.service';
 
 @Injectable()
 export class ChatbotService {
+  private readonly logger = new Logger(ChatbotService.name);
+
   constructor(
     @InjectRepository(Team)
     private teamsRepository: Repository<Team>,
@@ -33,6 +35,37 @@ export class ChatbotService {
     private standingsService: StandingsService,
     private botConfigService: BotConfigService,
   ) {}
+
+  /**
+   * Converte uma data UTC para o timezone de Brasília (UTC-3)
+   */
+  private convertToBrasiliaTime(utcDate: Date): Date {
+    // Brasília está sempre UTC-3 (não há horário de verão desde 2019)
+    const brasiliaOffset = -3 * 60; // -3 horas em minutos
+    const utcTime = utcDate.getTime() + (utcDate.getTimezoneOffset() * 60000);
+    const brasiliaTime = new Date(utcTime + (brasiliaOffset * 60000));
+    return brasiliaTime;
+  }
+
+  /**
+   * Formata uma data para o padrão brasileiro com timezone correto
+   */
+  private formatBrasiliaDate(utcDate: Date): { date: string, time: string } {
+    const brasiliaDate = this.convertToBrasiliaTime(utcDate);
+    
+    const date = brasiliaDate.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    const time = brasiliaDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return { date, time };
+  }
 
   async processMessage(phoneNumber: string, message: string, pushName?: string): Promise<string> {
     try {
@@ -155,9 +188,8 @@ export class ChatbotService {
 🔍 Verifique novamente em breve ou pergunte sobre outro time!`;
       }
 
-      const date = new Date(nextMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR');
-      const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      // Usar a nova função de formatação com timezone correto
+      const { date: formattedDate, time: formattedTime } = this.formatBrasiliaDate(new Date(nextMatch.match_date));
 
       const isHome = nextMatch.home_team.id === team.id;
       const opponent = isHome ? nextMatch.away_team.name : nextMatch.home_team.name;
@@ -291,8 +323,8 @@ Bora torcer! 🔥⚽`;
       let response = `📅 **JOGOS DE HOJE** 📅\n\n`;
 
       todayMatches.forEach(match => {
-        const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        response += `⏰ ${time} - ${match.competition.name}\n`;
+        const { time: formattedTime } = this.formatBrasiliaDate(new Date(match.match_date));
+        response += `⏰ ${formattedTime} - ${match.competition.name}\n`;
         response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n`;
         response += `🏟️ ${match.stadium?.name || 'A definir'}\n\n`;
       });
@@ -515,14 +547,12 @@ ${result}`;
       let response = `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺\n\n`;
 
       upcomingMatches.forEach(match => {
-        const date = new Date(match.match_date);
-        const formattedDate = date.toLocaleDateString('pt-BR');
-        const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const { date: formattedDate, time: formattedTime } = this.formatBrasiliaDate(new Date(match.match_date));
         
         const isHome = match.home_team.id === team.id;
         const opponent = isHome ? match.away_team.name : match.home_team.name;
 
-        response += `📅 ${formattedDate} - ${time}\n`;
+        response += `📅 ${formattedDate} - ${formattedTime}\n`;
         response += `🆚 ${team.name} vs ${opponent}\n`;
         response += `🏆 ${match.competition.name}\n`;
         

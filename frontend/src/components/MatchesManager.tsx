@@ -259,7 +259,7 @@ export default function MatchesManager() {
 
       if (roundsRes.ok) {
         const roundsData = await roundsRes.json()
-        setRounds(roundsData)
+        // setRounds(roundsData) // Removido - não está sendo usado
       }
 
       if (channelsRes.ok) {
@@ -507,9 +507,6 @@ export default function MatchesManager() {
   const handleEdit = (match: Match) => {
     console.log('🔧 handleEdit - Match original:', match);
     console.log('🔧 handleEdit - match_date original:', match.match_date);
-    console.log('🔧 handleEdit - match_date como Date:', new Date(match.match_date));
-    console.log('🔧 handleEdit - match_date ISO:', new Date(match.match_date).toISOString());
-    console.log('🔧 handleEdit - match_date slice(0,16):', new Date(match.match_date).toISOString().slice(0, 16));
     
     setEditingMatch(match)
     
@@ -537,8 +534,17 @@ export default function MatchesManager() {
       return '';
     };
     
-    const formattedDate = new Date(match.match_date).toISOString().slice(0, 16);
-    console.log('🔧 handleEdit - Data formatada para o form:', formattedDate);
+    // Converter data UTC para timezone local do usuário para o campo datetime-local
+    const utcDate = new Date(match.match_date);
+    console.log('🔧 handleEdit - Data UTC:', utcDate);
+    
+    // Para campos datetime-local, precisamos ajustar para o timezone local
+    // Subtraindo o offset do timezone para que o valor exibido seja correto
+    const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
+    const formattedDate = localDate.toISOString().slice(0, 16);
+    
+    console.log('🔧 handleEdit - Data local ajustada:', localDate);
+    console.log('🔧 handleEdit - Data formatada para form:', formattedDate);
     
     const newFormData = {
       home_team_id: match.home_team.id.toString(),
