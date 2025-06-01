@@ -14,6 +14,7 @@ import { Round } from '../entities/round.entity';
 import { Goal } from '../entities/goal.entity';
 import { Channel } from '../entities/channel.entity';
 import { UsersModule } from '../modules/users/users.module';
+import { StandingsService } from '../modules/standings/standings.service';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UsersModule } from '../modules/users/users.module';
     OpenAIService,
     EvolutionService,
     FootballDataService,
+    StandingsService,
   ],
   exports: [ChatbotService],
 })
