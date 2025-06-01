@@ -1,0 +1,16 @@
+{
+  "event": "messages.upsert",
+  "instance": "kmizabot",
+  "data": {
+    "key": {
+      "remoteJid": "5548996652575@s.whatsapp.net",
+      "fromMe": false,
+      "id": "test_message_123"
+    },
+    "pushName": "ToniMedeiros",
+    "message": {
+      "conversation": "oi"
+    },
+    "messageTimestamp": 1735689600
+  }
+} 

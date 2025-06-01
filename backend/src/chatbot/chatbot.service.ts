@@ -966,4 +966,17 @@ ${result}`;
       };
     }
   }
+
+  /**
+   * Verificar se as respostas automáticas estão habilitadas
+   */
+  async isAutoResponseEnabled(): Promise<boolean> {
+    try {
+      const config = await this.botConfigService.getConfig('auto_response_enabled');
+      return config === 'true';
+    } catch (error) {
+      console.error('Erro ao verificar auto_response_enabled:', error);
+      return true; // Default: habilitado
+    }
+  }
 } 

@@ -10,6 +10,13 @@ export class ChatbotController {
     try {
       console.log('📨 Webhook recebido:', JSON.stringify(body, null, 2));
       
+      // Verificar se as respostas automáticas estão habilitadas
+      const autoResponseEnabled = await this.chatbotService.isAutoResponseEnabled();
+      if (!autoResponseEnabled) {
+        console.log('⚠️ Respostas automáticas estão desabilitadas');
+        return { success: true, message: 'Respostas automáticas desabilitadas' };
+      }
+      
       let phoneNumber: string | null = null;
       let messageText: string | null = null;
       let pushName: string | null = null;
@@ -51,7 +58,7 @@ export class ChatbotController {
         console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
         console.log(`👤 Nome: ${pushName || 'Não informado'}`);
         
-        const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName);
+        const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName || undefined);
         
         console.log(`🤖 Resposta gerada: "${response.substring(0, 100)}..."`);
         
