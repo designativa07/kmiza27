@@ -223,70 +223,52 @@ export default function MatchesManager() {
 
   const fetchData = async () => {
     try {
-      console.log('🔄 Iniciando carregamento de dados...')
+      setLoading(true)
+      console.log('🔄 fetchData - Iniciando busca de dados...');
       
-      // Adicionar timestamp para evitar cache
-      const timestamp = new Date().getTime()
-      const cacheHeaders = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-      
-      const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
-        fetch(`${API_ENDPOINTS.matches.list()}?t=${timestamp}`, { headers: cacheHeaders }),
-        fetch(`${API_ENDPOINTS.teams.list()}?t=${timestamp}`, { headers: cacheHeaders }),
-        fetch(`${API_ENDPOINTS.competitions.list()}?t=${timestamp}`, { headers: cacheHeaders }),
-        fetch(`${API_ENDPOINTS.channels.list()}?t=${timestamp}`, { headers: cacheHeaders })
+      // Buscar dados em paralelo
+      const [matchesRes, teamsRes, competitionsRes, roundsRes, channelsRes] = await Promise.all([
+        fetch(API_ENDPOINTS.matches.list(), {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        }),
+        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.competitions.list()),
+        fetch('/rounds'),
+        fetch(API_ENDPOINTS.channels.list())
       ])
-      
-      console.log('📊 Status das requisições:', {
-        matches: matchesRes.status,
-        teams: teamsRes.status,
-        competitions: competitionsRes.status,
-        channels: channelsRes.status
-      })
-      
-      if (!matchesRes.ok) {
-        throw new Error(`Erro ao carregar jogos: ${matchesRes.status}`)
+
+      if (matchesRes.ok) {
+        const matchesData = await matchesRes.json()
+        console.log('🔄 fetchData - Matches recebidos:', matchesData.length);
+        console.log('🔄 fetchData - Primeiro match:', matchesData[0]);
+        setMatches(matchesData)
       }
-      
-      if (!teamsRes.ok) {
-        throw new Error(`Erro ao carregar times: ${teamsRes.status}`)
+
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json()
+        setTeams(teamsData)
       }
-      
-      if (!competitionsRes.ok) {
-        throw new Error(`Erro ao carregar competições: ${competitionsRes.status}`)
+
+      if (competitionsRes.ok) {
+        const competitionsData = await competitionsRes.json()
+        setCompetitions(competitionsData)
       }
-      
-      const matchesData = await matchesRes.json()
-      const teamsData = await teamsRes.json()
-      const competitionsData = await competitionsRes.json()
-      
-      // Channels pode dar erro se não existir ainda no backend
-      let channelsData = []
+
+      if (roundsRes.ok) {
+        const roundsData = await roundsRes.json()
+        setRounds(roundsData)
+      }
+
       if (channelsRes.ok) {
-        channelsData = await channelsRes.json()
+        const channelsData = await channelsRes.json()
+        setChannels(channelsData)
       }
-      
-      console.log('✅ Dados carregados:', {
-        jogos: matchesData.length,
-        times: teamsData.length,
-        competições: competitionsData.length,
-        canais: channelsData.length
-      })
-      
-      // Debug: verificar estrutura dos dados de matches
-      console.log('🔍 Debug - Primeiros 5 matches:', matchesData.slice(0, 5))
-      
-      setMatches(matchesData)
-      setTeams(teamsData)
-      setCompetitions(competitionsData)
-      setChannels(channelsData)
+
     } catch (error) {
-      console.error('❌ Erro ao carregar dados:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`Erro ao carregar dados: ${errorMessage}`)
+      console.error('❌ fetchData - Erro ao carregar dados:', error)
     } finally {
       setLoading(false)
     }
@@ -523,6 +505,12 @@ export default function MatchesManager() {
   }
 
   const handleEdit = (match: Match) => {
+    console.log('🔧 handleEdit - Match original:', match);
+    console.log('🔧 handleEdit - match_date original:', match.match_date);
+    console.log('🔧 handleEdit - match_date como Date:', new Date(match.match_date));
+    console.log('🔧 handleEdit - match_date ISO:', new Date(match.match_date).toISOString());
+    console.log('🔧 handleEdit - match_date slice(0,16):', new Date(match.match_date).toISOString().slice(0, 16));
+    
     setEditingMatch(match)
     
     const processBroadcastChannels = (channels: any): string => {
@@ -549,16 +537,17 @@ export default function MatchesManager() {
       return '';
     };
     
-
+    const formattedDate = new Date(match.match_date).toISOString().slice(0, 16);
+    console.log('🔧 handleEdit - Data formatada para o form:', formattedDate);
     
-    setFormData({
+    const newFormData = {
       home_team_id: match.home_team.id.toString(),
       away_team_id: match.away_team.id.toString(),
       competition_id: match.competition.id.toString(),
       round_id: match.round?.id?.toString() || '',
       group_name: match.group_name || '',
       phase: match.phase || '',
-      match_date: new Date(match.match_date).toISOString().slice(0, 16),
+      match_date: formattedDate,
       status: match.status,
       broadcast_channels: processBroadcastChannels(match.broadcast_channels),
       channel_ids: match.channel_ids || [],
@@ -568,7 +557,10 @@ export default function MatchesManager() {
       away_yellow_cards: (match as any).away_yellow_cards,
       home_red_cards: (match as any).home_red_cards,
       away_red_cards: (match as any).away_red_cards
-    })
+    };
+    
+    console.log('🔧 handleEdit - FormData que será setado:', newFormData);
+    setFormData(newFormData);
     setShowModal(true)
   }
 
