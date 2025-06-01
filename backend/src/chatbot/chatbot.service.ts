@@ -12,6 +12,7 @@ import { OpenAIService } from './openai.service';
 import { EvolutionService } from './evolution.service';
 import { FootballDataService } from './football-data.service';
 import { UsersService } from '../modules/users/users.service';
+import { StandingsService, StandingEntry } from '../modules/standings/standings.service';
 
 @Injectable()
 export class ChatbotService {
@@ -28,6 +29,7 @@ export class ChatbotService {
     private evolutionService: EvolutionService,
     private footballDataService: FootballDataService,
     private usersService: UsersService,
+    private standingsService: StandingsService,
   ) {}
 
   async processMessage(phoneNumber: string, message: string, pushName?: string): Promise<string> {
@@ -227,16 +229,8 @@ Bora torcer! 🔥⚽`;
 🔍 Tente com: Brasileirão, Libertadores, Copa do Brasil, etc.`;
       }
 
-      // Buscar classificação real da competição
-      const standings = await this.competitionTeamsRepository
-        .createQueryBuilder('ct')
-        .leftJoinAndSelect('ct.team', 'team')
-        .where('ct.competition = :competitionId', { competitionId: competition.id })
-        .orderBy('ct.points', 'DESC')
-        .addOrderBy('ct.goal_difference', 'DESC')
-        .addOrderBy('ct.goals_for', 'DESC')
-        .limit(10) // Top 10
-        .getMany();
+      // Usar o StandingsService para obter a classificação calculada dinamicamente
+      const standings = await this.standingsService.getCompetitionStandings(competition.id);
 
       if (standings.length === 0) {
         return `📊 **TABELA - ${competition.name.toUpperCase()}** 📊
@@ -248,8 +242,11 @@ Bora torcer! 🔥⚽`;
 
       let response = `📊 **TABELA - ${competition.name.toUpperCase()}** 📊\n\n`;
 
-      standings.forEach((standing, index) => {
-        const position = index + 1;
+      // Mostrar apenas os primeiros 10 times
+      const topStandings = standings.slice(0, 10);
+
+      topStandings.forEach((standing) => {
+        const position = standing.position;
         const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
         
         response += `${emoji} ${standing.team.name} - ${standing.points} pts\n`;
@@ -852,7 +849,7 @@ ${result}`;
         };
       }
       
-      // 3. Verificar dados na tabela competition_teams
+      // 3. Verificar dados na tabela competition_teams (dados estáticos)
       const competitionTeams = await this.competitionTeamsRepository
         .createQueryBuilder('ct')
         .leftJoinAndSelect('ct.team', 'team')
@@ -860,8 +857,8 @@ ${result}`;
         .where('ct.competition = :competitionId', { competitionId: brasileirao.id })
         .getMany();
       
-      console.log('📊 Times na competição:', competitionTeams.length);
-      console.log('📋 Dados dos times:', competitionTeams.map(ct => ({
+      console.log('📊 Times na competição (tabela estática):', competitionTeams.length);
+      console.log('📋 Dados dos times (estáticos):', competitionTeams.map(ct => ({
         team: ct.team?.name,
         points: ct.points,
         played: ct.played,
@@ -870,9 +867,41 @@ ${result}`;
         lost: ct.lost
       })));
       
-      // 4. Verificar se há dados zerados
+      // 4. Verificar dados calculados dinamicamente
+      let dynamicStandings: StandingEntry[] = [];
+      let matchesCount = 0;
+      try {
+        dynamicStandings = await this.standingsService.getCompetitionStandings(brasileirao.id);
+        
+        // Contar jogos finalizados
+        const finishedMatches = await this.matchesRepository
+          .createQueryBuilder('match')
+          .where('match.competition_id = :competitionId', { competitionId: brasileirao.id })
+          .andWhere('match.status = :status', { status: 'finished' })
+          .getCount();
+        
+        matchesCount = finishedMatches;
+        
+        console.log('🎯 Classificação calculada dinamicamente:', dynamicStandings.slice(0, 5).map(s => ({
+          position: s.position,
+          team: s.team.name,
+          points: s.points,
+          played: s.played,
+          won: s.won,
+          drawn: s.drawn,
+          lost: s.lost,
+          goal_difference: s.goal_difference
+        })));
+      } catch (error) {
+        console.error('❌ Erro ao calcular classificação dinâmica:', error);
+      }
+      
+      // 5. Verificar se há dados zerados
       const teamsWithPoints = competitionTeams.filter(ct => ct.points > 0);
-      console.log('🎯 Times com pontos > 0:', teamsWithPoints.length);
+      const dynamicTeamsWithPoints = dynamicStandings.filter(s => s.points > 0);
+      
+      console.log('🎯 Times com pontos > 0 (estático):', teamsWithPoints.length);
+      console.log('🎯 Times com pontos > 0 (dinâmico):', dynamicTeamsWithPoints.length);
       
       return {
         success: true,
@@ -881,17 +910,37 @@ ${result}`;
           name: brasileirao.name,
           slug: brasileirao.slug
         },
-        totalTeams: competitionTeams.length,
-        teamsWithPoints: teamsWithPoints.length,
-        sampleData: competitionTeams.slice(0, 5).map(ct => ({
-          team: ct.team?.name,
-          points: ct.points,
-          played: ct.played,
-          won: ct.won,
-          drawn: ct.drawn,
-          lost: ct.lost,
-          goalDifference: ct.goal_difference
-        }))
+        staticData: {
+          totalTeams: competitionTeams.length,
+          teamsWithPoints: teamsWithPoints.length,
+          sampleData: competitionTeams.slice(0, 5).map(ct => ({
+            team: ct.team?.name,
+            points: ct.points,
+            played: ct.played,
+            won: ct.won,
+            drawn: ct.drawn,
+            lost: ct.lost,
+            goalDifference: ct.goal_difference
+          }))
+        },
+        dynamicData: {
+          totalTeams: dynamicStandings.length,
+          teamsWithPoints: dynamicTeamsWithPoints.length,
+          finishedMatches: matchesCount,
+          sampleData: dynamicStandings.slice(0, 5).map(s => ({
+            position: s.position,
+            team: s.team.name,
+            points: s.points,
+            played: s.played,
+            won: s.won,
+            drawn: s.drawn,
+            lost: s.lost,
+            goalDifference: s.goal_difference
+          }))
+        },
+        recommendation: dynamicStandings.length > 0 ? 
+          'O chatbot agora usa dados calculados dinamicamente baseados nos jogos finalizados!' :
+          'Não há jogos finalizados ainda. A tabela será populada conforme os jogos forem sendo finalizados.'
       };
       
     } catch (error) {
