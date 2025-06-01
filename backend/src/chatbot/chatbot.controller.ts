@@ -21,6 +21,14 @@ export class ChatbotController {
       let messageText: string | null = null;
       let pushName: string | null = null;
 
+      // Log detalhado da estrutura recebida
+      console.log('🔍 Analisando estrutura do webhook:');
+      console.log('- body.data:', !!body.data);
+      console.log('- body.data.message:', !!body.data?.message);
+      console.log('- body.data.key:', !!body.data?.key);
+      console.log('- body.event:', body.event);
+      console.log('- body.data.message keys:', body.data?.message ? Object.keys(body.data.message) : 'N/A');
+
       // Formato 1: Evolution API com messageType
       if (body.data && body.data.message && body.data.message.messageType === 'textMessage') {
         phoneNumber = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
@@ -53,6 +61,53 @@ export class ChatbotController {
         pushName = body.pushName;
         console.log('✅ Formato 4 detectado: Formato direto');
       }
+      // Formato 5: Tentar extrair de qualquer estrutura
+      else {
+        console.log('🔍 Tentando extrair dados de estrutura não reconhecida...');
+        
+        // Buscar recursivamente por campos conhecidos
+        const findInObject = (obj: any, path = ''): any => {
+          if (typeof obj !== 'object' || obj === null) return null;
+          
+          for (const [key, value] of Object.entries(obj)) {
+            const currentPath = path ? `${path}.${key}` : key;
+            
+            // Procurar por telefone
+            if (key === 'remoteJid' && typeof value === 'string' && value.includes('@s.whatsapp.net')) {
+              phoneNumber = value.replace('@s.whatsapp.net', '');
+              console.log(`📞 Telefone encontrado em: ${currentPath}`);
+            }
+            
+            // Procurar por texto da mensagem
+            if ((key === 'conversation' || key === 'text') && typeof value === 'string' && value.trim()) {
+              messageText = value;
+              console.log(`💬 Texto encontrado em: ${currentPath}`);
+            }
+            
+            // Procurar por nome
+            if (key === 'pushName' && typeof value === 'string') {
+              pushName = value;
+              console.log(`👤 Nome encontrado em: ${currentPath}`);
+            }
+            
+            // Buscar recursivamente
+            if (typeof value === 'object') {
+              findInObject(value, currentPath);
+            }
+          }
+        };
+        
+        findInObject(body);
+        
+        if (phoneNumber && messageText) {
+          console.log('✅ Formato 5 detectado: Extração recursiva bem-sucedida');
+        }
+      }
+
+      console.log(`📊 Resultado da análise:`);
+      console.log(`- Telefone: ${phoneNumber || 'NÃO ENCONTRADO'}`);
+      console.log(`- Mensagem: ${messageText || 'NÃO ENCONTRADA'}`);
+      console.log(`- Nome: ${pushName || 'NÃO ENCONTRADO'}`);
 
       if (phoneNumber && messageText) {
         console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
@@ -68,15 +123,8 @@ export class ChatbotController {
         
         return { success: true, message: 'Mensagem processada com sucesso' };
       } else {
-        console.log('⚠️ Formato de mensagem não reconhecido ou não é mensagem de texto');
-        console.log('📋 Estrutura recebida:', {
-          hasData: !!body.data,
-          hasMessage: !!body.data?.message,
-          messageKeys: body.data?.message ? Object.keys(body.data.message) : [],
-          hasKey: !!body.data?.key,
-          event: body.event
-        });
-        return { success: true, message: 'Webhook processado - formato não reconhecido' };
+        console.log('⚠️ Não foi possível extrair telefone e/ou mensagem do webhook');
+        return { success: true, message: 'Webhook processado - dados insuficientes' };
       }
       
     } catch (error) {
