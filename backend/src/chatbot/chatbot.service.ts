@@ -13,6 +13,7 @@ import { EvolutionService } from './evolution.service';
 import { FootballDataService } from './football-data.service';
 import { UsersService } from '../modules/users/users.service';
 import { StandingsService, StandingEntry } from '../modules/standings/standings.service';
+import { BotConfigService } from '../modules/bot-config/bot-config.service';
 
 @Injectable()
 export class ChatbotService {
@@ -30,6 +31,7 @@ export class ChatbotService {
     private footballDataService: FootballDataService,
     private usersService: UsersService,
     private standingsService: StandingsService,
+    private botConfigService: BotConfigService,
   ) {}
 
   async processMessage(phoneNumber: string, message: string, pushName?: string): Promise<string> {
@@ -102,7 +104,7 @@ export class ChatbotService {
           break;
 
         default:
-          response = this.getWelcomeMessage();
+          response = await this.getWelcomeMessage();
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
@@ -542,7 +544,19 @@ ${result}`;
     }
   }
 
-  private getWelcomeMessage(): string {
+  private async getWelcomeMessage(): Promise<string> {
+    try {
+      // Tentar buscar a mensagem de boas-vindas do banco de dados
+      const welcomeMessage = await this.botConfigService.getConfig('welcome_message');
+      
+      if (welcomeMessage) {
+        return welcomeMessage;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar welcome_message do banco:', error);
+    }
+    
+    // Fallback para mensagem padrão se não conseguir buscar do banco
     return `👋 **Olá! Sou o Kmiza27 Bot** ⚽
 
 🤖 Posso te ajudar com informações sobre futebol:

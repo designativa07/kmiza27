@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BotConfigService } from '../modules/bot-config/bot-config.service';
 
 export interface MessageAnalysis {
   intent: string;
@@ -9,6 +10,8 @@ export interface MessageAnalysis {
 
 @Injectable()
 export class OpenAIService {
+  
+  constructor(private botConfigService: BotConfigService) {}
   
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
     try {

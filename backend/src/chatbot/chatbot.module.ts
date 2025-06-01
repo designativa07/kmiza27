@@ -15,6 +15,7 @@ import { Goal } from '../entities/goal.entity';
 import { Channel } from '../entities/channel.entity';
 import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
+import { BotConfigModule } from '../modules/bot-config/bot-config.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { StandingsService } from '../modules/standings/standings.service';
       Channel,
     ]),
     UsersModule,
+    BotConfigModule,
   ],
   controllers: [ChatbotController],
   providers: [
