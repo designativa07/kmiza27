@@ -528,13 +528,8 @@ export default function MatchesManager() {
       return '';
     };
     
-    // Converter data UTC para timezone local do usuário para o campo datetime-local
-    const utcDate = new Date(match.match_date);
-    
-    // Para campos datetime-local, precisamos ajustar para o timezone local
-    // Subtraindo o offset do timezone para que o valor exibido seja correto
-    const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
-    const formattedDate = localDate.toISOString().slice(0, 16);
+    // Usar conversão simples para datetime-local
+    const formattedDate = new Date(match.match_date).toISOString().slice(0, 16);
     
     const newFormData = {
       home_team_id: match.home_team.id.toString(),
