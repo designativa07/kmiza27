@@ -45,25 +45,42 @@ export default function AutomationPanel() {
   }
 
   const updateConfig = async (id: number, value: string) => {
+    console.log('🔧 Iniciando updateConfig:', { id, value: value.substring(0, 50) + '...' });
     setSaving(true)
     try {
-      const response = await fetch(API_ENDPOINTS.botConfig.byId(id), {
+      const url = API_ENDPOINTS.botConfig.byId(id);
+      console.log('🌐 URL da requisição:', url);
+      
+      const requestBody = { value };
+      console.log('📦 Body da requisição:', requestBody);
+      
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ value }),
+        body: JSON.stringify(requestBody),
       })
 
+      console.log('📡 Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Dados da resposta:', responseData);
         setMessage({ type: 'success', text: 'Configuração salva com sucesso!' })
         fetchConfigs()
       } else {
-        setMessage({ type: 'error', text: 'Erro ao salvar configuração' })
+        const errorText = await response.text();
+        console.error('❌ Erro na resposta:', errorText);
+        setMessage({ type: 'error', text: `Erro ao salvar configuração: ${response.status}` })
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error)
-      setMessage({ type: 'error', text: 'Erro ao salvar configuração' })
+      console.error('❌ Erro ao salvar:', error)
+      setMessage({ type: 'error', text: `Erro ao salvar configuração: ${error.message}` })
     } finally {
       setSaving(false)
     }
