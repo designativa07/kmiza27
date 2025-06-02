@@ -145,15 +145,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Credenciais de demonstração */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 font-medium mb-2">Credenciais de acesso:</p>
-              <div className="text-sm text-gray-500 space-y-1">
-                <p><strong>Usuário:</strong> admin_kmiza27</p>
-                <p><strong>Senha:</strong> admin@kmiza27</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
