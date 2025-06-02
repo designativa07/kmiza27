@@ -160,7 +160,11 @@ export class ChatbotService {
       // Usar formatação simples de data (sem conversão de timezone)
       const date = new Date(nextMatch.match_date);
       const formattedDate = date.toLocaleDateString('pt-BR');
-      const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const formattedTime = date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'UTC' // Forçar uso do UTC para evitar conversão de fuso horário
+      });
 
       const isHome = nextMatch.home_team.id === team.id;
       const opponent = isHome ? nextMatch.away_team.name : nextMatch.home_team.name;
