@@ -16,9 +16,10 @@ import {
   HeartIcon,
   ClockIcon,
   DocumentTextIcon,
-  PlayIcon,
   ChartPieIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  PlusIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline'
 import Sidebar from './Sidebar'
 import StatsCards from './StatsCards'
@@ -31,7 +32,6 @@ import ChannelsManager from './ChannelsManager'
 import UsersManager from './UsersManager'
 import AdminsManager from './AdminsManager'
 import ChatbotSettings from './ChatbotSettings'
-import BroadcastManager from './BroadcastManager'
 import NotificationsManager from './NotificationsManager'
 import GlobalSearch from './GlobalSearch'
 import SystemSettings from './SystemSettings'
@@ -43,8 +43,24 @@ import CompetitionTeamsManager from './CompetitionTeamsManager'
 import UserStats from './UserStats'
 import StatusContent from './StatusContent'
 import { API_ENDPOINTS } from '../config/api'
+import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
-// Navegação atualizada com todas as páginas disponíveis
+interface UserStats {
+  whatsapp: {
+    total_messages: number
+    total_users: number
+    messages_today: number
+    active_users_today: number
+    response_time_avg: number
+  }
+  users: number
+  teams: number
+  matches: number
+  competitions: number
+  channels: number
+}
+
+// Navegação atualizada sem Transmissões
 const navigation = [
   { name: 'Dashboard', href: '#', icon: ChartBarIcon, current: true },
   { name: 'Times', href: '#', icon: TrophyIcon, current: false },
@@ -58,7 +74,6 @@ const navigation = [
   { name: 'Administradores', href: '#', icon: UserGroupIcon, current: false },
   { name: 'Conversas WhatsApp', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
   { name: 'Automação IA', href: '#', icon: CogIcon, current: false },
-  { name: 'Transmissões', href: '#', icon: PlayIcon, current: false },
   { name: 'Notificações', href: '#', icon: BellIcon, current: false },
   { name: 'Status do Sistema', href: '#', icon: ServerIcon, current: false },
   { name: 'Chatbot', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
@@ -487,8 +502,6 @@ export default function Dashboard() {
         return <AutomationPanel />
       case 'Chatbot':
         return <ChatbotSettings />
-      case 'Transmissões':
-        return <BroadcastManager />
       case 'Notificações':
         return <NotificationsManager />
       case 'Status do Sistema':
