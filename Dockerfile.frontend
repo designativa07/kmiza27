@@ -34,9 +34,8 @@ RUN cd /tmp/repo && \
     echo "CURRENT_COMMIT=$CURRENT_COMMIT" && \
     echo "$CURRENT_COMMIT" > /app/commit-cache-buster.txt
 
-# Copiar package files com cache busting
-RUN cp /tmp/repo/frontend/package*.json ./ && \
-    echo "$(date +%s)" >> package.json
+# Copiar package files (sem modificar o JSON)
+RUN cp /tmp/repo/frontend/package*.json ./
 
 # Limpar e reinstalar dependências
 RUN rm -rf node_modules package-lock.json
