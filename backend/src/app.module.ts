@@ -18,7 +18,8 @@ import {
   Notification, 
   NotificationDelivery,
   SystemSettings,
-  Channel
+  Channel,
+  MatchBroadcast
 } from './entities';
 import { BotConfig } from './entities/bot-config.entity';
 
@@ -63,7 +64,8 @@ import { AuthModule } from './modules/auth/auth.module';
         NotificationDelivery,
         SystemSettings,
         BotConfig,
-        Channel
+        Channel,
+        MatchBroadcast
       ],
       synchronize: false,
       logging: false,
