@@ -97,27 +97,82 @@ export default function ChannelsManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('🔄 Iniciando salvamento de canal...')
+    console.log('📝 Dados do formulário:', formData)
+    console.log('✏️ Modo de edição:', editingChannel ? 'Editando' : 'Criando novo')
+    
+    // Validação básica
+    if (!formData.name.trim()) {
+      alert('Por favor, insira o nome do canal')
+      return
+    }
+    
+    if (!formData.type) {
+      alert('Por favor, selecione o tipo do canal')
+      return
+    }
+    
     try {
       const url = editingChannel 
         ? `${API_ENDPOINTS.channels.list()}/${editingChannel.id}`
         : API_ENDPOINTS.channels.list()
       
-      const method = editingChannel ? 'PATCH' : 'POST'
+      console.log('🌐 URL da requisição:', url)
       
-      const response = await fetch(url, {
+      const method = editingChannel ? 'PATCH' : 'POST'
+      console.log('📡 Método HTTP:', method)
+      
+      // Limpar dados vazios
+      const cleanFormData = {
+        name: formData.name.trim(),
+        logo: formData.logo?.trim() || '',
+        channel_number: formData.channel_number?.trim() || '',
+        channel_link: formData.channel_link?.trim() || '',
+        type: formData.type,
+        active: formData.active
+      }
+      
+      console.log('🧹 Dados limpos:', cleanFormData)
+      
+      const requestOptions = {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanFormData),
+      }
+      
+      console.log('📦 Enviando requisição...')
+      
+      const response = await fetch(url, requestOptions)
+      
+      console.log('📥 Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       })
 
       if (response.ok) {
-        fetchChannels()
+        const responseData = await response.json()
+        console.log('✅ Dados da resposta:', responseData)
+        console.log('🔄 Recarregando lista de canais...')
+        await fetchChannels()
         resetForm()
+        console.log('✅ Canal salvo com sucesso!')
+        alert('Canal salvo com sucesso!')
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Erro na resposta:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: errorText
+        })
+        alert(`Erro ao salvar canal: ${response.status} - ${response.statusText}`)
       }
     } catch (error) {
-      console.error('Erro ao salvar canal:', error)
+      console.error('❌ Erro na requisição:', error)
+      alert(`Erro ao salvar canal: ${error}`)
     }
   }
 
