@@ -215,17 +215,48 @@ export class MatchesService {
   }
 
   private async updateMatchBroadcasts(matchId: number, channelIds: number[]): Promise<void> {
-    // Remove todas as transmissões existentes para este jogo
-    await this.matchBroadcastRepository.delete({ match_id: matchId });
+    console.log('🔄 Iniciando atualização de transmissões...', { matchId, channelIds });
 
-    // Adiciona as novas transmissões
-    if (channelIds && channelIds.length > 0) {
-      const broadcasts = channelIds.map(channelId => ({
-        match_id: matchId,
-        channel_id: channelId
-      }));
+    try {
+      // Remove todas as transmissões existentes para este jogo
+      console.log('🗑️ Removendo transmissões existentes...');
+      const deleteResult = await this.matchBroadcastRepository.delete({ match_id: matchId });
+      console.log('✅ Transmissões removidas:', deleteResult);
 
-      await this.matchBroadcastRepository.insert(broadcasts);
+      // Adiciona as novas transmissões
+      if (channelIds && channelIds.length > 0) {
+        console.log('📝 Preparando novas transmissões...');
+        
+        // Verificar se todos os canais existem
+        const channels = await this.channelRepository.findByIds(channelIds);
+        if (channels.length !== channelIds.length) {
+          const foundIds = channels.map(c => c.id);
+          const missingIds = channelIds.filter(id => !foundIds.includes(id));
+          throw new Error(`Canais não encontrados: ${missingIds.join(', ')}`);
+        }
+
+        const broadcasts = channelIds.map(channelId => ({
+          match_id: matchId,
+          channel_id: channelId
+        }));
+
+        console.log('💾 Salvando novas transmissões:', broadcasts);
+        const insertResult = await this.matchBroadcastRepository.insert(broadcasts);
+        console.log('✅ Novas transmissões salvas:', insertResult);
+      } else {
+        console.log('ℹ️ Nenhum canal para adicionar');
+      }
+
+      // Verificar se as transmissões foram salvas corretamente
+      const savedBroadcasts = await this.matchBroadcastRepository.find({
+        where: { match_id: matchId },
+        relations: ['channel']
+      });
+      console.log('✅ Transmissões atualizadas com sucesso:', savedBroadcasts);
+
+    } catch (error) {
+      console.error('❌ Erro ao atualizar transmissões:', error);
+      throw error;
     }
   }
 } 

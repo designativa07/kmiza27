@@ -1,10 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Channel } from '../../entities/channel.entity';
 
 @Injectable()
 export class ChannelsService {
+  private readonly logger = new Logger(ChannelsService.name);
+
   constructor(
     @InjectRepository(Channel)
     private channelRepository: Repository<Channel>
@@ -81,12 +83,17 @@ export class ChannelsService {
   }
 
   async create(channelData: Partial<Channel>): Promise<Channel> {
+    this.logger.log('Iniciando criação de canal...');
+    this.logger.debug('Dados recebidos:', channelData);
+
     // Validações
     if (!channelData.name?.trim()) {
+      this.logger.error('Nome do canal é obrigatório');
       throw new BadRequestException('Nome do canal é obrigatório');
     }
 
     if (!channelData.type?.trim()) {
+      this.logger.error('Tipo do canal é obrigatório');
       throw new BadRequestException('Tipo do canal é obrigatório');
     }
 
@@ -96,6 +103,7 @@ export class ChannelsService {
     });
 
     if (existingChannel) {
+      this.logger.error(`Canal com nome "${channelData.name}" já existe`);
       throw new BadRequestException('Já existe um canal com este nome');
     }
 
@@ -109,28 +117,39 @@ export class ChannelsService {
       active: channelData.active ?? true
     });
 
+    this.logger.debug('Canal preparado para salvar:', channel);
+
     // Salvar no banco
     try {
-      return await this.channelRepository.save(channel);
+      const savedChannel = await this.channelRepository.save(channel);
+      this.logger.log(`Canal "${savedChannel.name}" criado com sucesso`);
+      return savedChannel;
     } catch (error) {
+      this.logger.error('Erro ao salvar canal no banco:', error);
       throw new BadRequestException('Erro ao criar canal: ' + error.message);
     }
   }
 
   async update(id: number, channelData: Partial<Channel>): Promise<Channel> {
+    this.logger.log(`Iniciando atualização do canal ${id}...`);
+    this.logger.debug('Dados recebidos:', channelData);
+
     // Verificar se o canal existe
     const existingChannel = await this.findOne(id);
 
     if (!existingChannel) {
+      this.logger.error(`Canal ${id} não encontrado`);
       throw new BadRequestException('Canal não encontrado');
     }
 
     // Validações
     if (channelData.name && !channelData.name.trim()) {
+      this.logger.error('Nome do canal não pode ser vazio');
       throw new BadRequestException('Nome do canal não pode ser vazio');
     }
 
     if (channelData.type && !channelData.type.trim()) {
+      this.logger.error('Tipo do canal não pode ser vazio');
       throw new BadRequestException('Tipo do canal não pode ser vazio');
     }
 
@@ -141,6 +160,7 @@ export class ChannelsService {
       });
 
       if (channelWithSameName) {
+        this.logger.error(`Já existe um canal com o nome "${channelData.name}"`);
         throw new BadRequestException('Já existe um canal com este nome');
       }
     }
@@ -156,10 +176,15 @@ export class ChannelsService {
       type: channelData.type?.trim() || existingChannel.type
     };
 
+    this.logger.debug('Canal preparado para atualizar:', updatedChannel);
+
     // Salvar no banco
     try {
-      return await this.channelRepository.save(updatedChannel);
+      const savedChannel = await this.channelRepository.save(updatedChannel);
+      this.logger.log(`Canal "${savedChannel.name}" atualizado com sucesso`);
+      return savedChannel;
     } catch (error) {
+      this.logger.error('Erro ao atualizar canal no banco:', error);
       throw new BadRequestException('Erro ao atualizar canal: ' + error.message);
     }
   }
