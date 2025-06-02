@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, HttpException, HttpStatus } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TeamsService } from './teams.service';
 import { Team } from '../../entities';
@@ -54,7 +54,15 @@ export class TeamsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.teamsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    try {
+      await this.teamsService.remove(+id);
+      return { message: 'Time excluído com sucesso' };
+    } catch (error) {
+      if (error.message.includes('Não é possível excluir')) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException('Erro interno do servidor', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 } 
