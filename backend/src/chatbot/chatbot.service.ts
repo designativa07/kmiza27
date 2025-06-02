@@ -159,11 +159,11 @@ export class ChatbotService {
 
       // Usar formatação simples de data (sem conversão de timezone)
       const date = new Date(nextMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR');
+      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
       const formattedTime = date.toLocaleTimeString('pt-BR', { 
         hour: '2-digit', 
         minute: '2-digit',
-        timeZone: 'UTC' // Forçar uso do UTC para evitar conversão de fuso horário
+        timeZone: 'America/Sao_Paulo' // Corrigido para horário de Brasília
       });
 
       const isHome = nextMatch.home_team.id === team.id;
@@ -461,7 +461,7 @@ Bora torcer! 🔥⚽`;
       }
 
       const date = new Date(lastMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR');
+      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
       const isHome = lastMatch.home_team.id === team.id;
       const opponent = isHome ? lastMatch.away_team.name : lastMatch.home_team.name;
@@ -523,7 +523,7 @@ ${result}`;
 
       upcomingMatches.forEach(match => {
         const date = new Date(match.match_date);
-        const formattedDate = date.toLocaleDateString('pt-BR');
+        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
         const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         
         const isHome = match.home_team.id === team.id;
