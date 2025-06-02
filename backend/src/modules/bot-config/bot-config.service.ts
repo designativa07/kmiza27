@@ -72,6 +72,18 @@ Mantenha as respostas concisas e informativas.`,
 💬 **O que você gostaria de saber?**`,
           description: 'Mensagem de boas-vindas do bot',
           type: 'text' as const
+        },
+        {
+          key: 'venue_home_phrase',
+          value: 'em casa',
+          description: 'Frase para jogos com mando de campo do time',
+          type: 'text' as const
+        },
+        {
+          key: 'venue_away_phrase',
+          value: 'fora de casa',
+          description: 'Frase para jogos com mando de campo do adversário',
+          type: 'text' as const
         }
       ];
 

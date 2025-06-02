@@ -36,7 +36,7 @@ export default function AutomationPanel() {
         const data = await response.json()
         setConfigs(data)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar configurações:', error)
       setMessage({ type: 'error', text: 'Erro ao carregar configurações' })
     } finally {
@@ -78,7 +78,7 @@ export default function AutomationPanel() {
         console.error('❌ Erro na resposta:', errorText);
         setMessage({ type: 'error', text: `Erro ao salvar configuração: ${response.status}` })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao salvar:', error)
       setMessage({ type: 'error', text: `Erro ao salvar configuração: ${error.message}` })
     } finally {
@@ -99,7 +99,7 @@ export default function AutomationPanel() {
       } else {
         setMessage({ type: 'error', text: 'Erro ao restaurar configurações' })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao restaurar:', error)
       setMessage({ type: 'error', text: 'Erro ao restaurar configurações' })
     } finally {
@@ -188,18 +188,28 @@ export default function AutomationPanel() {
 
             <div className="space-y-3">
               {config.type === 'text' ? (
-                <textarea
-                  value={config.value}
-                  onChange={(e) => handleConfigChange(config.id, e.target.value)}
-                  rows={8}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Digite o prompt aqui..."
-                />
+                config.key === 'openai_prompt' || config.key === 'welcome_message' ? (
+                  <textarea
+                    value={config.value}
+                    onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                    rows={8}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Digite o prompt aqui..."
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={config.value}
+                    onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Digite o valor..."
+                  />
+                )
               ) : config.type === 'boolean' ? (
                 <select
                   value={config.value}
                   onChange={(e) => handleConfigChange(config.id, e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:focus:border-indigo-500"
                 >
                   <option value="true">Habilitado</option>
                   <option value="false">Desabilitado</option>

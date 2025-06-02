@@ -173,8 +173,9 @@ export class ChatbotService {
       });
 
       const isHome = nextMatch.home_team.id === team.id;
-      const opponent = isHome ? nextMatch.away_team.name : nextMatch.home_team.name;
-      const venue = isHome ? 'em casa' : 'fora de casa';
+      const venueHomePhrase = await this.botConfigService.getConfig('venue_home_phrase') || 'em casa';
+      const venueAwayPhrase = await this.botConfigService.getConfig('venue_away_phrase') || 'fora de casa';
+      const venue = isHome ? venueHomePhrase : venueAwayPhrase;
 
       // Buscar canais de transmissão da nova tabela match_broadcasts
       const broadcasts = await this.matchBroadcastRepository
@@ -215,7 +216,7 @@ export class ChatbotService {
 📅 **Data:** ${formattedDate}
 ⏰ **Horário:** ${formattedTime}
 🏆 **Competição:** ${nextMatch.competition.name}
-🆚 **Adversário:** ${opponent}
+�� **Adversário:** ${nextMatch.away_team.name}
 🏟️ **Estádio:** ${nextMatch.stadium?.name || 'A definir'}
 📍 **Rodada:** ${nextMatch.round?.name || 'A definir'}
 🏠 **Mando:** ${venue}${broadcastInfo}
