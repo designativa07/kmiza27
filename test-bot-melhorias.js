@@ -154,11 +154,11 @@ async function findNextMatch(client, teamName) {
     
     const match = matchResult.rows[0];
     const date = new Date(match.match_date);
-    const formattedDate = date.toLocaleDateString('pt-BR');
+    const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const formattedTime = date.toLocaleTimeString('pt-BR', { 
       hour: '2-digit', 
       minute: '2-digit',
-      timeZone: 'UTC'
+      timeZone: 'America/Sao_Paulo'
     });
     
     const isHome = match.home_team === team.name;
