@@ -106,10 +106,25 @@ export class MatchesService {
     console.log('🔍 MatchesService.findAll - Buscando todos os matches...');
     
     const matches = await this.matchRepository.find({
-      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round'],
+      relations: [
+        'home_team', 
+        'away_team', 
+        'competition', 
+        'stadium', 
+        'round',
+        'broadcasts',
+        'broadcasts.channel'
+      ],
       order: {
         match_date: 'ASC', // Ordenar por data, mais próximos primeiro
         id: 'ASC' // Em caso de empate na data, ordenar por ID
+      }
+    });
+
+    // Mapear os IDs dos canais para cada partida
+    matches.forEach(match => {
+      if (match.broadcasts) {
+        match.channel_ids = match.broadcasts.map(broadcast => broadcast.channel.id);
       }
     });
     

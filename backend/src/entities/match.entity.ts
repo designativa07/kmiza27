@@ -97,4 +97,7 @@ export class Match {
 
   @OneToMany(() => MatchBroadcast, broadcast => broadcast.match)
   broadcasts: MatchBroadcast[];
+
+  // Propriedade virtual para armazenar os IDs dos canais
+  channel_ids?: number[];
 } 
