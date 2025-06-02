@@ -188,9 +188,19 @@ export class ChatbotService {
       if (broadcasts && broadcasts.length > 0) {
         const channelsList = broadcasts.map(broadcast => {
           const channel = broadcast.channel;
-          return channel.channel_link 
-            ? `${channel.name}: ${channel.channel_link}`
-            : channel.name;
+          let channelText = channel.name;
+          
+          // Adicionar número do canal se disponível
+          if (channel.channel_number) {
+            channelText += ` (${channel.channel_number})`;
+          }
+          
+          // Adicionar link se disponível
+          if (channel.channel_link) {
+            channelText += `: ${channel.channel_link}`;
+          }
+          
+          return channelText;
         }).join('\n- ');
         broadcastInfo = `\n📺 **Transmissão:**\n- ${channelsList}`;
       } else {
