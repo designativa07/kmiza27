@@ -4,6 +4,7 @@ import { Team } from './team.entity';
 import { Round } from './round.entity';
 import { Stadium } from './stadium.entity';
 import { Goal } from './goal.entity';
+import { MatchBroadcast } from './match-broadcast.entity';
 
 export enum MatchStatus {
   SCHEDULED = 'scheduled',
@@ -93,4 +94,7 @@ export class Match {
 
   @OneToMany(() => Goal, goal => goal.match)
   goals: Goal[];
+
+  @OneToMany(() => MatchBroadcast, broadcast => broadcast.match)
+  broadcasts: MatchBroadcast[];
 } 
