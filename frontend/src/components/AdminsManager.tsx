@@ -19,7 +19,7 @@ export default function AdminsManager() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [formData, setFormData] = useState<CreateAdminData & { username: string }>({
+  const [formData, setFormData] = useState<CreateAdminData>({
     username: '',
     email: '',
     password: '',
@@ -36,9 +36,10 @@ export default function AdminsManager() {
       setLoading(true)
       setError(null)
       const data = await authService.getAdminUsers()
+      console.log('📊 AdminsManager: Carregados', data.length, 'administradores')
       setAdmins(data)
     } catch (err) {
-      console.error('Erro ao carregar administradores:', err)
+      console.error('❌ AdminsManager: Erro ao carregar administradores:', err)
       setError('Erro ao carregar administradores. Tente novamente.')
     } finally {
       setLoading(false)
@@ -48,33 +49,59 @@ export default function AdminsManager() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('🔄 Iniciando criação de administrador:', formData)
+    console.log('🔄 AdminsManager: Iniciando criação de administrador:', formData)
+    
+    // Validação básica
+    if (!formData.name.trim()) {
+      setCreateError('Nome é obrigatório')
+      return
+    }
+    
+    if (!formData.password.trim()) {
+      setCreateError('Senha é obrigatória')
+      return
+    }
+    
+    if (formData.password.length < 6) {
+      setCreateError('Senha deve ter pelo menos 6 caracteres')
+      return
+    }
     
     try {
       setCreateLoading(true)
       setCreateError(null)
       
       const result = await authService.createAdmin(formData)
-      console.log('✅ Administrador criado com sucesso:', result)
+      console.log('✅ AdminsManager: Resposta do backend:', result)
       
-      // Limpar formulário
-      setFormData({
-        username: '',
-        email: '',
-        password: '',
-        name: '',
-        phone_number: ''
-      })
-      
-      // Fechar modal e recarregar lista
-      setShowCreateModal(false)
-      await loadAdmins()
+      if (result.success) {
+        console.log('✅ AdminsManager: Administrador criado com sucesso')
+        
+        // Limpar formulário
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          name: '',
+          phone_number: ''
+        })
+        
+        // Fechar modal e recarregar lista
+        setShowCreateModal(false)
+        await loadAdmins()
+        
+        // Mostrar mensagem de sucesso
+        alert('Administrador criado com sucesso!')
+        
+      } else {
+        console.error('❌ AdminsManager: Erro do backend:', result.message)
+        setCreateError(result.message || 'Erro ao criar administrador')
+      }
       
     } catch (err: any) {
-      console.error('❌ Erro ao criar administrador:', err)
-      console.error('Response data:', err.response?.data)
-      console.error('Response status:', err.response?.status)
-      setCreateError(err.response?.data?.message || err.message || 'Erro ao criar administrador')
+      console.error('❌ AdminsManager: Erro ao criar administrador:', err)
+      const errorMsg = err.response?.data?.message || err.message || 'Erro ao criar administrador'
+      setCreateError(errorMsg)
     } finally {
       setCreateLoading(false)
     }
@@ -85,6 +112,25 @@ export default function AdminsManager() {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
+    })
+  }
+
+  const handleOpenModal = () => {
+    console.log('🔄 AdminsManager: Abrindo modal para criar administrador')
+    setShowCreateModal(true)
+    setCreateError(null)
+  }
+
+  const handleCloseModal = () => {
+    console.log('🔄 AdminsManager: Fechando modal')
+    setShowCreateModal(false)
+    setCreateError(null)
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      name: '',
+      phone_number: ''
     })
   }
 
@@ -116,8 +162,8 @@ export default function AdminsManager() {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={handleOpenModal}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
         >
           <PlusIcon className="h-4 w-4 mr-2" />
           Criar Administrador
@@ -145,16 +191,16 @@ export default function AdminsManager() {
               <div className="flex-shrink-0">
                 <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                   <span className="text-white font-semibold text-lg">
-                    {(admin.name || admin.username).charAt(0).toUpperCase()}
+                    {(admin.name || admin.username || 'A').charAt(0).toUpperCase()}
                   </span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                  {admin.name || admin.username}
+                  {admin.name || admin.username || 'Sem nome'}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  @{admin.username}
+                  @{admin.username || admin.email || admin.phone_number}
                 </p>
               </div>
             </div>
@@ -209,8 +255,8 @@ export default function AdminsManager() {
           </p>
           <div className="mt-6">
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              onClick={handleOpenModal}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
             >
               <PlusIcon className="h-4 w-4 mr-2" />
               Criar Administrador
@@ -223,7 +269,7 @@ export default function AdminsManager() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowCreateModal(false)} />
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={handleCloseModal} />
             
             <div className="inline-block align-bottom bg-white dark:bg-slate-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <form onSubmit={handleCreateAdmin}>
@@ -234,7 +280,7 @@ export default function AdminsManager() {
                     </h3>
                     <button
                       type="button"
-                      onClick={() => setShowCreateModal(false)}
+                      onClick={handleCloseModal}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       <XMarkIcon className="h-6 w-6" />
@@ -250,24 +296,11 @@ export default function AdminsManager() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Nome de usuário *
+                        Nome completo *
                       </label>
                       <input
                         type="text"
                         required
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="admin_usuario"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Nome completo
-                      </label>
-                      <input
-                        type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -277,11 +310,10 @@ export default function AdminsManager() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Email *
+                        Email
                       </label>
                       <input
                         type="email"
-                        required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -315,6 +347,9 @@ export default function AdminsManager() {
                         placeholder="Senha segura"
                         minLength={6}
                       />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Mínimo de 6 caracteres
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -323,14 +358,22 @@ export default function AdminsManager() {
                   <button
                     type="submit"
                     disabled={createLoading}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {createLoading ? 'Criando...' : 'Criar Administrador'}
+                    {createLoading ? (
+                      <span className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Criando...
+                      </span>
+                    ) : (
+                      'Criar Administrador'
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={handleCloseModal}
+                    disabled={createLoading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
                   >
                     Cancelar
                   </button>

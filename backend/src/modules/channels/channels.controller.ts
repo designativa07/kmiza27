@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
-import { Channel } from '../../entities';
+import { Channel } from '../../entities/channel.entity';
 
 @Controller('channels')
 export class ChannelsController {
@@ -12,14 +12,18 @@ export class ChannelsController {
   }
 
   @Get()
-  findAll(@Query('active') active?: string, @Query('type') type?: string) {
-    if (active === 'true') {
-      return this.channelsService.findActive();
-    }
-    if (type) {
-      return this.channelsService.findByType(type);
-    }
+  findAll() {
     return this.channelsService.findAll();
+  }
+
+  @Get('active')
+  findActive() {
+    return this.channelsService.findActive();
+  }
+
+  @Get('type/:type')
+  findByType(@Param('type') type: string) {
+    return this.channelsService.findByType(type);
   }
 
   @Get(':id')
@@ -33,7 +37,7 @@ export class ChannelsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.channelsService.remove(+id);
+  delete(@Param('id') id: string) {
+    return this.channelsService.delete(+id);
   }
 } 

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
@@ -82,13 +82,47 @@ export class AuthService {
     phone_number?: string;
     password: string;
   }): Promise<User> {
+    // Validações
+    if (!userData.name?.trim()) {
+      throw new BadRequestException('Nome é obrigatório');
+    }
+
+    if (!userData.password?.trim()) {
+      throw new BadRequestException('Senha é obrigatória');
+    }
+
+    if (userData.password.length < 6) {
+      throw new BadRequestException('Senha deve ter pelo menos 6 caracteres');
+    }
+
+    // Verificar se já existe um admin com este email ou telefone
+    if (userData.email) {
+      const existingEmail = await this.userRepository.findOne({
+        where: { email: userData.email }
+      });
+      if (existingEmail) {
+        throw new BadRequestException('Email já está em uso');
+      }
+    }
+
+    if (userData.phone_number) {
+      const existingPhone = await this.userRepository.findOne({
+        where: { phone_number: userData.phone_number }
+      });
+      if (existingPhone) {
+        throw new BadRequestException('Telefone já está em uso');
+      }
+    }
+
+    // Gerar hash da senha
     const saltRounds = 10;
     const password_hash = await bcrypt.hash(userData.password, saltRounds);
 
+    // Criar novo usuário admin
     const adminUser = this.userRepository.create({
-      name: userData.name,
-      email: userData.email,
-      phone_number: userData.phone_number,
+      name: userData.name.trim(),
+      email: userData.email?.trim(),
+      phone_number: userData.phone_number?.trim(),
       password_hash,
       is_admin: true,
       is_active: true,
@@ -98,7 +132,14 @@ export class AuthService {
       }
     });
 
-    return this.userRepository.save(adminUser);
+    // Salvar no banco
+    try {
+      const savedUser = await this.userRepository.save(adminUser);
+      const { password_hash: _, ...userWithoutPassword } = savedUser;
+      return userWithoutPassword as User;
+    } catch (error) {
+      throw new BadRequestException('Erro ao criar administrador: ' + error.message);
+    }
   }
 
   async updateAdminPassword(userId: number, newPassword: string): Promise<boolean> {
