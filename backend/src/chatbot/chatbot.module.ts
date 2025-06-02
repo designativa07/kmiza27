@@ -13,6 +13,7 @@ import { Stadium } from '../entities/stadium.entity';
 import { Round } from '../entities/round.entity';
 import { Goal } from '../entities/goal.entity';
 import { Channel } from '../entities/channel.entity';
+import { MatchBroadcast } from '../entities/match-broadcast.entity';
 import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
@@ -28,6 +29,7 @@ import { BotConfigModule } from '../modules/bot-config/bot-config.module';
       Round,
       Goal,
       Channel,
+      MatchBroadcast,
     ]),
     UsersModule,
     BotConfigModule,

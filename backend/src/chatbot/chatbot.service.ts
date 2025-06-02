@@ -8,6 +8,8 @@ import { CompetitionTeam } from '../entities/competition-team.entity';
 import { Stadium } from '../entities/stadium.entity';
 import { Round } from '../entities/round.entity';
 import { User } from '../entities/user.entity';
+import { MatchBroadcast } from '../entities/match-broadcast.entity';
+import { Channel } from '../entities/channel.entity';
 import { OpenAIService } from './openai.service';
 import { EvolutionService } from './evolution.service';
 import { FootballDataService } from './football-data.service';
@@ -28,6 +30,10 @@ export class ChatbotService {
     private competitionsRepository: Repository<Competition>,
     @InjectRepository(CompetitionTeam)
     private competitionTeamsRepository: Repository<CompetitionTeam>,
+    @InjectRepository(MatchBroadcast)
+    private matchBroadcastRepository: Repository<MatchBroadcast>,
+    @InjectRepository(Channel)
+    private channelRepository: Repository<Channel>,
     private openAIService: OpenAIService,
     private evolutionService: EvolutionService,
     private footballDataService: FootballDataService,
@@ -170,10 +176,28 @@ export class ChatbotService {
       const opponent = isHome ? nextMatch.away_team.name : nextMatch.home_team.name;
       const venue = isHome ? 'em casa' : 'fora de casa';
 
-      // Informações de transmissão
+      // Buscar canais de transmissão da nova tabela match_broadcasts
+      const broadcasts = await this.matchBroadcastRepository
+        .createQueryBuilder('broadcast')
+        .leftJoinAndSelect('broadcast.channel', 'channel')
+        .where('broadcast.match_id = :matchId', { matchId: nextMatch.id })
+        .andWhere('channel.active = :active', { active: true })
+        .getMany();
+
       let broadcastInfo = '';
-      if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels)) {
-        broadcastInfo = `\n📺 **Transmissão:** ${nextMatch.broadcast_channels.join(', ')}`;
+      if (broadcasts && broadcasts.length > 0) {
+        const channelsList = broadcasts.map(broadcast => {
+          const channel = broadcast.channel;
+          return channel.channel_link 
+            ? `${channel.name}: ${channel.channel_link}`
+            : channel.name;
+        }).join('\n- ');
+        broadcastInfo = `\n📺 **Transmissão:**\n- ${channelsList}`;
+      } else {
+        // Fallback para o campo broadcast_channels se não houver dados na nova tabela
+        if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels)) {
+          broadcastInfo = `\n📺 **Transmissão:** ${nextMatch.broadcast_channels.join(', ')}`;
+        }
       }
 
       return `⚽ **PRÓXIMO JOGO DO ${team.name.toUpperCase()}** ⚽
@@ -521,10 +545,14 @@ ${result}`;
 
       let response = `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺\n\n`;
 
-      upcomingMatches.forEach(match => {
+      for (const match of upcomingMatches) {
         const date = new Date(match.match_date);
         const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-        const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const time = date.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo'
+        });
         
         const isHome = match.home_team.id === team.id;
         const opponent = isHome ? match.away_team.name : match.home_team.name;
@@ -533,13 +561,30 @@ ${result}`;
         response += `🆚 ${team.name} vs ${opponent}\n`;
         response += `🏆 ${match.competition.name}\n`;
         
-        if (match.broadcast_channels && Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
+        // Buscar canais de transmissão da nova tabela match_broadcasts
+        const broadcasts = await this.matchBroadcastRepository
+          .createQueryBuilder('broadcast')
+          .leftJoinAndSelect('broadcast.channel', 'channel')
+          .where('broadcast.match_id = :matchId', { matchId: match.id })
+          .andWhere('channel.active = :active', { active: true })
+          .getMany();
+
+        if (broadcasts && broadcasts.length > 0) {
+          const channelsList = broadcasts.map(broadcast => {
+            const channel = broadcast.channel;
+            return channel.channel_link 
+              ? `${channel.name} (${channel.channel_link})`
+              : channel.name;
+          }).join(', ');
+          response += `📺 ${channelsList}\n`;
+        } else if (match.broadcast_channels && Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
+          // Fallback para o campo antigo
           response += `📺 ${match.broadcast_channels.join(', ')}\n`;
         } else {
           response += `📺 Transmissão a confirmar\n`;
         }
         response += `\n`;
-      });
+      }
 
       return response;
 
