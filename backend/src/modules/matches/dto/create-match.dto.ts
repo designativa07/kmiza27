@@ -71,6 +71,11 @@ export class CreateMatchDto {
   broadcast_channels?: any;
 
   @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  channel_ids?: number[];
+
+  @IsOptional()
   streaming_links?: any;
 
   @IsOptional()

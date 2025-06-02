@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Match, Round } from '../../entities';
+import { Match, Round, MatchBroadcast, Channel } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 
@@ -12,6 +12,10 @@ export class MatchesService {
     private matchRepository: Repository<Match>,
     @InjectRepository(Round)
     private roundRepository: Repository<Round>,
+    @InjectRepository(MatchBroadcast)
+    private matchBroadcastRepository: Repository<MatchBroadcast>,
+    @InjectRepository(Channel)
+    private channelRepository: Repository<Channel>,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -88,7 +92,14 @@ export class MatchesService {
 
     const match = this.matchRepository.create(matchData);
     const savedMatch = await this.matchRepository.save(match);
-    return savedMatch[0] || savedMatch;
+    const finalMatch = savedMatch[0] || savedMatch;
+
+    // Gerenciar transmissões usando a nova tabela match_broadcasts
+    if (createMatchDto.channel_ids && createMatchDto.channel_ids.length > 0) {
+      await this.updateMatchBroadcasts(finalMatch.id, createMatchDto.channel_ids);
+    }
+
+    return finalMatch;
   }
 
   async findAll(): Promise<Match[]> {
@@ -109,7 +120,7 @@ export class MatchesService {
   async findOne(id: number): Promise<Match | null> {
     return this.matchRepository.findOne({ 
       where: { id },
-      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round']
+      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round', 'broadcasts', 'broadcasts.channel']
     });
   }
 
@@ -184,6 +195,12 @@ export class MatchesService {
       console.log('🔍 MatchesService.update - Dados processados:', updateData);
       
       await this.matchRepository.save({ id, ...updateData });
+
+      // Gerenciar transmissões usando a nova tabela match_broadcasts
+      if (updateMatchDto.channel_ids !== undefined) {
+        await this.updateMatchBroadcasts(id, updateMatchDto.channel_ids || []);
+      }
+
       const updatedMatch = await this.findOne(id);
       console.log('✅ MatchesService.update - Match atualizado:', updatedMatch);
       return updatedMatch;
@@ -195,5 +212,20 @@ export class MatchesService {
 
   async remove(id: number): Promise<void> {
     await this.matchRepository.delete(id);
+  }
+
+  private async updateMatchBroadcasts(matchId: number, channelIds: number[]): Promise<void> {
+    // Remove todas as transmissões existentes para este jogo
+    await this.matchBroadcastRepository.delete({ match_id: matchId });
+
+    // Adiciona as novas transmissões
+    if (channelIds && channelIds.length > 0) {
+      const broadcasts = channelIds.map(channelId => ({
+        match_id: matchId,
+        channel_id: channelId
+      }));
+
+      await this.matchBroadcastRepository.insert(broadcasts);
+    }
   }
 } 

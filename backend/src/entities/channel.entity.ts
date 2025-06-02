@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { MatchBroadcast } from './match-broadcast.entity';
 
 @Entity('channels')
 export class Channel {
@@ -28,4 +29,7 @@ export class Channel {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @OneToMany(() => MatchBroadcast, broadcast => broadcast.channel)
+  broadcasts: MatchBroadcast[];
 } 
