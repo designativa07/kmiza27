@@ -25,9 +25,9 @@ interface Stadium {
 
 interface Match {
   id: number
-  home_team: Team
-  away_team: Team
-  competition: Competition
+  home_team: Team | null
+  away_team: Team | null
+  competition: Competition | null
   stadium?: Stadium
   match_date: string
   status: string
@@ -125,7 +125,7 @@ function ChannelMultiSelect({
 // Componente auxiliar para autocomplete de times
 function TeamAutocomplete({ teams, value, onChange, label }: { teams: Team[], value: string, onChange: (id: string) => void, label: string }) {
   const [query, setQuery] = useState('')
-  const filteredTeams = query === '' ? teams : teams.filter(team => team.name.toLowerCase().includes(query.toLowerCase()))
+  const filteredTeams = query === '' ? teams : teams.filter(team => team?.name?.toLowerCase().includes(query.toLowerCase()))
   const selectedTeam = teams.find(team => team.id.toString() === value)
 
   return (
@@ -151,7 +151,7 @@ function TeamAutocomplete({ teams, value, onChange, label }: { teams: Team[], va
                   value={team}
                   className={({ active }: { active: boolean }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-600 text-white' : 'text-gray-900'}`}
                 >
-                  {team.name}
+                  {team?.name || 'Time sem nome'}
                 </Combobox.Option>
               ))
             )}
@@ -289,7 +289,7 @@ export default function MatchesManager() {
 
     if (filters.competition) {
       const beforeCount = filtered.length
-      filtered = filtered.filter(match => match.competition.id.toString() === filters.competition)
+      filtered = filtered.filter(match => match.competition?.id?.toString() === filters.competition)
       console.log(`🔍 Debug - Filtro competição: ${beforeCount} -> ${filtered.length}`)
     }
 
@@ -540,9 +540,9 @@ export default function MatchesManager() {
     const formattedDate = localDate.toISOString().slice(0, 16);
     
     const newFormData = {
-      home_team_id: match.home_team.id.toString(),
-      away_team_id: match.away_team.id.toString(),
-      competition_id: match.competition.id.toString(),
+      home_team_id: match.home_team?.id?.toString() || '',
+      away_team_id: match.away_team?.id?.toString() || '',
+      competition_id: match.competition?.id?.toString() || '',
       round_id: match.round?.id?.toString() || '',
       round_name: match.round?.name || '',
       group_name: match.group_name || '',
@@ -605,10 +605,18 @@ export default function MatchesManager() {
   }
 
   const TeamLogo = ({ team }: { team: Team }) => {
+    if (!team) {
+      return (
+        <div className="h-6 w-6 rounded-md bg-gray-200 flex items-center justify-center">
+          <span className="text-xs font-bold text-gray-600">?</span>
+        </div>
+      )
+    }
+    
     if (!team.logo_url) {
       return (
         <div className="h-6 w-6 rounded-md bg-gray-200 flex items-center justify-center">
-          <span className="text-xs font-bold text-gray-600">{team.short_name?.substring(0, 3) || team.name.substring(0, 3)}</span>
+          <span className="text-xs font-bold text-gray-600">{team.short_name?.substring(0, 3) || team.name?.substring(0, 3) || '?'}</span>
         </div>
       )
     }
@@ -617,7 +625,7 @@ export default function MatchesManager() {
       <img 
         className="h-6 w-6 rounded-md object-cover" 
         src={imageUrl(team.logo_url)} 
-        alt={`Escudo ${team.name}`}
+        alt={`Escudo ${team.name || 'Time'}`}
         onError={(e) => {
           const target = e.target as HTMLImageElement
           target.style.display = 'none'
@@ -943,8 +951,8 @@ export default function MatchesManager() {
                         <div className="flex items-center justify-center space-x-3">
                           {/* Time da casa */}
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">{match.home_team.name}</span>
-                            <TeamLogo team={match.home_team} />
+                            <span className="text-sm font-medium text-gray-900">{match.home_team?.name || 'Time não encontrado'}</span>
+                            {match.home_team && <TeamLogo team={match.home_team} />}
                           </div>
                           
                           {/* Placar da casa */}
@@ -964,8 +972,8 @@ export default function MatchesManager() {
                           
                           {/* Time visitante */}
                           <div className="flex items-center space-x-2">
-                            <TeamLogo team={match.away_team} />
-                            <span className="text-sm font-medium text-gray-900">{match.away_team.name}</span>
+                            {match.away_team && <TeamLogo team={match.away_team} />}
+                            <span className="text-sm font-medium text-gray-900">{match.away_team?.name || 'Time não encontrado'}</span>
                           </div>
                         </div>
                         
@@ -983,7 +991,7 @@ export default function MatchesManager() {
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900">
                         <div>
-                          {match.competition.name}
+                          {match.competition?.name || 'Competição não encontrada'}
                           {(match.round?.name || match.group_name) && (
                             <div className="text-xs text-gray-700">
                               {match.round?.name || match.group_name}
