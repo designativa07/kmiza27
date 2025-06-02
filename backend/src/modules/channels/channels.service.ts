@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Channel } from '../../entities';
+import { Channel } from '../../entities/channel.entity';
 
 @Injectable()
 export class ChannelsService {
   constructor(
     @InjectRepository(Channel)
-    private channelRepository: Repository<Channel>,
+    private channelRepository: Repository<Channel>
   ) {}
 
   // Dados mock para testes quando banco não estiver disponível
@@ -50,24 +50,24 @@ export class ChannelsService {
   }
 
   async findAll(): Promise<Channel[]> {
-    try {
-      return await this.channelRepository.find({
-        order: { name: 'ASC' }
-      });
-    } catch (error) {
-      console.log('⚠️ Banco não disponível, usando dados mock para channels');
-      return this.getMockChannels();
-    }
+    return this.channelRepository.find({
+      order: {
+        type: 'ASC',
+        name: 'ASC'
+      }
+    });
   }
 
-  async findOne(id: number): Promise<Channel | null> {
-    try {
-      return await this.channelRepository.findOne({ where: { id } });
-    } catch (error) {
-      console.log('⚠️ Banco não disponível, usando dados mock para channel');
-      const mockChannels = this.getMockChannels();
-      return mockChannels.find(c => c.id === id) || null;
+  async findOne(id: number): Promise<Channel> {
+    const channel = await this.channelRepository.findOne({
+      where: { id }
+    });
+
+    if (!channel) {
+      throw new BadRequestException('Canal não encontrado');
     }
+
+    return channel;
   }
 
   async findByName(name: string): Promise<Channel | null> {
@@ -81,64 +81,117 @@ export class ChannelsService {
   }
 
   async create(channelData: Partial<Channel>): Promise<Channel> {
+    // Validações
+    if (!channelData.name?.trim()) {
+      throw new BadRequestException('Nome do canal é obrigatório');
+    }
+
+    if (!channelData.type?.trim()) {
+      throw new BadRequestException('Tipo do canal é obrigatório');
+    }
+
+    // Verificar se já existe um canal com este nome
+    const existingChannel = await this.channelRepository.findOne({
+      where: { name: channelData.name.trim() }
+    });
+
+    if (existingChannel) {
+      throw new BadRequestException('Já existe um canal com este nome');
+    }
+
+    // Criar novo canal
+    const channel = this.channelRepository.create({
+      name: channelData.name.trim(),
+      logo: channelData.logo?.trim(),
+      channel_number: channelData.channel_number?.trim(),
+      channel_link: channelData.channel_link?.trim(),
+      type: channelData.type.trim(),
+      active: channelData.active ?? true
+    });
+
+    // Salvar no banco
     try {
-      const channel = this.channelRepository.create(channelData);
       return await this.channelRepository.save(channel);
     } catch (error) {
-      console.log('⚠️ Banco não disponível, simulando criação de channel');
-      return {
-        id: Date.now(),
-        name: channelData.name || 'Novo Canal',
-        logo: channelData.logo || '',
-        channel_number: channelData.channel_number || '',
-        channel_link: channelData.channel_link || '',
-        type: channelData.type || 'other',
-        active: channelData.active ?? true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      } as Channel;
+      throw new BadRequestException('Erro ao criar canal: ' + error.message);
     }
   }
 
-  async update(id: number, channelData: Partial<Channel>): Promise<Channel | null> {
+  async update(id: number, channelData: Partial<Channel>): Promise<Channel> {
+    // Verificar se o canal existe
+    const existingChannel = await this.findOne(id);
+
+    if (!existingChannel) {
+      throw new BadRequestException('Canal não encontrado');
+    }
+
+    // Validações
+    if (channelData.name && !channelData.name.trim()) {
+      throw new BadRequestException('Nome do canal não pode ser vazio');
+    }
+
+    if (channelData.type && !channelData.type.trim()) {
+      throw new BadRequestException('Tipo do canal não pode ser vazio');
+    }
+
+    // Verificar se o novo nome já existe (se estiver alterando o nome)
+    if (channelData.name && channelData.name !== existingChannel.name) {
+      const channelWithSameName = await this.channelRepository.findOne({
+        where: { name: channelData.name.trim() }
+      });
+
+      if (channelWithSameName) {
+        throw new BadRequestException('Já existe um canal com este nome');
+      }
+    }
+
+    // Atualizar dados
+    const updatedChannel = {
+      ...existingChannel,
+      ...channelData,
+      name: channelData.name?.trim() || existingChannel.name,
+      logo: channelData.logo?.trim(),
+      channel_number: channelData.channel_number?.trim(),
+      channel_link: channelData.channel_link?.trim(),
+      type: channelData.type?.trim() || existingChannel.type
+    };
+
+    // Salvar no banco
     try {
-      await this.channelRepository.update(id, channelData);
-      return this.findOne(id);
+      return await this.channelRepository.save(updatedChannel);
     } catch (error) {
-      console.log('⚠️ Banco não disponível, simulando atualização de channel');
-      return this.findOne(id);
+      throw new BadRequestException('Erro ao atualizar canal: ' + error.message);
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async delete(id: number): Promise<void> {
+    const channel = await this.findOne(id);
+
+    if (!channel) {
+      throw new BadRequestException('Canal não encontrado');
+    }
+
     try {
-      await this.channelRepository.delete(id);
+      await this.channelRepository.remove(channel);
     } catch (error) {
-      console.log('⚠️ Banco não disponível, simulando remoção de channel');
+      throw new BadRequestException('Erro ao excluir canal: ' + error.message);
     }
   }
 
   async findActive(): Promise<Channel[]> {
-    try {
-      return await this.channelRepository.find({
-        where: { active: true },
-        order: { name: 'ASC' }
-      });
-    } catch (error) {
-      console.log('⚠️ Banco não disponível, usando dados mock para channels ativos');
-      return this.getMockChannels().filter(c => c.active);
-    }
+    return this.channelRepository.find({
+      where: { active: true },
+      order: {
+        type: 'ASC',
+        name: 'ASC'
+      }
+    });
   }
 
   async findByType(type: string): Promise<Channel[]> {
-    try {
-      return await this.channelRepository.find({
-        where: { type },
-        order: { name: 'ASC' }
-      });
-    } catch (error) {
-      console.log('⚠️ Banco não disponível, usando dados mock para channels por tipo');
-      return this.getMockChannels().filter(c => c.type === type);
-    }
+    return this.channelRepository.find({
+      where: { type },
+      order: { name: 'ASC' }
+    });
   }
 } 

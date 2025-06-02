@@ -43,6 +43,7 @@ export interface UserStats {
 
 export interface CreateAdminData {
   name: string;
+  username?: string;
   email?: string;
   phone_number?: string;
   password: string;
