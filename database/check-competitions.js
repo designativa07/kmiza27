@@ -12,32 +12,25 @@ async function checkCompetitions() {
   const client = await pool.connect();
   
   try {
-    console.log('🔍 Verificando competições existentes...\n');
+    console.log('🔍 Verificando competições...');
     
-    const competitions = await client.query(`
-      SELECT 
-        c.name,
-        c.country,
-        c.season,
-        COUNT(m.id) as matches_count
-      FROM competitions c
-      LEFT JOIN matches m ON c.id = m.competition_id
-      GROUP BY c.id, c.name, c.country, c.season
-      ORDER BY c.name
-    `);
+    const result = await client.query('SELECT id, name FROM competitions ORDER BY name');
     
-    console.log('📋 Competições no banco:');
-    console.log('=====================================');
-    
-    competitions.rows.forEach(comp => {
-      console.log(`✅ ${comp.name}`);
-      console.log(`   País: ${comp.country || 'N/A'}`);
-      console.log(`   Temporada: ${comp.season || 'N/A'}`);
-      console.log(`   Jogos: ${comp.matches_count}`);
-      console.log('');
+    console.log('📋 Competições encontradas:');
+    result.rows.forEach(row => {
+      console.log(`ID: ${row.id}, Nome: ${row.name}`);
     });
     
-    console.log(`📊 Total de competições: ${competitions.rows.length}`);
+    // Verificar especificamente o Brasileirão
+    const brasileirao = await client.query(`
+      SELECT id, name FROM competitions 
+      WHERE name ILIKE '%brasileir%' OR name ILIKE '%série a%'
+    `);
+    
+    console.log('\n⚽ Competições do Brasileirão:');
+    brasileirao.rows.forEach(row => {
+      console.log(`ID: ${row.id}, Nome: ${row.name}`);
+    });
     
   } catch (error) {
     console.error('❌ Erro:', error);
@@ -47,4 +40,4 @@ async function checkCompetitions() {
   }
 }
 
-checkCompetitions(); 
+checkCompetitions().catch(console.error); 

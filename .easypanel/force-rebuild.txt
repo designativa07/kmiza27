@@ -1,14 +1,24 @@
 # Force Rebuild - Kmiza27
 # Este arquivo muda a cada commit para forçar invalidação de cache
 
-Build Timestamp: 2025-05-27T19:10:00Z
-Commit: fix-localhost-urls-production
-Features: auth, admin-panel, user-management, admin-creation
-Cache Buster: 1732734600
+Build Timestamp: 2025-01-27T20:45:00Z
+Commit: optimize-cache-busting-dockerfiles
+Features: auth, admin-panel, user-management, admin-creation, cache-busting
+Cache Buster: 1737999900
 
 # Mudanças neste commit:
-- URLs localhost corrigidas para produção
-- Health check com URL correta da API
-- AuthService com fallback para produção
-- Cache busting melhorado
-- Sistema anti-cache implementado 
+- Dockerfiles otimizados para quebrar cache automaticamente
+- Clone sempre fresco do repositório (--depth=1)
+- Cache busting agressivo com timestamp e commit
+- Remoção forçada de node_modules e package-lock.json
+- Build IDs únicos para Next.js
+- Logs melhorados para debug de cache
+- Eliminação da necessidade de Force Rebuild manual
+
+# Cache Busting Strategy:
+- git clone --depth=1 (sempre fresco)
+- rm -rf node_modules package-lock.json
+- npm install --no-cache
+- Commit hash como cache buster
+- Timestamp único por build
+- Build ID único para Next.js 

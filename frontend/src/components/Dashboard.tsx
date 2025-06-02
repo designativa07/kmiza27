@@ -49,7 +49,6 @@ const navigation = [
   { name: 'Dashboard', href: '#', icon: ChartBarIcon, current: true },
   { name: 'Times', href: '#', icon: TrophyIcon, current: false },
   { name: 'Competições', href: '#', icon: TrophyIcon, current: false },
-  { name: 'Times por Competição', href: '#', icon: UserGroupIcon, current: false },
   { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
   { name: 'Classificações', href: '#', icon: ChartBarIcon, current: false },
   { name: 'Critérios de Desempate', href: '#', icon: WrenchScrewdriverIcon, current: false },
@@ -468,8 +467,6 @@ export default function Dashboard() {
         return <TeamsManager />
       case 'Competições':
         return <CompetitionsManager />
-      case 'Times por Competição':
-        return <CompetitionTeamsManager />
       case 'Jogos':
         return <MatchesManager />
       case 'Canais':

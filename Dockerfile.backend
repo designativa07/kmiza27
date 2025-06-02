@@ -1,5 +1,5 @@
-# 🐳 Dockerfile Backend Otimizado - Auto Commit Detection
-# Multi-stage build com captura automática de commit
+# �� Dockerfile Backend - Cache Busting Otimizado
+# Força rebuild sempre que houver mudanças no repositório
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
@@ -7,27 +7,40 @@ RUN apk add --no-cache libc6-compat python3 make g++ git curl
 
 WORKDIR /app
 
-# Cache busting com timestamp real
+# Cache busting AGRESSIVO - sempre quebra cache
 ARG CACHEBUST=1
 ARG BUILD_TIMESTAMP
 RUN echo "Build: $CACHEBUST - Timestamp: $BUILD_TIMESTAMP - $(date)" > /app/build-info.txt
 
-# Clone do repositório atual
-RUN git clone https://github.com/designativa07/kmiza27.git /tmp/repo
+# SEMPRE clonar repositório fresco (sem cache)
+RUN rm -rf /tmp/repo || true
+RUN git clone --depth=1 https://github.com/designativa07/kmiza27.git /tmp/repo
 
-# Capturar commit automaticamente do repositório clonado
+# Capturar commit e forçar rebuild se mudou
 RUN cd /tmp/repo && \
     GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
+    GIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
     echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
     echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
+    echo "GIT_SHORT=$GIT_SHORT" >> /app/build-vars.env && \
     echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
-    echo "Commit capturado: $GIT_COMMIT_AUTO" && \
+    echo "CACHE_BUSTER=$(date +%s)" >> /app/build-vars.env && \
+    echo "🔄 Commit capturado: $GIT_COMMIT_AUTO ($GIT_SHORT)" && \
     git log --oneline -1
 
-# Copiar apenas package files primeiro (melhor cache)
-RUN cp /tmp/repo/backend/package*.json ./
-RUN rm -rf node_modules
-RUN npm install --only=production --legacy-peer-deps
+# Quebrar cache baseado no commit atual
+RUN cd /tmp/repo && \
+    CURRENT_COMMIT=$(git rev-parse HEAD) && \
+    echo "CURRENT_COMMIT=$CURRENT_COMMIT" && \
+    echo "$CURRENT_COMMIT" > /app/commit-cache-buster.txt
+
+# Copiar package files com cache busting
+RUN cp /tmp/repo/backend/package*.json ./ && \
+    echo "$(date +%s)" >> package.json
+
+# Limpar e reinstalar dependências
+RUN rm -rf node_modules package-lock.json
+RUN npm install --only=production --legacy-peer-deps --no-cache
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
@@ -36,18 +49,22 @@ WORKDIR /app
 # Copiar dependências e variáveis do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/build-vars.env ./build-vars.env
+COPY --from=deps /app/commit-cache-buster.txt ./commit-cache-buster.txt
 COPY --from=deps /tmp/repo/backend ./
 
-# Carregar variáveis de build
+# Quebrar cache se commit mudou
 RUN . ./build-vars.env && \
-    echo "Usando commit: $GIT_COMMIT" && \
-    echo "Usando timestamp: $BUILD_TIMESTAMP"
+    echo "🔄 Usando commit: $GIT_COMMIT ($GIT_SHORT)" && \
+    echo "⏰ Build timestamp: $BUILD_TIMESTAMP" && \
+    echo "🔥 Cache buster: $CACHE_BUSTER"
 
-# Instalar dependências de desenvolvimento para build
-RUN npm install --legacy-peer-deps
+# Instalar dependências de desenvolvimento para build (sem cache)
+RUN npm install --legacy-peer-deps --no-cache
 
-# Build da aplicação
-RUN npm run build
+# Build da aplicação com cache busting
+RUN . ./build-vars.env && \
+    echo "🏗️ Building with commit: $GIT_SHORT" && \
+    npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
@@ -65,13 +82,18 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nestjs:nodejs /app/build-vars.env ./build-vars.env
+COPY --from=builder --chown=nestjs:nodejs /app/commit-cache-buster.txt ./commit-cache-buster.txt
 
 # Criar script de inicialização que carrega as variáveis
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo '. /app/build-vars.env' >> /app/start.sh && \
     echo 'export GIT_COMMIT' >> /app/start.sh && \
+    echo 'export GIT_SHORT' >> /app/start.sh && \
     echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
-    echo 'echo "Iniciando com commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'export CACHE_BUSTER' >> /app/start.sh && \
+    echo 'echo "🚀 Iniciando backend com commit: $GIT_SHORT"' >> /app/start.sh && \
+    echo 'echo "⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
+    echo 'echo "🔥 Cache: $CACHE_BUSTER"' >> /app/start.sh && \
     echo 'node dist/main' >> /app/start.sh && \
     chmod +x /app/start.sh
 
