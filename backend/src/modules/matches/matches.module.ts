@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MatchesService } from './matches.service';
 import { MatchesController } from './matches.controller';
-import { Match, Team, Competition } from '../../entities';
+import { Match, Team, Competition, Round } from '../../entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Match, Team, Competition])],
+  imports: [TypeOrmModule.forFeature([Match, Team, Competition, Round])],
   controllers: [MatchesController],
   providers: [MatchesService],
   exports: [MatchesService]

@@ -19,6 +19,10 @@ export class CreateMatchDto {
   round_id?: number;
 
   @IsOptional()
+  @IsString()
+  round_name?: string;
+
+  @IsOptional()
   @IsNumber()
   stadium_id?: number;
 

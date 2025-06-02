@@ -173,6 +173,8 @@ export default function MatchesManager() {
   const [showModal, setShowModal] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [stadiums, setStadiums] = useState<Stadium[]>([])
+  const [availableRounds, setAvailableRounds] = useState<{id: number, name: string}[]>([])
   
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -191,6 +193,7 @@ export default function MatchesManager() {
     away_team_id: '',
     competition_id: '',
     round_id: '',
+    round_name: '',
     group_name: '',
     phase: '',
     match_date: '',
@@ -221,21 +224,19 @@ export default function MatchesManager() {
     applyPagination()
   }, [filteredMatches, currentPage, itemsPerPage])
 
+  // Buscar rodadas quando a competição for selecionada no formulário
+  useEffect(() => {
+    if (formData.competition_id) {
+      fetchRoundsByCompetition(formData.competition_id)
+    }
+  }, [formData.competition_id])
+
   const fetchData = async () => {
     try {
-      setLoading(true)
-      
-      // Buscar dados em paralelo
-      const [matchesRes, teamsRes, competitionsRes, roundsRes, channelsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.matches.list(), {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        }),
+      const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
+        fetch(API_ENDPOINTS.matches.list()),
         fetch(API_ENDPOINTS.teams.list()),
         fetch(API_ENDPOINTS.competitions.list()),
-        fetch('/rounds'),
         fetch(API_ENDPOINTS.channels.list())
       ])
 
@@ -243,31 +244,40 @@ export default function MatchesManager() {
         const matchesData = await matchesRes.json()
         setMatches(matchesData)
       }
-
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json()
         setTeams(teamsData)
       }
-
       if (competitionsRes.ok) {
         const competitionsData = await competitionsRes.json()
         setCompetitions(competitionsData)
       }
-
-      if (roundsRes.ok) {
-        const roundsData = await roundsRes.json()
-        // setRounds(roundsData) // Removido - não está sendo usado
-      }
-
       if (channelsRes.ok) {
         const channelsData = await channelsRes.json()
         setChannels(channelsData)
       }
-
     } catch (error) {
-      console.error('❌ fetchData - Erro ao carregar dados:', error)
+      console.error('Erro ao carregar dados:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchRoundsByCompetition = async (competitionId: string) => {
+    if (!competitionId) {
+      setAvailableRounds([])
+      return
+    }
+    
+    try {
+      const response = await fetch(API_ENDPOINTS.standings.rounds(parseInt(competitionId)))
+      if (response.ok) {
+        const rounds = await response.json()
+        setAvailableRounds(rounds)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar rodadas:', error)
+      setAvailableRounds([])
     }
   }
 
@@ -343,36 +353,26 @@ export default function MatchesManager() {
   }
 
   const getUniqueRounds = () => {
-    console.log('🔍 Debug - getUniqueRounds - Total de matches:', matches.length)
-    
     const rounds = new Set<string>()
     matches.forEach(match => {
       // Apenas adicionar rodadas que são números ou começam com "Rodada"
       if (match.round?.name) {
         const roundName = match.round.name
-        console.log('🔍 Debug - Verificando round:', roundName)
         // Verificar se é uma rodada numérica ou contém "Rodada" (case insensitive)
         if (/^\d+$/.test(roundName) || /rodada/i.test(roundName)) {
-          console.log('✅ Debug - Round aceita:', roundName)
           rounds.add(roundName)
-        } else {
-          console.log('❌ Debug - Round rejeitada:', roundName)
         }
       }
       // Adicionar group_name apenas se não for uma fase
       if (match.group_name) {
         const groupName = match.group_name
-        console.log('🔍 Debug - Verificando group_name:', groupName)
         // Verificar se não é uma fase (não contém palavras como "final", "semi", "oitavas", etc.)
         const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória']
         const isPhase = phaseKeywords.some(keyword => 
           groupName.toLowerCase().includes(keyword)
         )
         if (!isPhase) {
-          console.log('✅ Debug - Group aceito:', groupName)
           rounds.add(groupName)
-        } else {
-          console.log('❌ Debug - Group rejeitado (é fase):', groupName)
         }
       }
     })
@@ -388,7 +388,6 @@ export default function MatchesManager() {
       return a.localeCompare(b)
     })
     
-    console.log('🔍 Debug - Rounds finais encontradas:', sortedRounds)
     return sortedRounds
   }
 
@@ -428,6 +427,7 @@ export default function MatchesManager() {
         away_team_id: parseInt(formData.away_team_id),
         competition_id: parseInt(formData.competition_id),
         round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
+        round_name: formData.round_name || undefined,
         group_name: formData.group_name || undefined,
         phase: formData.phase || undefined,
         match_date: new Date(formData.match_date).toISOString(),
@@ -486,6 +486,7 @@ export default function MatchesManager() {
       away_team_id: '',
       competition_id: '',
       round_id: '',
+      round_name: '',
       group_name: '',
       phase: '',
       match_date: '',
@@ -528,15 +529,22 @@ export default function MatchesManager() {
       return '';
     };
     
-    // Converter data para formato datetime-local sem alterar timezone
-    // Remove o 'Z' e os milissegundos para usar no campo datetime-local
-    const formattedDate = match.match_date.replace('Z', '').replace(/\.\d{3}$/, '');
+    // Converter data para formato datetime-local mantendo o horário local correto
+    // Criar um objeto Date e ajustar para o timezone local
+    const date = new Date(match.match_date);
+    // Obter o offset do timezone local em minutos
+    const timezoneOffset = date.getTimezoneOffset();
+    // Ajustar a data subtraindo o offset (para compensar a diferença de timezone)
+    const localDate = new Date(date.getTime() - (timezoneOffset * 60000));
+    // Converter para string no formato datetime-local (YYYY-MM-DDTHH:mm)
+    const formattedDate = localDate.toISOString().slice(0, 16);
     
     const newFormData = {
       home_team_id: match.home_team.id.toString(),
       away_team_id: match.away_team.id.toString(),
       competition_id: match.competition.id.toString(),
       round_id: match.round?.id?.toString() || '',
+      round_name: match.round?.name || '',
       group_name: match.group_name || '',
       phase: match.phase || '',
       match_date: formattedDate,
@@ -1126,13 +1134,29 @@ export default function MatchesManager() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Rodada</label>
-                    <input
-                      type="text"
-                      value={formData.round_id}
-                      onChange={(e) => setFormData({ ...formData, round_id: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="Ex: 1, 2, 3..."
-                    />
+                    <div className="space-y-2">
+                      <select
+                        value={formData.round_id}
+                        onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      >
+                        <option value="">Selecione uma rodada existente...</option>
+                        {availableRounds.map((round) => (
+                          <option key={round.id} value={round.id}>{round.name}</option>
+                        ))}
+                      </select>
+                      <div className="text-center text-sm text-gray-500">ou</div>
+                      <input
+                        type="text"
+                        value={formData.round_name || ''}
+                        onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                        placeholder="Digite o nome da nova rodada (ex: Rodada 13)"
+                      />
+                    </div>
+                    {!formData.competition_id && (
+                      <p className="mt-1 text-sm text-gray-500">Selecione uma competição primeiro</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Grupo</label>

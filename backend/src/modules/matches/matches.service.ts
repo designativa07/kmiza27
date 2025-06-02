@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Match } from '../../entities';
+import { Match, Round } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 
@@ -10,9 +10,47 @@ export class MatchesService {
   constructor(
     @InjectRepository(Match)
     private matchRepository: Repository<Match>,
+    @InjectRepository(Round)
+    private roundRepository: Repository<Round>,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
+    // Se round_id não foi fornecido mas temos informações para criar uma rodada
+    if (!createMatchDto.round_id && createMatchDto.round_name && createMatchDto.competition_id) {
+      const roundName = createMatchDto.round_name;
+      
+      // Verificar se a rodada já existe para esta competição
+      let existingRound = await this.roundRepository.findOne({
+        where: {
+          name: roundName,
+          competition: { id: createMatchDto.competition_id }
+        }
+      });
+
+      if (!existingRound) {
+        // Criar nova rodada
+        console.log(`🆕 Criando nova rodada: ${roundName} para competição ${createMatchDto.competition_id}`);
+        
+        // Extrair número da rodada se possível
+        const roundNumberMatch = roundName.match(/(\d+)/);
+        const roundNumber = roundNumberMatch ? parseInt(roundNumberMatch[1]) : undefined;
+        
+        const newRound = this.roundRepository.create({
+          name: roundName,
+          round_number: roundNumber,
+          competition: { id: createMatchDto.competition_id }
+        });
+        
+        existingRound = await this.roundRepository.save(newRound);
+        console.log(`✅ Rodada criada com ID: ${existingRound.id}`);
+      }
+      
+      // Usar a rodada encontrada ou criada
+      if (existingRound) {
+        createMatchDto.round_id = existingRound.id;
+      }
+    }
+
     // Converter o DTO para o formato correto para o TypeORM
     const matchData: any = {
       match_date: new Date(createMatchDto.match_date),
