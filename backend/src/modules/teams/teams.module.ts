@@ -5,11 +5,11 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
-import { Team } from '../../entities';
+import { Team, Match, CompetitionTeam } from '../../entities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Team]),
+    TypeOrmModule.forFeature([Team, Match, CompetitionTeam]),
     MulterModule.register({
       storage: diskStorage({
         destination: join(process.cwd(), 'uploads', 'escudos'),
