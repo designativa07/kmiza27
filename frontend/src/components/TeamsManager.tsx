@@ -254,14 +254,39 @@ export default function TeamsManager() {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este time?')) {
+    const team = teams.find(t => t.id === id);
+    const teamName = team?.name || 'este time';
+    
+    if (confirm(`Tem certeza que deseja excluir ${teamName}?`)) {
       try {
-        await fetch(API_ENDPOINTS.teams.byId(id), {
+        const response = await fetch(API_ENDPOINTS.teams.byId(id), {
           method: 'DELETE',
-        })
-        fetchTeams()
+        });
+
+        if (response.ok) {
+          // Sucesso
+          alert('Time excluído com sucesso!');
+          fetchTeams();
+        } else {
+          // Erro do servidor
+          const errorText = await response.text();
+          let errorMessage = 'Erro ao excluir time';
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            // Se não conseguir fazer parse do JSON, usar o texto direto
+            if (errorText.includes('Não é possível excluir')) {
+              errorMessage = errorText;
+            }
+          }
+          
+          alert(errorMessage);
+        }
       } catch (error) {
-        console.error('Erro ao excluir time:', error)
+        console.error('Erro ao excluir time:', error);
+        alert('Erro de conexão. Tente novamente.');
       }
     }
   }
