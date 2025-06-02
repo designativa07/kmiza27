@@ -1,7 +1,7 @@
 @echo off
-echo 🚀 Fazendo push das mudanças...
+echo 🚀 Fazendo push da correção...
 git add .
-git commit -m "feat: implement cache busting system - eliminates Force Rebuild need"
+git commit -m "fix: remove timestamp from package.json to fix JSON parsing error"
 git push origin main
-echo ✅ Push concluído!
+echo ✅ Push da correção concluído!
 pause 
