@@ -153,22 +153,33 @@ export default function ChannelsManager() {
         ok: response.ok
       })
 
-      if (response.ok) {
+      let errorText = ''
+      try {
         const responseData = await response.json()
-        console.log('✅ Dados da resposta:', responseData)
-        console.log('🔄 Recarregando lista de canais...')
-        await fetchChannels()
-        resetForm()
-        console.log('✅ Canal salvo com sucesso!')
-        alert('Canal salvo com sucesso!')
-      } else {
-        const errorText = await response.text()
-        console.error('❌ Erro na resposta:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: errorText
-        })
-        alert(`Erro ao salvar canal: ${response.status} - ${response.statusText}`)
+        console.log('📄 Corpo da resposta:', responseData)
+        
+        if (response.ok) {
+          console.log('✅ Canal salvo com sucesso!')
+          setShowModal(false)
+          setEditingChannel(null)
+          resetForm()
+          
+          // Aguardar um pouco antes de recarregar para garantir que a transação foi commitada
+          setTimeout(() => {
+            console.log('🔄 Recarregando lista de canais...')
+            fetchChannels()
+          }, 1000)
+          
+          alert('Canal salvo com sucesso!')
+        } else {
+          errorText = responseData.message || responseData.error || JSON.stringify(responseData)
+          console.error('❌ Erro na resposta:', errorText)
+          alert(`Erro ao salvar canal: ${errorText}`)
+        }
+      } catch (parseError) {
+        errorText = await response.text()
+        console.error('❌ Erro ao processar resposta:', errorText)
+        alert(`Erro ao salvar canal: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('❌ Erro na requisição:', error)
