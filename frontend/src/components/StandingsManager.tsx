@@ -129,7 +129,7 @@ export default function StandingsManager() {
   const isCupCompetition = useMemo(() => {
     if (!selectedCompetition || competitions.length === 0) return false;
     const comp = competitions.find(c => c.id === selectedCompetition);
-    return comp?.type === 'cup';
+    return comp?.type === 'copa';
   }, [selectedCompetition, competitions]);
 
   useEffect(() => {
