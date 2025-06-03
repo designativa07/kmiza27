@@ -76,7 +76,7 @@ export class MatchesService {
       highlights_url: createMatchDto.highlights_url,
       match_stats: createMatchDto.match_stats,
       leg: createMatchDto.leg || MatchLeg.SINGLE_MATCH,
-      tie_id: createMatchDto.tie_id,
+      tie_id: createMatchDto.tie_id === '' ? null : createMatchDto.tie_id,
       home_aggregate_score: createMatchDto.home_aggregate_score,
       away_aggregate_score: createMatchDto.away_aggregate_score,
       qualified_team_id: createMatchDto.qualified_team_id,
@@ -207,7 +207,7 @@ export class MatchesService {
         updateData.leg = updateMatchDto.leg;
       }
       if (updateMatchDto.tie_id !== undefined) {
-        updateData.tie_id = updateMatchDto.tie_id;
+        updateData.tie_id = updateMatchDto.tie_id === '' ? null : updateMatchDto.tie_id;
       }
       if (updateMatchDto.home_aggregate_score !== undefined) {
         updateData.home_aggregate_score = updateMatchDto.home_aggregate_score;
