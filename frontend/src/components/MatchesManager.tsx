@@ -69,6 +69,9 @@ interface MatchFormData {
   away_red_cards?: number;
   leg: '' | 'first_leg' | 'second_leg' | 'single_match';
   tie_id: string;
+  match_date_second_leg?: string;
+  stadium_id_second_leg?: string;
+  stadium_id?: string;
 }
 
 // Componente para seleção múltipla de canais
@@ -200,6 +203,7 @@ export default function MatchesManager() {
   const [showFilters, setShowFilters] = useState(false)
   const [stadiums, setStadiums] = useState<Stadium[]>([])
   const [availableRounds, setAvailableRounds] = useState<{id: number, name: string}[]>([])
+  const [createTwoLegTie, setCreateTwoLegTie] = useState(false)
   
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -232,7 +236,10 @@ export default function MatchesManager() {
     home_red_cards: undefined,
     away_red_cards: undefined,
     leg: '',
-    tie_id: ''
+    tie_id: '',
+    match_date_second_leg: '',
+    stadium_id_second_leg: '',
+    stadium_id: '',
   })
 
   useEffect(() => {
@@ -443,35 +450,87 @@ export default function MatchesManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const url = editingMatch 
-        ? `${API_ENDPOINTS.matches.list()}/${editingMatch.id}`
-        : API_ENDPOINTS.matches.list()
-      
-      const method = editingMatch ? 'PATCH' : 'POST'
-      
-      const payload = {
-        home_team_id: parseInt(formData.home_team_id),
-        away_team_id: parseInt(formData.away_team_id),
-        competition_id: parseInt(formData.competition_id),
-        round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
-        round_name: formData.round_name || undefined,
-        group_name: formData.group_name || undefined,
-        phase: formData.phase || undefined,
-        match_date: new Date(formData.match_date).toISOString(),
-        status: formData.status,
-        broadcast_channels: formData.broadcast_channels ? 
-          formData.broadcast_channels.split(',').map(s => s.trim()) : [],
-        channel_ids: formData.channel_ids,
-        home_score: formData.home_score,
-        away_score: formData.away_score,
-        home_yellow_cards: formData.home_yellow_cards,
-        away_yellow_cards: formData.away_yellow_cards,
-        home_red_cards: formData.home_red_cards,
-        away_red_cards: formData.away_red_cards,
-        leg: formData.leg,
-        tie_id: formData.tie_id
+      let url: string;
+      let method: string;
+      let payload: any;
+
+      if (editingMatch) {
+        // Lógica para edição de partida existente
+        url = `${API_ENDPOINTS.matches.list()}/${editingMatch.id}`;
+        method = 'PATCH';
+        payload = {
+          home_team_id: parseInt(formData.home_team_id),
+          away_team_id: parseInt(formData.away_team_id),
+          competition_id: parseInt(formData.competition_id),
+          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
+          round_name: formData.round_name || undefined,
+          group_name: formData.group_name || undefined,
+          phase: formData.phase || undefined,
+          match_date: new Date(formData.match_date).toISOString(),
+          status: formData.status,
+          broadcast_channels: formData.broadcast_channels ? 
+            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          channel_ids: formData.channel_ids,
+          home_score: formData.home_score,
+          away_score: formData.away_score,
+          home_yellow_cards: formData.home_yellow_cards,
+          away_yellow_cards: formData.away_yellow_cards,
+          home_red_cards: formData.home_red_cards,
+          away_red_cards: formData.away_red_cards,
+          leg: formData.leg,
+          tie_id: formData.tie_id,
+          stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+        };
+      } else if (createTwoLegTie) {
+        // Lógica para criar um confronto de ida e volta
+        url = API_ENDPOINTS.matches.createTwoLegTie(); // Novo endpoint para ida e volta
+        method = 'POST';
+        payload = {
+          home_team_id: parseInt(formData.home_team_id),
+          away_team_id: parseInt(formData.away_team_id),
+          competition_id: parseInt(formData.competition_id),
+          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
+          round_name: formData.round_name || undefined,
+          group_name: formData.group_name || undefined,
+          phase: formData.phase || undefined,
+          match_date_first_leg: new Date(formData.match_date).toISOString(),
+          stadium_id_first_leg: formData.stadium_id ? parseInt(formData.stadium_id) : undefined, // Assumindo que stadium_id é para a primeira leg
+          match_date_second_leg: new Date(formData.match_date_second_leg!).toISOString(),
+          stadium_id_second_leg: formData.stadium_id_second_leg ? parseInt(formData.stadium_id_second_leg) : undefined,
+          status: formData.status,
+          channel_ids: formData.channel_ids,
+          broadcast_channels: formData.broadcast_channels ? 
+            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+        };
+      } else {
+        // Lógica para criar uma única partida
+        url = API_ENDPOINTS.matches.list();
+        method = 'POST';
+        payload = {
+          home_team_id: parseInt(formData.home_team_id),
+          away_team_id: parseInt(formData.away_team_id),
+          competition_id: parseInt(formData.competition_id),
+          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
+          round_name: formData.round_name || undefined,
+          group_name: formData.group_name || undefined,
+          phase: formData.phase || undefined,
+          match_date: new Date(formData.match_date).toISOString(),
+          status: formData.status,
+          broadcast_channels: formData.broadcast_channels ? 
+            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          channel_ids: formData.channel_ids,
+          home_score: formData.home_score,
+          away_score: formData.away_score,
+          home_yellow_cards: formData.home_yellow_cards,
+          away_yellow_cards: formData.away_yellow_cards,
+          home_red_cards: formData.home_red_cards,
+          away_red_cards: formData.away_red_cards,
+          leg: formData.leg,
+          tie_id: formData.tie_id,
+          stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+        };
       }
-      
+
       console.log('🔍 Frontend - Enviando payload:', payload);
       
       const response = await fetch(url, {
@@ -529,12 +588,17 @@ export default function MatchesManager() {
       home_red_cards: undefined,
       away_red_cards: undefined,
       leg: '',
-      tie_id: ''
+      tie_id: '',
+      match_date_second_leg: '',
+      stadium_id_second_leg: '',
+      stadium_id: '',
     })
+    setCreateTwoLegTie(false)
   }
 
   const handleEdit = (match: Match) => {
     setEditingMatch(match)
+    setCreateTwoLegTie(false)
     
     const processBroadcastChannels = (channels: any): string => {
       if (!channels) return '';
@@ -589,8 +653,11 @@ export default function MatchesManager() {
       home_red_cards: (match as any).home_red_cards,
       away_red_cards: (match as any).away_red_cards,
       leg: match.leg || '',
-      tie_id: match.tie_id || ''
-    } as MatchFormData; // Adicionar cast para MatchFormData
+      tie_id: match.tie_id || '',
+      match_date_second_leg: '',
+      stadium_id_second_leg: '',
+      stadium_id: match.stadium?.id?.toString() || '',
+    } as MatchFormData;
     
     setFormData(newFormData);
     setShowModal(true)
@@ -1278,6 +1345,7 @@ export default function MatchesManager() {
                     value={formData.leg}
                     onChange={(e) => setFormData({ ...formData, leg: e.target.value as '' | 'first_leg' | 'second_leg' | 'single_match' })}
                     className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    disabled={createTwoLegTie}
                   >
                     <option value="">Selecione a mão</option>
                     <option value="single_match">Jogo Único</option>
@@ -1285,6 +1353,32 @@ export default function MatchesManager() {
                     <option value="second_leg">Segunda Mão</option>
                   </select>
                 </div>
+
+                {/* Opção para criar confrontos de ida e volta */}
+                {competitions.find(comp => comp.id.toString() === formData.competition_id)?.name.toLowerCase().includes('copa') && !editingMatch && (
+                  <div className="col-span-full mt-4 bg-blue-50 p-4 rounded-lg flex items-center">
+                    <input
+                      id="create_two_leg_tie"
+                      name="create_two_leg_tie"
+                      type="checkbox"
+                      checked={createTwoLegTie}
+                      onChange={(e) => {
+                        setCreateTwoLegTie(e.target.checked);
+                        if (e.target.checked) {
+                          // Se marcado, sugere 'first_leg' e limpa 'tie_id'
+                          setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
+                        } else {
+                          // Se desmarcado, reseta leg e tie_id
+                          setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: '' }));
+                        }
+                      }}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="create_two_leg_tie" className="ml-2 block text-sm text-blue-800 font-semibold">
+                      Criar Confronto de Ida e Volta (Primeira Mão + Segunda Mão)
+                    </label>
+                  </div>
+                )}
 
                 {/* Adicionado: Campo Tie ID */}
                 <div className="col-span-full sm:col-span-3">
@@ -1296,10 +1390,59 @@ export default function MatchesManager() {
                     value={formData.tie_id}
                     onChange={(e) => setFormData({ ...formData, tie_id: e.target.value })}
                     className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Preencha para jogos de volta"
-                    disabled={formData.leg !== 'second_leg'}
+                    placeholder={createTwoLegTie ? "Gerado automaticamente" : "Preencha para jogos de volta"}
+                    disabled={createTwoLegTie || formData.leg !== 'second_leg'}
                   />
                 </div>
+                
+                {/* Campos para a segunda mão (apenas se 'Criar Confronto de Ida e Volta' estiver marcado e não estiver editando) */}
+                {createTwoLegTie && !editingMatch && (
+                  <div className="mt-8 px-4 py-5 sm:p-6 bg-white shadow sm:rounded-lg">
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Dados da Segunda Mão</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900">Data e Hora da Volta</label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={formData.match_date_second_leg}
+                          onChange={(e) => setFormData({ ...formData, match_date_second_leg: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900">Estádio da Volta</label>
+                        <select
+                          value={formData.stadium_id_second_leg}
+                          onChange={(e) => setFormData({ ...formData, stadium_id_second_leg: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                        >
+                          <option value="">Selecione o estádio</option>
+                          {stadiums.map((stadium) => (
+                            <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Adicionado: Campo Estádio (para partidas únicas) */}
+                {!createTwoLegTie && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900">Estádio</label>
+                    <select
+                      value={formData.stadium_id}
+                      onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    >
+                      <option value="">Selecione o estádio</option>
+                      {stadiums.map((stadium) => (
+                        <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button

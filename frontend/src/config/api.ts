@@ -51,6 +51,7 @@ export const API_ENDPOINTS = {
   matches: {
     list: () => apiUrl('matches'),
     byId: (id: number) => apiUrl(`matches/${id}`),
+    createTwoLegTie: () => apiUrl('matches/two-leg-tie'),
   },
   
   // Competitions

@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Match, Round, MatchBroadcast, Channel, Competition } from '../../entities';
+import { Match, Round, MatchBroadcast, Channel, Competition, Team, Stadium } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { MatchStatus, MatchLeg } from '../../entities/match.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { CreateTwoLegTieDto } from './dto/create-two-leg-tie.dto';
 
 @Injectable()
 export class MatchesService {
@@ -20,6 +21,10 @@ export class MatchesService {
     private channelRepository: Repository<Channel>,
     @InjectRepository(Competition)
     private competitionRepository: Repository<Competition>,
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>,
+    @InjectRepository(Stadium)
+    private stadiumRepository: Repository<Stadium>,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -114,6 +119,122 @@ export class MatchesService {
     }
 
     return finalMatch;
+  }
+
+  async createTwoLegTie(createTwoLegTieDto: CreateTwoLegTieDto): Promise<Match[]> {
+    const queryRunner = this.matchRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const tieId = uuidv4();
+      const { 
+        home_team_id, 
+        away_team_id, 
+        competition_id, 
+        round_id, 
+        round_name, 
+        group_name, 
+        phase, 
+        match_date_first_leg, 
+        stadium_id_first_leg, 
+        match_date_second_leg, 
+        stadium_id_second_leg, 
+        status, 
+        channel_ids, 
+        broadcast_channels 
+      } = createTwoLegTieDto;
+
+      // Buscar entidades completas
+      const homeTeam = await this.teamRepository.findOneBy({ id: home_team_id });
+      const awayTeam = await this.teamRepository.findOneBy({ id: away_team_id });
+      const competition = await this.competitionRepository.findOneBy({ id: competition_id });
+      const stadiumFirstLeg = stadium_id_first_leg ? await this.stadiumRepository.findOneBy({ id: stadium_id_first_leg }) : null;
+      const stadiumSecondLeg = stadium_id_second_leg ? await this.stadiumRepository.findOneBy({ id: stadium_id_second_leg }) : null;
+
+      if (!homeTeam || !awayTeam || !competition) {
+        throw new Error('Times ou competição não encontrados.');
+      }
+
+      // Encontrar ou criar a rodada
+      let existingRound: Round | null = null;
+      if (!round_id && round_name && competition_id) {
+        existingRound = await queryRunner.manager.findOne(Round, {
+          where: {
+            name: round_name,
+            competition: { id: competition_id }
+          }
+        });
+
+        if (!existingRound) {
+          const roundNumberMatch = round_name.match(/(\d+)/);
+          const roundNumber = roundNumberMatch ? parseInt(roundNumberMatch[1]) : undefined;
+          
+          const newRound = queryRunner.manager.create(Round, {
+            name: round_name,
+            round_number: roundNumber,
+            competition: competition
+          });
+          existingRound = await queryRunner.manager.save(newRound);
+        }
+      }
+      const finalRound = round_id ? await this.roundRepository.findOneBy({ id: round_id }) : existingRound;
+
+      // Criar partida de ida
+      const firstLegMatchData: Partial<Match> = {
+        home_team: homeTeam,
+        away_team: awayTeam,
+        competition: competition,
+        round: finalRound || undefined,
+        group_name: group_name,
+        phase: phase,
+        match_date: new Date(match_date_first_leg),
+        status: status || MatchStatus.SCHEDULED,
+        leg: MatchLeg.FIRST_LEG,
+        tie_id: tieId,
+        stadium: stadiumFirstLeg || undefined,
+        broadcast_channels: broadcast_channels,
+      };
+      const firstLeg = queryRunner.manager.create(Match, firstLegMatchData);
+      const savedFirstLeg = await queryRunner.manager.save(firstLeg);
+
+      // Gerenciar transmissões para a partida de ida
+      if (channel_ids && channel_ids.length > 0) {
+        await this.updateMatchBroadcasts(savedFirstLeg.id, channel_ids);
+      }
+
+      // Criar partida de volta
+      const secondLegMatchData: Partial<Match> = {
+        home_team: awayTeam,
+        away_team: homeTeam,
+        competition: competition,
+        round: finalRound || undefined,
+        group_name: group_name,
+        phase: phase,
+        match_date: new Date(match_date_second_leg),
+        status: status || MatchStatus.SCHEDULED,
+        leg: MatchLeg.SECOND_LEG,
+        tie_id: tieId,
+        stadium: stadiumSecondLeg || undefined,
+        broadcast_channels: broadcast_channels,
+      };
+      const secondLeg = queryRunner.manager.create(Match, secondLegMatchData);
+      const savedSecondLeg = await queryRunner.manager.save(secondLeg);
+
+      // Gerenciar transmissões para a partida de volta
+      if (channel_ids && channel_ids.length > 0) {
+        await this.updateMatchBroadcasts(savedSecondLeg.id, channel_ids);
+      }
+
+      await queryRunner.commitTransaction();
+      return [savedFirstLeg, savedSecondLeg];
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      console.error('❌ Erro ao criar confronto de ida e volta:', err);
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findAll(): Promise<Match[]> {
