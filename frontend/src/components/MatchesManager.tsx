@@ -39,11 +39,36 @@ interface Match {
   round?: { id: number; name: string }
   group_name?: string
   phase?: string
+  leg?: 'first_leg' | 'second_leg' | 'single_match'
+  tie_id?: string
 }
 
 interface Channel {
   id: number
   name: string
+}
+
+// Nova interface para o estado do formulário
+interface MatchFormData {
+  home_team_id: string;
+  away_team_id: string;
+  competition_id: string;
+  round_id: string;
+  round_name: string;
+  group_name: string;
+  phase: string;
+  match_date: string;
+  status: string;
+  broadcast_channels: string;
+  channel_ids: number[];
+  home_score?: number;
+  away_score?: number;
+  home_yellow_cards?: number;
+  away_yellow_cards?: number;
+  home_red_cards?: number;
+  away_red_cards?: number;
+  leg: '' | 'first_leg' | 'second_leg' | 'single_match';
+  tie_id: string;
 }
 
 // Componente para seleção múltipla de canais
@@ -188,7 +213,7 @@ export default function MatchesManager() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MatchFormData>({
     home_team_id: '',
     away_team_id: '',
     competition_id: '',
@@ -199,13 +224,15 @@ export default function MatchesManager() {
     match_date: '',
     status: 'scheduled',
     broadcast_channels: '',
-    channel_ids: [] as number[],
-    home_score: undefined as number | undefined,
-    away_score: undefined as number | undefined,
-    home_yellow_cards: undefined as number | undefined,
-    away_yellow_cards: undefined as number | undefined,
-    home_red_cards: undefined as number | undefined,
-    away_red_cards: undefined as number | undefined
+    channel_ids: [],
+    home_score: undefined,
+    away_score: undefined,
+    home_yellow_cards: undefined,
+    away_yellow_cards: undefined,
+    home_red_cards: undefined,
+    away_red_cards: undefined,
+    leg: '',
+    tie_id: ''
   })
 
   useEffect(() => {
@@ -440,7 +467,9 @@ export default function MatchesManager() {
         home_yellow_cards: formData.home_yellow_cards,
         away_yellow_cards: formData.away_yellow_cards,
         home_red_cards: formData.home_red_cards,
-        away_red_cards: formData.away_red_cards
+        away_red_cards: formData.away_red_cards,
+        leg: formData.leg,
+        tie_id: formData.tie_id
       }
       
       console.log('🔍 Frontend - Enviando payload:', payload);
@@ -493,12 +522,14 @@ export default function MatchesManager() {
       status: 'scheduled',
       broadcast_channels: '',
       channel_ids: [],
-      home_score: undefined as number | undefined,
-      away_score: undefined as number | undefined,
-      home_yellow_cards: undefined as number | undefined,
-      away_yellow_cards: undefined as number | undefined,
-      home_red_cards: undefined as number | undefined,
-      away_red_cards: undefined as number | undefined
+      home_score: undefined,
+      away_score: undefined,
+      home_yellow_cards: undefined,
+      away_yellow_cards: undefined,
+      home_red_cards: undefined,
+      away_red_cards: undefined,
+      leg: '',
+      tie_id: ''
     })
   }
 
@@ -556,8 +587,10 @@ export default function MatchesManager() {
       home_yellow_cards: (match as any).home_yellow_cards,
       away_yellow_cards: (match as any).away_yellow_cards,
       home_red_cards: (match as any).home_red_cards,
-      away_red_cards: (match as any).away_red_cards
-    };
+      away_red_cards: (match as any).away_red_cards,
+      leg: match.leg || '',
+      tie_id: match.tie_id || ''
+    } as MatchFormData; // Adicionar cast para MatchFormData
     
     setFormData(newFormData);
     setShowModal(true)
@@ -1233,6 +1266,38 @@ export default function MatchesManager() {
                     onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                     placeholder="Ex: Outros canais não cadastrados"
+                  />
+                </div>
+                
+                {/* Adicionado: Campo Leg */}
+                <div className="col-span-full sm:col-span-3">
+                  <label htmlFor="leg" className="block text-sm font-medium leading-6 text-gray-900">Mão</label>
+                  <select
+                    id="leg"
+                    name="leg"
+                    value={formData.leg}
+                    onChange={(e) => setFormData({ ...formData, leg: e.target.value as '' | 'first_leg' | 'second_leg' | 'single_match' })}
+                    className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  >
+                    <option value="">Selecione a mão</option>
+                    <option value="single_match">Jogo Único</option>
+                    <option value="first_leg">Primeira Mão</option>
+                    <option value="second_leg">Segunda Mão</option>
+                  </select>
+                </div>
+
+                {/* Adicionado: Campo Tie ID */}
+                <div className="col-span-full sm:col-span-3">
+                  <label htmlFor="tie_id" className="block text-sm font-medium leading-6 text-gray-900">ID do Confronto (Tie ID)</label>
+                  <input
+                    type="text"
+                    name="tie_id"
+                    id="tie_id"
+                    value={formData.tie_id}
+                    onChange={(e) => setFormData({ ...formData, tie_id: e.target.value })}
+                    className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    placeholder="Preencha para jogos de volta"
+                    disabled={formData.leg !== 'second_leg'}
                   />
                 </div>
                 
