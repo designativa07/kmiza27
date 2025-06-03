@@ -14,6 +14,12 @@ export enum MatchStatus {
   CANCELLED = 'cancelled'
 }
 
+export enum MatchLeg {
+  FIRST_LEG = 'first_leg',
+  SECOND_LEG = 'second_leg',
+  SINGLE_MATCH = 'single_match',
+}
+
 @Entity('matches')
 export class Match {
   @PrimaryGeneratedColumn()
@@ -85,6 +91,30 @@ export class Match {
 
   @Column({ type: 'jsonb', nullable: true })
   match_stats: any;
+
+  @Column({
+    type: 'enum',
+    enum: MatchLeg,
+    enumName: 'match_leg',
+    default: MatchLeg.SINGLE_MATCH,
+  })
+  leg: MatchLeg;
+
+  @Column({ type: 'uuid', nullable: true }) 
+  tie_id: string;
+
+  @Column({ type: 'int', nullable: true })
+  home_aggregate_score: number;
+
+  @Column({ type: 'int', nullable: true })
+  away_aggregate_score: number;
+
+  @ManyToOne(() => Team, { nullable: true })
+  @JoinColumn({ name: 'qualified_team_id' })
+  qualified_team: Team;
+
+  @Column({ type: 'int', nullable: true })
+  qualified_team_id: number | null; // For foreign key relationship
 
   @CreateDateColumn()
   created_at: Date;

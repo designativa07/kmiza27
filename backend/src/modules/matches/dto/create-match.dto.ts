@@ -1,5 +1,6 @@
 import { IsNotEmpty, IsNumber, IsString, IsDateString, IsEnum, IsArray, IsOptional } from 'class-validator';
 import { MatchStatus } from '../../../entities/match.entity';
+import { MatchLeg } from '../../../entities/match.entity';
 
 export class CreateMatchDto {
   @IsNotEmpty()
@@ -84,4 +85,24 @@ export class CreateMatchDto {
 
   @IsOptional()
   match_stats?: any;
+
+  @IsOptional()
+  @IsEnum(MatchLeg)
+  leg?: MatchLeg;
+
+  @IsOptional()
+  @IsString()
+  tie_id?: string;
+
+  @IsOptional()
+  @IsNumber()
+  home_aggregate_score?: number;
+
+  @IsOptional()
+  @IsNumber()
+  away_aggregate_score?: number;
+
+  @IsOptional()
+  @IsNumber()
+  qualified_team_id?: number;
 } 

@@ -415,10 +415,19 @@ export class StandingsService {
     return this.matchRepository.find({
       where: {
         competition: { id: competitionId },
-        round: { id: roundId }
+        round: { id: roundId },
       },
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium'],
-      order: { match_date: 'ASC' }
+      relations: [
+        'home_team',
+        'away_team',
+        'stadium',
+        'round',
+        'competition',
+        'qualified_team',
+      ],
+      order: {
+        match_date: 'ASC',
+      },
     });
   }
 

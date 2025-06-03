@@ -1,5 +1,6 @@
 import { IsOptional, IsNumber, IsString, IsDateString, IsEnum, IsArray } from 'class-validator';
 import { MatchStatus } from '../../../entities/match.entity';
+import { MatchLeg } from '../../../entities/match.entity';
 
 export class UpdateMatchDto {
   @IsOptional()
@@ -80,4 +81,25 @@ export class UpdateMatchDto {
 
   @IsOptional()
   match_stats?: any;
+
+  @IsOptional()
+  @IsEnum(MatchLeg)
+  leg?: MatchLeg;
+
+  @IsOptional()
+  @IsString()
+  // @IsUUID('4') // Se o tie_id for um UUID V4, descomente esta linha
+  tie_id?: string;
+
+  @IsOptional()
+  @IsNumber()
+  home_aggregate_score?: number;
+
+  @IsOptional()
+  @IsNumber()
+  away_aggregate_score?: number;
+
+  @IsOptional()
+  @IsNumber()
+  qualified_team_id?: number;
 } 
