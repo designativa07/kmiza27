@@ -4,6 +4,7 @@ import { MatchesService } from './matches.service';
 import { Match } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
+import { CreateTwoLegTieDto } from './dto/create-two-leg-tie.dto';
 
 @Controller('matches')
 export class MatchesController {
@@ -12,6 +13,11 @@ export class MatchesController {
   @Post()
   create(@Body() createMatchDto: CreateMatchDto) {
     return this.matchesService.create(createMatchDto);
+  }
+
+  @Post('two-leg-tie')
+  createTwoLegTie(@Body() createTwoLegTieDto: CreateTwoLegTieDto) {
+    return this.matchesService.createTwoLegTie(createTwoLegTieDto);
   }
 
   @Get()

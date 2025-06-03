@@ -29,7 +29,7 @@ export class Match {
   @JoinColumn({ name: 'competition_id' })
   competition: Competition;
 
-  @ManyToOne(() => Round, round => round.matches)
+  @ManyToOne(() => Round, round => round.matches, { nullable: true })
   @JoinColumn({ name: 'round_id' })
   round: Round;
 
@@ -41,7 +41,7 @@ export class Match {
   @JoinColumn({ name: 'away_team_id' })
   away_team: Team;
 
-  @ManyToOne(() => Stadium)
+  @ManyToOne(() => Stadium, { nullable: true })
   @JoinColumn({ name: 'stadium_id' })
   stadium: Stadium;
 
