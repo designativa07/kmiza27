@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Match, Round, MatchBroadcast, Channel } from '../../entities';
+import { Match, Round, MatchBroadcast, Channel, Competition } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
+import { MatchStatus, MatchLeg } from '../../entities/match.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MatchesService {
@@ -16,6 +18,8 @@ export class MatchesService {
     private matchBroadcastRepository: Repository<MatchBroadcast>,
     @InjectRepository(Channel)
     private channelRepository: Repository<Channel>,
+    @InjectRepository(Competition)
+    private competitionRepository: Repository<Competition>,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -58,7 +62,7 @@ export class MatchesService {
     // Converter o DTO para o formato correto para o TypeORM
     const matchData: any = {
       match_date: new Date(createMatchDto.match_date),
-      status: createMatchDto.status || 'scheduled',
+      status: createMatchDto.status || MatchStatus.SCHEDULED,
       group_name: createMatchDto.group_name,
       phase: createMatchDto.phase,
       home_score: createMatchDto.home_score,
@@ -71,7 +75,17 @@ export class MatchesService {
       streaming_links: createMatchDto.streaming_links,
       highlights_url: createMatchDto.highlights_url,
       match_stats: createMatchDto.match_stats,
+      leg: createMatchDto.leg || MatchLeg.SINGLE_MATCH,
+      tie_id: createMatchDto.tie_id,
+      home_aggregate_score: createMatchDto.home_aggregate_score,
+      away_aggregate_score: createMatchDto.away_aggregate_score,
+      qualified_team_id: createMatchDto.qualified_team_id,
     };
+
+    // Se for o primeiro jogo de um confronto e não tiver um tie_id, gerar um novo
+    if (matchData.leg === MatchLeg.FIRST_LEG && !matchData.tie_id) {
+      matchData.tie_id = uuidv4();
+    }
 
     // Relacionamentos
     if (createMatchDto.home_team_id) {
@@ -189,6 +203,21 @@ export class MatchesService {
       if (updateMatchDto.phase !== undefined) {
         updateData.phase = updateMatchDto.phase;
       }
+      if (updateMatchDto.leg !== undefined) {
+        updateData.leg = updateMatchDto.leg;
+      }
+      if (updateMatchDto.tie_id !== undefined) {
+        updateData.tie_id = updateMatchDto.tie_id;
+      }
+      if (updateMatchDto.home_aggregate_score !== undefined) {
+        updateData.home_aggregate_score = updateMatchDto.home_aggregate_score;
+      }
+      if (updateMatchDto.away_aggregate_score !== undefined) {
+        updateData.away_aggregate_score = updateMatchDto.away_aggregate_score;
+      }
+      if (updateMatchDto.qualified_team_id !== undefined) {
+        updateData.qualified_team_id = updateMatchDto.qualified_team_id;
+      }
       
       // Relacionamentos - usar os nomes das colunas de foreign key
       if (updateMatchDto.home_team_id !== undefined) {
@@ -209,16 +238,27 @@ export class MatchesService {
       
       console.log('🔍 MatchesService.update - Dados processados:', updateData);
       
-      await this.matchRepository.save({ id, ...updateData });
+      const updatedMatch = await this.matchRepository.save({ id, ...updateData });
 
       // Gerenciar transmissões usando a nova tabela match_broadcasts
       if (updateMatchDto.channel_ids !== undefined) {
         await this.updateMatchBroadcasts(id, updateMatchDto.channel_ids || []);
       }
 
-      const updatedMatch = await this.findOne(id);
-      console.log('✅ MatchesService.update - Match atualizado:', updatedMatch);
-      return updatedMatch;
+      // Se o status da partida for finalizado, e a competição for de mata-mata, calcular e atualizar o placar agregado
+      const fullMatch = await this.matchRepository.findOne({ 
+        where: { id },
+        relations: ['competition']
+      });
+
+      if (fullMatch && fullMatch.status === MatchStatus.FINISHED && 
+          (fullMatch.competition.type === 'mata_mata' || fullMatch.competition.type === 'grupos_e_mata_mata' || fullMatch.competition.type === 'copa')) {
+        await this._handleMatchOutcome(fullMatch);
+      }
+
+      const finalMatch = await this.findOne(id);
+      console.log('✅ MatchesService.update - Match atualizado:', finalMatch);
+      return finalMatch;
     } catch (error) {
       console.error('❌ MatchesService.update - Erro:', error);
       throw error;
@@ -273,5 +313,104 @@ export class MatchesService {
       console.error('❌ Erro ao atualizar transmissões:', error);
       throw error;
     }
+  }
+
+  private async _handleMatchOutcome(match: Match): Promise<void> {
+    console.log(`處理比賽結果: ${match.id}`);
+
+    // Carregar a competição completa para verificar o tipo
+    const competition = await this.competitionRepository.findOne({ where: { id: match.competition.id } });
+    if (!competition || (competition.type !== 'mata_mata' && competition.type !== 'grupos_e_mata_mata' && competition.type !== 'copa')) {
+        console.log('Não é uma competição de mata-mata, ignorando cálculo de placar agregado.');
+        return;
+    }
+
+    let qualifiedTeamId: number | null = null; // Declarar aqui para abranger todos os casos
+
+    // Se for um jogo único, o time classificado é o vencedor do jogo
+    if (match.leg === MatchLeg.SINGLE_MATCH) {
+        if (match.home_score !== null && match.away_score !== null) {
+            if (match.home_score > match.away_score) {
+                qualifiedTeamId = match.home_team.id as number | null;
+            } else if (match.away_score > match.home_score) {
+                qualifiedTeamId = match.away_team.id as number | null;
+            }
+            // Se houver empate em jogo único, mas tiver pênaltis, verifica os pênaltis
+            else if (match.home_score_penalties !== null && match.away_score_penalties !== null) {
+                if (match.home_score_penalties > match.away_score_penalties) {
+                    qualifiedTeamId = match.home_team.id as number | null;
+                } else if (match.away_score_penalties > match.home_score_penalties) {
+                    qualifiedTeamId = match.away_team.id as number | null;
+                }
+            }
+        }
+        if (qualifiedTeamId !== null) {
+            match.qualified_team_id = qualifiedTeamId;
+            await this.matchRepository.save(match);
+            console.log(`Time classificado para jogo único ${match.id}: ${qualifiedTeamId}`);
+        }
+        return;
+    }
+
+    // Para jogos de ida e volta
+    if (!match.tie_id) {
+        console.log('Partida de ida/volta sem tie_id. Não é possível calcular o placar agregado.');
+        return;
+    }
+
+    // Buscar todas as partidas que fazem parte deste confronto
+    const tieMatches = await this.matchRepository.find({
+        where: { tie_id: match.tie_id },
+        relations: ['home_team', 'away_team'],
+        order: { match_date: 'ASC' }
+    });
+
+    if (tieMatches.length !== 2) {
+        console.log(`Confronto ${match.tie_id} não possui 2 partidas. Não é possível calcular o placar agregado.`);
+        return;
+    }
+
+    const firstLeg = tieMatches.find(m => m.leg === MatchLeg.FIRST_LEG);
+    const secondLeg = tieMatches.find(m => m.leg === MatchLeg.SECOND_LEG);
+
+    if (!firstLeg || !secondLeg || firstLeg.status !== MatchStatus.FINISHED || secondLeg.status !== MatchStatus.FINISHED) {
+        console.log(`Ambas as partidas do confronto ${match.tie_id} precisam estar finalizadas para calcular o placar agregado.`);
+        return;
+    }
+
+    // Calcular placar agregado
+    const homeAggregate = (firstLeg.home_score || 0) + (secondLeg.home_score || 0);
+    const awayAggregate = (firstLeg.away_score || 0) + (secondLeg.away_score || 0);
+    
+    if (homeAggregate > awayAggregate) {
+        qualifiedTeamId = match.home_team.id as number | null; // Assume que home_team é o mesmo em ambos os jogos do confronto
+    } else if (awayAggregate > homeAggregate) {
+        qualifiedTeamId = match.away_team.id as number | null; // Assume que away_team é o mesmo em ambos os jogos do confronto
+    } else {
+        // Caso de empate no placar agregado, verificar pênaltis se aplicável no segundo jogo
+        if (secondLeg.home_score_penalties !== null && secondLeg.away_score_penalties !== null) {
+            if (secondLeg.home_score_penalties > secondLeg.away_score_penalties) {
+                qualifiedTeamId = match.home_team.id as number | null;
+            } else if (secondLeg.away_score_penalties > secondLeg.home_score_penalties) {
+                qualifiedTeamId = match.away_team.id as number | null;
+            }
+        } else {
+          console.log(`Confronto ${match.tie_id} empatado sem informação de pênaltis. Não é possível determinar o classificado.`);
+          return;
+        }
+    }
+
+    // Atualizar ambas as partidas do confronto
+    for (const tm of tieMatches) {
+        tm.home_aggregate_score = homeAggregate;
+        tm.away_aggregate_score = awayAggregate;
+        if (qualifiedTeamId !== null) {
+          tm.qualified_team_id = qualifiedTeamId;
+        } else {
+          tm.qualified_team_id = null;
+        }
+    }
+    await this.matchRepository.save(tieMatches);
+    console.log(`Placar agregado e classificado atualizados para o confronto ${match.tie_id}. Classificado: ${qualifiedTeamId}`);
   }
 } 
