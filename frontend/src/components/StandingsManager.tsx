@@ -527,9 +527,9 @@ export default function StandingsManager() {
                         </div>
                         <div className="flex-shrink-0 text-center mx-4">
                             <span className="text-lg font-bold text-gray-900">
-                                {match.home_score !== undefined ? match.home_score : '-'} x {match.away_score !== undefined ? match.away_score : '-'}
+                                {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
                             </span>
-                            {match.home_score_penalties !== undefined && match.away_score_penalties !== undefined && (
+                            {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
                                 <span className="text-xs text-gray-500 block">
                                     ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
                                 </span>
