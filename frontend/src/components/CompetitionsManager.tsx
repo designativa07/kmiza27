@@ -131,8 +131,7 @@ export default function CompetitionsManager() {
   const getTypeLabel = (type: string) => {
     const types = {
       pontos_corridos: 'Pontos Corridos',
-      mata_mata: 'Mata-Mata',
-      grupos_e_mata_mata: 'Grupos + Mata-Mata',
+      grupos_e_mata_mata: 'Copa com Grupos',
       copa: 'Copa'
     }
     return types[type as keyof typeof types] || type
@@ -290,8 +289,7 @@ export default function CompetitionsManager() {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     >
                       <option value="pontos_corridos">Pontos Corridos</option>
-                      <option value="mata_mata">Mata-Mata</option>
-                      <option value="grupos_e_mata_mata">Grupos + Mata-Mata</option>
+                      <option value="grupos_e_mata_mata">Copa com Grupos</option>
                       <option value="copa">Copa</option>
                     </select>
                   </div>

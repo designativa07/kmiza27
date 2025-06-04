@@ -67,6 +67,8 @@ interface MatchFormData {
   away_yellow_cards?: number;
   home_red_cards?: number;
   away_red_cards?: number;
+  home_score_penalties?: number;
+  away_score_penalties?: number;
   leg: '' | 'first_leg' | 'second_leg' | 'single_match';
   tie_id: string;
   match_date_second_leg?: string;
@@ -235,6 +237,8 @@ export default function MatchesManager() {
     away_yellow_cards: undefined,
     home_red_cards: undefined,
     away_red_cards: undefined,
+    home_score_penalties: undefined,
+    away_score_penalties: undefined,
     leg: '',
     tie_id: '',
     match_date_second_leg: '',
@@ -477,6 +481,8 @@ export default function MatchesManager() {
           away_yellow_cards: formData.away_yellow_cards,
           home_red_cards: formData.home_red_cards,
           away_red_cards: formData.away_red_cards,
+          home_score_penalties: formData.home_score_penalties,
+          away_score_penalties: formData.away_score_penalties,
           leg: formData.leg,
           tie_id: formData.tie_id,
           stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
@@ -525,6 +531,8 @@ export default function MatchesManager() {
           away_yellow_cards: formData.away_yellow_cards,
           home_red_cards: formData.home_red_cards,
           away_red_cards: formData.away_red_cards,
+          home_score_penalties: formData.home_score_penalties,
+          away_score_penalties: formData.away_score_penalties,
           leg: formData.leg,
           tie_id: formData.tie_id,
           stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
@@ -587,6 +595,8 @@ export default function MatchesManager() {
       away_yellow_cards: undefined,
       home_red_cards: undefined,
       away_red_cards: undefined,
+      home_score_penalties: undefined,
+      away_score_penalties: undefined,
       leg: '',
       tie_id: '',
       match_date_second_leg: '',
@@ -652,6 +662,8 @@ export default function MatchesManager() {
       away_yellow_cards: (match as any).away_yellow_cards,
       home_red_cards: (match as any).home_red_cards,
       away_red_cards: (match as any).away_red_cards,
+      home_score_penalties: (match as any).home_score_penalties,
+      away_score_penalties: (match as any).away_score_penalties,
       leg: match.leg || '',
       tie_id: match.tie_id || '',
       match_date_second_leg: '',
@@ -1151,27 +1163,61 @@ export default function MatchesManager() {
                   </div>
                 </div>
                 {/* Campos de placar */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Placar Casa</label>
+                    <label htmlFor="home_score" className="block text-sm font-medium text-gray-700">
+                      Placar Casa
+                    </label>
                     <input
                       type="number"
-                      min="0"
-                      value={formData.home_score ?? ''}
+                      name="home_score"
+                      id="home_score"
+                      value={formData.home_score === undefined ? '' : formData.home_score}
                       onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="Gols do time da casa"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Placar Visitante</label>
+                    <label htmlFor="away_score" className="block text-sm font-medium text-gray-700">
+                      Placar Visitante
+                    </label>
                     <input
                       type="number"
-                      min="0"
-                      value={formData.away_score ?? ''}
+                      name="away_score"
+                      id="away_score"
+                      value={formData.away_score === undefined ? '' : formData.away_score}
                       onChange={(e) => setFormData({ ...formData, away_score: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="Gols do time visitante"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+
+                  {/* Novos campos para gols de pênaltis */}
+                  <div>
+                    <label htmlFor="home_score_penalties" className="block text-sm font-medium text-gray-700">
+                      Gols Pênaltis Casa
+                    </label>
+                    <input
+                      type="number"
+                      name="home_score_penalties"
+                      id="home_score_penalties"
+                      value={formData.home_score_penalties === undefined ? '' : formData.home_score_penalties}
+                      onChange={(e) => setFormData({ ...formData, home_score_penalties: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="away_score_penalties" className="block text-sm font-medium text-gray-700">
+                      Gols Pênaltis Visitante
+                    </label>
+                    <input
+                      type="number"
+                      name="away_score_penalties"
+                      id="away_score_penalties"
+                      value={formData.away_score_penalties === undefined ? '' : formData.away_score_penalties}
+                      onChange={(e) => setFormData({ ...formData, away_score_penalties: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
                   </div>
                 </div>
