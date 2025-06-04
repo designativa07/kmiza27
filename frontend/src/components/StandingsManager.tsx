@@ -449,6 +449,48 @@ export default function StandingsManager() {
     }
   };
 
+  const EditarJogo = ({ match }: { match: Match }) => (
+    <div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Gols de Pênaltis Casa</label>
+        <input
+          type="number"
+          value={match.home_score_penalties || ''}
+          onChange={(e) => {/* lógica para atualizar o estado */}}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Gols de Pênaltis Visitante</label>
+        <input
+          type="number"
+          value={match.away_score_penalties || ''}
+          onChange={(e) => {/* lógica para atualizar o estado */}}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+        />
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    if (activeTab === 'standings') {
+      return isCupCompetition ? renderCupMatches() : renderLeagueStandings();
+    }
+    // ... existing code ...
+  };
+
+  const renderCupMatches = () => (
+    <div className="bg-white shadow rounded-lg p-6 w-full">
+      {/* Lógica para exibir confrontos */}
+    </div>
+  );
+
+  const renderLeagueStandings = () => (
+    <div className="bg-white shadow rounded-lg">
+      {/* Lógica para exibir tabela de pontos corridos */}
+    </div>
+  );
+
   if (loading) {
     return <div className="text-center">Carregando classificações...</div>
   }
