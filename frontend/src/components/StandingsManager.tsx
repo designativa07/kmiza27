@@ -129,6 +129,7 @@ export default function StandingsManager() {
   const isCupCompetition = useMemo(() => {
     if (!selectedCompetition || competitions.length === 0) return false;
     const comp = competitions.find(c => c.id === selectedCompetition);
+    console.log('Competição selecionada:', comp); // Debug
     return comp?.type === 'copa';
   }, [selectedCompetition, competitions]);
 
@@ -170,6 +171,11 @@ export default function StandingsManager() {
         console.log(`Sincronizando índice: ${roundIndex} para rodada ID: ${selectedRound}`) // Debug
         setCurrentRoundIndex(roundIndex)
       }
+    } else if (rounds.length > 0) {
+      // Se há rodadas mas nenhuma selecionada, selecione a primeira
+      console.log("Nenhuma rodada selecionada, definindo a primeira: ", rounds[0].id); // Debug
+      setCurrentRoundIndex(0);
+      setSelectedRound(rounds[0].id);
     }
   }, [rounds, selectedRound])
 
@@ -257,30 +263,40 @@ export default function StandingsManager() {
       const response = await fetch(API_ENDPOINTS.standings.rounds(selectedCompetition))
       if (response.ok) {
         const data = await response.json()
-        console.log('Rodadas carregadas:', data) // Debug
+        console.log('Rodadas carregadas (fetchRounds):', data) // Debug
         setRounds(data)
-        if (data.length > 0) {
-          // Sempre começar pela primeira rodada (índice 0)
-          setCurrentRoundIndex(0)
-          setSelectedRound(data[0].id)
+        // Se houver rodadas e selectedRound não estiver nas rodadas carregadas, selecione a primeira
+        if (data.length > 0 && (!selectedRound || !data.some((round: any) => round.id === selectedRound))) {
+          console.log("Definindo selectedRound para a primeira rodada: ", data[0].id); // Debug
+          setSelectedRound(data[0].id);
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar rodadas:', error)
+      console.error('Erro ao carregar rodadas (fetchRounds):', error)
     }
   }
 
   const fetchRoundMatches = async () => {
-    if (!selectedCompetition || !selectedRound) return
+    if (!selectedCompetition || !selectedRound) {
+      console.log("Não carregando jogos: Competição ou Rodada não selecionada.", { selectedCompetition, selectedRound }); // Debug
+      setRoundMatches([]); 
+      return;
+    }
     
     try {
+      console.log(`Carregando jogos para competição ${selectedCompetition}, rodada ${selectedRound}`); // Debug
       const response = await fetch(API_ENDPOINTS.standings.roundMatches(selectedCompetition, selectedRound))
       if (response.ok) {
         const data = await response.json()
+        console.log('Jogos da rodada carregados:', data); // Debug
         setRoundMatches(data)
+      } else {
+        console.error(`Erro ao carregar jogos da rodada: ${response.status} - ${response.statusText}`); // Debug
+        setRoundMatches([]); 
       }
     } catch (error) {
       console.error('Erro ao carregar jogos da rodada:', error)
+      setRoundMatches([]); 
     }
   }
 
@@ -449,45 +465,157 @@ export default function StandingsManager() {
     }
   };
 
-  const EditarJogo = ({ match }: { match: Match }) => (
-    <div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Gols de Pênaltis Casa</label>
-        <input
-          type="number"
-          value={match.home_score_penalties || ''}
-          onChange={(e) => {/* lógica para atualizar o estado */}}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Gols de Pênaltis Visitante</label>
-        <input
-          type="number"
-          value={match.away_score_penalties || ''}
-          onChange={(e) => {/* lógica para atualizar o estado */}}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (activeTab === 'standings') {
-      return isCupCompetition ? renderCupMatches() : renderLeagueStandings();
-    }
-    // ... existing code ...
-  };
-
   const renderCupMatches = () => (
     <div className="bg-white shadow rounded-lg p-6 w-full">
-      {/* Lógica para exibir confrontos */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => navigateRound('prev')}
+          disabled={currentRoundIndex === 0}
+          className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+        >
+          <ChevronLeftIcon className="h-5 w-5" />
+        </button>
+        <h3 className="text-lg font-semibold text-gray-800">
+          {rounds.length > 0 ? rounds[currentRoundIndex]?.name : 'Carregando Fases...'}
+        </h3>
+        <button
+          onClick={() => navigateRound('next')}
+          disabled={currentRoundIndex === rounds.length - 1}
+          className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+        >
+          <ChevronRightIcon className="h-5 w-5" />
+        </button>
+      </div>
+
+      {roundMatches.length > 0 ? (
+        <div className="space-y-4">
+          {Object.keys(groupedMatchesByTieId).map(tieId => {
+            const matchesInTie = groupedMatchesByTieId[tieId];
+            const match1 = matchesInTie[0];
+            // const match2 = matchesInTie.length > 1 ? matchesInTie[1] : null; // Esta linha não é necessária aqui
+
+            let aggregateOutcomeText = '';
+            let showQualifiedTeam = false;
+            let qualifiedTeamName = '';
+
+            if (match1.status === 'finished') {
+              if (match1.qualified_team) {
+                qualifiedTeamName = match1.qualified_team.name;
+                showQualifiedTeam = true;
+              } else if (match1.home_aggregate_score !== undefined && match1.away_aggregate_score !== undefined) {
+                aggregateOutcomeText = `Agregado: ${match1.home_aggregate_score}x${match1.away_aggregate_score}`;
+              } else if (match1.leg === 'single_match') {
+                  const homeScore = match1.home_score !== undefined ? match1.home_score : 0;
+                  const awayScore = match1.away_score !== undefined ? match1.away_score : 0;
+                  if (homeScore > awayScore) {
+                      aggregateOutcomeText = `${match1.home_team.short_name} venceu`;
+                  } else if (awayScore > homeScore) {
+                      aggregateOutcomeText = `${match1.away_team.short_name} venceu`;
+                  } else {
+                      aggregateOutcomeText = 'Empate';
+                  }
+              }
+            }
+
+            return (
+              <div key={tieId} className="border rounded-lg p-4 bg-gray-50">
+                  {matchesInTie.map(match => (
+                    <div key={match.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <div className="flex-1 flex items-center justify-start space-x-2">
+                            <TeamLogo team={match.home_team} />
+                            <span className="font-semibold text-gray-800 text-sm">{match.home_team.name}</span>
+                        </div>
+                        <div className="flex-shrink-0 text-center mx-4">
+                            <span className="text-lg font-bold text-gray-900">
+                                {match.home_score !== undefined ? match.home_score : '-'} x {match.away_score !== undefined ? match.away_score : '-'}
+                            </span>
+                            {match.home_score_penalties !== undefined && match.away_score_penalties !== undefined && (
+                                <span className="text-xs text-gray-500 block">
+                                    ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
+                                </span>
+                            )}
+                            <span className={`block text-xs ${getMatchStatusColor(match.status)}`}>
+                                {match.status === 'finished' ? getMatchOutcomeText(match) : formatMatchDate(match.match_date).time}
+                            </span>
+                        </div>
+                        <div className="flex-1 flex items-center justify-end space-x-2">
+                            <span className="font-semibold text-gray-800 text-sm">{match.away_team.name}</span>
+                            <TeamLogo team={match.away_team} />
+                        </div>
+                    </div>
+                  ))}
+                  {(showQualifiedTeam || aggregateOutcomeText) && (
+                      <div className="mt-2 text-center text-sm font-medium text-indigo-700">
+                          {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
+                      </div>
+                  )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-center text-gray-600">Nenhum jogo encontrado para esta fase.</p>
+      )}
     </div>
   );
 
   const renderLeagueStandings = () => (
     <div className="bg-white shadow rounded-lg">
-      {/* Lógica para exibir tabela de pontos corridos */}
+      {Object.entries(groupedStandings()).map(([groupName, groupStandings]) => (
+        <div key={groupName} className="mb-8 last:mb-0">
+          {groupName !== '' && (
+            <h2 className="text-xl font-bold text-gray-800 mb-4 px-6 pt-6">Grupo {groupName}</h2>
+          )}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">POS</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">TIME</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">PTS</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">J</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">V</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">E</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">D</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">GP</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">GC</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">SG</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">FORM</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {groupStandings.map((entry) => (
+                  <tr key={entry.team.id}>
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${getPositionColor(entry.position)}`}>
+                        {entry.position}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <TeamLogo team={entry.team} />
+                        <div className="ml-3">
+                          <div className="font-medium text-gray-900">{entry.team.name}</div>
+                          <div className="text-gray-500">{entry.team.short_name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-bold">{entry.points}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.played}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-green-600 font-bold">{entry.won}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-yellow-600 font-bold">{entry.drawn}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-bold">{entry.lost}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.goals_for}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.goals_against}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-bold">{entry.goal_difference}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{renderForm(entry.form)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 
@@ -583,157 +711,7 @@ export default function StandingsManager() {
             {/* Content based on activeTab */}
             <div className="mt-8">
               {activeTab === 'standings' && (
-                isCupCompetition ? (
-                  <div className="bg-white shadow rounded-lg p-6 w-full">
-                    <div className="flex items-center justify-between mb-4">
-                      <button
-                        onClick={() => navigateRound('prev')}
-                        disabled={currentRoundIndex === 0}
-                        className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                      >
-                        <ChevronLeftIcon className="h-5 w-5" />
-                      </button>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {rounds.length > 0 ? rounds[currentRoundIndex]?.name : 'Carregando Fases...'}
-                      </h3>
-                      <button
-                        onClick={() => navigateRound('next')}
-                        disabled={currentRoundIndex === rounds.length - 1}
-                        className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                      >
-                        <ChevronRightIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    {roundMatches.length > 0 ? (
-                      <div className="space-y-4">
-                        {Object.keys(groupedMatchesByTieId).map(tieId => {
-                          const matchesInTie = groupedMatchesByTieId[tieId];
-                          const match1 = matchesInTie[0];
-                          const match2 = matchesInTie.length > 1 ? matchesInTie[1] : null;
-
-                          let aggregateOutcomeText = '';
-                          let showQualifiedTeam = false;
-                          let qualifiedTeamName = '';
-
-                          if (match1.status === 'finished') {
-                            if (match1.qualified_team) {
-                              qualifiedTeamName = match1.qualified_team.name;
-                              showQualifiedTeam = true;
-                            } else if (match1.home_aggregate_score !== undefined && match1.away_aggregate_score !== undefined) {
-                              aggregateOutcomeText = `Agregado: ${match1.home_aggregate_score}x${match1.away_aggregate_score}`;
-                            } else if (match1.leg === 'single_match') {
-                                const homeScore = match1.home_score !== undefined ? match1.home_score : 0;
-                                const awayScore = match1.away_score !== undefined ? match1.away_score : 0;
-                                if (homeScore > awayScore) {
-                                    aggregateOutcomeText = `${match1.home_team.short_name} venceu`;
-                                } else if (awayScore > homeScore) {
-                                    aggregateOutcomeText = `${match1.away_team.short_name} venceu`;
-                                } else {
-                                    aggregateOutcomeText = 'Empate';
-                                }
-                            }
-                          }
-
-                          return (
-                            <div key={tieId} className="border rounded-lg p-4 bg-gray-50">
-                                {matchesInTie.map(match => (
-                                  <div key={match.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                                      <div className="flex-1 flex items-center justify-start space-x-2">
-                                          <TeamLogo team={match.home_team} />
-                                          <span className="font-semibold text-gray-800 text-sm">{match.home_team.name}</span>
-                                      </div>
-                                      <div className="flex-shrink-0 text-center mx-4">
-                                          <span className="text-lg font-bold text-gray-900">
-                                              {match.home_score !== undefined ? match.home_score : '-'} x {match.away_score !== undefined ? match.away_score : '-'}
-                                          </span>
-                                          {match.home_score_penalties !== undefined && match.away_score_penalties !== undefined && (
-                                              <span className="text-xs text-gray-500 block">
-                                                  ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
-                                              </span>
-                                          )}
-                                          <span className={`block text-xs ${getMatchStatusColor(match.status)}`}>
-                                              {match.status === 'finished' ? getMatchOutcomeText(match) : formatMatchDate(match.match_date).time}
-                                          </span>
-                                      </div>
-                                      <div className="flex-1 flex items-center justify-end space-x-2">
-                                          <span className="font-semibold text-gray-800 text-sm">{match.away_team.name}</span>
-                                          <TeamLogo team={match.away_team} />
-                                      </div>
-                                  </div>
-                                ))}
-                                {(showQualifiedTeam || aggregateOutcomeText) && (
-                                    <div className="mt-2 text-center text-sm font-medium text-indigo-700">
-                                        {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
-                                    </div>
-                                )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-600">Nenhum jogo encontrado para esta fase.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white shadow rounded-lg">
-                    {Object.entries(groupedStandings()).map(([groupName, groupStandings]) => (
-                      <div key={groupName} className="mb-8 last:mb-0">
-                        {groupName !== '' && (
-                          <h2 className="text-xl font-bold text-gray-800 mb-4 px-6 pt-6">Grupo {groupName}</h2>
-                        )}
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-300">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">POS</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">TIME</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">PTS</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">J</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">V</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">E</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">D</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">GP</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">GC</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">SG</th>
-                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">FORM</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                              {groupStandings.map((entry) => (
-                                <tr key={entry.team.id}>
-                                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6">
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${getPositionColor(entry.position)}`}>
-                                      {entry.position}
-                                    </span>
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                    <div className="flex items-center">
-                                      <TeamLogo team={entry.team} />
-                                      <div className="ml-3">
-                                        <div className="font-medium text-gray-900">{entry.team.name}</div>
-                                        <div className="text-gray-500">{entry.team.short_name}</div>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-bold">{entry.points}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.played}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-green-600 font-bold">{entry.won}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-yellow-600 font-bold">{entry.drawn}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-bold">{entry.lost}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.goals_for}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{entry.goals_against}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-bold">{entry.goal_difference}</td>
-                                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{renderForm(entry.form)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
+                isCupCompetition ? renderCupMatches() : renderLeagueStandings()
               )}
               {/* Estatísticas do Time */}
               {activeTab === 'stats' && (
