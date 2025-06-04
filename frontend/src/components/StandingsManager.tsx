@@ -103,6 +103,35 @@ export default function StandingsManager() {
   const [roundMatches, setRoundMatches] = useState<Match[]>([])
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0)
 
+  // Função auxiliar para calcular agregado de um confronto
+  const calculateAggregate = (matches: Match[]) => {
+    if (matches.length !== 2) return null;
+    
+    const firstLeg = matches.find(m => m.leg === 'first_leg');
+    const secondLeg = matches.find(m => m.leg === 'second_leg');
+    
+    if (!firstLeg || !secondLeg) return null;
+    if (firstLeg.status !== 'finished' || secondLeg.status !== 'finished') return null;
+    
+    // Calcular agregado considerando que o time mandante pode ser diferente em cada jogo
+    const homeTeamId = firstLeg.home_team.id;
+    const awayTeamId = firstLeg.away_team.id;
+    
+    // Somar gols do time da casa (time que jogou em casa na ida)
+    const homeAggregate = (firstLeg.home_score || 0) + (secondLeg.away_score || 0);
+    // Somar gols do time visitante (time que jogou fora na ida)  
+    const awayAggregate = (firstLeg.away_score || 0) + (secondLeg.home_score || 0);
+    
+    return {
+      homeTeam: firstLeg.home_team,
+      awayTeam: firstLeg.away_team,
+      homeAggregate,
+      awayAggregate,
+      qualified: homeAggregate > awayAggregate ? firstLeg.home_team : 
+                 awayAggregate > homeAggregate ? firstLeg.away_team : null
+    };
+  };
+
   // Função auxiliar para agrupar partidas por tie_id ou id (para jogos únicos)
   const groupedMatchesByTieId = useMemo(() => {
     const grouped: { [key: string]: Match[] } = {};
@@ -492,28 +521,36 @@ export default function StandingsManager() {
           {Object.keys(groupedMatchesByTieId).map(tieId => {
             const matchesInTie = groupedMatchesByTieId[tieId];
             const match1 = matchesInTie[0];
-            // const match2 = matchesInTie.length > 1 ? matchesInTie[1] : null; // Esta linha não é necessária aqui
 
             let aggregateOutcomeText = '';
             let showQualifiedTeam = false;
             let qualifiedTeamName = '';
 
-            if (match1.status === 'finished') {
+            // Calcular agregado dinamicamente
+            if (matchesInTie.length === 2) {
+              const aggregate = calculateAggregate(matchesInTie);
+              if (aggregate) {
+                aggregateOutcomeText = `Agregado: ${aggregate.homeTeam.short_name} ${aggregate.homeAggregate}x${aggregate.awayAggregate} ${aggregate.awayTeam.short_name}`;
+                if (aggregate.qualified) {
+                  qualifiedTeamName = aggregate.qualified.name;
+                  showQualifiedTeam = true;
+                }
+              }
+            } else if (match1.status === 'finished') {
+              // Para jogos únicos
               if (match1.qualified_team) {
                 qualifiedTeamName = match1.qualified_team.name;
                 showQualifiedTeam = true;
-              } else if (match1.home_aggregate_score !== undefined && match1.away_aggregate_score !== undefined) {
-                aggregateOutcomeText = `Agregado: ${match1.home_aggregate_score}x${match1.away_aggregate_score}`;
               } else if (match1.leg === 'single_match') {
-                  const homeScore = match1.home_score !== undefined ? match1.home_score : 0;
-                  const awayScore = match1.away_score !== undefined ? match1.away_score : 0;
-                  if (homeScore > awayScore) {
-                      aggregateOutcomeText = `${match1.home_team.short_name} venceu`;
-                  } else if (awayScore > homeScore) {
-                      aggregateOutcomeText = `${match1.away_team.short_name} venceu`;
-                  } else {
-                      aggregateOutcomeText = 'Empate';
-                  }
+                const homeScore = match1.home_score !== undefined ? match1.home_score : 0;
+                const awayScore = match1.away_score !== undefined ? match1.away_score : 0;
+                if (homeScore > awayScore) {
+                  aggregateOutcomeText = `${match1.home_team.short_name} venceu`;
+                } else if (awayScore > homeScore) {
+                  aggregateOutcomeText = `${match1.away_team.short_name} venceu`;
+                } else {
+                  aggregateOutcomeText = 'Empate';
+                }
               }
             }
 
@@ -535,7 +572,11 @@ export default function StandingsManager() {
                                 </span>
                             )}
                             <span className={`block text-xs ${getMatchStatusColor(match.status)}`}>
-                                {match.status === 'finished' ? getMatchOutcomeText(match) : formatMatchDate(match.match_date).time}
+                                {match.status === 'finished' ? (
+                                  match.leg === 'first_leg' ? '1ª Mão' : 
+                                  match.leg === 'second_leg' ? '2ª Mão' : 
+                                  'Jogo Único'
+                                ) : formatMatchDate(match.match_date).time}
                             </span>
                         </div>
                         <div className="flex-1 flex items-center justify-end space-x-2">
