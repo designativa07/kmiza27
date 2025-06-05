@@ -339,7 +339,7 @@ export default function StandingsManager() {
   const TeamLogo = ({ team }: { team: Team }) => {
     if (!team.logo_url) {
       return (
-        <div className="h-6 w-6 rounded-md bg-gray-200 flex items-center justify-center">
+        <div className="h-6 w-6 bg-gray-200 flex items-center justify-center">
           <span className="text-xs font-bold text-gray-600">{team.short_name?.substring(0, 3) || team.name.substring(0, 3)}</span>
         </div>
       )
@@ -347,7 +347,7 @@ export default function StandingsManager() {
 
     return (
       <img 
-        className="h-6 w-6 rounded-md object-cover" 
+        className="h-6 w-6 object-cover" 
         src={imageUrl(team.logo_url)} 
         alt={`Escudo ${team.name}`}
         onError={(e) => {
@@ -518,7 +518,7 @@ export default function StandingsManager() {
 
       {roundMatches.length > 0 ? (
         <div className="space-y-3">
-          {Object.keys(groupedMatchesByTieId).map(tieId => {
+          {Object.keys(groupedMatchesByTieId).map((tieId, index) => {
             const matchesInTie = groupedMatchesByTieId[tieId];
             const match1 = matchesInTie[0];
 
@@ -545,7 +545,9 @@ export default function StandingsManager() {
             }
 
             return (
-              <div key={tieId} className="bg-gray-50 rounded-lg p-3">
+              <div key={tieId}>
+                {index > 0 && <div className="border-t border-gray-300 my-3"></div>}
+                <div className="bg-gray-50 rounded-lg p-3">
                 <div className={`space-y-2 ${matchesInTie.length > 1 ? '' : ''}`}>
                   {matchesInTie.map(match => (
                     <div key={match.id} className="bg-white rounded-md p-3">
@@ -598,6 +600,7 @@ export default function StandingsManager() {
                     {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
                   </div>
                 )}
+                </div>
               </div>
             );
           })}
