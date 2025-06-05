@@ -202,7 +202,6 @@ export default function MatchesManager() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
   const [stadiums, setStadiums] = useState<Stadium[]>([])
   const [availableRounds, setAvailableRounds] = useState<{id: number, name: string}[]>([])
   const [createTwoLegTie, setCreateTwoLegTie] = useState(false)
@@ -924,14 +923,6 @@ export default function MatchesManager() {
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex gap-2">
           <button
             type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <FunnelIcon className="h-4 w-4 mr-1" />
-            Filtros
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setLoading(true)
               fetchData()
@@ -955,82 +946,80 @@ export default function MatchesManager() {
         </div>
       </div>
 
-      {/* Filtros */}
-      {showFilters && (
-        <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Competição</label>
-              <select
-                value={filters.competition}
-                onChange={(e) => setFilters({ ...filters, competition: e.target.value })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-              >
-                <option value="">Todas</option>
-                {competitions.map((comp) => (
-                  <option key={comp.id} value={comp.id}>{comp.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rodada/Grupo</label>
-              <select
-                value={filters.round}
-                onChange={(e) => setFilters({ ...filters, round: e.target.value })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-              >
-                <option value="">Todas</option>
-                {getUniqueRounds().map((round) => (
-                  <option key={round} value={round}>{round}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fase</label>
-              <select
-                value={filters.phase}
-                onChange={(e) => setFilters({ ...filters, phase: e.target.value })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-              >
-                <option value="">Todas</option>
-                {getUniquePhases().map((phase) => (
-                  <option key={phase} value={phase}>{phase}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-              >
-                <option value="">Todos</option>
-                <option value="scheduled">Agendado</option>
-                <option value="live">Ao Vivo</option>
-                <option value="finished">Finalizado</option>
-                <option value="postponed">Adiado</option>
-                <option value="cancelled">Cancelado</option>
-              </select>
-            </div>
+      {/* Filtros - agora sempre visíveis e sem condição */}
+      <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Competição</label>
+            <select
+              value={filters.competition}
+              onChange={(e) => setFilters({ ...filters, competition: e.target.value })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
+            >
+              <option value="">Todas</option>
+              {competitions.map((comp) => (
+                <option key={comp.id} value={comp.id}>{comp.name}</option>
+              ))}
+            </select>
           </div>
           
-          <div className="mt-3 flex justify-between items-center">
-            <span className="text-sm text-gray-600">
-              {filteredMatches.length} jogos encontrados
-            </span>
-            <button
-              onClick={clearFilters}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rodada/Grupo</label>
+            <select
+              value={filters.round}
+              onChange={(e) => setFilters({ ...filters, round: e.target.value })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
             >
-              Limpar filtros
-            </button>
+              <option value="">Todas</option>
+              {getUniqueRounds().map((round) => (
+                <option key={round} value={round}>{round}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fase</label>
+            <select
+              value={filters.phase}
+              onChange={(e) => setFilters({ ...filters, phase: e.target.value })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
+            >
+              <option value="">Todas</option>
+              {getUniquePhases().map((phase) => (
+                <option key={phase} value={phase}>{phase}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
+            >
+              <option value="">Todos</option>
+              <option value="scheduled">Agendado</option>
+              <option value="live">Ao Vivo</option>
+              <option value="finished">Finalizado</option>
+              <option value="postponed">Adiado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
           </div>
         </div>
-      )}
+        
+        <div className="mt-3 flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            {filteredMatches.length} jogos encontrados
+          </span>
+          <button
+            onClick={clearFilters}
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      </div>
 
       <div className="mt-8 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -1395,8 +1384,8 @@ export default function MatchesManager() {
                   >
                     <option value="">Selecione a mão</option>
                     <option value="single_match">Jogo Único</option>
-                    <option value="first_leg">Primeira Mão</option>
-                    <option value="second_leg">Segunda Mão</option>
+                    <option value="first_leg">Jogo de ida</option>
+                    <option value="second_leg">Jogo de volta</option>
                   </select>
                 </div>
 

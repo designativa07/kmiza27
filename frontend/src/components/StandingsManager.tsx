@@ -465,8 +465,8 @@ export default function StandingsManager() {
             }
         } else {
             // Se não há placar agregado ou time classificado, exibe o resultado da mão
-            if (match.leg === 'first_leg') outcomeText = '1ª Mão';
-            else if (match.leg === 'second_leg') outcomeText = '2ª Mão';
+            if (match.leg === 'first_leg') outcomeText = 'Jogo de ida';
+            else if (match.leg === 'second_leg') outcomeText = 'Jogo de volta';
 
             if (homeScore > awayScore) {
               outcomeText += ` - ${match.home_team.short_name} venceu esta mão`;
@@ -556,35 +556,39 @@ export default function StandingsManager() {
 
             return (
               <div key={tieId} className="border rounded-lg p-4 bg-gray-50">
-                  {matchesInTie.map(match => (
-                    <div key={match.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                        <div className="flex-1 flex items-center justify-start space-x-2">
-                            <TeamLogo team={match.home_team} />
-                            <span className="font-semibold text-gray-800 text-sm">{match.home_team.name}</span>
-                        </div>
-                        <div className="flex-shrink-0 text-center mx-4">
-                            <span className="text-lg font-bold text-gray-900">
-                                {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
-                            </span>
-                            {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
-                                <span className="text-xs text-gray-500 block">
-                                    ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
+                  <div className={`grid ${matchesInTie.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    {matchesInTie.map(match => (
+                      <div key={match.id} className="flex flex-col items-center justify-between p-2 border rounded-md bg-white">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex-1 flex items-center justify-start space-x-2">
+                                <TeamLogo team={match.home_team} />
+                                <span className="font-semibold text-gray-800 text-sm">{match.home_team.name}</span>
+                            </div>
+                            <div className="flex-shrink-0 text-center mx-2">
+                                <span className="text-lg font-bold text-gray-900">
+                                    {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
                                 </span>
-                            )}
-                            <span className={`block text-xs ${getMatchStatusColor(match.status)}`}>
-                                {match.status === 'finished' ? (
-                                  match.leg === 'first_leg' ? '1ª Mão' : 
-                                  match.leg === 'second_leg' ? '2ª Mão' : 
-                                  'Jogo Único'
-                                ) : formatMatchDate(match.match_date).time}
-                            </span>
-                        </div>
-                        <div className="flex-1 flex items-center justify-end space-x-2">
-                            <span className="font-semibold text-gray-800 text-sm">{match.away_team.name}</span>
-                            <TeamLogo team={match.away_team} />
-                        </div>
-                    </div>
-                  ))}
+                                {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
+                                    <span className="text-xs text-gray-500 block">
+                                        ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex-1 flex items-center justify-end space-x-2">
+                                <span className="font-semibold text-gray-800 text-sm">{match.away_team.name}</span>
+                                <TeamLogo team={match.away_team} />
+                            </div>
+                          </div>
+                          <span className={`block text-xs mt-2 ${getMatchStatusColor(match.status)}`}>
+                              {match.status === 'finished' ? (
+                                match.leg === 'first_leg' ? 'Jogo de ida' : 
+                                match.leg === 'second_leg' ? 'Jogo de volta' : 
+                                'Jogo Único'
+                              ) : formatMatchDate(match.match_date).time}
+                          </span>
+                      </div>
+                    ))}
+                  </div>
                   {(showQualifiedTeam || aggregateOutcomeText) && (
                       <div className="mt-2 text-center text-sm font-medium text-indigo-700">
                           {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
