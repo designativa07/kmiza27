@@ -517,7 +517,7 @@ export default function StandingsManager() {
       </div>
 
       {roundMatches.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {Object.keys(groupedMatchesByTieId).map(tieId => {
             const matchesInTie = groupedMatchesByTieId[tieId];
             const match1 = matchesInTie[0];
@@ -541,77 +541,63 @@ export default function StandingsManager() {
               if (match1.qualified_team) {
                 qualifiedTeamName = match1.qualified_team.name;
                 showQualifiedTeam = true;
-              } else if (match1.leg === 'single_match') {
-                const homeScore = match1.home_score !== undefined ? match1.home_score : 0;
-                const awayScore = match1.away_score !== undefined ? match1.away_score : 0;
-                if (homeScore > awayScore) {
-                  aggregateOutcomeText = `${match1.home_team.short_name} venceu`;
-                } else if (awayScore > homeScore) {
-                  aggregateOutcomeText = `${match1.away_team.short_name} venceu`;
-                } else {
-                  aggregateOutcomeText = 'Empate';
-                }
               }
             }
 
             return (
-              <div key={tieId} className="border rounded-lg p-4 bg-gray-50">
-                  <div className={`grid ${matchesInTie.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                    {matchesInTie.map(match => (
-                      <div key={match.id} className="flex flex-col items-center justify-between p-2 border rounded-md bg-white">
-                          {/* Data, Hora, Estádio */}
-                          <div className="text-center text-gray-600 text-xs mb-2">
-                              {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
-                              {match.stadium?.name && ` • ${match.stadium.name}`}
-                              {match.stadium?.name && match.stadium?.city && `, ${match.stadium.city}`}
-                          </div>
-
-                          {/* Layout de partida centralizado: Time da Casa vs Time Visitante com Placar */}
-                          <div className="flex items-center justify-center w-full">
-                              {/* Time da Casa */}
-                              <div className="flex flex-col items-center flex-1 space-y-1">
-                                  <span className="font-semibold text-gray-800 text-sm text-center">{match.home_team.name}</span>
-                                  <TeamLogo team={match.home_team} />
-                              </div>
-
-                              {/* Placar e Pênaltis */}
-                              <div className="flex flex-col items-center mx-2">
-                                  <span className="text-lg font-bold text-gray-900">
-                                      {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
-                                  </span>
-                                  {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
-                                      <span className="text-xs text-gray-500">({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)</span>
-                                  )}
-                              </div>
-
-                              {/* Time Visitante */}
-                              <div className="flex flex-col items-center flex-1 space-y-1">
-                                  <TeamLogo team={match.away_team} />
-                                  <span className="font-semibold text-gray-800 text-sm text-center">{match.away_team.name}</span>
-                              </div>
-                          </div>
-
-                          {/* Resultado da Partida / Informação da Mão */}
-                          {match.status === 'finished' ? (
-                            <div className="text-center text-sm font-medium text-indigo-700 mt-2">
-                              {match.leg === 'first_leg' ? 'Jogo de ida' :
-                               match.leg === 'second_leg' ? 'Jogo de volta' :
-                               getMatchOutcomeText(match) // Para jogos únicos finalizados (Empate, Time venceu)
-                              }
-                            </div>
-                          ) : (
-                            <div className="text-center text-sm text-gray-500 mt-2">
-                              {formatMatchDate(match.match_date).time}
-                            </div>
-                          )}
+              <div key={tieId} className="bg-gray-50 rounded-lg p-3">
+                <div className={`space-y-2 ${matchesInTie.length > 1 ? '' : ''}`}>
+                  {matchesInTie.map(match => (
+                    <div key={match.id} className="bg-white rounded-md p-3">
+                      {/* Data, Hora, Estádio */}
+                      <div className="text-center text-gray-600 text-xs mb-3">
+                        {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
+                        {match.stadium?.name && ` • ${match.stadium.name}`}
+                        {match.stadium?.name && match.stadium?.city && `, ${match.stadium.city}`}
                       </div>
-                    ))}
+
+                      {/* Layout: Mandante (escudo) (placar) X (placar) (escudo) Visitante */}
+                      <div className="flex items-center justify-center space-x-3">
+                        {/* Mandante */}
+                        <div className="flex items-center space-x-2 flex-1 justify-end">
+                          <span className="font-medium text-gray-800 text-sm">{match.home_team.name}</span>
+                          <TeamLogo team={match.home_team} />
+                        </div>
+
+                        {/* Placar */}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-bold text-gray-900">
+                            {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
+                          </span>
+                          <span className="text-gray-500 font-medium">X</span>
+                          <span className="text-lg font-bold text-gray-900">
+                            {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
+                          </span>
+                        </div>
+
+                        {/* Visitante */}
+                        <div className="flex items-center space-x-2 flex-1">
+                          <TeamLogo team={match.away_team} />
+                          <span className="font-medium text-gray-800 text-sm">{match.away_team.name}</span>
+                        </div>
+                      </div>
+
+                      {/* Pênaltis (se houver) */}
+                      {match.home_score_penalties !== undefined && match.home_score_penalties !== null && 
+                       match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
+                        <div className="text-center text-xs text-gray-500 mt-2">
+                          Pênaltis: {match.home_score_penalties} x {match.away_score_penalties}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {(showQualifiedTeam || aggregateOutcomeText) && (
+                  <div className="mt-2 text-center text-sm font-medium text-indigo-700">
+                    {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
                   </div>
-                  {(showQualifiedTeam || aggregateOutcomeText) && (
-                      <div className="mt-2 text-center text-sm font-medium text-indigo-700">
-                          {showQualifiedTeam ? `Classificado: ${qualifiedTeamName}` : aggregateOutcomeText}
-                      </div>
-                  )}
+                )}
               </div>
             );
           })}
