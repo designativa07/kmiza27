@@ -605,4 +605,3 @@ export default function StadiumsManager() {
     </div>
   )
 }
-</rewritten_file>
