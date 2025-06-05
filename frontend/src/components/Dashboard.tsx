@@ -19,7 +19,8 @@ import {
   ChartPieIcon,
   WrenchScrewdriverIcon,
   PlusIcon,
-  FunnelIcon
+  FunnelIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 import Sidebar from './Sidebar'
 import StatsCards from './StatsCards'
@@ -38,10 +39,10 @@ import SystemSettings from './SystemSettings'
 import ThemeToggle from './ThemeToggle'
 import WhatsAppConversations from './WhatsAppConversations'
 import AutomationPanel from './AutomationPanel'
-import CompetitionTiebreakers from './CompetitionTiebreakers'
 import CompetitionTeamsManager from './CompetitionTeamsManager'
 import UserStats from './UserStats'
 import StatusContent from './StatusContent'
+import StadiumsManager from './StadiumsManager'
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
@@ -58,20 +59,21 @@ interface UserStats {
   matches: number
   competitions: number
   channels: number
+  stadiums: number
 }
 
-// Navegação atualizada sem Transmissões
+// Navegação reorganizada com melhor sequência lógica
 const navigation = [
   { name: 'Dashboard', href: '#', icon: ChartBarIcon, current: true },
-  { name: 'Times', href: '#', icon: TrophyIcon, current: false },
+  { name: 'Times', href: '#', icon: UserGroupIcon, current: false },
+  { name: 'Estádios', href: '#', icon: BuildingOfficeIcon, current: false },
   { name: 'Competições', href: '#', icon: TrophyIcon, current: false },
   { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
   { name: 'Classificações', href: '#', icon: ChartBarIcon, current: false },
-  { name: 'Critérios de Desempate', href: '#', icon: WrenchScrewdriverIcon, current: false },
   { name: 'Canais', href: '#', icon: TvIcon, current: false },
   { name: 'Usuários', href: '#', icon: UsersIcon, current: false },
   { name: 'Estatísticas de Usuários', href: '#', icon: ChartPieIcon, current: false },
-  { name: 'Administradores', href: '#', icon: UserGroupIcon, current: false },
+  { name: 'Administradores', href: '#', icon: WrenchScrewdriverIcon, current: false },
   { name: 'Conversas WhatsApp', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
   { name: 'Automação IA', href: '#', icon: CogIcon, current: false },
   { name: 'Notificações', href: '#', icon: BellIcon, current: false },
@@ -89,6 +91,7 @@ export default function Dashboard() {
     totalMatches: 0,
     totalCompetitions: 0,
     totalChannels: 0,
+    totalStadiums: 0,
     activeConversations: 0,
     totalAdmins: 0,
     usersWithFavoriteTeam: 0,
@@ -119,7 +122,8 @@ export default function Dashboard() {
         fetch(API_ENDPOINTS.teams.list()),
         fetch(API_ENDPOINTS.matches.list()),
         fetch(API_ENDPOINTS.competitions.list()),
-        fetch(API_ENDPOINTS.channels.list())
+        fetch(API_ENDPOINTS.channels.list()),
+        fetch(API_ENDPOINTS.stadiums.list())
       ])
       
       let whatsappData = null
@@ -128,6 +132,7 @@ export default function Dashboard() {
       let matchesData = []
       let competitionsData = []
       let channelsData = []
+      let stadiumsData = []
       
       // Processar respostas de forma segura
       if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
@@ -148,6 +153,9 @@ export default function Dashboard() {
       if (responses[5].status === 'fulfilled' && responses[5].value.ok) {
         channelsData = await responses[5].value.json()
       }
+      if (responses[6].status === 'fulfilled' && responses[6].value.ok) {
+        stadiumsData = await responses[6].value.json()
+      }
       
       // Calcular estatísticas derivadas
       const adminsCount = usersData.filter((user: any) => user.is_admin).length
@@ -160,6 +168,7 @@ export default function Dashboard() {
         matches: matchesData.length,
         competitions: competitionsData.length,
         channels: channelsData.length,
+        stadiums: stadiumsData.length,
         admins: adminsCount,
         usersWithTeam: usersWithTeam
       })
@@ -170,6 +179,7 @@ export default function Dashboard() {
         totalMatches: matchesData.length || 0,
         totalCompetitions: competitionsData.length || 0,
         totalChannels: channelsData.length || 0,
+        totalStadiums: stadiumsData.length || 0,
         activeConversations: whatsappData?.totalConversations || 0,
         totalAdmins: adminsCount || 0,
         usersWithFavoriteTeam: usersWithTeam || 0,
@@ -185,6 +195,7 @@ export default function Dashboard() {
         totalMatches: 0,
         totalCompetitions: 0,
         totalChannels: 0,
+        totalStadiums: 0,
         activeConversations: 0,
         totalAdmins: 0,
         usersWithFavoriteTeam: 0,
@@ -316,7 +327,7 @@ export default function Dashboard() {
             </div>
 
             {/* Cards secundários */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {/* Card Competições */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
@@ -356,6 +367,29 @@ export default function Dashboard() {
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
                       <span className="font-medium text-red-600 hover:text-red-500">
+                        Gerenciar →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
+
+              {/* Card Estádios */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setCurrentPage('Estádios')}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-teal-500 p-3">
+                    <BuildingOfficeIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Estádios</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalStadiums}</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-teal-600 hover:text-teal-500">
                         Gerenciar →
                       </span>
                     </div>
@@ -488,8 +522,6 @@ export default function Dashboard() {
         return <ChannelsManager />
       case 'Classificações':
         return <StandingsManager />
-      case 'Critérios de Desempate':
-        return <CompetitionTiebreakers />
       case 'Usuários':
         return <UsersManager />
       case 'Estatísticas de Usuários':
@@ -508,6 +540,8 @@ export default function Dashboard() {
         return <StatusContent />
       case 'Configurações':
         return <SystemSettings />
+      case 'Estádios':
+        return <StadiumsManager />
       default:
         return (
           <div className="space-y-8">
