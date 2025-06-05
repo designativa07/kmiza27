@@ -6,7 +6,7 @@
     "prebuild": "mkdir -p public && echo \"${GIT_COMMIT:-unknown}\" > public/commit.txt",
     "dev": "next dev --turbopack -p 3002",
     "build": "next build",
-    "build:win": "for /f \"tokens=*\" %i in ('powershell -Command \"Get-Date -UFormat '%%Y-%%m-%%dT%%H:%%M:%%SZ'\"') do set BUILD_TIMESTAMP=%i && for /f \"tokens=*\" %i in ('git rev-parse HEAD 2^>nul ^|^| echo unknown') do set GIT_COMMIT=%i && next build",
+    "build:win": "next build",
     "start": "next start",
     "lint": "next lint"
   },
