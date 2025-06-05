@@ -42,6 +42,8 @@ export class StandingsService {
     private matchRepository: Repository<Match>,
     @InjectRepository(Competition)
     private competitionRepository: Repository<Competition>,
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>,
   ) {}
 
   async getCompetitionStandings(competitionId: number, group?: string): Promise<StandingEntry[]> {
@@ -266,6 +268,16 @@ export class StandingsService {
   }
 
   async getHeadToHeadStats(competitionId: number, team1Id: number, team2Id: number): Promise<HeadToHeadStats> {
+    // Buscar os times primeiro, independente de terem jogado ou não
+    const [team1Entity, team2Entity] = await Promise.all([
+      this.teamRepository.findOne({ where: { id: team1Id } }),
+      this.teamRepository.findOne({ where: { id: team2Id } })
+    ]);
+
+    if (!team1Entity || !team2Entity) {
+      throw new Error('Um ou ambos os times não foram encontrados');
+    }
+
     const matches = await this.matchRepository.find({
       where: [
         {
@@ -284,9 +296,6 @@ export class StandingsService {
       relations: ['home_team', 'away_team', 'competition'],
       order: { match_date: 'DESC' }
     });
-
-    const team1 = matches[0]?.home_team.id === team1Id ? matches[0].home_team : matches[0]?.away_team;
-    const team2 = matches[0]?.home_team.id === team2Id ? matches[0].home_team : matches[0]?.away_team;
 
     let team1_wins = 0;
     let team2_wins = 0;
@@ -312,8 +321,8 @@ export class StandingsService {
     });
 
     return {
-      team1,
-      team2,
+      team1: team1Entity,
+      team2: team2Entity,
       total_matches: matches.length,
       team1_wins,
       team2_wins,
