@@ -45,6 +45,8 @@ RUN npm install --legacy-peer-deps --no-cache
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+ARG GIT_SHA
+
 # Copiar dependências e variáveis do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/build-vars.env ./build-vars.env
@@ -53,7 +55,7 @@ COPY --from=deps /tmp/repo/frontend ./
 
 # Quebrar cache se commit mudou
 RUN . ./build-vars.env && \
-    echo "🔄 Usando commit: $GIT_COMMIT ($GIT_SHORT)" && \
+    echo "🔄 Usando commit: $GIT_COMMIT ($GIT_SHA)" && \
     echo "⏰ Build timestamp: $BUILD_TIMESTAMP" && \
     echo "🔥 Cache buster: $CACHE_BUSTER"
 
@@ -61,15 +63,15 @@ RUN . ./build-vars.env && \
 RUN . ./build-vars.env && \
     export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
     export NODE_ENV=production && \
-    export NEXT_PUBLIC_BUILD_ID="$GIT_SHORT-$CACHE_BUSTER" && \
-    echo "🎨 Next.js Build with commit: $GIT_SHORT"
+    export NEXT_PUBLIC_BUILD_ID="$GIT_SHA-$CACHE_BUSTER" && \
+    echo "🎨 Next.js Build with commit: $GIT_SHA"
 
 # Build da aplicação Next.js com cache busting
 RUN . ./build-vars.env && \
     export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
     export NODE_ENV=production && \
-    export NEXT_PUBLIC_BUILD_ID="$GIT_SHORT-$CACHE_BUSTER" && \
-    echo "🏗️ Building frontend with commit: $GIT_SHORT" && \
+    export NEXT_PUBLIC_BUILD_ID="$GIT_SHA-$CACHE_BUSTER" && \
+    echo "🏗️ Building frontend with commit: $GIT_SHA" && \
     npm run build
 
 # Stage 3: Runner
@@ -93,12 +95,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/commit-cache-buster.txt ./commit-
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo '. /app/build-vars.env' >> /app/start.sh && \
     echo 'export GIT_COMMIT' >> /app/start.sh && \
-    echo 'export GIT_SHORT' >> /app/start.sh && \
+    echo 'export GIT_SHA' >> /app/start.sh && \
     echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
     echo 'export CACHE_BUSTER' >> /app/start.sh && \
     echo 'export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host' >> /app/start.sh && \
-    echo 'export NEXT_PUBLIC_BUILD_ID="$GIT_SHORT-$CACHE_BUSTER"' >> /app/start.sh && \
-    echo 'echo "🚀 Iniciando frontend com commit: $GIT_SHORT"' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_BUILD_ID="$GIT_SHA-$CACHE_BUSTER"' >> /app/start.sh && \
+    echo 'echo "🚀 Iniciando frontend com commit: $GIT_SHA"' >> /app/start.sh && \
     echo 'echo "⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
     echo 'echo "🔥 Cache: $CACHE_BUSTER"' >> /app/start.sh && \
     echo 'node server.js' >> /app/start.sh && \
