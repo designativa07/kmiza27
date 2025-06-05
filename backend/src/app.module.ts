@@ -36,6 +36,7 @@ import { StandingsModule } from './modules/standings/standings.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { BotConfigModule } from './modules/bot-config/bot-config.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { StadiumsModule } from './modules/stadiums/stadiums.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { AuthModule } from './modules/auth/auth.module';
     WhatsAppModule,
     BotConfigModule,
     AuthModule,
+    StadiumsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

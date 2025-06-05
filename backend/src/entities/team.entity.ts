@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { CompetitionTeam } from './competition-team.entity';
 import { Match } from './match.entity';
+import { Stadium } from './stadium.entity';
 
 @Entity('teams')
 export class Team {
@@ -22,8 +23,12 @@ export class Team {
   @Column({ type: 'text', nullable: true })
   logo_url: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  stadium: string;
+  @Column({ type: 'int', nullable: true })
+  stadium_id: number;
+
+  @ManyToOne(() => Stadium, stadium => stadium.id, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'stadium_id' })
+  stadium: Stadium;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   city: string;

@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
 
+interface Stadium {
+  id: number;
+  name: string;
+  city?: string;
+  state?: string;
+}
+
 interface Team {
   id: number
   name: string
@@ -13,7 +20,8 @@ interface Team {
   founded_year?: number
   city?: string
   state?: string
-  stadium?: string
+  stadium?: Stadium;
+  stadium_id?: number;
   created_at: string
 }
 
@@ -28,6 +36,8 @@ export default function TeamsManager() {
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [uploading, setUploading] = useState(false)
   const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload')
+  const [stadiums, setStadiums] = useState<Stadium[]>([])
+  const [selectedStadiumId, setSelectedStadiumId] = useState<string>('')
   
   // Estados do filtro
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,11 +53,13 @@ export default function TeamsManager() {
     city: '',
     state: '',
     founded_year: '',
-    logo_url: ''
+    logo_url: '',
+    stadium_id: ''
   })
 
   useEffect(() => {
     fetchTeams()
+    fetchStadiums()
   }, [])
 
   useEffect(() => {
@@ -57,6 +69,16 @@ export default function TeamsManager() {
   useEffect(() => {
     applyPagination()
   }, [filteredTeams, currentPage, itemsPerPage])
+
+  const fetchStadiums = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.stadiums.list());
+      const data = await response.json();
+      setStadiums(data);
+    } catch (error) {
+      console.error('Erro ao carregar estádios:', error);
+    }
+  };
 
   const applyFilters = () => {
     let filtered = [...teams]
@@ -226,31 +248,25 @@ export default function TeamsManager() {
       city: '',
       state: '',
       founded_year: '',
-      logo_url: ''
+      logo_url: '',
+      stadium_id: ''
     })
   }
 
   const handleEdit = (team: Team) => {
     setEditingTeam(team)
+    setShowModal(true)
+    setPreviewUrl(team.logo_url || '')
+    setLogoInputType(team.logo_url ? 'url' : 'upload')
     setFormData({
       name: team.name,
       short_name: team.short_name || '',
       city: team.city || '',
       state: team.state || '',
       founded_year: team.founded_year?.toString() || '',
-      logo_url: team.logo_url || ''
+      logo_url: team.logo_url || '',
+      stadium_id: team.stadium_id?.toString() || ''
     })
-    
-    if (team.logo_url) {
-      if (team.logo_url.startsWith('http') || team.logo_url.startsWith('https')) {
-        setLogoInputType('url')
-      } else {
-        setLogoInputType('upload')
-      }
-      setPreviewUrl(team.logo_url.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${team.logo_url}` : team.logo_url)
-    }
-    
-    setShowModal(true)
   }
 
   const handleDelete = async (id: number) => {
@@ -541,6 +557,9 @@ export default function TeamsManager() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fundação
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Estádio
+                    </th>
                     <th className="relative px-6 py-3">
                       <span className="sr-only">Ações</span>
                     </th>
@@ -575,6 +594,9 @@ export default function TeamsManager() {
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900">
                         {team.founded_year || '-'}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {team.stadium ? `${team.stadium.name} (${team.stadium.city || team.stadium.state || '-'})` : '-'}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
                         <button
@@ -656,6 +678,25 @@ export default function TeamsManager() {
                     onChange={(e) => setFormData({ ...formData, founded_year: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                   />
+                </div>
+                
+                {/* Campo Estádio */}
+                <div>
+                  <label htmlFor="stadium" className="block text-sm font-medium text-gray-900">Estádio</label>
+                  <select
+                    id="stadium"
+                    name="stadium_id"
+                    value={formData.stadium_id}
+                    onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-4 py-3"
+                  >
+                    <option value="">Selecione um estádio (Opcional)</option>
+                    {stadiums.map((stadium) => (
+                      <option key={stadium.id} value={stadium.id}>
+                        {stadium.name} {stadium.city ? `(${stadium.city})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
