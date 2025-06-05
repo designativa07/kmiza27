@@ -494,7 +494,7 @@ export default function StandingsManager() {
     }
   };
 
-  const renderCupMatches = () => (
+  const renderRoundMatches = () => (
     <div className="bg-white shadow rounded-lg p-6 w-full">
       <div className="flex items-center justify-between mb-4">
         <button
@@ -756,7 +756,18 @@ export default function StandingsManager() {
             {/* Content based on activeTab */}
             <div className="mt-8">
               {activeTab === 'standings' && (
-                isCupCompetition ? renderCupMatches() : renderLeagueStandings()
+                isCupCompetition ? renderRoundMatches() : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800 mb-4">Classificação</h2>
+                      {renderLeagueStandings()}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800 mb-4">Partidas da Rodada</h2>
+                      {renderRoundMatches()}
+                    </div>
+                  </div>
+                )
               )}
               {/* Estatísticas do Time */}
               {activeTab === 'stats' && (
