@@ -764,7 +764,7 @@ export default function StandingsManager() {
             <div className="mt-8">
               {activeTab === 'standings' && (
                 isCupCompetition ? renderRoundMatches() : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6">
                     <div>
                       <h2 className="text-xl font-bold text-gray-800 mb-4">Classificação</h2>
                       {renderLeagueStandings()}
