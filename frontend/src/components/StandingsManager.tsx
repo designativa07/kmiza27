@@ -548,52 +548,112 @@ export default function StandingsManager() {
               <div key={tieId}>
                 {index > 0 && <div className="border-t border-gray-300 my-3"></div>}
                 <div className="bg-gray-50 rounded-lg p-3">
-                <div className={`space-y-2 ${matchesInTie.length > 1 ? '' : ''}`}>
-                  {matchesInTie.map(match => (
-                    <div key={match.id} className="bg-white rounded-md p-3">
-                      {/* Data, Hora, Estádio */}
-                      <div className="text-center text-gray-600 text-xs mb-3">
-                        {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
-                        {match.stadium?.name && ` • ${match.stadium.name}`}
-                        {match.stadium?.name && match.stadium?.city && `, ${match.stadium.city}`}
+                {/* Renderização lado a lado para confrontos de ida e volta */}
+                {matchesInTie.length === 2 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {matchesInTie.map((match, matchIndex) => (
+                      <div key={match.id} className="bg-white rounded-md p-3 border-2 border-gray-100">
+                        {/* Título do Jogo (Ida/Volta) */}
+                        <div className="text-center text-xs font-semibold text-indigo-600 mb-2">
+                          {match.leg === 'first_leg' ? 'JOGO DE IDA' : 'JOGO DE VOLTA'}
+                        </div>
+                        
+                        {/* Data, Hora, Estádio */}
+                        <div className="text-center text-gray-600 text-xs mb-3">
+                          {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
+                          {match.stadium?.name && (
+                            <div className="mt-1">
+                              {match.stadium.name}
+                              {match.stadium?.city && `, ${match.stadium.city}`}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Layout: Mandante (escudo) (placar) X (placar) (escudo) Visitante */}
+                        <div className="flex items-center justify-center space-x-2">
+                          {/* Mandante */}
+                          <div className="flex items-center space-x-1 flex-1 justify-end">
+                            <span className="font-medium text-gray-800 text-xs truncate">{match.home_team.short_name}</span>
+                            <TeamLogo team={match.home_team} />
+                          </div>
+
+                          {/* Placar */}
+                          <div className="flex items-center space-x-1 px-2">
+                            <span className="text-lg font-bold text-gray-900">
+                              {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
+                            </span>
+                            <span className="text-gray-500 font-medium">X</span>
+                            <span className="text-lg font-bold text-gray-900">
+                              {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
+                            </span>
+                          </div>
+
+                          {/* Visitante */}
+                          <div className="flex items-center space-x-1 flex-1">
+                            <TeamLogo team={match.away_team} />
+                            <span className="font-medium text-gray-800 text-xs truncate">{match.away_team.short_name}</span>
+                          </div>
+                        </div>
+
+                        {/* Pênaltis (se houver) */}
+                        {match.home_score_penalties !== undefined && match.home_score_penalties !== null && 
+                         match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
+                          <div className="text-center text-xs text-gray-500 mt-2">
+                            Pênaltis: {match.home_score_penalties} x {match.away_score_penalties}
+                          </div>
+                        )}
                       </div>
-
-                      {/* Layout: Mandante (escudo) (placar) X (placar) (escudo) Visitante */}
-                      <div className="flex items-center justify-center space-x-3">
-                        {/* Mandante */}
-                        <div className="flex items-center space-x-2 flex-1 justify-end">
-                          <span className="font-medium text-gray-800 text-sm">{match.home_team.name}</span>
-                          <TeamLogo team={match.home_team} />
+                    ))}
+                  </div>
+                ) : (
+                  /* Para jogos únicos, manter layout original */
+                  <div className="space-y-2">
+                    {matchesInTie.map(match => (
+                      <div key={match.id} className="bg-white rounded-md p-3">
+                        {/* Data, Hora, Estádio */}
+                        <div className="text-center text-gray-600 text-xs mb-3">
+                          {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
+                          {match.stadium?.name && ` • ${match.stadium.name}`}
+                          {match.stadium?.name && match.stadium?.city && `, ${match.stadium.city}`}
                         </div>
 
-                        {/* Placar */}
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg font-bold text-gray-900">
-                            {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
-                          </span>
-                          <span className="text-gray-500 font-medium">X</span>
-                          <span className="text-lg font-bold text-gray-900">
-                            {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
-                          </span>
+                        {/* Layout: Mandante (escudo) (placar) X (placar) (escudo) Visitante */}
+                        <div className="flex items-center justify-center space-x-3">
+                          {/* Mandante */}
+                          <div className="flex items-center space-x-2 flex-1 justify-end">
+                            <span className="font-medium text-gray-800 text-sm">{match.home_team.name}</span>
+                            <TeamLogo team={match.home_team} />
+                          </div>
+
+                          {/* Placar */}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg font-bold text-gray-900">
+                              {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
+                            </span>
+                            <span className="text-gray-500 font-medium">X</span>
+                            <span className="text-lg font-bold text-gray-900">
+                              {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
+                            </span>
+                          </div>
+
+                          {/* Visitante */}
+                          <div className="flex items-center space-x-2 flex-1">
+                            <TeamLogo team={match.away_team} />
+                            <span className="font-medium text-gray-800 text-sm">{match.away_team.name}</span>
+                          </div>
                         </div>
 
-                        {/* Visitante */}
-                        <div className="flex items-center space-x-2 flex-1">
-                          <TeamLogo team={match.away_team} />
-                          <span className="font-medium text-gray-800 text-sm">{match.away_team.name}</span>
-                        </div>
+                        {/* Pênaltis (se houver) */}
+                        {match.home_score_penalties !== undefined && match.home_score_penalties !== null && 
+                         match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
+                          <div className="text-center text-xs text-gray-500 mt-2">
+                            Pênaltis: {match.home_score_penalties} x {match.away_score_penalties}
+                          </div>
+                        )}
                       </div>
-
-                      {/* Pênaltis (se houver) */}
-                      {match.home_score_penalties !== undefined && match.home_score_penalties !== null && 
-                       match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
-                        <div className="text-center text-xs text-gray-500 mt-2">
-                          Pênaltis: {match.home_score_penalties} x {match.away_score_penalties}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
                 
                 {(showQualifiedTeam || aggregateOutcomeText) && (
                   <div className="mt-2 text-center text-sm font-medium text-indigo-700">
