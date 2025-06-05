@@ -16,7 +16,7 @@ interface Match {
   home_team: Team;
   away_team: Team;
   competition: Competition;
-  stadium?: { id: number; name: string };
+  stadium?: { id: number; name: string; city?: string };
   match_date: string;
   status: string;
   home_score?: number;
@@ -559,33 +559,51 @@ export default function StandingsManager() {
                   <div className={`grid ${matchesInTie.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
                     {matchesInTie.map(match => (
                       <div key={match.id} className="flex flex-col items-center justify-between p-2 border rounded-md bg-white">
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex-1 flex items-center justify-start space-x-2">
-                                <TeamLogo team={match.home_team} />
-                                <span className="font-semibold text-gray-800 text-sm">{match.home_team.name}</span>
-                            </div>
-                            <div className="flex-shrink-0 text-center mx-2">
-                                <span className="text-lg font-bold text-gray-900">
-                                    {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
-                                </span>
-                                {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
-                                    <span className="text-xs text-gray-500 block">
-                                        ({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex-1 flex items-center justify-end space-x-2">
-                                <span className="font-semibold text-gray-800 text-sm">{match.away_team.name}</span>
-                                <TeamLogo team={match.away_team} />
-                            </div>
+                          {/* Data, Hora, Estádio */}
+                          <div className="text-center text-gray-600 text-xs mb-2">
+                              {formatMatchDate(match.match_date).date} • {formatMatchDate(match.match_date).time}
+                              {match.stadium?.name && ` • ${match.stadium.name}`}
+                              {match.stadium?.name && match.stadium?.city && `, ${match.stadium.city}`}
                           </div>
-                          <span className={`block text-xs mt-2 ${getMatchStatusColor(match.status)}`}>
-                              {match.status === 'finished' ? (
-                                match.leg === 'first_leg' ? 'Jogo de ida' : 
-                                match.leg === 'second_leg' ? 'Jogo de volta' : 
-                                'Jogo Único'
-                              ) : formatMatchDate(match.match_date).time}
-                          </span>
+
+                          {/* Layout de partida centralizado: Time da Casa vs Time Visitante com Placar */}
+                          <div className="flex items-center justify-center w-full">
+                              {/* Time da Casa */}
+                              <div className="flex flex-col items-center flex-1 space-y-1">
+                                  <span className="font-semibold text-gray-800 text-sm text-center">{match.home_team.name}</span>
+                                  <TeamLogo team={match.home_team} />
+                              </div>
+
+                              {/* Placar e Pênaltis */}
+                              <div className="flex flex-col items-center mx-2">
+                                  <span className="text-lg font-bold text-gray-900">
+                                      {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'} x {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
+                                  </span>
+                                  {match.home_score_penalties !== undefined && match.home_score_penalties !== null && match.away_score_penalties !== undefined && match.away_score_penalties !== null && (
+                                      <span className="text-xs text-gray-500">({match.home_score_penalties}x{match.away_score_penalties} Pênaltis)</span>
+                                  )}
+                              </div>
+
+                              {/* Time Visitante */}
+                              <div className="flex flex-col items-center flex-1 space-y-1">
+                                  <TeamLogo team={match.away_team} />
+                                  <span className="font-semibold text-gray-800 text-sm text-center">{match.away_team.name}</span>
+                              </div>
+                          </div>
+
+                          {/* Resultado da Partida / Informação da Mão */}
+                          {match.status === 'finished' ? (
+                            <div className="text-center text-sm font-medium text-indigo-700 mt-2">
+                              {match.leg === 'first_leg' ? 'Jogo de ida' :
+                               match.leg === 'second_leg' ? 'Jogo de volta' :
+                               getMatchOutcomeText(match) // Para jogos únicos finalizados (Empate, Time venceu)
+                              }
+                            </div>
+                          ) : (
+                            <div className="text-center text-sm text-gray-500 mt-2">
+                              {formatMatchDate(match.match_date).time}
+                            </div>
+                          )}
                       </div>
                     ))}
                   </div>

@@ -10,7 +10,13 @@ import {
   Bars3Icon,
   XMarkIcon,
   ChartBarIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  BuildingOfficeIcon,
+  TrophyIcon,
+  ShieldCheckIcon,
+  CalendarDaysIcon,
+  SignalIcon,
+  BellIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -24,6 +30,12 @@ const navigation = [
   { name: 'Estatísticas', href: '/stats', icon: ChartBarIcon },
   { name: 'Usuários', href: '/users', icon: UsersIcon },
   { name: 'Administradores', href: '/admins', icon: UserGroupIcon },
+  { name: 'Competições', href: '/competitions', icon: TrophyIcon },
+  { name: 'Times', href: '/teams', icon: ShieldCheckIcon },
+  { name: 'Partidas', href: '/matches', icon: CalendarDaysIcon },
+  { name: 'Canais', href: '/channels', icon: SignalIcon },
+  { name: 'Notificações', href: '/notifications', icon: BellIcon },
+  { name: 'Estádios', href: '/stadiums', icon: BuildingOfficeIcon },
   { name: 'Configurações', href: '/settings', icon: Cog6ToothIcon },
 ];
 

@@ -15,11 +15,16 @@ export class TeamsService {
   ) {}
 
   async findAll(): Promise<Team[]> {
-    return this.teamRepository.find();
+    return this.teamRepository.find({
+      relations: ['stadium'],
+    });
   }
 
   async findOne(id: number): Promise<Team | null> {
-    return this.teamRepository.findOne({ where: { id } });
+    return this.teamRepository.findOne({
+      where: { id },
+      relations: ['stadium'],
+    });
   }
 
   async findBySlug(slug: string): Promise<Team | null> {

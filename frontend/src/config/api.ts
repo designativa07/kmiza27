@@ -101,6 +101,12 @@ export const API_ENDPOINTS = {
     resetDefaults: () => apiUrl('bot-config/reset-defaults'),
   },
   
+  // Stadiums
+  stadiums: {
+    list: () => apiUrl('stadiums'),
+    byId: (id: number) => apiUrl(`stadiums/${id}`),
+  },
+  
   // Chatbot
   chatbot: {
     status: () => apiUrl('chatbot/status'),
