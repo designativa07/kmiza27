@@ -10,6 +10,7 @@ interface Team {
   name: string
   short_name: string
   logo_url?: string
+  stadium_id?: number
 }
 
 interface Competition {
@@ -153,7 +154,12 @@ function ChannelMultiSelect({
 }
 
 // Componente auxiliar para autocomplete de times
-function TeamAutocomplete({ teams, value, onChange, label }: { teams: Team[], value: string, onChange: (id: string) => void, label: string }) {
+function TeamAutocomplete({
+  teams,
+  value,
+  onChange,
+  label
+}: { teams: Team[], value: string, onChange: (id: string) => void, label: string }) {
   const [query, setQuery] = useState('')
   const filteredTeams = query === '' ? teams : teams.filter(team => team?.name?.toLowerCase().includes(query.toLowerCase()))
   const selectedTeam = teams.find(team => team.id.toString() === value)
@@ -245,6 +251,16 @@ export default function MatchesManager() {
     stadium_id: '',
   })
 
+  const fetchStadiums = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.stadiums.list())
+      const data = await response.json()
+      setStadiums(data)
+    } catch (error) {
+      console.error('Erro ao carregar estádios:', error)
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchData()
@@ -267,6 +283,20 @@ export default function MatchesManager() {
       fetchRoundsByCompetition(formData.competition_id)
     }
   }, [formData.competition_id])
+
+  // Auto-selecionar estádio quando o time da casa for selecionado
+  useEffect(() => {
+    if (formData.home_team_id && teams.length > 0) {
+      const selectedHomeTeam = teams.find(team => team.id.toString() === formData.home_team_id)
+      if (selectedHomeTeam && selectedHomeTeam.stadium_id !== undefined) {
+        const stadiumIdValue: number = selectedHomeTeam.stadium_id;
+        setFormData(prev => ({
+          ...prev,
+          stadium_id: stadiumIdValue.toString()
+        }))
+      }
+    }
+  }, [formData.home_team_id, teams])
 
   const fetchData = async () => {
     try {
@@ -293,6 +323,7 @@ export default function MatchesManager() {
         const channelsData = await channelsRes.json()
         setChannels(channelsData)
       }
+      fetchStadiums()
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
     } finally {
@@ -1473,7 +1504,9 @@ export default function MatchesManager() {
                     >
                       <option value="">Selecione o estádio</option>
                       {stadiums.map((stadium) => (
-                        <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                        <option key={stadium.id} value={stadium.id}>
+                          {stadium.name} ({stadium.city})
+                        </option>
                       ))}
                     </select>
                   </div>
