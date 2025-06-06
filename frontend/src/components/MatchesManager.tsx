@@ -10,7 +10,7 @@ interface Team {
   name: string
   short_name: string
   logo_url?: string
-  stadium_id?: number
+  stadium_id?: number | null
 }
 
 interface Competition {
@@ -167,11 +167,11 @@ function TeamAutocomplete({
   return (
     <div>
       <label className="block text-sm font-medium text-gray-900">{label}</label>
-      <Combobox value={selectedTeam} onChange={(team: Team) => onChange(team.id.toString())}>
+      <Combobox value={selectedTeam || null} onChange={(team: Team) => onChange(team.id.toString())}>
         <div className="relative mt-1">
           <Combobox.Input
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-            displayValue={(team: Team) => team?.name || ''}
+            displayValue={(team: Team | null) => team?.name || ''}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
             placeholder="Digite para buscar..."
           />
@@ -289,10 +289,9 @@ export default function MatchesManager() {
     if (formData.home_team_id && teams.length > 0) {
       const selectedHomeTeam = teams.find(team => team.id.toString() === formData.home_team_id)
       if (selectedHomeTeam && selectedHomeTeam.stadium_id !== undefined) {
-        const stadiumIdValue: number = selectedHomeTeam.stadium_id;
         setFormData(prev => ({
           ...prev,
-          stadium_id: stadiumIdValue.toString()
+          stadium_id: selectedHomeTeam.stadium_id?.toString() || ''
         }))
       }
     }
@@ -686,14 +685,14 @@ export default function MatchesManager() {
       status: match.status,
       broadcast_channels: processBroadcastChannels(match.broadcast_channels),
       channel_ids: match.channel_ids || [],
-      home_score: match.home_score,
-      away_score: match.away_score,
-      home_yellow_cards: (match as any).home_yellow_cards,
-      away_yellow_cards: (match as any).away_yellow_cards,
-      home_red_cards: (match as any).home_red_cards,
-      away_red_cards: (match as any).away_red_cards,
-      home_score_penalties: (match as any).home_score_penalties,
-      away_score_penalties: (match as any).away_score_penalties,
+      home_score: match.home_score ?? undefined,
+      away_score: match.away_score ?? undefined,
+      home_yellow_cards: (match as any).home_yellow_cards ?? undefined,
+      away_yellow_cards: (match as any).away_yellow_cards ?? undefined,
+      home_red_cards: (match as any).home_red_cards ?? undefined,
+      away_red_cards: (match as any).away_red_cards ?? undefined,
+      home_score_penalties: (match as any).home_score_penalties ?? undefined,
+      away_score_penalties: (match as any).away_score_penalties ?? undefined,
       leg: match.leg || '',
       tie_id: match.tie_id || '',
       match_date_second_leg: '',
@@ -1479,13 +1478,13 @@ export default function MatchesManager() {
                       <div>
                         <label className="block text-sm font-medium text-gray-900">Estádio da Volta</label>
                         <select
-                          value={formData.stadium_id_second_leg}
+                          value={(formData.stadium_id_second_leg ?? '') as string}
                           onChange={(e) => setFormData({ ...formData, stadium_id_second_leg: e.target.value })}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                         >
                           <option value="">Selecione o estádio</option>
                           {stadiums.map((stadium) => (
-                            <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                            stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id?.toString() || ''}>{stadium.name}</option>
                           ))}
                         </select>
                       </div>
@@ -1498,13 +1497,13 @@ export default function MatchesManager() {
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Estádio</label>
                     <select
-                      value={formData.stadium_id}
+                      value={(formData.stadium_id ?? '') as string}
                       onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                     >
                       <option value="">Selecione o estádio</option>
                       {stadiums.map((stadium) => (
-                        <option key={stadium.id} value={stadium.id}>
+                        stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id?.toString() || ''}>
                           {stadium.name} ({stadium.city})
                         </option>
                       ))}
