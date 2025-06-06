@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const axios = require('axios');
 
 // Configuração do banco PostgreSQL
 const pool = new Pool({
@@ -110,6 +111,17 @@ function extractCompetitionName(message) {
   return undefined;
 }
 
+// Nova função para buscar estádios da API
+async function fetchStadiumsFromApi() {
+  try {
+    const response = await axios.get('http://localhost:3000/stadiums'); // Assumindo que a API está rodando em localhost:3000
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar estádios da API:', error);
+    return [];
+  }
+}
+
 // Buscar próximo jogo
 async function findNextMatch(client, teamName) {
   try {
@@ -132,14 +144,13 @@ async function findNextMatch(client, teamName) {
         ht.name as home_team,
         at.name as away_team,
         m.match_date,
-        s.name as stadium,
+        m.stadium_id,
         r.name as round_name,
         m.broadcast_channels
       FROM matches m
       JOIN competitions c ON m.competition_id = c.id
       JOIN teams ht ON m.home_team_id = ht.id
       JOIN teams at ON m.away_team_id = at.id
-      LEFT JOIN stadiums s ON m.stadium_id = s.id
       LEFT JOIN rounds r ON m.round_id = r.id
       WHERE (m.home_team_id = $1 OR m.away_team_id = $1)
         AND m.status = 'scheduled'
@@ -165,6 +176,15 @@ async function findNextMatch(client, teamName) {
     const opponent = isHome ? match.away_team : match.home_team;
     const venue = isHome ? 'em casa' : 'fora de casa';
     
+    let stadiumName = 'A definir';
+    if (match.stadium_id) {
+      const stadiums = await fetchStadiumsFromApi();
+      const foundStadium = stadiums.find(s => s.id === match.stadium_id);
+      if (foundStadium) {
+        stadiumName = foundStadium.name;
+      }
+    }
+
     let broadcastInfo = '';
     if (match.broadcast_channels && Array.isArray(match.broadcast_channels)) {
       broadcastInfo = `\n📺 **Transmissão:** ${match.broadcast_channels.join(', ')}`;
@@ -176,7 +196,7 @@ async function findNextMatch(client, teamName) {
 ⏰ **Horário:** ${formattedTime}
 🏆 **Competição:** ${match.competition}
 🆚 **Adversário:** ${opponent}
-🏟️ **Estádio:** ${match.stadium || 'A definir'}
+🏟️ **Estádio:** ${stadiumName}
 📍 **Rodada:** ${match.round_name || 'A definir'}
 🏠 **Mando:** ${venue}${broadcastInfo}
 
@@ -309,98 +329,258 @@ async function getChannelInfo(client) {
   }
 }
 
-// Processar mensagem
-async function processMessage(message) {
-  const client = await pool.connect();
-  
+// Buscar último jogo
+async function findLastMatch(client, teamName) {
   try {
-    const analysis = analyzeMessage(message);
-    console.log(`🧠 Intenção: ${analysis.intent} (${(analysis.confidence * 100).toFixed(0)}%)`);
+    const teamResult = await client.query(`
+      SELECT id, name, short_name 
+      FROM teams 
+      WHERE LOWER(name) LIKE $1 OR LOWER(short_name) LIKE $1
+      LIMIT 1
+    `, [`%${teamName}%`]);
     
-    let response;
-    
-    switch (analysis.intent) {
-      case 'next_match':
-        response = await findNextMatch(client, analysis.team);
-        break;
-        
-      case 'table':
-        response = await getCompetitionTable(client, analysis.competition);
-        break;
-        
-      case 'channels_info':
-        response = await getChannelInfo(client);
-        break;
-        
-      default:
-        response = `👋 **Olá! Sou o Kmiza27 Bot** ⚽
-
-🤖 Posso te ajudar com informações sobre futebol:
-
-⚽ **Próximos jogos** - "Próximo jogo do Flamengo"
-🏁 **Último jogo** - "Último jogo do Palmeiras"
-ℹ️ **Info do time** - "Informações do Corinthians"  
-📊 **Tabelas** - "Tabela do Brasileirão"
-📍 **Posição** - "Posição do São Paulo"
-📈 **Estatísticas** - "Estatísticas do Santos"
-🥇 **Artilheiros** - "Artilheiros do Brasileirão"
-📅 **Jogos hoje** - "Jogos de hoje"
-📺 **Transmissão** - "Onde passa o jogo do Botafogo"
-📡 **Canais** - "Lista de canais"
-🗓️ **Jogos da semana** - "Jogos da semana"
-🏆 **Competições** - "Estatísticas da Libertadores"
-
-💬 **O que você gostaria de saber?**`;
+    if (teamResult.rows.length === 0) {
+      return `❌ Time "${teamName}" não encontrado.`;
     }
     
-    return response;
+    const team = teamResult.rows[0];
     
+    const matchResult = await client.query(`
+      SELECT 
+        c.name as competition,
+        ht.name as home_team,
+        at.name as away_team,
+        m.match_date,
+        m.home_team_goals,
+        m.away_team_goals,
+        m.stadium_id,
+        r.name as round_name
+      FROM matches m
+      JOIN competitions c ON m.competition_id = c.id
+      JOIN teams ht ON m.home_team_id = ht.id
+      JOIN teams at ON m.away_team_id = at.id
+      LEFT JOIN rounds r ON m.round_id = r.id
+      WHERE (m.home_team_id = $1 OR m.away_team_id = $1)
+        AND m.status = 'finished'
+        AND m.match_date < NOW()
+      ORDER BY m.match_date DESC
+      LIMIT 1
+    `, [team.id]);
+    
+    if (matchResult.rows.length === 0) {
+      return `😔 Não encontrei jogos anteriores para o ${team.name}.`;
+    }
+    
+    const match = matchResult.rows[0];
+    const date = new Date(match.match_date);
+    const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const formattedTime = date.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
+    });
+    
+    const isHome = match.home_team === team.name;
+    const opponent = isHome ? match.away_team : match.home_team;
+    const teamGoals = isHome ? match.home_team_goals : match.away_team_goals;
+    const opponentGoals = isHome ? match.away_team_goals : match.home_team_goals;
+
+    let stadiumName = 'A definir';
+    if (match.stadium_id) {
+      const stadiums = await fetchStadiumsFromApi();
+      const foundStadium = stadiums.find(s => s.id === match.stadium_id);
+      if (foundStadium) {
+        stadiumName = foundStadium.name;
+      }
+    }
+    
+    return `⚽ **ÚLTIMO JOGO DO ${team.name.toUpperCase()}** ⚽
+
+📅 **Data:** ${formattedDate}
+⏰ **Horário:** ${formattedTime}
+🏆 **Competição:** ${match.competition}
+🆚 **Placar:** ${team.name} ${teamGoals} x ${opponentGoals} ${opponent}
+🏟️ **Estádio:** ${stadiumName}
+📍 **Rodada:** ${match.round_name || 'A definir'}
+
+Relembrando o jogo! ⚽`;
+    
+  } catch (error) {
+    console.error('Erro ao buscar último jogo:', error);
+    return '❌ Erro ao buscar último jogo.';
+  }
+}
+
+// Buscar posição do time
+async function getTeamPosition(client, teamName) {
+  try {
+    const teamResult = await client.query(`
+      SELECT id, name, short_name 
+      FROM teams 
+      WHERE LOWER(name) LIKE $1 OR LOWER(short_name) LIKE $1
+      LIMIT 1
+    `, [`%${teamName}%`]);
+    
+    if (teamResult.rows.length === 0) {
+      return `❌ Time "${teamName}" não encontrado.`;
+    }
+    
+    const team = teamResult.rows[0];
+
+    const positionResult = await client.query(`
+      SELECT 
+        ct.position,
+        ct.points,
+        c.name as competition_name
+      FROM competition_teams ct
+      JOIN competitions c ON ct.competition_id = c.id
+      WHERE ct.team_id = $1
+      ORDER BY ct.position ASC
+      LIMIT 1
+    `, [team.id]);
+
+    if (positionResult.rows.length === 0) {
+      return `😔 Não encontrei a posição do ${team.name} em nenhuma competição.`;
+    }
+
+    const positionData = positionResult.rows[0];
+
+    return `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊
+
+Em ${positionData.competition_name}, o ${team.name} está na **${positionData.position}ª posição** com **${positionData.points} pontos**.`;
+
+  } catch (error) {
+    console.error('Erro ao buscar posição do time:', error);
+    return '❌ Erro ao buscar posição do time.';
+  }
+}
+
+// Buscar artilheiros
+async function getTopScorers(client, competitionName) {
+  try {
+    const competitionResult = await client.query(`
+      SELECT id, name 
+      FROM competitions 
+      WHERE LOWER(name) LIKE $1 
+      LIMIT 1
+    `, [`%${competitionName}%`]);
+    
+    if (competitionResult.rows.length === 0) {
+      return `❌ Competição "${competitionName}" não encontrada.`;
+    }
+    
+    const competition = competitionResult.rows[0];
+
+    const scorersResult = await client.query(`
+      SELECT 
+        p.name as player_name,
+        t.name as team_name,
+        gs.goals
+      FROM goal_scorers gs
+      JOIN players p ON gs.player_id = p.id
+      JOIN teams t ON p.current_team_id = t.id
+      WHERE gs.competition_id = $1
+      ORDER BY gs.goals DESC
+      LIMIT 5
+    `, [competition.id]);
+
+    if (scorersResult.rows.length === 0) {
+      return `⚽️ **ARTILHARIA - ${competition.name.toUpperCase()}** ⚽️
+
+😔 Ainda não há dados de artilharia disponíveis.`;
+    }
+
+    let response = `⚽️ **ARTILHARIA - ${competition.name.toUpperCase()}** ⚽️
+
+`;
+    scorersResult.rows.forEach((scorer, index) => {
+      response += `${index + 1}º - ${scorer.player_name} (${scorer.team_name}) - ${scorer.goals} gols
+`;
+    });
+
+    return response;
+
+  } catch (error) {
+    console.error('Erro ao buscar artilheiros:', error);
+    return '❌ Erro ao buscar artilheiros.';
+  }
+}
+
+// Processar mensagem
+async function processMessage(message) {
+  const intent = analyzeMessage(message);
+  console.log(`✨ Intenção detectada: ${intent.intent} (Confiança: ${intent.confidence})`);
+
+  const client = await pool.connect();
+  try {
+    switch (intent.intent) {
+      case 'next_match':
+        return await findNextMatch(client, intent.team);
+      case 'last_match':
+        return await findLastMatch(client, intent.team);
+      case 'team_position':
+        return await getTeamPosition(client, intent.team);
+      case 'team_statistics':
+        // Lógica para estatísticas do time (ainda não implementada)
+        return `📊 As estatísticas do time ${intent.team} ainda estão sendo compiladas! Em breve teremos novidades.`;
+      case 'competition_stats':
+        // Lógica para estatísticas da competição (ainda não implementada)
+        return `📊 As estatísticas da competição ${intent.competition} ainda estão sendo compiladas! Em breve teremos novidades.`;
+      case 'top_scorers':
+        return await getTopScorers(client, intent.competition);
+      case 'channels_info':
+        return await getChannelInfo(client);
+      case 'broadcast_info':
+        // Lógica para informações de transmissão (ainda não implementada)
+        return `📺 A informação de transmissão para o jogo do ${intent.team} está sendo verificada.`;
+      case 'matches_week':
+        // Lógica para jogos da semana (ainda não implementada)
+        return '📅 Os jogos da semana estão sendo atualizados! Fique ligado para não perder nenhum lance.';
+      case 'table':
+        return await getCompetitionTable(client, intent.competition);
+      case 'matches_today':
+        // Lógica para jogos de hoje (ainda não implementada)
+        return '📅 Os jogos de hoje estão sendo carregados! Aguarde para ver as partidas do dia.';
+      case 'greeting':
+        return '👋 Olá! Como posso ajudar você hoje?';
+      default:
+        return 'Desculpe, não entendi a sua pergunta. Poderia reformular?';
+    }
   } finally {
     client.release();
   }
 }
 
-// Executar testes
+// Função para testar as funcionalidades do bot
 async function runTests() {
-  console.log('🚀 TESTE DAS MELHORIAS DO KMIZA27 BOT 🚀\n');
-  console.log('=' .repeat(60));
+  console.log('\n--- Testando próximo jogo do Flamengo ---');
+  console.log(await processMessage('Qual o próximo jogo do Flamengo?'));
+
+  console.log('\n--- Testando último jogo do Palmeiras ---');
+  console.log(await processMessage('Resultado do último jogo do Palmeiras?'));
+
+  console.log('\n--- Testando posição do Corinthians ---');
+  console.log(await processMessage('Qual a posição do Corinthians na tabela?'));
+
+  console.log('\n--- Testando artilharia do Brasileirão ---');
+  console.log(await processMessage('Quem são os artilheiros do Brasileirão?'));
+
+  console.log('\n--- Testando canais de transmissão ---');
+  console.log(await processMessage('Onde posso assistir os jogos?'));
+
+  console.log('\n--- Testando tabela do Brasileirão ---');
+  console.log(await processMessage('Tabela do brasileirão'));
   
-  const testMessages = [
-    'Oi',
-    'Próximo jogo do Flamengo',
-    'Último jogo do Palmeiras',
-    'Posição do Corinthians',
-    'Estatísticas do São Paulo',
-    'Artilheiros do Brasileirão',
-    'Tabela do Brasileirão',
-    'Lista de canais',
-    'Onde passa o jogo do Santos',
-    'Jogos da semana',
-    'Jogos de hoje'
-  ];
-  
-  for (let i = 0; i < testMessages.length; i++) {
-    console.log(`\n🧪 TESTE ${i + 1}/${testMessages.length}`);
-    console.log('-' .repeat(40));
-    
-    try {
-      const response = await processMessage(testMessages[i]);
-      console.log(`📝 Mensagem: "${testMessages[i]}"`);
-      console.log(`🤖 Resposta:\n${response}\n`);
-    } catch (error) {
-      console.error(`❌ Erro no teste ${i + 1}:`, error.message);
-    }
-    
-    // Pausa entre testes
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  
-  console.log('✅ Testes concluídos!');
-  process.exit(0);
+  console.log('\n--- Testando jogos de hoje ---');
+  console.log(await processMessage('Jogos de hoje'));
+
+  console.log('\n--- Testando mensagem desconhecida ---');
+  console.log(await processMessage('Qual a previsão do tempo?'));
 }
 
-// Executar
-runTests().catch(error => {
-  console.error('❌ Erro geral:', error);
-  process.exit(1);
-}); 
+// Executar os testes
+// runTests();
+
+module.exports = {
+  processMessage
+}; 
