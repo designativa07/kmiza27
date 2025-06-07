@@ -158,7 +158,7 @@ export class ChatbotService {
         .getOne();
 
       if (!nextMatch) {
-        return `😔 Não encontrei jogos futuros agendados para o **${team.name}**.
+        return `😔 Não encontrei jogos futuros agendados para o ${team.name}.
 
 🔍 Verifique novamente em breve ou pergunte sobre outro time!`;
       }
@@ -172,11 +172,6 @@ export class ChatbotService {
         timeZone: 'America/Sao_Paulo' // Corrigido para horário de Brasília
       });
 
-      const isHome = nextMatch.home_team.id === team.id;
-      const venueHomePhrase = await this.botConfigService.getConfig('venue_home_phrase') || 'em casa';
-      const venueAwayPhrase = await this.botConfigService.getConfig('venue_away_phrase') || 'fora de casa';
-      const venue = isHome ? venueHomePhrase : venueAwayPhrase;
-
       // Buscar canais de transmissão da nova tabela match_broadcasts
       const broadcasts = await this.matchBroadcastRepository
         .createQueryBuilder('broadcast')
@@ -185,41 +180,28 @@ export class ChatbotService {
         .andWhere('channel.active = :active', { active: true })
         .getMany();
 
-      let broadcastInfo = '';
+      // Determinar transmissão
+      let transmissionText = 'A definir';
       if (broadcasts && broadcasts.length > 0) {
         const channelsList = broadcasts.map(broadcast => {
           const channel = broadcast.channel;
-          let channelText = channel.name;
-          
-          // Adicionar número do canal se disponível
-          if (channel.channel_number) {
-            channelText += ` (${channel.channel_number})`;
-          }
-          
-          // Adicionar link se disponível
-          if (channel.channel_link) {
-            channelText += `: ${channel.channel_link}`;
-          }
-          
-          return channelText;
-        }).join('\n- ');
-        broadcastInfo = `\n📺 **Transmissão:**\n- ${channelsList}`;
-      } else {
-        // Fallback para o campo broadcast_channels se não houver dados na nova tabela
-        if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels)) {
-          broadcastInfo = `\n📺 **Transmissão:** ${nextMatch.broadcast_channels.join(', ')}`;
-        }
+          return channel.name;
+        }).join(', ');
+        transmissionText = channelsList;
+      } else if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+        transmissionText = nextMatch.broadcast_channels.join(', ');
       }
 
-      return `⚽ **PRÓXIMO JOGO DO ${team.name.toUpperCase()}** ⚽
+      return `⚽ PRÓXIMO JOGO DO ${team.name.toUpperCase()} ⚽
+⚽ Jogo: *{nextMatch.home_team.name} x ${nextMatch.away_team.name}*
+📅 Data: ${formattedDate}
+⏰ Hora: ${formattedTime}
 
-📅 **Data:** ${formattedDate}
-⏰ **Horário:** ${formattedTime}
-🏆 **Competição:** ${nextMatch.competition.name}
-�� **Adversário:** ${nextMatch.away_team.name}
-🏟️ **Estádio:** ${nextMatch.stadium?.name || 'A definir'}
-📍 **Rodada:** ${nextMatch.round?.name || 'A definir'}
-🏠 **Mando:** ${venue}${broadcastInfo}
+🏆 Competição: ${nextMatch.competition.name}
+📅 Rodada: ${nextMatch.round?.name || 'A definir'}
+🏟️ Estádio: ${nextMatch.stadium?.name || 'A definir'}
+
+📺 Transmissão: ${transmissionText}
 
 Bora torcer! 🔥⚽`;
 
@@ -241,14 +223,14 @@ Bora torcer! 🔥⚽`;
         return `❌ Time "${teamName}" não encontrado.`;
       }
 
-      return `ℹ️ **INFORMAÇÕES DO ${team.name.toUpperCase()}** ℹ️
+      return `ℹ️ INFORMAÇÕES DO ${team.name.toUpperCase()} ℹ️
 
-📛 **Nome completo:** ${team.full_name}
-🏷️ **Sigla:** ${team.short_name}
-🏙️ **Cidade:** ${team.city}
-🗺️ **Estado:** ${team.state}
-🌍 **País:** ${team.country}
-📅 **Fundação:** ${team.founded_year}
+📛 Nome completo: ${team.full_name}
+🏷️ Sigla: ${team.short_name}
+🏙️ Cidade: ${team.city}
+🗺️ Estado: ${team.state}
+🌍 País: ${team.country}
+📅 Fundação: ${team.founded_year}
 
 ⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
 
@@ -277,14 +259,14 @@ Bora torcer! 🔥⚽`;
       const standings = await this.standingsService.getCompetitionStandings(competition.id);
 
       if (standings.length === 0) {
-        return `📊 **TABELA - ${competition.name.toUpperCase()}** 📊
+        return `📊 TABELA - ${competition.name.toUpperCase()} 📊
 
 😔 Ainda não há dados de classificação disponíveis para esta competição.
 
 ⚽ Quer saber sobre jogos ou outras informações?`;
       }
 
-      let response = `📊 **TABELA - ${competition.name.toUpperCase()}** 📊\n\n`;
+      let response = `📊 TABELA - ${competition.name.toUpperCase()} 📊\n\n`;
 
       // Mostrar TODOS os times, mas apenas com posição e pontuação
       standings.forEach((standing) => {
@@ -323,14 +305,14 @@ Bora torcer! 🔥⚽`;
         .getMany();
 
       if (todayMatches.length === 0) {
-        return `📅 **JOGOS DE HOJE** 📅
+        return `📅 JOGOS DE HOJE 📅
 
 😔 Não há jogos agendados para hoje.
 
 ⚽ Quer saber sobre o próximo jogo de algum time específico?`;
       }
 
-      let response = `📅 **JOGOS DE HOJE** 📅\n\n`;
+      let response = `📅 JOGOS DE HOJE 📅\n\n`;
 
       todayMatches.forEach(match => {
         const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -366,14 +348,14 @@ Bora torcer! 🔥⚽`;
         .getMany();
 
       if (weekMatches.length === 0) {
-        return `📅 **JOGOS DA SEMANA** 📅
+        return `📅 JOGOS DA SEMANA 📅
 
 😔 Não há jogos agendados para os próximos 7 dias.
 
 ⚽ Quer saber sobre algum time específico?`;
       }
 
-      let response = `📅 **JOGOS DA SEMANA** 📅\n\n`;
+      let response = `📅 JOGOS DA SEMANA 📅\n\n`;
 
       weekMatches.forEach(match => {
         const date = new Date(match.match_date);
@@ -408,12 +390,12 @@ Bora torcer! 🔥⚽`;
         return `❌ Competição "${competitionName}" não encontrada.`;
       }
 
-      return `🏆 **${competition.name.toUpperCase()}** 🏆
+      return `🏆 ${competition.name.toUpperCase()} 🏆
 
-📅 **Temporada:** ${competition.season}
-🌍 **País/Região:** ${competition.country}
-📋 **Tipo:** ${competition.type}
-✅ **Status:** ${competition.is_active ? 'Ativa' : 'Inativa'}
+📅 Temporada: ${competition.season}
+🌍 País/Região: ${competition.country}
+📋 Tipo: ${competition.type}
+✅ Status: ${competition.is_active ? 'Ativa' : 'Inativa'}
 
 ⚽ Quer saber sobre jogos desta competição?`;
 
@@ -444,15 +426,15 @@ Bora torcer! 🔥⚽`;
         .getMany();
 
       if (positions.length === 0) {
-        return `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊
+        return `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊
 
 😔 O time não está participando de competições ativas no momento.`;
       }
 
-      let response = `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊\n\n`;
+      let response = `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊\n\n`;
 
       positions.forEach(pos => {
-        response += `🏆 **${pos.competition.name}**\n`;
+        response += `🏆 ${pos.competition.name}\n`;
         response += `📍 ${pos.position}º lugar - ${pos.points} pontos\n`;
         response += `⚽ J:${pos.played} V:${pos.won} E:${pos.drawn} D:${pos.lost}\n`;
         response += `🥅 GP:${pos.goals_for} GC:${pos.goals_against} SG:${pos.goal_difference}\n\n`;
@@ -492,28 +474,33 @@ Bora torcer! 🔥⚽`;
         .getOne();
 
       if (!lastMatch) {
-        return `😔 Não encontrei jogos finalizados para o **${team.name}**.`;
+        return `😔 Não encontrei jogos finalizados para o ${team.name}.`;
       }
 
       const date = new Date(lastMatch.match_date);
       const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const formattedTime = date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+      });
 
-      const isHome = lastMatch.home_team.id === team.id;
-      const opponent = isHome ? lastMatch.away_team.name : lastMatch.home_team.name;
-      const teamScore = isHome ? lastMatch.home_score : lastMatch.away_score;
-      const opponentScore = isHome ? lastMatch.away_score : lastMatch.home_score;
+      const teamScore = lastMatch.home_score ?? 0;
+      const opponentScore = lastMatch.away_score ?? 0;
       
       const result = teamScore > opponentScore ? '✅ VITÓRIA' : 
                     teamScore < opponentScore ? '❌ DERROTA' : '🟡 EMPATE';
 
-      return `⚽ **ÚLTIMO JOGO DO ${team.name.toUpperCase()}** ⚽
+      return `⚽ ÚLTIMO JOGO DO ${team.name.toUpperCase()} ⚽
+${lastMatch.home_team.name} x ${lastMatch.away_team.name}
+📅 Data: ${formattedDate}
+⏰ Hora: ${formattedTime}
 
-📅 **Data:** ${formattedDate}
-🏆 **Competição:** ${lastMatch.competition.name}
-🆚 **Adversário:** ${opponent}
-📊 **Placar:** ${lastMatch.home_team.name} ${lastMatch.home_score} x ${lastMatch.away_score} ${lastMatch.away_team.name}
-🏟️ **Estádio:** ${lastMatch.stadium?.name || 'N/A'}
-📍 **Rodada:** ${lastMatch.round?.name || 'N/A'}
+🏆 Competição: ${lastMatch.competition.name}
+📍 Rodada: ${lastMatch.round?.name || 'A definir'}
+🏟️ Estádio: ${lastMatch.stadium?.name || 'A definir'}
+
+🆚 Placar: ${lastMatch.home_team.name} ${teamScore} x ${opponentScore} ${lastMatch.away_team.name}
 
 ${result}`;
 
@@ -549,12 +536,12 @@ ${result}`;
         .getMany();
 
       if (upcomingMatches.length === 0) {
-        return `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺
+        return `📺 TRANSMISSÕES DO ${team.name.toUpperCase()} 📺
 
 😔 Não há jogos futuros agendados.`;
       }
 
-      let response = `📺 **TRANSMISSÕES DO ${team.name.toUpperCase()}** 📺\n\n`;
+      let response = `📺 TRANSMISSÕES DO ${team.name.toUpperCase()} 📺\n\n`;
 
       for (const match of upcomingMatches) {
         const date = new Date(match.match_date);
@@ -618,24 +605,24 @@ ${result}`;
     }
     
     // Fallback para mensagem padrão se não conseguir buscar do banco
-    return `👋 **Olá! Sou o Kmiza27 Bot** ⚽
+    return `👋 Olá! Sou o Kmiza27 Bot ⚽
 
 🤖 Posso te ajudar com informações sobre futebol:
 
-⚽ **Próximos jogos** - "Próximo jogo do Flamengo"
-🏁 **Último jogo** - "Último jogo do Palmeiras"
-ℹ️ **Info do time** - "Informações do Corinthians"  
-📊 **Tabelas** - "Tabela do Brasileirão"
-📍 **Posição** - "Posição do São Paulo"
-📈 **Estatísticas** - "Estatísticas do Santos"
-🥇 **Artilheiros** - "Artilheiros do Brasileirão"
-📅 **Jogos hoje** - "Jogos de hoje"
-📺 **Transmissão** - "Onde passa o jogo do Botafogo"
-📡 **Canais** - "Lista de canais"
-🗓️ **Jogos da semana** - "Jogos da semana"
-🏆 **Competições** - "Estatísticas da Libertadores"
+⚽ *Próximos jogos* - "Próximo jogo do Flamengo"
+🏁 *Último jogo* - "Último jogo do Palmeiras"
+ℹ️ *Info do time* - "Informações do Corinthians"  
+📊 *Tabelas* - "Tabela do Brasileirão"
+📍 *Posição* - "Posição do São Paulo"
+📈 *Estatísticas* - "Estatísticas do Santos"
+🥇 *Artilheiros* - "Artilheiros do Brasileirão"
+📅 *Jogos hoje* - "Jogos de hoje"
+📺 *Transmissão* - "Onde passa o jogo do Botafogo"
+📡 *Canais* - "Lista de canais"
+🗓️ *Jogos da semana* - "Jogos da semana"
+🏆 *Competições* - "Estatísticas da Libertadores"
 
-💬 **O que você gostaria de saber?**`;
+💬 O que você gostaria de saber?`;
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {

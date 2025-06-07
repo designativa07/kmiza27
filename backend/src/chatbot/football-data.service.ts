@@ -50,7 +50,7 @@ export class FootballDataService {
         .getMany();
 
       if (recentMatches.length === 0) {
-        return `📊 **ESTATÍSTICAS DO ${team.name.toUpperCase()}** 📊
+        return `📊 ESTATÍSTICAS DO ${team.name.toUpperCase()} 📊
 
 😔 Não há dados de jogos finalizados para análise.`;
       }
@@ -82,24 +82,24 @@ export class FootballDataService {
       const avgGoalsFor = (goalsFor / recentMatches.length).toFixed(1);
       const avgGoalsAgainst = (goalsAgainst / recentMatches.length).toFixed(1);
 
-      return `📊 **ESTATÍSTICAS DO ${team.name.toUpperCase()}** 📊
+      return `📊 ESTATÍSTICAS DO ${team.name.toUpperCase()} 📊
 *Últimos ${recentMatches.length} jogos*
 
-🏆 **Desempenho Geral:**
+🏆 Desempenho Geral:
 ✅ Vitórias: ${wins} (${winPercentage}%)
 🟡 Empates: ${draws}
 ❌ Derrotas: ${losses}
 
-⚽ **Gols:**
+⚽ Gols:
 🥅 Marcados: ${goalsFor} (média: ${avgGoalsFor})
 🚫 Sofridos: ${goalsAgainst} (média: ${avgGoalsAgainst})
 📊 Saldo: ${goalsFor - goalsAgainst}
 
-🏠 **Mandante vs Visitante:**
+🏠 Mandante vs Visitante:
 🏠 Vitórias em casa: ${homeWins}
 ✈️ Vitórias fora: ${awayWins}
 
-💪 **Aproveitamento:** ${winPercentage}%`;
+💪 Aproveitamento: ${winPercentage}%`;
 
     } catch (error) {
       console.error('Erro ao buscar estatísticas do time:', error);
@@ -133,7 +133,7 @@ export class FootballDataService {
         .getMany();
 
       if (goals.length === 0) {
-        return `⚽ **ARTILHEIROS** ⚽
+        return `⚽ ARTILHEIROS ⚽
 
 😔 Não há dados de gols disponíveis.`;
       }
@@ -159,7 +159,7 @@ export class FootballDataService {
         .sort((a, b) => b.goals - a.goals)
         .slice(0, 10);
 
-      let response = `⚽ **ARTILHEIROS** ⚽`;
+      let response = `⚽ ARTILHEIROS ⚽`;
       if (competitionName) {
         response += ` - ${competitionName.toUpperCase()}`;
       }
@@ -189,12 +189,12 @@ export class FootballDataService {
         .getMany();
 
       if (channels.length === 0) {
-        return `📺 **CANAIS DE TRANSMISSÃO** 📺
+        return `📺 CANAIS DE TRANSMISSÃO 📺
 
 😔 Não há informações de canais disponíveis.`;
       }
 
-      let response = `📺 **CANAIS DE TRANSMISSÃO** 📺\n\n`;
+      let response = `📺 CANAIS DE TRANSMISSÃO 📺\n\n`;
 
       const channelsByType = new Map<string, Channel[]>();
       channels.forEach(channel => {
@@ -223,7 +223,7 @@ export class FootballDataService {
         const emoji = typeEmojis[type] || '📺';
         const typeName = typeNames[type] || type.toUpperCase();
         
-        response += `${emoji} **${typeName}:**\n`;
+        response += `${emoji} ${typeName}:\n`;
         
         channelList.forEach(channel => {
           response += `• ${channel.name}`;
@@ -280,23 +280,23 @@ export class FootballDataService {
         .where('ct.competition = :competitionId', { competitionId: competition.id })
         .getCount();
 
-      return `📊 **ESTATÍSTICAS - ${competition.name.toUpperCase()}** 📊
+      return `📊 ESTATÍSTICAS - ${competition.name.toUpperCase()} 📊
 
-🏆 **Informações Gerais:**
+🏆 Informações Gerais:
 📅 Temporada: ${competition.season}
 🌍 País: ${competition.country || 'Internacional'}
 👥 Times participantes: ${teamsCount}
 
-⚽ **Estatísticas de Jogos:**
+⚽ Estatísticas de Jogos:
 🎯 Total de partidas: ${totalMatches}
 ✅ Partidas finalizadas: ${finishedMatches}
 ⏳ Partidas restantes: ${totalMatches - finishedMatches}
 
-🥅 **Estatísticas de Gols:**
+🥅 Estatísticas de Gols:
 ⚽ Total de gols: ${totalGoals}
 📊 Média por jogo: ${avgGoalsPerMatch}
 
-📈 **Status:** ${competition.is_active ? 'Ativa' : 'Inativa'}`;
+📈 Status: ${competition.is_active ? 'Ativa' : 'Inativa'}`;
 
     } catch (error) {
       console.error('Erro ao buscar estatísticas da competição:', error);
