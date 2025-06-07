@@ -5,6 +5,7 @@ import { Round } from './round.entity';
 import { Stadium } from './stadium.entity';
 import { Goal } from './goal.entity';
 import { MatchBroadcast } from './match-broadcast.entity';
+import { Card } from './card.entity';
 
 export enum MatchStatus {
   SCHEDULED = 'scheduled',
@@ -127,6 +128,9 @@ export class Match {
 
   @OneToMany(() => MatchBroadcast, broadcast => broadcast.match)
   broadcasts: MatchBroadcast[];
+
+  @OneToMany(() => Card, card => card.match)
+  cards: Card[];
 
   // Propriedade virtual para armazenar os IDs dos canais
   channel_ids?: number[];

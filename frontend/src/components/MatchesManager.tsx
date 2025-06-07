@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, ChangeEvent } from 'react'
+import React, { useState, useEffect, ChangeEvent, useRef } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
 import { Combobox } from '@headlessui/react'
@@ -252,6 +252,8 @@ export default function MatchesManager() {
     stadium_id: '',
   })
 
+  const isInitialLoad = useRef(true);
+
   const fetchStadiums = async () => {
     try {
       const response = await fetch(API_ENDPOINTS.stadiums.list())
@@ -268,55 +270,60 @@ export default function MatchesManager() {
 
   useEffect(() => {
     if (matches.length > 0 && competitions.length > 0) {
-      console.log("Matches e Competitions carregados.")
+      if (isInitialLoad.current) {
+        console.log("Matches e Competitions carregados (primeira carga).")
 
-      const today = new Date();
-      const todayMatches = matches.filter(match => isToday(parseISO(match.match_date)))
+        const today = new Date();
+        const todayMatches = matches.filter(match => isToday(parseISO(match.match_date)))
 
-      let initialCompetitionId = '';
-      let initialRoundName = '';
+        let initialCompetitionId = '';
+        let initialRoundName = '';
 
-      if (todayMatches.length > 0) {
-        // Priorize jogos de hoje
-        const firstTodayMatch = todayMatches[0];
-        initialCompetitionId = firstTodayMatch.competition?.id?.toString() || '';
-        initialRoundName = firstTodayMatch.round?.name || firstTodayMatch.group_name || '';
-        console.log(`🎯 Encontrados jogos para hoje. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
-      } else {
-        // Se não houver jogos hoje, encontre a rodada mais recente com jogos
-        console.log("Nenhum jogo para hoje. Buscando rodada mais recente com jogos.")
-        let mostRecentMatch: Match | null = null;
+        if (todayMatches.length > 0) {
+          // Priorize jogos de hoje
+          const firstTodayMatch = todayMatches[0];
+          initialCompetitionId = firstTodayMatch.competition?.id?.toString() || '';
+          initialRoundName = firstTodayMatch.round?.name || firstTodayMatch.group_name || '';
+          console.log(`🎯 Encontrados jogos para hoje. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
+        } else {
+          // Se não houver jogos hoje, encontre a rodada mais recente com jogos
+          console.log("Nenhum jogo para hoje. Buscando rodada mais recente com jogos.")
+          let mostRecentMatch: Match | null = null;
 
-        for (const match of matches) {
-          const matchDate = parseISO(match.match_date);
-          if (isPast(matchDate) || isToday(matchDate)) { // Incluir partidas passadas e de hoje
-            if (!mostRecentMatch || matchDate > parseISO(mostRecentMatch.match_date)) {
-              mostRecentMatch = match;
+          for (const match of matches) {
+            const matchDate = parseISO(match.match_date);
+            if (isPast(matchDate) || isToday(matchDate)) { // Incluir partidas passadas e de hoje
+              if (!mostRecentMatch || parseISO(match.match_date) > parseISO(mostRecentMatch.match_date)) {
+                mostRecentMatch = match;
+              }
             }
+          }
+
+          if (mostRecentMatch) {
+            initialCompetitionId = mostRecentMatch.competition?.id?.toString() || '';
+            initialRoundName = mostRecentMatch.round?.name || mostRecentMatch.group_name || '';
+            console.log(`🗓️ Rodada mais recente encontrada. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
+          } else if (competitions.length > 0) {
+            // Se ainda não houver partidas, defina a primeira competição disponível
+            initialCompetitionId = competitions[0].id.toString();
+            console.log(`❌ Nenhuma partida encontrada. Selecionando primeira competição: ${initialCompetitionId}`)
           }
         }
 
-        if (mostRecentMatch) {
-          initialCompetitionId = mostRecentMatch.competition?.id?.toString() || '';
-          initialRoundName = mostRecentMatch.round?.name || mostRecentMatch.group_name || '';
-          console.log(`🗓️ Rodada mais recente encontrada. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
-        } else if (competitions.length > 0) {
-          // Se ainda não houver partidas, defina a primeira competição disponível
-          initialCompetitionId = competitions[0].id.toString();
-          console.log(`❌ Nenhuma partida encontrada. Selecionando primeira competição: ${initialCompetitionId}`)
+        // Atualiza os filtros e força o fetch das rodadas para a competição selecionada
+        if (initialCompetitionId || initialRoundName) {
+          setFilters(prev => ({
+            ...prev,
+            competition: initialCompetitionId,
+            round: initialRoundName
+          }));
+          if (initialCompetitionId) {
+            fetchRoundsByCompetition(initialCompetitionId);
+          }
         }
-      }
-
-      // Atualiza os filtros e força o fetch das rodadas para a competição selecionada
-      if (initialCompetitionId || initialRoundName) {
-        setFilters(prev => ({
-          ...prev,
-          competition: initialCompetitionId,
-          round: initialRoundName
-        }));
-        if (initialCompetitionId) {
-          fetchRoundsByCompetition(initialCompetitionId);
-        }
+        isInitialLoad.current = false; // Marca que a carga inicial foi feita
+      } else {
+        console.log("Matches e Competitions recarregados. Preservando filtros existentes.");
       }
     } else {
       console.log("Aguardando Matches e Competitions carregarem...");
@@ -325,7 +332,7 @@ export default function MatchesManager() {
 
   useEffect(() => {
     applyFilters()
-  }, [filters, matches]) // Garante que filtros sejam aplicados quando o estado `filters` ou `matches` muda
+  }, [filters, matches])
 
   useEffect(() => {
     applyPagination()
@@ -471,6 +478,7 @@ export default function MatchesManager() {
       phase: '',
       status: ''
     })
+    isInitialLoad.current = true; // Resetar para que a auto-seleção ocorra no próximo carregamento
   }
 
   const getUniqueRounds = () => {

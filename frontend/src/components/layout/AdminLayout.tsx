@@ -30,6 +30,7 @@ const navigation = [
   { name: 'Estatísticas', href: '/stats', icon: ChartBarIcon },
   { name: 'Usuários', href: '/users', icon: UsersIcon },
   { name: 'Administradores', href: '/admins', icon: UserGroupIcon },
+  { name: 'Jogadores', href: '/players', icon: UsersIcon },
   { name: 'Competições', href: '/competitions', icon: TrophyIcon },
   { name: 'Times', href: '/teams', icon: ShieldCheckIcon },
   { name: 'Partidas', href: '/matches', icon: CalendarDaysIcon },

@@ -113,6 +113,12 @@ export const API_ENDPOINTS = {
     status: () => apiUrl('chatbot/status'),
     testMessage: () => apiUrl('chatbot/test-message'),
   },
+
+  // Players
+  players: {
+    list: () => apiUrl('players'),
+    byId: (id: number) => apiUrl(`players/${id}`),
+  },
 };
 
 // Helper para URLs de imagens
