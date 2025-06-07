@@ -63,6 +63,10 @@ export class ChatbotService {
           response = await this.findNextMatch(analysis.team ?? '');
           break;
 
+        case 'current_match':
+          response = await this.getCurrentMatch(analysis.team ?? '');
+          break;
+
         case 'team_info':
           response = await this.getTeamInfo(analysis.team ?? '');
           break;
@@ -143,7 +147,45 @@ export class ChatbotService {
 🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, Santos, Botafogo, etc.`;
       }
 
-      // Buscar próximo jogo com informações de transmissão
+      // Primeiro, verificar se há jogo em andamento (LIVE)
+      const liveMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: 'live' })
+        .getOne();
+
+      if (liveMatch) {
+        // Jogo em andamento - retornar informações do jogo ao vivo
+        const date = new Date(liveMatch.match_date);
+        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const formattedTime = date.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo'
+        });
+
+        const homeScore = liveMatch.home_score ?? 0;
+        const awayScore = liveMatch.away_score ?? 0;
+
+        return `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
+⚽ *${liveMatch.home_team.name} ${homeScore} x ${awayScore} ${liveMatch.away_team.name}*
+📅 Data: ${formattedDate}
+⏰ Início: ${formattedTime}
+
+🏆 Competição: ${liveMatch.competition.name}
+📅 ${liveMatch.round?.name || 'A definir'}
+🏟️ Estádio: ${liveMatch.stadium?.name || 'A definir'}
+
+🔴 JOGO EM ANDAMENTO!
+⚽ Acompanhe o placar ao vivo!`;
+      }
+
+      // Se não há jogo ao vivo, buscar próximo jogo agendado
       const nextMatch = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
@@ -316,7 +358,26 @@ Bora torcer! 🔥⚽`;
 
       todayMatches.forEach(match => {
         const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        response += `⏰ ${time} - ${match.competition.name}\n`;
+        
+        // Determinar emoji e status baseado no status do jogo
+        let statusEmoji = '⏰';
+        let statusText = '';
+        
+        if (match.status === 'live') {
+          statusEmoji = '🔴';
+          statusText = ` - AO VIVO ${match.home_score ?? 0}x${match.away_score ?? 0}`;
+        } else if (match.status === 'finished') {
+          statusEmoji = '✅';
+          statusText = ` - FINALIZADO ${match.home_score ?? 0}x${match.away_score ?? 0}`;
+        } else if (match.status === 'postponed') {
+          statusEmoji = '⏸️';
+          statusText = ' - ADIADO';
+        } else if (match.status === 'cancelled') {
+          statusEmoji = '❌';
+          statusText = ' - CANCELADO';
+        }
+        
+        response += `${statusEmoji} ${time} - ${match.competition.name}${statusText}\n`;
         response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n`;
         response += `🏟️ ${match.stadium?.name || 'A definir'}\n\n`;
       });
@@ -610,6 +671,7 @@ ${result}`;
 🤖 Posso te ajudar com informações sobre futebol:
 
 ⚽ *Próximos jogos* - "Próximo jogo do Flamengo"
+🔴 *Jogos ao vivo* - "Jogo atual do Avaí" ou "Avaí está jogando?"
 🏁 *Último jogo* - "Último jogo do Palmeiras"
 ℹ️ *Info do time* - "Informações do Corinthians"  
 📊 *Tabelas* - "Tabela do Brasileirão"
@@ -1025,6 +1087,93 @@ ${result}`;
     } catch (error) {
       console.error('Erro ao verificar auto_response_enabled:', error);
       return true; // Default: habilitado
+    }
+  }
+
+  private async getCurrentMatch(teamName: string): Promise<string> {
+    try {
+      if (!teamName) {
+        return '❌ Por favor, especifique o nome do time. Ex: "Jogo atual do Avaí"';
+      }
+
+      // Buscar o time no banco
+      const team = await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .getOne();
+
+      if (!team) {
+        return `❌ Time "${teamName}" não encontrado. 
+
+🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, Santos, Botafogo, etc.`;
+      }
+
+      // Buscar jogo em andamento
+      const currentMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: 'live' })
+        .getOne();
+
+      if (!currentMatch) {
+        return `😔 O ${team.name} não está jogando no momento.
+
+⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
+      }
+
+      const date = new Date(currentMatch.match_date);
+      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const formattedTime = date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+      });
+
+      const homeScore = currentMatch.home_score ?? 0;
+      const awayScore = currentMatch.away_score ?? 0;
+
+      // Buscar canais de transmissão
+      const broadcasts = await this.matchBroadcastRepository
+        .createQueryBuilder('broadcast')
+        .leftJoinAndSelect('broadcast.channel', 'channel')
+        .where('broadcast.match_id = :matchId', { matchId: currentMatch.id })
+        .andWhere('channel.active = :active', { active: true })
+        .getMany();
+
+      let transmissionText = 'A definir';
+      if (broadcasts && broadcasts.length > 0) {
+        const channelsList = broadcasts.map(broadcast => {
+          const channel = broadcast.channel;
+          return channel.name;
+        }).join(', ');
+        transmissionText = channelsList;
+      } else if (currentMatch.broadcast_channels && Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
+        transmissionText = currentMatch.broadcast_channels.join(', ');
+      }
+
+      return `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
+⚽ *${currentMatch.home_team.name} ${homeScore} x ${awayScore} ${currentMatch.away_team.name}*
+📅 Data: ${formattedDate}
+⏰ Início: ${formattedTime}
+
+🏆 Competição: ${currentMatch.competition.name}
+📅 ${currentMatch.round?.name || 'A definir'}
+🏟️ Estádio: ${currentMatch.stadium?.name || 'A definir'}
+
+📺 Transmissão: ${transmissionText}
+
+🔴 JOGO EM ANDAMENTO!
+⚽ Acompanhe o placar ao vivo!`;
+
+    } catch (error) {
+      console.error('Erro ao buscar jogo atual:', error);
+      return '❌ Erro ao buscar informações do jogo atual. Tente novamente.';
     }
   }
 } 
