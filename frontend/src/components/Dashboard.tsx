@@ -88,6 +88,7 @@ const navigation = [
 export default function Dashboard() {
   const { user, logout, isAuthenticated } = useAuth()
   const [currentPage, setCurrentPage] = useState('Dashboard')
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
@@ -109,6 +110,27 @@ export default function Dashboard() {
       return
     }
   }, [isAuthenticated])
+
+  // Função para fazer logout
+  const handleLogout = () => {
+    logout()
+    window.location.href = '/login'
+  }
+
+  // Fechar menu do usuário quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('#user-menu-button') && !target.closest('#user-menu')) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   useEffect(() => {
     // Carregar estatísticas do backend
@@ -544,28 +566,80 @@ export default function Dashboard() {
               <div className="relative">
                 <button
                   type="button"
-                  className="-m-1.5 flex items-center p-1.5"
-                  id="user-menu-button" aria-expanded="false" aria-haspopup="true"
+                  className="-m-1.5 flex items-center p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                  id="user-menu-button" 
+                  aria-expanded={showUserMenu} 
+                  aria-haspopup="true"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
                 >
                   <span className="sr-only">Abrir menu do usuário</span>
                   <img
                     className="h-8 w-8 rounded-full bg-gray-50"
                     src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                    alt=""
+                    alt="Foto do usuário"
                   />
                   <span className="hidden lg:flex lg:items-center">
-                    <span className="ml-4 text-sm font-semibold leading-6 text-gray-900 dark:text-white" aria-hidden="true">{user?.name || user?.username}</span>
-                    <ChevronDownIcon className="ml-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <span className="ml-4 text-sm font-semibold leading-6 text-gray-900 dark:text-white" aria-hidden="true">
+                      {user?.name || user?.username || 'Usuário'}
+                    </span>
+                    <ChevronDownIcon 
+                      className={`ml-2 h-5 w-5 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} 
+                      aria-hidden="true" 
+                    />
                   </span>
                 </button>
 
-                {/* Dropdown menu, show/hide based on menu state. */}
-                {/*
-                <div className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabIndex={-1}>
-                  <a href="#" className="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabIndex={-1} id="user-menu-item-0">Your profile</a>
-                  <a href="#" className="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabIndex={-1} id="user-menu-item-1">Sign out</a>
-                </div>
-                */}
+                {/* Dropdown menu */}
+                {showUserMenu && (
+                  <div 
+                    id="user-menu"
+                    className="absolute right-0 z-50 mt-2.5 w-48 origin-top-right rounded-md bg-white dark:bg-slate-800 py-2 shadow-lg ring-1 ring-gray-900/5 dark:ring-slate-700 focus:outline-none" 
+                    role="menu" 
+                    aria-orientation="vertical" 
+                    aria-labelledby="user-menu-button"
+                  >
+                    <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-600">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {user?.name || user?.username || 'Usuário'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {user?.email || 'Administrador'}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false)
+                        setCurrentPage('Configurações')
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      role="menuitem"
+                    >
+                      ⚙️ Configurações
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false)
+                        setCurrentPage('Administradores')
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      role="menuitem"
+                    >
+                      👥 Gerenciar Admins
+                    </button>
+                    
+                    <div className="border-t border-gray-200 dark:border-slate-600 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        role="menuitem"
+                      >
+                        🚪 Sair
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
