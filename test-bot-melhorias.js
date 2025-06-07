@@ -56,15 +56,15 @@ function analyzeMessage(message) {
     return { intent: 'top_scorers', competition, confidence: 0.85 };
   }
 
-  // Detectar canais
+  // Detectar canais - MELHORADO
   if (lowerMessage.includes('canais') || lowerMessage.includes('lista') ||
-      lowerMessage.includes('onde assistir')) {
-    return { intent: 'channels_info', confidence: 0.80 };
+      lowerMessage.includes('onde assistir') || lowerMessage.includes('assistir') ||
+      lowerMessage.includes('transmissão') || lowerMessage.includes('transmissao')) {
+    return { intent: 'channels_info', confidence: 0.90 };
   }
 
-  // Detectar transmissão
-  if (lowerMessage.includes('onde passa') || lowerMessage.includes('transmissão') ||
-      lowerMessage.includes('transmissao')) {
+  // Detectar transmissão específica
+  if (lowerMessage.includes('onde passa')) {
     const team = extractTeamName(lowerMessage);
     return { intent: 'broadcast_info', team, confidence: 0.90 };
   }
@@ -114,17 +114,60 @@ function extractCompetitionName(message) {
 // Nova função para buscar estádios da API
 async function fetchStadiumsFromApi() {
   try {
-    const response = await axios.get('http://localhost:3000/stadiums'); // Assumindo que a API está rodando em localhost:3000
+    console.log('🔍 Buscando estádios da API...');
+    const response = await axios.get('http://localhost:3000/stadiums');
+    console.log('✅ Dados da API de estádios recebidos:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
-    console.error('Erro ao buscar estádios da API:', error);
-    return [];
+    console.error('❌ Erro ao buscar estádios da API:', error.message);
+    // Fallback: buscar diretamente do banco se a API falhar
+    console.log('🔄 Tentando buscar estádios diretamente do banco...');
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT id, name FROM stadiums ORDER BY name');
+      client.release();
+      console.log('✅ Estádios do banco:', JSON.stringify(result.rows, null, 2));
+      return result.rows;
+    } catch (dbError) {
+      console.error('❌ Erro ao buscar estádios do banco:', dbError.message);
+      return [];
+    }
+  }
+}
+
+// Função para buscar estádio por ID
+async function getStadiumById(stadiumId) {
+  if (!stadiumId) {
+    console.log('⚠️ ID do estádio não fornecido');
+    return null;
+  }
+  
+  console.log(`🔍 Buscando estádio com ID: ${stadiumId}`);
+  const stadiums = await fetchStadiumsFromApi();
+  
+  // Tentar encontrar por ID exato
+  let foundStadium = stadiums.find(s => s.id === stadiumId);
+  
+  // Se não encontrar, tentar conversão de tipos
+  if (!foundStadium) {
+    foundStadium = stadiums.find(s => parseInt(s.id) === parseInt(stadiumId));
+  }
+  
+  if (foundStadium) {
+    console.log(`✅ Estádio encontrado: ${foundStadium.name}`);
+    return foundStadium;
+  } else {
+    console.log(`❌ Estádio com ID ${stadiumId} não encontrado`);
+    console.log('📋 IDs disponíveis:', stadiums.map(s => `${s.id}: ${s.name}`));
+    return null;
   }
 }
 
 // Buscar próximo jogo
 async function findNextMatch(client, teamName) {
   try {
+    console.log(`🔍 Buscando próximo jogo para: ${teamName}`);
+    
     const teamResult = await client.query(`
       SELECT id, name, short_name 
       FROM teams 
@@ -137,6 +180,7 @@ async function findNextMatch(client, teamName) {
     }
     
     const team = teamResult.rows[0];
+    console.log(`✅ Time encontrado: ${team.name} (ID: ${team.id})`);
     
     const matchResult = await client.query(`
       SELECT 
@@ -164,6 +208,8 @@ async function findNextMatch(client, teamName) {
     }
     
     const match = matchResult.rows[0];
+    console.log(`✅ Próximo jogo encontrado:`, JSON.stringify(match, null, 2));
+    
     const date = new Date(match.match_date);
     const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const formattedTime = date.toLocaleTimeString('pt-BR', { 
@@ -172,38 +218,25 @@ async function findNextMatch(client, teamName) {
       timeZone: 'America/Sao_Paulo'
     });
     
-    const isHome = match.home_team === team.name;
-    const opponent = isHome ? match.away_team : match.home_team;
-    const venue = isHome ? 'em casa' : 'fora de casa';
-    
     let stadiumName = 'A definir';
     if (match.stadium_id) {
-      const stadiums = await fetchStadiumsFromApi();
-      const foundStadium = stadiums.find(s => s.id === match.stadium_id);
+      const foundStadium = await getStadiumById(match.stadium_id);
       if (foundStadium) {
         stadiumName = foundStadium.name;
       }
     }
 
     let broadcastInfo = '';
-    if (match.broadcast_channels && Array.isArray(match.broadcast_channels)) {
-      broadcastInfo = `\n📺 **Transmissão:** ${match.broadcast_channels.join(', ')}`;
+    if (match.broadcast_channels && Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
+      broadcastInfo = match.broadcast_channels.join(', ');
+    } else {
+      broadcastInfo = 'A definir';
     }
     
-    return `⚽ **PRÓXIMO JOGO DO ${team.name.toUpperCase()}** ⚽
-
-📅 **Data:** ${formattedDate}
-⏰ **Horário:** ${formattedTime}
-🏆 **Competição:** ${match.competition}
-🆚 **Adversário:** ${opponent}
-🏟️ **Estádio:** ${stadiumName}
-📍 **Rodada:** ${match.round_name || 'A definir'}
-🏠 **Mando:** ${venue}${broadcastInfo}
-
-Bora torcer! 🔥⚽`;
+    return `⚽ PRÓXIMO JOGO DO ${team.name.toUpperCase()} ⚽\n${match.home_team} x ${match.away_team}\n📅 Data: ${formattedDate}\n⏰ Hora: ${formattedTime}\n\n🏆 Competição: ${match.competition}\n📍 Rodada: ${match.round_name || 'A definir'}\n🏟️ Estádio: ${stadiumName}\n\n📺 Transmissão: ${broadcastInfo}\n\nBora torcer! 🔥⚽`;
     
   } catch (error) {
-    console.error('Erro ao buscar próximo jogo:', error);
+    console.error('❌ Erro ao buscar próximo jogo:', error);
     return '❌ Erro ao buscar próximo jogo.';
   }
 }
@@ -211,18 +244,32 @@ Bora torcer! 🔥⚽`;
 // Buscar tabela de classificação
 async function getCompetitionTable(client, competitionName) {
   try {
+    console.log(`🔍 Buscando tabela para competição: ${competitionName}`);
+    
+    // Melhorar a busca de competições
+    let searchTerm = competitionName;
+    if (competitionName === 'brasileirao') {
+      searchTerm = 'brasileirão';
+    }
+    
     const competitionResult = await client.query(`
       SELECT id, name 
       FROM competitions 
-      WHERE LOWER(name) LIKE $1 
+      WHERE LOWER(name) LIKE $1 OR LOWER(name) LIKE $2
       LIMIT 1
-    `, [`%${competitionName}%`]);
+    `, [`%${searchTerm}%`, `%${competitionName}%`]);
+    
+    console.log(`🔍 Resultado da busca de competição:`, competitionResult.rows);
     
     if (competitionResult.rows.length === 0) {
-      return `❌ Competição "${competitionName}" não encontrada.`;
+      // Listar competições disponíveis para debug
+      const allCompetitions = await client.query('SELECT name FROM competitions ORDER BY name');
+      console.log('📋 Competições disponíveis:', allCompetitions.rows.map(c => c.name));
+      return `❌ Competição "${competitionName}" não encontrada.\n\n📋 Competições disponíveis: ${allCompetitions.rows.map(c => c.name).join(', ')}`;
     }
     
     const competition = competitionResult.rows[0];
+    console.log(`✅ Competição encontrada: ${competition.name} (ID: ${competition.id})`);
     
     const standingsResult = await client.query(`
       SELECT 
@@ -237,30 +284,37 @@ async function getCompetitionTable(client, competitionName) {
       FROM competition_teams ct
       JOIN teams t ON ct.team_id = t.id
       WHERE ct.competition_id = $1
-      ORDER BY ct.points DESC, ct.goal_difference DESC, ct.goals_for DESC
+      ORDER BY ct.position ASC, ct.points DESC, ct.goal_difference DESC
       LIMIT 10
     `, [competition.id]);
     
+    console.log(`📊 Dados da tabela encontrados: ${standingsResult.rows.length} times`);
+    
     if (standingsResult.rows.length === 0) {
-      return `📊 **TABELA - ${competition.name.toUpperCase()}** 📊
-
-😔 Ainda não há dados de classificação disponíveis.`;
+      return `📊 TABELA - ${competition.name.toUpperCase()} 📊\n\n😔 Ainda não há dados de classificação disponíveis.`;
     }
     
-    let response = `📊 **TABELA - ${competition.name.toUpperCase()}** 📊\n\n`;
+    let response = `📊 TABELA - ${competition.name.toUpperCase()} 📊\n\n`;
     
     standingsResult.rows.forEach((standing, index) => {
-      const position = index + 1;
+      const position = standing.position || (index + 1);
+      const points = standing.points || 0;
+      const played = standing.played || 0;
+      const won = standing.won || 0;
+      const drawn = standing.drawn || 0;
+      const lost = standing.lost || 0;
+      const goalDiff = standing.goal_difference || 0;
+      
       const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
       
-      response += `${emoji} ${standing.team_name} - ${standing.points} pts\n`;
-      response += `   J:${standing.played} V:${standing.won} E:${standing.drawn} D:${standing.lost} SG:${standing.goal_difference}\n\n`;
+      response += `${emoji} ${standing.team_name} - ${points} pts\n`;
+      response += `   J:${played} V:${won} E:${drawn} D:${lost} SG:${goalDiff}\n\n`;
     });
     
     return response;
     
   } catch (error) {
-    console.error('Erro ao buscar tabela:', error);
+    console.error('❌ Erro ao buscar tabela:', error);
     return '❌ Erro ao buscar tabela da competição.';
   }
 }
@@ -268,70 +322,67 @@ async function getCompetitionTable(client, competitionName) {
 // Buscar canais de transmissão
 async function getChannelInfo(client) {
   try {
-    const channelsResult = await client.query(`
-      SELECT name, channel_number, type
-      FROM channels
-      WHERE active = true
-      ORDER BY type, name
+    console.log('🔍 Buscando informações de canais...');
+    
+    // Primeiro, verificar quais colunas existem na tabela channels
+    const columnsResult = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'channels'
+      ORDER BY ordinal_position
     `);
     
-    if (channelsResult.rows.length === 0) {
-      return `📺 **CANAIS DE TRANSMISSÃO** 📺
+    console.log('📋 Colunas disponíveis na tabela channels:', columnsResult.rows.map(r => r.column_name));
+    
+    // Buscar usando as colunas que existem
+    const channelsResult = await client.query(`
+      SELECT name, channel_link, type, channel_number
+      FROM channels
+      WHERE active = true
+      ORDER BY name ASC
+    `);
 
-😔 Não há informações de canais disponíveis.`;
+    console.log(`📺 Canais encontrados: ${channelsResult.rows.length}`);
+
+    if (channelsResult.rows.length === 0) {
+      return '😔 Não encontrei informações sobre canais de transmissão.';
     }
-    
-    let response = `📺 **CANAIS DE TRANSMISSÃO** 📺\n\n`;
-    
-    const channelsByType = {};
+
+    let response = `📺 CANAIS DE TRANSMISSÃO 📺\n\n`;
     channelsResult.rows.forEach(channel => {
-      if (!channelsByType[channel.type]) {
-        channelsByType[channel.type] = [];
+      response += `* *${channel.name}*`;
+      
+      if (channel.type) {
+        response += ` (${channel.type})`;
       }
-      channelsByType[channel.type].push(channel);
-    });
-    
-    const typeEmojis = {
-      'tv': '📺',
-      'cable': '📡',
-      'streaming': '💻',
-      'other': '📱'
-    };
-    
-    const typeNames = {
-      'tv': 'TV Aberta',
-      'cable': 'TV por Assinatura',
-      'streaming': 'Streaming',
-      'other': 'Outros'
-    };
-    
-    Object.keys(channelsByType).forEach(type => {
-      const emoji = typeEmojis[type] || '📺';
-      const typeName = typeNames[type] || type.toUpperCase();
       
-      response += `${emoji} **${typeName}:**\n`;
+      if (channel.channel_number) {
+        response += ` - Canal ${channel.channel_number}`;
+      }
       
-      channelsByType[type].forEach(channel => {
-        response += `• ${channel.name}`;
-        if (channel.channel_number) {
-          response += ` (${channel.channel_number})`;
-        }
-        response += `\n`;
-      });
+      response += `\n`;
+      
+      if (channel.channel_link) {
+        response += `  🔗 ${channel.channel_link}\n`;
+      }
       response += `\n`;
     });
     
     return response;
-    
+
   } catch (error) {
-    console.error('Erro ao buscar canais:', error);
-    return '❌ Erro ao buscar informações de canais.';
+    console.error('❌ Erro ao buscar informações de canais:', error.message);
+    
+    // Fallback: retornar informação genérica
+    return `📺 CANAIS DE TRANSMISSÃO 📺\n\n🔧 Status: Sistema de canais ainda está sendo configurado.\n\n📋 Canais populares:\n* *Globo* - TV aberta\n* *SporTV* - TV por assinatura\n* *Premiere* - Pay-per-view\n* *Amazon Prime Video* - Streaming\n* *Paramount+* - Streaming\n\n💡 Dica: Verifique a programação de cada canal para confirmar as transmissões.`;
   }
 }
 
 // Buscar último jogo
 async function findLastMatch(client, teamName) {
   try {
+    console.log(`🔍 Buscando último jogo para: ${teamName}`);
+    
     const teamResult = await client.query(`
       SELECT id, name, short_name 
       FROM teams 
@@ -344,6 +395,7 @@ async function findLastMatch(client, teamName) {
     }
     
     const team = teamResult.rows[0];
+    console.log(`✅ Time encontrado: ${team.name} (ID: ${team.id})`);
     
     const matchResult = await client.query(`
       SELECT 
@@ -351,8 +403,6 @@ async function findLastMatch(client, teamName) {
         ht.name as home_team,
         at.name as away_team,
         m.match_date,
-        m.home_team_goals,
-        m.away_team_goals,
         m.stadium_id,
         r.name as round_name
       FROM matches m
@@ -372,6 +422,8 @@ async function findLastMatch(client, teamName) {
     }
     
     const match = matchResult.rows[0];
+    console.log(`✅ Último jogo encontrado:`, JSON.stringify(match, null, 2));
+    
     const date = new Date(match.match_date);
     const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const formattedTime = date.toLocaleTimeString('pt-BR', { 
@@ -379,34 +431,19 @@ async function findLastMatch(client, teamName) {
       minute: '2-digit',
       timeZone: 'America/Sao_Paulo'
     });
-    
-    const isHome = match.home_team === team.name;
-    const opponent = isHome ? match.away_team : match.home_team;
-    const teamGoals = isHome ? match.home_team_goals : match.away_team_goals;
-    const opponentGoals = isHome ? match.away_team_goals : match.home_team_goals;
 
     let stadiumName = 'A definir';
     if (match.stadium_id) {
-      const stadiums = await fetchStadiumsFromApi();
-      const foundStadium = stadiums.find(s => s.id === match.stadium_id);
+      const foundStadium = await getStadiumById(match.stadium_id);
       if (foundStadium) {
         stadiumName = foundStadium.name;
       }
     }
     
-    return `⚽ **ÚLTIMO JOGO DO ${team.name.toUpperCase()}** ⚽
-
-📅 **Data:** ${formattedDate}
-⏰ **Horário:** ${formattedTime}
-🏆 **Competição:** ${match.competition}
-🆚 **Placar:** ${team.name} ${teamGoals} x ${opponentGoals} ${opponent}
-🏟️ **Estádio:** ${stadiumName}
-📍 **Rodada:** ${match.round_name || 'A definir'}
-
-Relembrando o jogo! ⚽`;
+    return `⚽ ÚLTIMO JOGO DO ${team.name.toUpperCase()} ⚽\n${match.home_team} x ${match.away_team}\n📅 Data: ${formattedDate}\n⏰ Hora: ${formattedTime}\n\n🏆 Competição: ${match.competition}\n📍 Rodada: ${match.round_name || 'A definir'}\n🏟️ Estádio: ${stadiumName}\n\n🆚 Placar: A definir\n\nRelembrando o jogo! ⚽`;
     
   } catch (error) {
-    console.error('Erro ao buscar último jogo:', error);
+    console.error('❌ Erro ao buscar último jogo:', error);
     return '❌ Erro ao buscar último jogo.';
   }
 }
@@ -414,6 +451,8 @@ Relembrando o jogo! ⚽`;
 // Buscar posição do time
 async function getTeamPosition(client, teamName) {
   try {
+    console.log(`🔍 Buscando posição para: ${teamName}`);
+    
     const teamResult = await client.query(`
       SELECT id, name, short_name 
       FROM teams 
@@ -426,6 +465,7 @@ async function getTeamPosition(client, teamName) {
     }
     
     const team = teamResult.rows[0];
+    console.log(`✅ Time encontrado: ${team.name} (ID: ${team.id})`);
 
     const positionResult = await client.query(`
       SELECT 
@@ -439,18 +479,21 @@ async function getTeamPosition(client, teamName) {
       LIMIT 1
     `, [team.id]);
 
+    console.log(`📊 Dados de posição encontrados:`, positionResult.rows);
+
     if (positionResult.rows.length === 0) {
       return `😔 Não encontrei a posição do ${team.name} em nenhuma competição.`;
     }
 
     const positionData = positionResult.rows[0];
+    const position = positionData.position || 'N/A';
+    const points = positionData.points || 0;
+    const competitionName = positionData.competition_name || 'Competição não identificada';
 
-    return `📊 **POSIÇÃO DO ${team.name.toUpperCase()}** 📊
-
-Em ${positionData.competition_name}, o ${team.name} está na **${positionData.position}ª posição** com **${positionData.points} pontos**.`;
+    return `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊\n\nEm ${competitionName}, o ${team.name} está na *${position}ª posição* com *${points} pontos*.`;
 
   } catch (error) {
-    console.error('Erro ao buscar posição do time:', error);
+    console.error('❌ Erro ao buscar posição do time:', error);
     return '❌ Erro ao buscar posição do time.';
   }
 }
@@ -458,50 +501,89 @@ Em ${positionData.competition_name}, o ${team.name} está na **${positionData.po
 // Buscar artilheiros
 async function getTopScorers(client, competitionName) {
   try {
+    console.log(`🔍 Buscando artilheiros para: ${competitionName}`);
+    
+    // Melhorar a busca de competições
+    let searchTerm = competitionName;
+    if (competitionName === 'brasileirao') {
+      searchTerm = 'brasileirão';
+    }
+    
     const competitionResult = await client.query(`
       SELECT id, name 
       FROM competitions 
-      WHERE LOWER(name) LIKE $1 
+      WHERE LOWER(name) LIKE $1 OR LOWER(name) LIKE $2
       LIMIT 1
-    `, [`%${competitionName}%`]);
+    `, [`%${searchTerm}%`, `%${competitionName}%`]);
+    
+    console.log(`🔍 Resultado da busca de competição:`, competitionResult.rows);
     
     if (competitionResult.rows.length === 0) {
-      return `❌ Competição "${competitionName}" não encontrada.`;
+      // Listar competições disponíveis para debug
+      const allCompetitions = await client.query('SELECT name FROM competitions ORDER BY name');
+      console.log('📋 Competições disponíveis:', allCompetitions.rows.map(c => c.name));
+      return `❌ Competição "${competitionName}" não encontrada.\n\n📋 Competições disponíveis: ${allCompetitions.rows.map(c => c.name).join(', ')}`;
     }
     
     const competition = competitionResult.rows[0];
+    console.log(`✅ Competição encontrada: ${competition.name} (ID: ${competition.id})`);
 
-    const scorersResult = await client.query(`
-      SELECT 
-        p.name as player_name,
-        t.name as team_name,
-        gs.goals
-      FROM goal_scorers gs
-      JOIN players p ON gs.player_id = p.id
-      JOIN teams t ON p.current_team_id = t.id
-      WHERE gs.competition_id = $1
-      ORDER BY gs.goals DESC
-      LIMIT 5
-    `, [competition.id]);
+    // Verificar se a tabela goal_scorers existe
+    try {
+      const scorersResult = await client.query(`
+        SELECT 
+          p.name as player_name,
+          t.name as team_name,
+          gs.goals
+        FROM goal_scorers gs
+        JOIN players p ON gs.player_id = p.id
+        JOIN teams t ON p.current_team_id = t.id
+        WHERE gs.competition_id = $1
+        ORDER BY gs.goals DESC
+        LIMIT 5
+      `, [competition.id]);
 
-    if (scorersResult.rows.length === 0) {
-      return `⚽️ **ARTILHARIA - ${competition.name.toUpperCase()}** ⚽️
+      console.log(`⚽ Artilheiros encontrados: ${scorersResult.rows.length}`);
 
-😔 Ainda não há dados de artilharia disponíveis.`;
+      if (scorersResult.rows.length === 0) {
+        return `⚽️ ARTILHARIA - ${competition.name.toUpperCase()} ⚽️\n\n😔 Ainda não há dados de artilharia disponíveis.`;
+      }
+
+      let response = `⚽️ ARTILHARIA - ${competition.name.toUpperCase()} ⚽️\n\n`;
+      scorersResult.rows.forEach((scorer, index) => {
+        response += `${index + 1}º - ${scorer.player_name} (${scorer.team_name}) - ${scorer.goals} gols\n`;
+      });
+
+      return response;
+      
+    } catch (tableError) {
+      console.log('⚠️ Tabela goal_scorers não existe, tentando alternativa...');
+      
+      // Alternativa: buscar dados de gols das partidas (se existir)
+      try {
+        const alternativeResult = await client.query(`
+          SELECT table_name
+          FROM information_schema.tables 
+          WHERE table_name IN ('match_events', 'goals', 'player_stats')
+          ORDER BY table_name
+        `);
+        
+        console.log('📋 Tabelas de estatísticas disponíveis:', alternativeResult.rows.map(r => r.table_name));
+        
+        if (alternativeResult.rows.length === 0) {
+          return `⚽️ ARTILHARIA - ${competition.name.toUpperCase()} ⚽️\n\n😔 Sistema de artilharia ainda não foi implementado no banco de dados.\n\n🔧 Status: Aguardando criação das tabelas de estatísticas de jogadores.\n\n📋 Tabelas necessárias:\n* goal_scorers\n* match_events\n* player_stats`;
+        } else {
+          return `⚽️ ARTILHARIA - ${competition.name.toUpperCase()} ⚽️\n\n🔧 Sistema de artilharia em desenvolvimento.\n\n📋 Tabelas encontradas: ${alternativeResult.rows.map(r => r.table_name).join(', ')}\n\n💡 Em breve: Dados de artilheiros estarão disponíveis!`;
+        }
+        
+      } catch (altError) {
+        console.error('❌ Erro ao verificar tabelas alternativas:', altError.message);
+        return `⚽️ ARTILHARIA - ${competition.name.toUpperCase()} ⚽️\n\n😔 Sistema de artilharia ainda não foi implementado no banco de dados.\n\n🔧 Status: Aguardando criação das tabelas de estatísticas de jogadores.`;
+      }
     }
 
-    let response = `⚽️ **ARTILHARIA - ${competition.name.toUpperCase()}** ⚽️
-
-`;
-    scorersResult.rows.forEach((scorer, index) => {
-      response += `${index + 1}º - ${scorer.player_name} (${scorer.team_name}) - ${scorer.goals} gols
-`;
-    });
-
-    return response;
-
   } catch (error) {
-    console.error('Erro ao buscar artilheiros:', error);
+    console.error('❌ Erro ao buscar artilheiros:', error.message);
     return '❌ Erro ao buscar artilheiros.';
   }
 }
@@ -579,7 +661,7 @@ async function runTests() {
 }
 
 // Executar os testes
-// runTests();
+runTests();
 
 module.exports = {
   processMessage
