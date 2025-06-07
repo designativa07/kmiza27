@@ -1,0 +1,82 @@
+# 🚀 Configuração de Auto-Deploy para VPS
+# Este arquivo pode ser usado pelo sistema de auto-deploy da sua VPS
+
+name: Auto Deploy Kmiza Bot
+
+# Configurações do deploy
+deploy:
+  # Forçar rebuild sempre
+  force_rebuild: true
+  
+  # Limpar cache antes do build
+  clear_cache: true
+  
+  # Comandos de pre-deploy
+  pre_deploy:
+    - echo "🔥 Iniciando auto-deploy com cache busting..."
+    - export CACHEBUST=$(date +%s)
+    - export BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    - export GITHUB_SHA=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    - echo "Cache buster: $CACHEBUST"
+    - echo "Build timestamp: $BUILD_TIMESTAMP"
+    - echo "GitHub SHA: $GITHUB_SHA"
+
+  # Comandos de build
+  build:
+    - docker-compose down --remove-orphans || true
+    - docker system prune -f || true
+    - docker image prune -a -f || true
+    - docker-compose build --no-cache --pull --parallel
+    
+  # Comandos de deploy
+  deploy:
+    - docker-compose up -d
+    - sleep 30
+    
+  # Comandos de post-deploy
+  post_deploy:
+    - echo "🔍 Verificando status dos serviços..."
+    - docker-compose ps
+    - echo "📊 Verificando logs..."
+    - docker-compose logs --tail=5 backend
+    - docker-compose logs --tail=5 frontend
+    - echo "🏥 Testando health checks..."
+    - curl -f http://localhost:3000/health || echo "Backend health check failed"
+    - curl -f http://localhost:3002/api/health || echo "Frontend health check failed"
+    - echo "✅ Auto-deploy concluído!"
+
+# Variáveis de ambiente para o build
+environment:
+  NODE_ENV: production
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+# Configurações específicas do Docker
+docker:
+  # Sempre usar --no-cache
+  no_cache: true
+  
+  # Sempre fazer pull das imagens base
+  pull: true
+  
+  # Build em paralelo
+  parallel: true
+  
+  # Remover containers órfãos
+  remove_orphans: true
+
+# Configurações de timeout
+timeouts:
+  build: 600  # 10 minutos
+  deploy: 300 # 5 minutos
+  health_check: 60 # 1 minuto
+
+# Configurações de retry
+retry:
+  max_attempts: 3
+  delay: 30 # segundos
+
+# Notificações (opcional)
+notifications:
+  on_success: "✅ Deploy realizado com sucesso! Commit: ${GITHUB_SHA}"
+  on_failure: "❌ Falha no deploy! Verifique os logs." 

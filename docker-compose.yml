@@ -5,6 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      args:
+        - CACHEBUST=${CACHEBUST:-$(date +%s)}
+        - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+        - GITHUB_SHA=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
+      no_cache: true
     ports:
       - "3000:3000"
     environment:
@@ -18,19 +23,41 @@ services:
       - uploads_data:/app/uploads  # Volume persistente para uploads
     networks:
       - kmiza-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - CACHEBUST=${CACHEBUST:-$(date +%s)}
+        - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+        - GITHUB_SHA=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
+      no_cache: true
     ports:
       - "3002:3002"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NODE_ENV=production
+      - PORT=3002
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
     depends_on:
       - backend
     networks:
       - kmiza-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   postgres:
     image: postgres:15-alpine
@@ -75,4 +102,6 @@ volumes:
 
 networks:
   kmiza-network:
+    driver: bridge
+  default:
     driver: bridge 
