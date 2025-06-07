@@ -12,13 +12,14 @@ ARG CACHEBUST
 ARG BUILD_TIMESTAMP
 ARG GITHUB_SHA
 
-# Definir variáveis de cache busting
-ENV CACHE_BUSTER=${CACHEBUST:-$(date +%s)}
-ENV BUILD_TS=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
-ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
+# Definir variáveis de cache busting usando RUN
+RUN echo "CACHE_BUSTER=${CACHEBUST:-$(date +%s)}" > /app/build-vars.env && \
+    echo "BUILD_TS=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" >> /app/build-vars.env && \
+    echo "GIT_COMMIT=${GITHUB_SHA:-unknown}" >> /app/build-vars.env
 
 # Log das variáveis de build
-RUN echo "🔥 CACHE BUSTER: $CACHE_BUSTER" && \
+RUN . /app/build-vars.env && \
+    echo "🔥 CACHE BUSTER: $CACHE_BUSTER" && \
     echo "⏰ BUILD TIME: $BUILD_TS" && \
     echo "🐙 GIT COMMIT: $GIT_COMMIT" && \
     echo "Build: $CACHE_BUSTER - Timestamp: $BUILD_TS - $(date)" > /app/build-info.txt
@@ -38,6 +39,7 @@ WORKDIR /app
 # Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/build-info.txt ./build-info.txt
+COPY --from=deps /app/build-vars.env ./build-vars.env
 
 # Copiar código fonte do contexto local
 COPY backend/ ./
@@ -49,12 +51,13 @@ ARG GITHUB_SHA
 
 # Configurar variáveis de ambiente para build
 ENV NODE_ENV=production
-ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
-ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
-ENV CACHE_BUSTER=${CACHEBUST:-$(date +%s)}
 
-# Log das variáveis de build
-RUN echo "🏗️ Building backend with:" && \
+# Carregar e usar variáveis de build
+RUN . ./build-vars.env && \
+    export BUILD_TIMESTAMP="${BUILD_TIMESTAMP:-$BUILD_TS}" && \
+    export GIT_COMMIT="${GITHUB_SHA:-$GIT_COMMIT}" && \
+    export CACHE_BUSTER="${CACHEBUST:-$CACHE_BUSTER}" && \
+    echo "🏗️ Building backend with:" && \
     echo "  🐙 Commit: $GIT_COMMIT" && \
     echo "  ⏰ Timestamp: $BUILD_TIMESTAMP" && \
     echo "  🔥 Cache: $CACHE_BUSTER"
@@ -81,23 +84,19 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/build-vars.env ./build-vars.env
 
 # Receber argumentos de build para runtime
 ARG CACHEBUST
 ARG BUILD_TIMESTAMP
 ARG GITHUB_SHA
 
-# Criar arquivo com variáveis de ambiente
-RUN echo "export NODE_ENV=production" > /app/runtime-env.sh && \
-    echo "export PORT=3000" >> /app/runtime-env.sh && \
-    echo "export BUILD_TIMESTAMP=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime-env.sh && \
-    echo "export GIT_COMMIT=\"${GITHUB_SHA:-unknown}\"" >> /app/runtime-env.sh && \
-    echo "export CACHE_BUSTER=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime-env.sh && \
-    chmod +x /app/runtime-env.sh
-
-# Criar script de inicialização
+# Criar script de inicialização que carrega as variáveis
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo '. /app/runtime-env.sh' >> /app/start.sh && \
+    echo '. /app/build-vars.env' >> /app/start.sh && \
+    echo 'export BUILD_TIMESTAMP="${BUILD_TIMESTAMP:-$BUILD_TS}"' >> /app/start.sh && \
+    echo 'export GIT_COMMIT="${GITHUB_SHA:-$GIT_COMMIT}"' >> /app/start.sh && \
+    echo 'export CACHE_BUSTER="${CACHEBUST:-$CACHE_BUSTER}"' >> /app/start.sh && \
     echo 'echo "🚀 Iniciando backend..."' >> /app/start.sh && \
     echo 'echo "  🐙 Commit: $GIT_COMMIT"' >> /app/start.sh && \
     echo 'echo "  ⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
