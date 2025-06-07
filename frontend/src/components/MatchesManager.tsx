@@ -4,6 +4,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, imageUrl } from '../config/api'
 import { Combobox } from '@headlessui/react'
+import { format, isToday, parseISO, isPast } from 'date-fns'
 
 interface Team {
   id: number
@@ -262,16 +263,69 @@ export default function MatchesManager() {
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData()
-    }, 2000)
-    
-    return () => clearTimeout(timer)
+    fetchData()
   }, [])
 
   useEffect(() => {
+    if (matches.length > 0 && competitions.length > 0) {
+      console.log("Matches e Competitions carregados.")
+
+      const today = new Date();
+      const todayMatches = matches.filter(match => isToday(parseISO(match.match_date)))
+
+      let initialCompetitionId = '';
+      let initialRoundName = '';
+
+      if (todayMatches.length > 0) {
+        // Priorize jogos de hoje
+        const firstTodayMatch = todayMatches[0];
+        initialCompetitionId = firstTodayMatch.competition?.id?.toString() || '';
+        initialRoundName = firstTodayMatch.round?.name || firstTodayMatch.group_name || '';
+        console.log(`🎯 Encontrados jogos para hoje. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
+      } else {
+        // Se não houver jogos hoje, encontre a rodada mais recente com jogos
+        console.log("Nenhum jogo para hoje. Buscando rodada mais recente com jogos.")
+        let mostRecentMatch: Match | null = null;
+
+        for (const match of matches) {
+          const matchDate = parseISO(match.match_date);
+          if (isPast(matchDate) || isToday(matchDate)) { // Incluir partidas passadas e de hoje
+            if (!mostRecentMatch || matchDate > parseISO(mostRecentMatch.match_date)) {
+              mostRecentMatch = match;
+            }
+          }
+        }
+
+        if (mostRecentMatch) {
+          initialCompetitionId = mostRecentMatch.competition?.id?.toString() || '';
+          initialRoundName = mostRecentMatch.round?.name || mostRecentMatch.group_name || '';
+          console.log(`🗓️ Rodada mais recente encontrada. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
+        } else if (competitions.length > 0) {
+          // Se ainda não houver partidas, defina a primeira competição disponível
+          initialCompetitionId = competitions[0].id.toString();
+          console.log(`❌ Nenhuma partida encontrada. Selecionando primeira competição: ${initialCompetitionId}`)
+        }
+      }
+
+      // Atualiza os filtros e força o fetch das rodadas para a competição selecionada
+      if (initialCompetitionId || initialRoundName) {
+        setFilters(prev => ({
+          ...prev,
+          competition: initialCompetitionId,
+          round: initialRoundName
+        }));
+        if (initialCompetitionId) {
+          fetchRoundsByCompetition(initialCompetitionId);
+        }
+      }
+    } else {
+      console.log("Aguardando Matches e Competitions carregarem...");
+    }
+  }, [matches, competitions]);
+
+  useEffect(() => {
     applyFilters()
-  }, [matches, filters])
+  }, [filters, matches]) // Garante que filtros sejam aplicados quando o estado `filters` ou `matches` muda
 
   useEffect(() => {
     applyPagination()
@@ -434,7 +488,7 @@ export default function MatchesManager() {
       if (match.group_name) {
         const groupName = match.group_name
         // Verificar se não é uma fase (não contém palavras como "final", "semi", "oitavas", etc.)
-        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória']
+        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória', 'playoff']
         const isPhase = phaseKeywords.some(keyword => 
           groupName.toLowerCase().includes(keyword)
         )
