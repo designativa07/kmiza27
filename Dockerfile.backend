@@ -27,10 +27,10 @@ RUN . /app/build-vars.env && \
 # Copiar package files do contexto local
 COPY backend/package*.json ./
 
-# Limpar cache e instalar dependências
+# Limpar cache e instalar TODAS as dependências (incluindo dev para build)
 RUN npm cache clean --force && \
     rm -rf node_modules package-lock.json && \
-    npm install --only=production --legacy-peer-deps
+    npm install --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
@@ -62,14 +62,21 @@ RUN . ./build-vars.env && \
     echo "  ⏰ Timestamp: $BUILD_TIMESTAMP" && \
     echo "  🔥 Cache: $CACHE_BUSTER"
 
-# Instalar dependências de desenvolvimento para build
-RUN npm cache clean --force && \
-    npm install --legacy-peer-deps
-
-# Build da aplicação
+# Build da aplicação (nest CLI já está disponível das dependências)
 RUN npm run build
 
-# Stage 3: Runner
+# Stage 3: Production Dependencies
+FROM node:18-alpine AS prod-deps
+WORKDIR /app
+
+# Copiar package files
+COPY backend/package*.json ./
+
+# Instalar apenas dependências de produção
+RUN npm cache clean --force && \
+    npm install --only=production --legacy-peer-deps
+
+# Stage 4: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
@@ -82,7 +89,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copiar arquivos necessários do stage builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nestjs:nodejs /app/build-vars.env ./build-vars.env
 
