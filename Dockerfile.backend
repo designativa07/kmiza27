@@ -1,110 +1,107 @@
-# 🐳 Dockerfile Backend - Cache Busting Otimizado
-# Força rebuild sempre que houver mudanças no repositório
+# 🐳 Dockerfile Backend - Otimizado para Auto-Deploy
+# Usa contexto local com cache busting eficiente
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++ git curl
+RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Cache busting AGRESSIVO - sempre quebra cache
+# Cache busting com argumentos de build
 ARG CACHEBUST
 ARG BUILD_TIMESTAMP
-ARG GITHUB_SHA # This is provided by deploy.sh script
+ARG GITHUB_SHA
 
-# Definir e logar variáveis de cache busting (local ao RUN)
-RUN CURRENT_TIME=$(date +%s) && \
-    CACHE_BUST_LOG=${CACHEBUST:-$CURRENT_TIME} && \
-    BUILD_TS_LOG=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)} && \
-    echo "🔥 CACHE BUSTER: $CACHE_BUST_LOG" && \
-    echo "⏰ BUILD TIME: $BUILD_TS_LOG" && \
-    echo "Build: $CACHE_BUST_LOG - Timestamp: $BUILD_TS_LOG - $(date)" > /app/build-info.txt
+# Definir variáveis de cache busting
+ENV CACHE_BUSTER=${CACHEBUST:-$(date +%s)}
+ENV BUILD_TS=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
 
-# SEMPRE clonar repositório fresco (sem cache) - quebra cache a cada build
-RUN RANDOM_BUST=$(date +%s%N | cut -b1-13) && \
-    echo "🔄 Random bust: $RANDOM_BUST" && \
-    rm -rf /tmp/repo || true && \
-    git clone --depth=1 https://github.com/designativa07/kmiza27.git /tmp/repo
+# Log das variáveis de build
+RUN echo "🔥 CACHE BUSTER: $CACHE_BUSTER" && \
+    echo "⏰ BUILD TIME: $BUILD_TS" && \
+    echo "🐙 GIT COMMIT: $GIT_COMMIT" && \
+    echo "Build: $CACHE_BUSTER - Timestamp: $BUILD_TS - $(date)" > /app/build-info.txt
 
-# Quebrar cache baseado no commit atual + timestamp (para fins de cache do Docker)
-RUN cd /tmp/repo && \
-    CURRENT_COMMIT=$(git rev-parse HEAD) && \
-    TIMESTAMP=$(date +%s) && \
-    echo "CURRENT_COMMIT=$CURRENT_COMMIT" && \
-    echo "TIMESTAMP=$TIMESTAMP" && \
-    echo "$CURRENT_COMMIT-$TIMESTAMP" > /app/commit-cache-buster.txt
+# Copiar package files do contexto local
+COPY backend/package*.json ./
 
-# Copiar package files (sem modificar o JSON)
-RUN cp /tmp/repo/backend/package*.json ./
-
-# Limpar e reinstalar dependências - forçar sem cache
-RUN rm -rf node_modules package-lock.json yarn.lock
-RUN npm cache clean --force
-RUN npm install --only=production --legacy-peer-deps --no-cache
+# Limpar cache e instalar dependências
+RUN npm cache clean --force && \
+    rm -rf node_modules package-lock.json && \
+    npm install --only=production --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências e arquivos necessários
+# Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/commit-cache-buster.txt ./commit-cache-buster.txt
-COPY --from=deps /tmp/repo/backend ./
+COPY --from=deps /app/build-info.txt ./build-info.txt
 
-# Recriar o script de variáveis de ambiente no estágio builder
+# Copiar código fonte do contexto local
+COPY backend/ ./
+
+# Receber argumentos de build novamente
 ARG CACHEBUST
 ARG BUILD_TIMESTAMP
 ARG GITHUB_SHA
 
-RUN cd /tmp/repo 2>/dev/null || cd . && \
-    GIT_COMMIT_CLONED=$(git rev-parse HEAD 2>/dev/null || echo "${GITHUB_SHA:-unknown}") && \
-    GIT_SHORT_CLONED=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
-    echo "export GIT_COMMIT=\"${GITHUB_SHA:-$GIT_COMMIT_CLONED}\"" > /app/runtime_env_vars.sh && \
-    echo "export GIT_SHORT=\"${GIT_SHORT_CLONED}\"" >> /app/runtime_env_vars.sh && \
-    echo "export BUILD_TIMESTAMP_VAL=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime_env_vars.sh && \
-    echo "export CACHE_BUSTER_VAL=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime_env_vars.sh && \
-    echo "🔄 Commit capturado para runtime: ${GIT_COMMIT_CLONED} (${GIT_SHORT_CLONED})"
+# Configurar variáveis de ambiente para build
+ENV NODE_ENV=production
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
+ENV CACHE_BUSTER=${CACHEBUST:-$(date +%s)}
 
-# Definir variáveis de ambiente para a fase de build a partir do script
-RUN . ./runtime_env_vars.sh && \
-    echo "🔄 Usando commit (build stage): ${GIT_SHORT} (SHA: ${GIT_COMMIT})" && \
-    echo "⏰ Build timestamp (build stage): ${BUILD_TIMESTAMP_VAL}" && \
-    echo "🔥 Cache buster (build stage): ${CACHE_BUSTER_VAL}"
+# Log das variáveis de build
+RUN echo "🏗️ Building backend with:" && \
+    echo "  🐙 Commit: $GIT_COMMIT" && \
+    echo "  ⏰ Timestamp: $BUILD_TIMESTAMP" && \
+    echo "  🔥 Cache: $CACHE_BUSTER"
 
-# Instalar dependências de desenvolvimento para build (sem cache)
-RUN npm cache clean --force
-RUN npm install --legacy-peer-deps --no-cache
+# Instalar dependências de desenvolvimento para build
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps
 
 # Build da aplicação
-RUN echo "🏗️ Building with commit: ${GIT_SHORT}" && \
-    echo "🔥 Cache ID: ${CACHE_BUSTER_VAL}" && \
-    npm run build
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Instalar apenas dependências de runtime
+# Instalar dependências de runtime
 RUN apk add --no-cache curl dumb-init
 
 # Criar usuário não-root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
 
 # Copiar arquivos necessários do stage builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nestjs:nodejs /app/commit-cache-buster.txt ./commit-cache-buster.txt
-COPY --from=builder --chown=nestjs:nodejs /app/runtime_env_vars.sh ./runtime_env_vars.sh
 
-# Criar script de inicialização que carrega as variáveis de ambiente
+# Receber argumentos de build para runtime
+ARG CACHEBUST
+ARG BUILD_TIMESTAMP
+ARG GITHUB_SHA
+
+# Criar arquivo com variáveis de ambiente
+RUN echo "export NODE_ENV=production" > /app/runtime-env.sh && \
+    echo "export PORT=3000" >> /app/runtime-env.sh && \
+    echo "export BUILD_TIMESTAMP=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime-env.sh && \
+    echo "export GIT_COMMIT=\"${GITHUB_SHA:-unknown}\"" >> /app/runtime-env.sh && \
+    echo "export CACHE_BUSTER=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime-env.sh && \
+    chmod +x /app/runtime-env.sh
+
+# Criar script de inicialização
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo '. /app/runtime_env_vars.sh' >> /app/start.sh && \
-    echo 'echo "🚀 Iniciando backend com commit: $GIT_SHORT"' >> /app/start.sh && \
-    echo 'echo "⏰ Build: $BUILD_TIMESTAMP_VAL"' >> /app/start.sh && \
-    echo 'echo "🔥 Cache: $CACHE_BUSTER_VAL"' >> /app/start.sh && \
-    echo 'echo "🐙 SHA: $GIT_COMMIT"' >> /app/start.sh && \
+    echo '. /app/runtime-env.sh' >> /app/start.sh && \
+    echo 'echo "🚀 Iniciando backend..."' >> /app/start.sh && \
+    echo 'echo "  🐙 Commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'echo "  ⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
+    echo 'echo "  🔥 Cache: $CACHE_BUSTER"' >> /app/start.sh && \
     echo 'node dist/src/main' >> /app/start.sh && \
     chmod +x /app/start.sh
 
@@ -116,19 +113,18 @@ RUN mkdir -p /app/uploads/escudos /app/logs /app/temp && \
 # Configurar usuário
 USER nestjs
 
-# Variáveis de ambiente fixas
+# Variáveis de ambiente
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV NODE_OPTIONS="--max-old-space-size=512"
-ENV RESTART_POLICY=always
 
-# Health check otimizado
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Expor porta
 EXPOSE 3000
 
-# Usar dumb-init para melhor signal handling
+# Inicializar com dumb-init
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["/app/start.sh"] 
