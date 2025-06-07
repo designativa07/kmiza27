@@ -23,7 +23,10 @@ import {
   NotificationDelivery,
   SystemSettings,
   Channel,
-  MatchBroadcast
+  MatchBroadcast,
+  Player,
+  PlayerTeamHistory,
+  Card
 } from './entities';
 import { BotConfig } from './entities/bot-config.entity';
 
@@ -72,6 +75,7 @@ import { PlayersModule } from './modules/players/players.module';
     WhatsAppModule,
     StadiumsModule,
     PlayersModule,
+    CompetitionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
