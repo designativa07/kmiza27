@@ -16,9 +16,26 @@ export class PlayersController {
     return this.playersService.createPlayer(playerData);
   }
 
+  @Get('test')
+  async test() {
+    return { 
+      message: 'Players endpoint funcionando!', 
+      timestamp: new Date().toISOString(),
+      status: 'ok' 
+    };
+  }
+
   @Get()
   async findAll(): Promise<Player[]> {
-    return this.playersService.findAllPlayers();
+    try {
+      console.log('🔍 PlayersController: Iniciando busca de jogadores...');
+      const players = await this.playersService.findAllPlayers();
+      console.log(`✅ PlayersController: ${players.length} jogadores encontrados`);
+      return players;
+    } catch (error) {
+      console.error('❌ PlayersController: Erro ao buscar jogadores:', error);
+      throw error;
+    }
   }
 
   @Get(':id')

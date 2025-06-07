@@ -26,6 +26,7 @@ import Sidebar from './Sidebar'
 import StatsCards from './StatsCards'
 
 import TeamsManager from './TeamsManager'
+import PlayersManager from './PlayersManager'
 import CompetitionsManager from './CompetitionsManager'
 import MatchesManager from './MatchesManager'
 import StandingsManager from './StandingsManager'
@@ -67,6 +68,7 @@ interface UserStats {
 const navigation = [
   { name: 'Dashboard', href: '#', icon: ChartBarIcon, current: true },
   { name: 'Times', href: '#', icon: UserGroupIcon, current: false },
+  { name: 'Jogadores', href: '#', icon: UsersIcon, current: false },
   { name: 'Estádios', href: '#', icon: BuildingOfficeIcon, current: false },
   { name: 'Competições', href: '#', icon: TrophyIcon, current: false },
   { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
@@ -283,7 +285,7 @@ export default function Dashboard() {
               {/* Card Jogadores */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => window.location.href = '/players'}
+                onClick={() => setCurrentPage('Jogadores')}
               >
                 <dt>
                   <div className="absolute rounded-md bg-purple-500 p-3">
@@ -474,6 +476,8 @@ export default function Dashboard() {
         )
       case 'Times':
         return <TeamsManager />
+      case 'Jogadores':
+        return <PlayersManager />
       case 'Estádios':
         return <StadiumsManager />
       case 'Competições':

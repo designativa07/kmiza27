@@ -32,13 +32,24 @@ export class PlayersService {
 
   async findAllPlayers(): Promise<Player[]> {
     try {
-      return await this.playersRepository.find({
+      console.log('🔍 PlayersService: Tentando buscar jogadores com relações...');
+      const players = await this.playersRepository.find({
         relations: ['team_history', 'team_history.team'],
       });
+      console.log(`✅ PlayersService: ${players.length} jogadores encontrados com relações`);
+      return players;
     } catch (error) {
-      console.error('Erro ao buscar jogadores com relações:', error);
-      // Fallback: buscar apenas os jogadores sem relações
-      return await this.playersRepository.find();
+      console.error('❌ PlayersService: Erro ao buscar jogadores com relações:', error);
+      console.log('🔄 PlayersService: Tentando fallback sem relações...');
+      try {
+        const playersSimple = await this.playersRepository.find();
+        console.log(`✅ PlayersService: ${playersSimple.length} jogadores encontrados sem relações`);
+        return playersSimple;
+      } catch (fallbackError) {
+        console.error('❌ PlayersService: Erro no fallback:', fallbackError);
+        console.log('🔄 PlayersService: Retornando array vazio como último recurso');
+        return [];
+      }
     }
   }
 
