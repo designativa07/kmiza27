@@ -55,38 +55,9 @@ export class PlayersController {
     return this.playersService.deletePlayer(+id);
   }
 
-  @Post(':playerId/add-to-team')
-  @HttpCode(HttpStatus.CREATED)
-  @UsePipes(new ValidationPipe({ transform: true }))
-  async addPlayerToTeam(
-    @Param('playerId') playerId: string,
-    @Body('teamId') teamId: string,
-    @Body('startDate') startDate: string,
-    @Body('jerseyNumber') jerseyNumber?: string,
-    @Body('role') role?: string,
-  ): Promise<PlayerTeamHistory> {
-    return this.playersService.addPlayerToTeam(+playerId, +teamId, new Date(startDate), jerseyNumber, role);
-  }
-
-  @Post(':playerId/remove-from-team')
-  @HttpCode(HttpStatus.OK)
-  @UsePipes(new ValidationPipe({ transform: true }))
-  async removePlayerFromTeam(
-    @Param('playerId') playerId: string,
-    @Body('teamId') teamId: string,
-    @Body('endDate') endDate?: string,
-  ): Promise<PlayerTeamHistory> {
-    return this.playersService.removePlayerFromTeam(+playerId, +teamId, endDate ? new Date(endDate) : undefined);
-  }
-
   @Get(':playerId/current-team')
   async getPlayerCurrentTeam(@Param('playerId') playerId: string) {
     return this.playersService.getPlayerCurrentTeam(+playerId);
-  }
-
-  @Get('team/:teamId/players')
-  async getTeamPlayers(@Param('teamId') teamId: string): Promise<PlayerTeamHistory[]> {
-    return this.playersService.getTeamPlayers(+teamId);
   }
 
   @Post(':matchId/goals')
