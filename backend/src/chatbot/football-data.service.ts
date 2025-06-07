@@ -113,8 +113,9 @@ export class FootballDataService {
         .createQueryBuilder('goal')
         .leftJoinAndSelect('goal.match', 'match')
         .leftJoinAndSelect('goal.team', 'team')
+        .leftJoinAndSelect('goal.player', 'player')
         .leftJoinAndSelect('match.competition', 'competition')
-        .where('goal.is_own_goal = :isOwnGoal', { isOwnGoal: false });
+        .where('goal.type != :ownGoal', { ownGoal: 'own_goal' });
 
       if (competitionName) {
         const competition = await this.competitionsRepository
@@ -142,12 +143,12 @@ export class FootballDataService {
       const scorers = new Map<string, { player: string, team: string, goals: number }>();
 
       goals.forEach(goal => {
-        const key = `${goal.player_name}-${goal.team.name}`;
+        const key = `${goal.player.name}-${goal.team.name}`;
         if (scorers.has(key)) {
           scorers.get(key)!.goals++;
         } else {
           scorers.set(key, {
-            player: goal.player_name,
+            player: goal.player.name,
             team: goal.team.name,
             goals: 1
           });
@@ -270,7 +271,7 @@ export class FootballDataService {
         .createQueryBuilder('goal')
         .leftJoin('goal.match', 'match')
         .where('match.competition_id = :competitionId', { competitionId: competition.id })
-        .andWhere('goal.is_own_goal = :isOwnGoal', { isOwnGoal: false })
+        .andWhere('goal.type != :ownGoal', { ownGoal: 'own_goal' })
         .getCount();
 
       const avgGoalsPerMatch = finishedMatches > 0 ? (totalGoals / finishedMatches).toFixed(2) : '0.00';
