@@ -30,12 +30,16 @@ RUN RANDOM_BUST=$(date +%s%N | cut -b1-13) && \
 RUN cd /tmp/repo && \
     GIT_COMMIT_CLONED=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
     GIT_SHORT_CLONED=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
-    echo "export GIT_COMMIT=${GITHUB_SHA:-$GIT_COMMIT_CLONED}" > /app/runtime_env_vars.sh && \
-    echo "export GIT_SHORT=${GIT_SHORT_CLONED}" >> /app/runtime_env_vars.sh && \
-    echo "export BUILD_TIMESTAMP_VAL=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" >> /app/runtime_env_vars.sh && \
-    echo "export CACHE_BUSTER_VAL=${CACHEBUST:-$(date +%s)}" >> /app/runtime_env_vars.sh && \
+    echo "export GIT_COMMIT=\"${GITHUB_SHA:-$GIT_COMMIT_CLONED}\"" > /app/runtime_env_vars.sh && \
+    echo "export GIT_SHORT=\"${GIT_SHORT_CLONED}\"" >> /app/runtime_env_vars.sh && \
+    echo "export BUILD_TIMESTAMP_VAL=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime_env_vars.sh && \
+    echo "export CACHE_BUSTER_VAL=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime_env_vars.sh && \
+    
     echo "🔄 Commit capturado para runtime: ${GIT_COMMIT_CLONED} (${GIT_SHORT_CLONED})" && \
     git log --oneline -1
+
+# DEBUG: Verificar se o runtime_env_vars.sh foi criado
+RUN ls -la /app
 
 # Quebrar cache baseado no commit atual + timestamp (para fins de cache do Docker)
 RUN cd /tmp/repo && \
