@@ -1,19 +1,23 @@
-# 🐳 Docker Ignore - Otimização de Build
+# 🐳 Docker Ignore - Otimizado para Performance
+# Exclui arquivos desnecessários do contexto de build
 
 # Git
 .git
 .gitignore
 .gitattributes
 
-# Node modules (serão instalados no container)
+# Node.js
 node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.npm
+.yarn
 
 # Logs
 logs
 *.log
+lerna-debug.log*
 
 # Runtime data
 pids
@@ -37,6 +41,12 @@ jspm_packages/
 # Optional eslint cache
 .eslintcache
 
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
 # Optional REPL history
 .node_repl_history
 
@@ -53,6 +63,10 @@ jspm_packages/
 .env.test.local
 .env.production.local
 
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
 # Next.js build output
 .next
 out
@@ -60,6 +74,10 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+
+# Gatsby files
+.cache/
+public
 
 # Storybook build outputs
 .out
@@ -69,14 +87,20 @@ dist
 tmp/
 temp/
 
-# IDE
-.vscode
-.idea
+# Editor directories and files
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Docker
@@ -84,24 +108,67 @@ Dockerfile*
 docker-compose*
 .dockerignore
 
-# Documentation
-README.md
+# Scripts de desenvolvimento
+scripts/
+test-*.js
+test-*.ps1
+test-*.html
+test-*.md
+
+# Arquivos de configuração de desenvolvimento
+*.bat
+*.ps1
+push.bat
+commit_and_push.bat
+
+# Documentação
+README*.md
 *.md
+!package.json
 
-# Scripts
-deploy.sh
-*.sh
+# Arquivos de teste e debug
+test-*
+debug-*
+*.test.js
+*.spec.js
 
-# Build artifacts
+# Uploads e dados temporários
+uploads/
+escudos.zip
+*.sql
+
+# Configurações específicas do projeto
+easypanel-config.json
+auto-deploy.yml
+deploy-config.md
+emergency_stop.md
+
+# Arquivos de backup
+*.backup
+*.bak
+
+# Cache e build artifacts
+.cache/
 build/
 dist/
 
-# Test files
-test/
-tests/
-__tests__/
-*.test.js
-*.spec.js
+# Arquivos específicos do Windows
+*.exe
+*.msi
+
+# Arquivos específicos do projeto que não são necessários no build
+CACHE_BUSTING_GUIDE.md
+RESUMO_*.md
+MELHORIAS_*.md
+SOLUCAO_*.md
+TESTE_*.md
+WEBHOOK-*.md
+UPLOAD_*.md
+VOLUME_*.md
+REPOSITORIO_*.md
+FRONTEND_*.md
+MIGRACAO_*.md
+EASYPANEL_*.md
 
 # 🐳 .dockerignore para kmiza27-chatbot
 # Arquivos e diretórios a serem ignorados no build Docker

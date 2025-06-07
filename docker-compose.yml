@@ -17,6 +17,8 @@ services:
       - DATABASE_URL=postgresql://admin:password@postgres:5432/kmiza27_db
       - EVOLUTION_API_BASE_URL=http://evolution-api:8080
       - EVOLUTION_API_GLOBAL_KEY=your-global-key
+      - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+      - GIT_COMMIT=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
     depends_on:
       - postgres
     volumes:
@@ -47,6 +49,8 @@ services:
       - PORT=3002
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+      - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+      - GIT_COMMIT=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
     depends_on:
       - backend
     networks:

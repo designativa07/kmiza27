@@ -1,145 +1,124 @@
-# 🐳 Dockerfile Frontend - Cache Busting Otimizado
-# Força rebuild sempre que houver mudanças no repositório
+# 🐳 Dockerfile Frontend - Otimizado para Auto-Deploy
+# Usa contexto local com cache busting eficiente
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++ git curl
+RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Cache busting AGRESSIVO - sempre quebra cache
+# Cache busting com argumentos de build
 ARG CACHEBUST
 ARG BUILD_TIMESTAMP
 ARG GITHUB_SHA
 
-# Forçar rebuild usando timestamp atual se não fornecido
-RUN CURRENT_TIME=$(date +%s) && \
-    CACHE_BUST=${CACHEBUST:-$CURRENT_TIME} && \
-    BUILD_TS=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)} && \
-    echo "🔥 CACHE BUSTER: $CACHE_BUST" && \
+# Definir variáveis de cache busting
+ENV CACHE_BUSTER=${CACHEBUST:-$(date +%s)}
+ENV BUILD_TS=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
+
+# Log das variáveis de build
+RUN echo "🔥 CACHE BUSTER: $CACHE_BUSTER" && \
     echo "⏰ BUILD TIME: $BUILD_TS" && \
-    echo "Build: $CACHE_BUST - Timestamp: $BUILD_TS - $(date)" > /app/build-info.txt
+    echo "🐙 GIT COMMIT: $GIT_COMMIT" && \
+    echo "Build: $CACHE_BUSTER - Timestamp: $BUILD_TS - $(date)" > /app/build-info.txt
 
-# SEMPRE clonar repositório fresco (sem cache) - quebra cache a cada build
-RUN RANDOM_BUST=$(date +%s%N | cut -b1-13) && \
-    echo "🔄 Random bust: $RANDOM_BUST" && \
-    rm -rf /tmp/repo || true && \
-    git clone --depth=1 https://github.com/designativa07/kmiza27.git /tmp/repo
+# Copiar package files do contexto local
+COPY frontend/package*.json ./
 
-# Capturar commit e forçar rebuild se mudou
-RUN cd /tmp/repo && \
-    GIT_COMMIT_AUTO=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
-    GIT_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
-    CURRENT_TIME=$(date +%s) && \
-    echo "export GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/git-commit.sh && \
-    echo "GIT_COMMIT=$GIT_COMMIT_AUTO" > /app/build-vars.env && \
-    echo "GIT_SHORT=$GIT_SHORT" >> /app/build-vars.env && \
-    echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /app/build-vars.env && \
-    echo "CACHE_BUSTER=$CURRENT_TIME" >> /app/build-vars.env && \
-    echo "GITHUB_SHA=${GITHUB_SHA:-$GIT_COMMIT_AUTO}" >> /app/build-vars.env && \
-    echo "🔄 Commit capturado: $GIT_COMMIT_AUTO ($GIT_SHORT)" && \
-    echo "🔥 Cache buster: $CURRENT_TIME" && \
-    git log --oneline -1
-
-# Quebrar cache baseado no commit atual + timestamp
-RUN cd /tmp/repo && \
-    CURRENT_COMMIT=$(git rev-parse HEAD) && \
-    TIMESTAMP=$(date +%s) && \
-    echo "CURRENT_COMMIT=$CURRENT_COMMIT" && \
-    echo "TIMESTAMP=$TIMESTAMP" && \
-    echo "$CURRENT_COMMIT-$TIMESTAMP" > /app/commit-cache-buster.txt
-
-# Copiar package files (sem modificar o JSON)
-RUN cp /tmp/repo/frontend/package*.json ./
-
-# Limpar e reinstalar dependências - forçar sem cache
-RUN rm -rf node_modules package-lock.json yarn.lock
-RUN npm cache clean --force
-RUN npm install --legacy-peer-deps --no-cache
+# Limpar cache e instalar dependências
+RUN npm cache clean --force && \
+    rm -rf node_modules package-lock.json && \
+    npm install --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências e variáveis do stage anterior
+# Copiar dependências do stage anterior
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/build-vars.env ./build-vars.env
-COPY --from=deps /app/commit-cache-buster.txt ./commit-cache-buster.txt
-COPY --from=deps /tmp/repo/frontend ./
+COPY --from=deps /app/build-info.txt ./build-info.txt
 
-# Quebrar cache se commit mudou - mostrar informações de build
-RUN . ./build-vars.env && \
-    echo "🔄 Usando commit: $GIT_COMMIT ($GIT_SHORT)" && \
-    echo "⏰ Build timestamp: $BUILD_TIMESTAMP" && \
-    echo "🔥 Cache buster: $CACHE_BUSTER" && \
-    echo "🐙 GitHub SHA: $GITHUB_SHA"
+# Copiar código fonte do contexto local
+COPY frontend/ ./
 
-# Configurar variáveis específicas do Next.js com cache busting
-RUN . ./build-vars.env && \
-    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
-    export NODE_ENV=production && \
-    export NEXT_PUBLIC_BUILD_ID="$GITHUB_SHA-$CACHE_BUSTER" && \
-    echo "🎨 Next.js Build with commit: $GITHUB_SHA" && \
-    echo "🔥 Build ID: $GITHUB_SHA-$CACHE_BUSTER"
+# Receber argumentos de build novamente
+ARG CACHEBUST
+ARG BUILD_TIMESTAMP
+ARG GITHUB_SHA
 
-# Build da aplicação Next.js com cache busting
-RUN . ./build-vars.env && \
-    export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host && \
-    export NODE_ENV=production && \
-    export NEXT_PUBLIC_BUILD_ID="$GITHUB_SHA-$CACHE_BUSTER" && \
-    echo "🏗️ Building frontend with commit: $GITHUB_SHA" && \
-    echo "🔥 Cache ID: $CACHE_BUSTER" && \
-    npm run build
+# Configurar variáveis de ambiente para build
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host
+ENV NEXT_PUBLIC_BUILD_ID=${GITHUB_SHA:-unknown}-${CACHEBUST:-$(date +%s)}
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+ENV GIT_COMMIT=${GITHUB_SHA:-unknown}
+
+# Log das variáveis de build
+RUN echo "🏗️ Building frontend with:" && \
+    echo "  🐙 Commit: $GIT_COMMIT" && \
+    echo "  🔥 Build ID: $NEXT_PUBLIC_BUILD_ID" && \
+    echo "  ⏰ Timestamp: $BUILD_TIMESTAMP"
+
+# Build da aplicação Next.js
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Instalar apenas dependências de runtime
+# Instalar dependências de runtime
 RUN apk add --no-cache curl dumb-init
 
 # Criar usuário não-root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 # Copiar arquivos necessários
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/build-vars.env ./build-vars.env
-COPY --from=builder --chown=nextjs:nodejs /app/commit-cache-buster.txt ./commit-cache-buster.txt
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Criar script de inicialização que carrega as variáveis
+# Receber argumentos de build para runtime
+ARG CACHEBUST
+ARG BUILD_TIMESTAMP
+ARG GITHUB_SHA
+
+# Criar arquivo com variáveis de ambiente
+RUN echo "export NODE_ENV=production" > /app/runtime-env.sh && \
+    echo "export PORT=3002" >> /app/runtime-env.sh && \
+    echo "export HOSTNAME=0.0.0.0" >> /app/runtime-env.sh && \
+    echo "export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host" >> /app/runtime-env.sh && \
+    echo "export BUILD_TIMESTAMP=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime-env.sh && \
+    echo "export GIT_COMMIT=\"${GITHUB_SHA:-unknown}\"" >> /app/runtime-env.sh && \
+    echo "export CACHE_BUSTER=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime-env.sh && \
+    chmod +x /app/runtime-env.sh
+
+# Criar script de inicialização
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo '. /app/build-vars.env' >> /app/start.sh && \
-    echo 'export GIT_COMMIT' >> /app/start.sh && \
-    echo 'export GIT_SHORT' >> /app/start.sh && \
-    echo 'export BUILD_TIMESTAMP' >> /app/start.sh && \
-    echo 'export CACHE_BUSTER' >> /app/start.sh && \
-    echo 'export GITHUB_SHA' >> /app/start.sh && \
-    echo 'export NEXT_PUBLIC_API_URL=https://kmizabot.h4xd66.easypanel.host' >> /app/start.sh && \
-    echo 'export NEXT_PUBLIC_BUILD_ID="$GITHUB_SHA-$CACHE_BUSTER"' >> /app/start.sh && \
-    echo 'echo "🚀 Iniciando frontend com commit: $GITHUB_SHA"' >> /app/start.sh && \
-    echo 'echo "⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
-    echo 'echo "🔥 Cache: $CACHE_BUSTER"' >> /app/start.sh && \
-    echo 'echo "🐙 SHA: $GITHUB_SHA"' >> /app/start.sh && \
+    echo '. /app/runtime-env.sh' >> /app/start.sh && \
+    echo 'echo "🚀 Iniciando frontend..."' >> /app/start.sh && \
+    echo 'echo "  🐙 Commit: $GIT_COMMIT"' >> /app/start.sh && \
+    echo 'echo "  ⏰ Build: $BUILD_TIMESTAMP"' >> /app/start.sh && \
+    echo 'echo "  🔥 Cache: $CACHE_BUSTER"' >> /app/start.sh && \
     echo 'node server.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Configurar usuário
 USER nextjs
 
-# Variáveis de ambiente fixas
+# Variáveis de ambiente
 ENV NODE_ENV=production
 ENV PORT=3002
 ENV HOSTNAME="0.0.0.0"
 
-# Health check otimizado
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3002/api/health || exit 1
 
 # Expor porta
 EXPOSE 3002
 
-# Usar dumb-init para melhor signal handling
+# Inicializar com dumb-init
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["/app/start.sh"] 
