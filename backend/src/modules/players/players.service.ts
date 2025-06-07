@@ -31,9 +31,15 @@ export class PlayersService {
   }
 
   async findAllPlayers(): Promise<Player[]> {
-    return this.playersRepository.find({
-      relations: ['team_history', 'team_history.team'],
-    });
+    try {
+      return await this.playersRepository.find({
+        relations: ['team_history', 'team_history.team'],
+      });
+    } catch (error) {
+      console.error('Erro ao buscar jogadores com relações:', error);
+      // Fallback: buscar apenas os jogadores sem relações
+      return await this.playersRepository.find();
+    }
   }
 
   async findPlayerById(id: number): Promise<Player> {

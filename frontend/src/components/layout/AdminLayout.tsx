@@ -17,6 +17,7 @@ import {
   CalendarDaysIcon,
   SignalIcon,
   BellIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -30,7 +31,7 @@ const navigation = [
   { name: 'Estatísticas', href: '/stats', icon: ChartBarIcon },
   { name: 'Usuários', href: '/users', icon: UsersIcon },
   { name: 'Administradores', href: '/admins', icon: UserGroupIcon },
-  { name: 'Jogadores', href: '/players', icon: UsersIcon },
+  { name: 'Jogadores', href: '/players', icon: UserIcon },
   { name: 'Competições', href: '/competitions', icon: TrophyIcon },
   { name: 'Times', href: '/teams', icon: ShieldCheckIcon },
   { name: 'Partidas', href: '/matches', icon: CalendarDaysIcon },
@@ -86,7 +87,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-64 lg:flex-col">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 shadow-lg border-r border-gray-200">
           <div className="flex h-16 shrink-0 items-center">
             <h1 className="text-xl font-bold text-gray-900">Kmiza27 Admin</h1>
@@ -123,7 +124,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top header */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <button
             type="button"
             className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
