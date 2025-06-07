@@ -9,7 +9,8 @@ import {
   XMarkIcon,
   EnvelopeIcon,
   PhoneIcon,
-  CalendarIcon
+  CalendarIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline'
 
 export default function AdminsManager() {
@@ -19,6 +20,7 @@ export default function AdminsManager() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [editingAdmin, setEditingAdmin] = useState<User | null>(null)
   const [formData, setFormData] = useState<CreateAdminData>({
     username: '',
     email: '',
@@ -46,10 +48,24 @@ export default function AdminsManager() {
     }
   }
 
+  const handleEditClick = (admin: User) => {
+    console.log('🔄 AdminsManager: Abrindo modal para editar administrador:', admin)
+    setEditingAdmin(admin)
+    setFormData({
+      username: admin.username || '',
+      email: admin.email || '',
+      password: '',
+      name: admin.name || '',
+      phone_number: admin.phone_number || ''
+    })
+    setShowCreateModal(true)
+    setCreateError(null)
+  }
+
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('🔄 AdminsManager: Iniciando criação de administrador:', formData)
+    console.log('🔄 AdminsManager: Iniciando operação de administrador:', formData)
     
     // Validação básica
     if (!formData.name.trim()) {
@@ -57,12 +73,13 @@ export default function AdminsManager() {
       return
     }
     
-    if (!formData.password.trim()) {
-      setCreateError('Senha é obrigatória')
+    // A senha é obrigatória apenas na criação de um novo administrador
+    if (!editingAdmin && !formData.password.trim()) {
+      setCreateError('Senha é obrigatória para novos administradores')
       return
     }
     
-    if (formData.password.length < 6) {
+    if (!editingAdmin && formData.password.length < 6) {
       setCreateError('Senha deve ter pelo menos 6 caracteres')
       return
     }
@@ -71,12 +88,20 @@ export default function AdminsManager() {
       setCreateLoading(true)
       setCreateError(null)
       
-      const result = await authService.createAdmin(formData)
-      console.log('✅ AdminsManager: Resposta do backend:', result)
+      let result
+      if (editingAdmin) {
+        // Lógica para atualização
+        result = await authService.updateAdmin(editingAdmin.id, formData)
+        console.log('✅ AdminsManager: Administrador atualizado com sucesso')
+        alert('Administrador atualizado com sucesso!')
+      } else {
+        // Lógica para criação
+        result = await authService.createAdmin(formData)
+        console.log('✅ AdminsManager: Administrador criado com sucesso')
+        alert('Administrador criado com sucesso!')
+      }
       
       if (result.success) {
-        console.log('✅ AdminsManager: Administrador criado com sucesso')
-        
         // Limpar formulário
         setFormData({
           username: '',
@@ -88,19 +113,17 @@ export default function AdminsManager() {
         
         // Fechar modal e recarregar lista
         setShowCreateModal(false)
+        setEditingAdmin(null)
         await loadAdmins()
-        
-        // Mostrar mensagem de sucesso
-        alert('Administrador criado com sucesso!')
         
       } else {
         console.error('❌ AdminsManager: Erro do backend:', result.message)
-        setCreateError(result.message || 'Erro ao criar administrador')
+        setCreateError(result.message || `Erro ao ${editingAdmin ? 'atualizar' : 'criar'} administrador`)
       }
       
     } catch (err: any) {
-      console.error('❌ AdminsManager: Erro ao criar administrador:', err)
-      const errorMsg = err.response?.data?.message || err.message || 'Erro ao criar administrador'
+      console.error('❌ AdminsManager: Erro ao manipular administrador:', err)
+      const errorMsg = err.response?.data?.message || err.message || `Erro ao ${editingAdmin ? 'atualizar' : 'criar'} administrador`
       setCreateError(errorMsg)
     } finally {
       setCreateLoading(false)
@@ -119,12 +142,21 @@ export default function AdminsManager() {
     console.log('🔄 AdminsManager: Abrindo modal para criar administrador')
     setShowCreateModal(true)
     setCreateError(null)
+    setEditingAdmin(null)
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      name: '',
+      phone_number: ''
+    })
   }
 
   const handleCloseModal = () => {
     console.log('🔄 AdminsManager: Fechando modal')
     setShowCreateModal(false)
     setCreateError(null)
+    setEditingAdmin(null)
     setFormData({
       username: '',
       email: '',
@@ -199,9 +231,28 @@ export default function AdminsManager() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                   {admin.name || admin.username || 'Sem nome'}
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  @{admin.username || admin.email || admin.phone_number}
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  @{admin.username}
                 </p>
+              </div>
+              <div className="flex-shrink-0 flex items-center space-x-2">
+                {/* Edit Button */}
+                <button
+                  onClick={() => handleEditClick(admin)}
+                  className="inline-flex items-center p-2 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                  title="Editar Administrador"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                {admin.is_admin ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                    Administrador
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    Usuário Comum
+                  </span>
+                )}
               </div>
             </div>
 
@@ -267,117 +318,100 @@ export default function AdminsManager() {
 
       {/* Create Admin Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-500 bg-opacity-75">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
-              <form onSubmit={handleCreateAdmin}>
-                <div className="px-4 pt-5 pb-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Criar Novo Administrador
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={handleCloseModal}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                      <XMarkIcon className="h-6 w-6" />
-                    </button>
-                  </div>
-
-                  {createError && (
-                    <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                      <p className="text-sm text-red-700 dark:text-red-400">{createError}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Nome completo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="João Silva"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="admin@exemplo.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Telefone
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.phone_number}
-                        onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                        className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="(11) 99999-9999"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Senha *
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Senha segura"
-                        minLength={6}
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Mínimo de 6 caracteres
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="submit"
-                    disabled={createLoading}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {createLoading ? (
-                      <span className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Criando...
-                      </span>
-                    ) : (
-                      'Criar Administrador'
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    disabled={createLoading}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingAdmin ? 'Editar Administrador' : 'Criar Novo Administrador'}</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
             </div>
+            {createError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+                <p className="text-red-700 dark:text-red-400 text-sm">{createError}</p>
+              </div>
+            )}
+            <form onSubmit={handleCreateAdmin} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome</label>
+                <input
+                  type="text"
+                  name="name"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuário (Opcional)</label>
+                <input
+                  type="text"
+                  name="username"
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email (Opcional)</label>
+                <input
+                  type="email"
+                  name="email"
+                  id="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Telefone (Opcional)</label>
+                <input
+                  type="text"
+                  name="phone_number"
+                  id="phone_number"
+                  value={formData.phone_number}
+                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              {/* Password field only for creation or if explicitly needed for update with password change */}
+              {!editingAdmin && (
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
+                  <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required={!editingAdmin} // Senha é obrigatória apenas na criação
+                  />
+                </div>
+              )}
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-slate-700 rounded-md hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  disabled={createLoading}
+                >
+                  {createLoading ? 'Salvando...' : (editingAdmin ? 'Salvar Alterações' : 'Criar Administrador')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

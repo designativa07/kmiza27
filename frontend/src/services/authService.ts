@@ -74,6 +74,11 @@ export const authService = {
     const response = await api.delete(`/users/${userId}`);
     return response.data;
   },
+
+  async updateAdmin(userId: number, adminData: Partial<CreateAdminData>): Promise<{ success: boolean; message: string; user?: User }> {
+    const response = await api.put(`/users/${userId}`, adminData);
+    return response.data;
+  },
 };
 
 export default authService; 
