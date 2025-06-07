@@ -56,7 +56,7 @@ export class PlayersService {
   async findPlayerById(id: number): Promise<Player> {
     const player = await this.playersRepository.findOne({
       where: { id },
-      relations: ['team_history', 'team_history.team'],
+      relations: ['team_history', 'team_history.team', 'goals', 'cards'],
     });
     if (!player) {
       throw new NotFoundException(`Jogador com ID "${id}" não encontrado`);
@@ -74,60 +74,12 @@ export class PlayersService {
     await this.playersRepository.delete(id);
   }
 
-  async addPlayerToTeam(playerId: number, teamId: number, startDate: Date, jerseyNumber?: string, role?: string): Promise<PlayerTeamHistory> {
-    const player = await this.playersRepository.findOneBy({ id: playerId });
-    const team = await this.teamsRepository.findOneBy({ id: teamId });
-
-    if (!player) throw new NotFoundException(`Jogador com ID "${playerId}" não encontrado`);
-    if (!team) throw new NotFoundException(`Time com ID "${teamId}" não encontrado`);
-
-    // Verificar se o jogador já está em um time e não tem data de fim
-    const currentAssignment = await this.playerTeamHistoryRepository.findOne({
-      where: { player_id: playerId, end_date: IsNull() },
-    });
-
-    if (currentAssignment) {
-      // Se já estiver em um time, encerrar o vínculo anterior
-      currentAssignment.end_date = new Date(); // Data de hoje
-      await this.playerTeamHistoryRepository.save(currentAssignment);
-    }
-
-    const historyEntry = this.playerTeamHistoryRepository.create({
-      player_id: playerId,
-      team_id: teamId,
-      start_date: startDate,
-      jersey_number: jerseyNumber,
-      role: role,
-    });
-    return this.playerTeamHistoryRepository.save(historyEntry);
-  }
-
-  async removePlayerFromTeam(playerId: number, teamId: number, endDate: Date = new Date()): Promise<PlayerTeamHistory> {
-    const assignment = await this.playerTeamHistoryRepository.findOne({
-      where: { player_id: playerId, team_id: teamId, end_date: IsNull() },
-    });
-
-    if (!assignment) {
-      throw new NotFoundException(`Vínculo ativo entre jogador ${playerId} e time ${teamId} não encontrado.`);
-    }
-
-    assignment.end_date = endDate;
-    return this.playerTeamHistoryRepository.save(assignment);
-  }
-
   async getPlayerCurrentTeam(playerId: number): Promise<Team | null> {
     const historyEntry = await this.playerTeamHistoryRepository.findOne({
       where: { player_id: playerId, end_date: IsNull() },
       relations: ['team'],
     });
     return historyEntry ? historyEntry.team : null;
-  }
-
-  async getTeamPlayers(teamId: number): Promise<PlayerTeamHistory[]> {
-    return this.playerTeamHistoryRepository.find({
-      where: { team_id: teamId, end_date: IsNull() },
-      relations: ['player'],
-    });
   }
 
   async addGoal(matchId: number, playerId: number, teamId: number, minute: number, type: string = 'normal'): Promise<Goal> {
