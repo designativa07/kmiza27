@@ -105,7 +105,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "⏰ Build: $BUILD_TIMESTAMP_VAL"' >> /app/start.sh && \
     echo 'echo "🔥 Cache: $CACHE_BUSTER_VAL"' >> /app/start.sh && \
     echo 'echo "🐙 SHA: $GIT_COMMIT"' >> /app/start.sh && \
-    echo 'node dist/main' >> /app/start.sh && \
+    echo 'node dist/src/main' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Criar pastas necessárias com permissões corretas
