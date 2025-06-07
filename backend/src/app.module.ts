@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { databaseConfig } from './config/database.config';
 
 // Import entities
 import { 
@@ -37,60 +41,37 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { BotConfigModule } from './modules/bot-config/bot-config.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { StadiumsModule } from './modules/stadiums/stadiums.module';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { PlayersModule } from './modules/players/players.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'h4xd66.easypanel.host',
-      port: parseInt(process.env.DB_PORT || '5433', 10),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || '8F1DC9A7F9CE32C4D32E88A1C5FF7',
-      database: process.env.DB_DATABASE || 'kmiza27',
-      entities: [
-        Team,
-        Competition,
-        CompetitionTeam,
-        Match,
-        Round,
-        Stadium,
-        Goal,
-        User,
-        ChatbotConversation,
-        Notification,
-        NotificationDelivery,
-        SystemSettings,
-        BotConfig,
-        Channel,
-        MatchBroadcast
-      ],
-      synchronize: false,
-      logging: false,
-      ssl: false,
-      retryAttempts: 3,
-      retryDelay: 3000,
-      connectTimeoutMS: 20000,
-      extra: {
-        connectionTimeoutMillis: 20000,
-      }
+    TypeOrmModule.forRoot(databaseConfig()),
+    ScheduleModule.forRoot(),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
+    EventEmitterModule.forRoot(),
     ChatbotModule,
     TeamsModule,
     MatchesModule,
-    UsersModule,
-    CompetitionsModule,
     ChannelsModule,
-    NotificationsModule,
-    UploadModule,
     StandingsModule,
-    WhatsAppModule,
-    BotConfigModule,
+    UsersModule,
     AuthModule,
+    SystemSettingsModule,
+    NotificationsModule,
+    BotConfigModule,
+    UploadModule,
+    WhatsAppModule,
     StadiumsModule,
+    PlayersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

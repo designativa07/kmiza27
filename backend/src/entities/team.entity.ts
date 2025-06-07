@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, Up
 import { CompetitionTeam } from './competition-team.entity';
 import { Match } from './match.entity';
 import { Stadium } from './stadium.entity';
+import { PlayerTeamHistory } from './player-team-history.entity';
 
 @Entity('teams')
 export class Team {
@@ -62,4 +63,7 @@ export class Team {
 
   @OneToMany(() => Match, match => match.away_team)
   awayMatches: Match[];
+
+  @OneToMany(() => PlayerTeamHistory, playerTeamHistory => playerTeamHistory.team)
+  player_history: PlayerTeamHistory[];
 } 

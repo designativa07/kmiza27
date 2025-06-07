@@ -60,6 +60,7 @@ interface UserStats {
   competitions: number
   channels: number
   stadiums: number
+  players: number
 }
 
 // Navegação reorganizada com melhor sequência lógica
@@ -92,6 +93,7 @@ export default function Dashboard() {
     totalCompetitions: 0,
     totalChannels: 0,
     totalStadiums: 0,
+    totalPlayers: 0,
     activeConversations: 0,
     totalAdmins: 0,
     usersWithFavoriteTeam: 0,
@@ -123,7 +125,8 @@ export default function Dashboard() {
         fetch(API_ENDPOINTS.matches.list()),
         fetch(API_ENDPOINTS.competitions.list()),
         fetch(API_ENDPOINTS.channels.list()),
-        fetch(API_ENDPOINTS.stadiums.list())
+        fetch(API_ENDPOINTS.stadiums.list()),
+        fetch(API_ENDPOINTS.players.list())
       ])
       
       let whatsappData = null
@@ -133,6 +136,7 @@ export default function Dashboard() {
       let competitionsData = []
       let channelsData = []
       let stadiumsData = []
+      let playersData = []
       
       // Processar respostas de forma segura
       if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
@@ -156,6 +160,9 @@ export default function Dashboard() {
       if (responses[6].status === 'fulfilled' && responses[6].value.ok) {
         stadiumsData = await responses[6].value.json()
       }
+      if (responses[7].status === 'fulfilled' && responses[7].value.ok) {
+        playersData = await responses[7].value.json()
+      }
       
       // Calcular estatísticas derivadas
       const adminsCount = usersData.filter((user: any) => user.is_admin).length
@@ -169,6 +176,7 @@ export default function Dashboard() {
         competitions: competitionsData.length,
         channels: channelsData.length,
         stadiums: stadiumsData.length,
+        players: playersData.length,
         admins: adminsCount,
         usersWithTeam: usersWithTeam
       })
@@ -180,6 +188,7 @@ export default function Dashboard() {
         totalCompetitions: competitionsData.length || 0,
         totalChannels: channelsData.length || 0,
         totalStadiums: stadiumsData.length || 0,
+        totalPlayers: playersData.length || 0,
         activeConversations: whatsappData?.totalConversations || 0,
         totalAdmins: adminsCount || 0,
         usersWithFavoriteTeam: usersWithTeam || 0,
@@ -196,6 +205,7 @@ export default function Dashboard() {
         totalCompetitions: 0,
         totalChannels: 0,
         totalStadiums: 0,
+        totalPlayers: 0,
         activeConversations: 0,
         totalAdmins: 0,
         usersWithFavoriteTeam: 0,
@@ -253,19 +263,16 @@ export default function Dashboard() {
                 onClick={() => setCurrentPage('Times')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-green-500 p-3">
-                    <TrophyIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  <div className="absolute rounded-md bg-orange-500 p-3">
+                    <UserGroupIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Times Cadastrados</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Times</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalTeams}</p>
-                  <p className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                    {stats.usersWithFavoriteTeam} favoritos
-                  </p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-green-600 hover:text-green-500">
+                      <span className="font-medium text-orange-600 hover:text-orange-500">
                         Gerenciar times →
                       </span>
                     </div>
@@ -273,78 +280,69 @@ export default function Dashboard() {
                 </dd>
               </div>
 
-              {/* Card Jogos */}
+              {/* Card Jogadores */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => window.location.href = '/players'}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-purple-500 p-3">
+                    <UsersIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Jogadores</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalPlayers}</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-purple-600 hover:text-purple-500">
+                        Gerenciar jogadores →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
+
+              {/* Card Partidas */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => setCurrentPage('Jogos')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-purple-500 p-3">
+                  <div className="absolute rounded-md bg-pink-500 p-3">
                     <CalendarIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Jogos Cadastrados</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Partidas</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalMatches}</p>
-                  <p className="ml-2 flex items-baseline text-sm font-semibold text-purple-600">
-                    {stats.totalCompetitions} competições
-                  </p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-purple-600 hover:text-purple-500">
-                        Gerenciar jogos →
+                      <span className="font-medium text-pink-600 hover:text-pink-500">
+                        Gerenciar partidas →
                       </span>
                     </div>
                   </div>
                 </dd>
               </div>
 
-              {/* Card Conversas */}
-              <div 
-                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setCurrentPage('Conversas WhatsApp')}
-              >
-                <dt>
-                  <div className="absolute rounded-md bg-orange-500 p-3">
-                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Conversas Ativas</p>
-                </dt>
-                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.activeConversations}</p>
-                  <p className="ml-2 flex items-baseline text-sm font-semibold text-orange-600">
-                    WhatsApp
-                  </p>
-                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
-                    <div className="text-sm">
-                      <span className="font-medium text-orange-600 hover:text-orange-500">
-                        Ver conversas →
-                      </span>
-                    </div>
-                  </div>
-                </dd>
-              </div>
-            </div>
-
-            {/* Cards secundários */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {/* Card Competições */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => setCurrentPage('Competições')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-indigo-500 p-3">
+                  <div className="absolute rounded-md bg-green-500 p-3">
                     <TrophyIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Competições</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Competições</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalCompetitions}</p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-indigo-600 hover:text-indigo-500">
-                        Gerenciar →
+                      <span className="font-medium text-green-600 hover:text-green-500">
+                        Gerenciar competições →
                       </span>
                     </div>
                   </div>
@@ -357,17 +355,17 @@ export default function Dashboard() {
                 onClick={() => setCurrentPage('Canais')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-red-500 p-3">
+                  <div className="absolute rounded-md bg-cyan-500 p-3">
                     <TvIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Canais de TV</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Canais</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalChannels}</p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-red-600 hover:text-red-500">
-                        Gerenciar →
+                      <span className="font-medium text-cyan-600 hover:text-cyan-500">
+                        Gerenciar canais →
                       </span>
                     </div>
                   </div>
@@ -380,40 +378,86 @@ export default function Dashboard() {
                 onClick={() => setCurrentPage('Estádios')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-teal-500 p-3">
+                  <div className="absolute rounded-md bg-red-500 p-3">
                     <BuildingOfficeIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Estádios</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Total de Estádios</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
                   <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalStadiums}</p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-teal-600 hover:text-teal-500">
-                        Gerenciar →
+                      <span className="font-medium text-red-600 hover:text-red-500">
+                        Gerenciar estádios →
                       </span>
                     </div>
                   </div>
                 </dd>
               </div>
 
-              {/* Card Status do Sistema */}
+              {/* Card Conversas Ativas */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setCurrentPage('Status do Sistema')}
+                onClick={() => setCurrentPage('Conversas WhatsApp')}
               >
                 <dt>
-                  <div className="absolute rounded-md bg-emerald-500 p-3">
-                    <ServerIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  <div className="absolute rounded-md bg-teal-500 p-3">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Sistema</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Conversas Ativas</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                  <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">Online</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.activeConversations}</p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
-                      <span className="font-medium text-emerald-600 hover:text-emerald-500">
-                        Ver status →
+                      <span className="font-medium text-teal-600 hover:text-teal-500">
+                        Ver conversas →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
+
+              {/* Card Usuários com Time Favorito */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setCurrentPage('Estatísticas de Usuários')}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-yellow-500 p-3">
+                    <HeartIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Usuários com Time Favorito</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.usersWithFavoriteTeam}</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-yellow-600 hover:text-yellow-500">
+                        Ver estatísticas de usuários →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
+
+              {/* Card Interações Recentes */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setCurrentPage('Conversas WhatsApp')}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-indigo-500 p-3">
+                    <ClockIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Interações Recentes (24h)</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.recentInteractions}</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-indigo-600 hover:text-indigo-500">
+                        Ver logs de interações →
                       </span>
                     </div>
                   </div>
@@ -421,107 +465,25 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Ações rápidas */}
-            <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-                  Ações Rápidas
-                </h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <button
-                    onClick={() => setCurrentPage('Classificações')}
-                    className="relative group bg-gray-50 dark:bg-slate-700 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-                  >
-                    <div>
-                      <span className="rounded-lg inline-flex p-3 bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 ring-4 ring-white dark:ring-slate-800">
-                        <ChartBarIcon className="h-6 w-6" aria-hidden="true" />
-                      </span>
-                    </div>
-                    <div className="mt-8">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                        <span className="absolute inset-0" aria-hidden="true" />
-                        Classificações
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Ver tabelas e classificações das competições
-                      </p>
-                    </div>
-                  </button>
+            {/* Outras seções do Dashboard (ex: gráficos, tabelas recentes, etc.) */}
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-12 mb-6">Visão Detalhada</h2>
 
-                  <button
-                    onClick={() => setCurrentPage('Automação IA')}
-                    className="relative group bg-gray-50 dark:bg-slate-700 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-                  >
-                    <div>
-                      <span className="rounded-lg inline-flex p-3 bg-purple-50 dark:bg-purple-900 text-purple-600 dark:text-purple-400 ring-4 ring-white dark:ring-slate-800">
-                        <CogIcon className="h-6 w-6" aria-hidden="true" />
-                      </span>
-                    </div>
-                    <div className="mt-8">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                        <span className="absolute inset-0" aria-hidden="true" />
-                        Automação IA
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Configurar respostas automáticas e IA
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setCurrentPage('Notificações')}
-                    className="relative group bg-gray-50 dark:bg-slate-700 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-                  >
-                    <div>
-                      <span className="rounded-lg inline-flex p-3 bg-orange-50 dark:bg-orange-900 text-orange-600 dark:text-orange-400 ring-4 ring-white dark:ring-slate-800">
-                        <BellIcon className="h-6 w-6" aria-hidden="true" />
-                      </span>
-                    </div>
-                    <div className="mt-8">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                        <span className="absolute inset-0" aria-hidden="true" />
-                        Notificações
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Enviar notificações e mensagens
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setCurrentPage('Configurações')}
-                    className="relative group bg-gray-50 dark:bg-slate-700 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-                  >
-                    <div>
-                      <span className="rounded-lg inline-flex p-3 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 ring-4 ring-white dark:ring-slate-800">
-                        <CogIcon className="h-6 w-6" aria-hidden="true" />
-                      </span>
-                    </div>
-                    <div className="mt-8">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                        <span className="absolute inset-0" aria-hidden="true" />
-                        Configurações
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Configurações gerais do sistema
-                      </p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Exemplo de componente de visão geral do Dashboard que pode ser adicionado */}
+            {/* <DashboardOverview /> */}
           </div>
         )
       case 'Times':
         return <TeamsManager />
+      case 'Estádios':
+        return <StadiumsManager />
       case 'Competições':
         return <CompetitionsManager />
       case 'Jogos':
         return <MatchesManager />
-      case 'Canais':
-        return <ChannelsManager />
       case 'Classificações':
         return <StandingsManager />
+      case 'Canais':
+        return <ChannelsManager />
       case 'Usuários':
         return <UsersManager />
       case 'Estatísticas de Usuários':
@@ -532,84 +494,81 @@ export default function Dashboard() {
         return <WhatsAppConversations />
       case 'Automação IA':
         return <AutomationPanel />
-      case 'Chatbot':
-        return <ChatbotSettings />
       case 'Notificações':
         return <NotificationsManager />
       case 'Status do Sistema':
         return <StatusContent />
+      case 'Chatbot':
+        return <ChatbotSettings />
       case 'Configurações':
         return <SystemSettings />
-      case 'Estádios':
-        return <StadiumsManager />
       default:
         return (
-          <div className="space-y-8">
-            <div className="border-b border-gray-200 dark:border-slate-600 pb-4">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Visão Geral
-              </h1>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Painel de controle do sistema Kmiza27 Chatbot
-              </p>
-            </div>
-            <StatsCards stats={stats} onNavigate={setCurrentPage} />
+          <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+            Selecione uma opção no menu lateral.
           </div>
         )
     }
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-900">
       <Sidebar 
         navigation={navigation} 
         currentPage={currentPage} 
         setCurrentPage={setCurrentPage} 
       />
       
-      <div className="lg:pl-72">
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white dark:bg-slate-800 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+            <form className="relative flex flex-1" action="#" method="GET">
+              <label htmlFor="search-field" className="sr-only">Pesquisar</label>
+              <MagnifyingGlassIcon className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400" aria-hidden="true" />
+              <input
+                id="search-field"
+                className="block h-full w-full border-0 py-0 pl-8 pr-0 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm"
+                placeholder="Pesquisar..." type="search" name="search"
+              />
+            </form>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200 dark:bg-slate-600" aria-hidden="true" />
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Painel Administrativo - Kmiza27 Chatbot
-              </h1>
-            </div>
-            <div className="flex flex-1 justify-center">
-              <GlobalSearch onNavigate={setCurrentPage} />
-            </div>
-            <div className="flex items-center space-x-4">
               <ThemeToggle />
-              {user && (
-                <div className="flex items-center space-x-3">
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {user.name || user.username}
-                    </p>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Administrador
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      logout()
-                      window.location.href = '/login'
-                    }}
-                    className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-                  >
-                    Sair
-                  </button>
+
+              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200 dark:bg-slate-700" aria-hidden="true" />
+              
+              {/* Profile dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  className="-m-1.5 flex items-center p-1.5"
+                  id="user-menu-button" aria-expanded="false" aria-haspopup="true"
+                >
+                  <span className="sr-only">Abrir menu do usuário</span>
+                  <img
+                    className="h-8 w-8 rounded-full bg-gray-50"
+                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    alt=""
+                  />
+                  <span className="hidden lg:flex lg:items-center">
+                    <span className="ml-4 text-sm font-semibold leading-6 text-gray-900 dark:text-white" aria-hidden="true">{user?.name || user?.username}</span>
+                    <ChevronDownIcon className="ml-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+                  </span>
+                </button>
+
+                {/* Dropdown menu, show/hide based on menu state. */}
+                {/*
+                <div className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabIndex={-1}>
+                  <a href="#" className="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabIndex={-1} id="user-menu-item-0">Your profile</a>
+                  <a href="#" className="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabIndex={-1} id="user-menu-item-1">Sign out</a>
                 </div>
-              )}
+                */}
+              </div>
             </div>
           </div>
-        </div>
+        </header>
 
-        <main className="py-10">
-          <div className="px-4 sm:px-6 lg:px-8">
-            {renderContent()}
-          </div>
+        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
+          {renderContent()}
         </main>
       </div>
     </div>
