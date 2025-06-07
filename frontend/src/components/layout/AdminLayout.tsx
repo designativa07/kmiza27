@@ -55,14 +55,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
+        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl z-60">
           <div className="flex h-16 items-center justify-between px-4">
             <h1 className="text-xl font-bold text-gray-900">Kmiza27 Admin</h1>
             <button onClick={() => setSidebarOpen(false)}>
               <XMarkIcon className="h-6 w-6 text-gray-500" />
             </button>
           </div>
-          <nav className="mt-8">
+          <nav className="mt-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -86,8 +86,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 shadow-lg">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 shadow-lg border-r border-gray-200">
           <div className="flex h-16 shrink-0 items-center">
             <h1 className="text-xl font-bold text-gray-900">Kmiza27 Admin</h1>
           </div>
