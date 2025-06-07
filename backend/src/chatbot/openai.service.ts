@@ -45,6 +45,20 @@ export class OpenAIService {
         };
       }
 
+      // Detectar jogo atual/em andamento/ao vivo
+      if ((lowerMessage.includes('jogo') && (lowerMessage.includes('atual') || lowerMessage.includes('agora') || lowerMessage.includes('andamento'))) ||
+          (lowerMessage.includes('ao vivo') || lowerMessage.includes('live')) ||
+          (lowerMessage.includes('está jogando') || lowerMessage.includes('esta jogando')) ||
+          (lowerMessage.includes('jogando agora') || lowerMessage.includes('jogo de agora'))) {
+        const team = this.extractTeamName(lowerMessage);
+        console.log(`✅ Detectado jogo atual/ao vivo para time: ${team}`);
+        return {
+          intent: 'current_match',
+          team,
+          confidence: 0.95
+        };
+      }
+
       // Detectar posição do time
       if (lowerMessage.includes('posição') || lowerMessage.includes('posicao') ||
           lowerMessage.includes('classificação') || lowerMessage.includes('classificacao') ||
