@@ -26,21 +26,6 @@ RUN RANDOM_BUST=$(date +%s%N | cut -b1-13) && \
     rm -rf /tmp/repo || true && \
     git clone --depth=1 https://github.com/designativa07/kmiza27.git /tmp/repo
 
-# Capturar commit do repo clonado e criar script para exportar como ENV
-RUN cd /tmp/repo && \
-    GIT_COMMIT_CLONED=$(git rev-parse HEAD 2>/dev/null || echo "unknown") && \
-    GIT_SHORT_CLONED=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
-    echo "export GIT_COMMIT=\"${GITHUB_SHA:-$GIT_COMMIT_CLONED}\"" > /app/runtime_env_vars.sh && \
-    echo "export GIT_SHORT=\"${GIT_SHORT_CLONED}\"" >> /app/runtime_env_vars.sh && \
-    echo "export BUILD_TIMESTAMP_VAL=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime_env_vars.sh && \
-    echo "export CACHE_BUSTER_VAL=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime_env_vars.sh && \
-    
-    echo "🔄 Commit capturado para runtime: ${GIT_COMMIT_CLONED} (${GIT_SHORT_CLONED})" && \
-    git log --oneline -1
-
-# DEBUG: Verificar se o runtime_env_vars.sh foi criado
-RUN ls -la /app
-
 # Quebrar cache baseado no commit atual + timestamp (para fins de cache do Docker)
 RUN cd /tmp/repo && \
     CURRENT_COMMIT=$(git rev-parse HEAD) && \
@@ -52,7 +37,6 @@ RUN cd /tmp/repo && \
 # Copiar package files (sem modificar o JSON)
 RUN cp /tmp/repo/backend/package*.json ./
 
-
 # Limpar e reinstalar dependências - forçar sem cache
 RUN rm -rf node_modules package-lock.json yarn.lock
 RUN npm cache clean --force
@@ -62,15 +46,26 @@ RUN npm install --only=production --legacy-peer-deps --no-cache
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copiar dependências e os arquivos de variáveis
+# Copiar dependências e arquivos necessários
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/runtime_env_vars.sh ./runtime_env_vars.sh # Script com ENVs para runtime
 COPY --from=deps /app/commit-cache-buster.txt ./commit-cache-buster.txt
 COPY --from=deps /tmp/repo/backend ./
 
+# Recriar o script de variáveis de ambiente no estágio builder
+ARG CACHEBUST
+ARG BUILD_TIMESTAMP
+ARG GITHUB_SHA
+
+RUN cd /tmp/repo 2>/dev/null || cd . && \
+    GIT_COMMIT_CLONED=$(git rev-parse HEAD 2>/dev/null || echo "${GITHUB_SHA:-unknown}") && \
+    GIT_SHORT_CLONED=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
+    echo "export GIT_COMMIT=\"${GITHUB_SHA:-$GIT_COMMIT_CLONED}\"" > /app/runtime_env_vars.sh && \
+    echo "export GIT_SHORT=\"${GIT_SHORT_CLONED}\"" >> /app/runtime_env_vars.sh && \
+    echo "export BUILD_TIMESTAMP_VAL=\"${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}\"" >> /app/runtime_env_vars.sh && \
+    echo "export CACHE_BUSTER_VAL=\"${CACHEBUST:-$(date +%s)}\"" >> /app/runtime_env_vars.sh && \
+    echo "🔄 Commit capturado para runtime: ${GIT_COMMIT_CLONED} (${GIT_SHORT_CLONED})"
 
 # Definir variáveis de ambiente para a fase de build a partir do script
-# Isso as torna disponíveis para TODOS os RUNs subsequentes e para o tempo de execução (se for copiado para runner)
 RUN . ./runtime_env_vars.sh && \
     echo "🔄 Usando commit (build stage): ${GIT_SHORT} (SHA: ${GIT_COMMIT})" && \
     echo "⏰ Build timestamp (build stage): ${BUILD_TIMESTAMP_VAL}" && \
@@ -101,7 +96,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nestjs:nodejs /app/commit-cache-buster.txt ./commit-cache-buster.txt
-COPY --from=builder --chown=nestjs:nodejs /app/runtime_env_vars.sh ./runtime_env_vars.sh # Copiar para o runtime
+COPY --from=builder --chown=nestjs:nodejs /app/runtime_env_vars.sh ./runtime_env_vars.sh
 
 # Criar script de inicialização que carrega as variáveis de ambiente
 RUN echo '#!/bin/sh' > /app/start.sh && \
