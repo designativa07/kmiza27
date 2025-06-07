@@ -14,6 +14,13 @@ interface Team {
   stadium_id?: number | null
 }
 
+interface Player {
+  id: number;
+  name: string;
+  position?: string;
+  image_url?: string;
+}
+
 interface Competition {
   id: number
   name: string
@@ -23,6 +30,13 @@ interface Stadium {
   id: number
   name: string
   city?: string
+}
+
+interface MatchPlayerStat {
+  player_id: number;
+  goals?: number;
+  yellow_cards?: number;
+  red_cards?: number;
 }
 
 interface Match {
@@ -43,6 +57,8 @@ interface Match {
   phase?: string
   leg?: 'first_leg' | 'second_leg' | 'single_match'
   tie_id?: string
+  home_team_player_stats?: MatchPlayerStat[];
+  away_team_player_stats?: MatchPlayerStat[];
 }
 
 interface Channel {
@@ -76,6 +92,8 @@ interface MatchFormData {
   match_date_second_leg?: string;
   stadium_id_second_leg?: string;
   stadium_id?: string;
+  home_team_player_stats: MatchPlayerStat[];
+  away_team_player_stats: MatchPlayerStat[];
 }
 
 // Componente para seleção múltipla de canais
@@ -212,6 +230,8 @@ export default function MatchesManager() {
   const [stadiums, setStadiums] = useState<Stadium[]>([])
   const [availableRounds, setAvailableRounds] = useState<{id: number, name: string}[]>([])
   const [createTwoLegTie, setCreateTwoLegTie] = useState(false)
+  const [homeTeamPlayers, setHomeTeamPlayers] = useState<Player[]>([])
+  const [awayTeamPlayers, setAwayTeamPlayers] = useState<Player[]>([])
   
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -250,6 +270,8 @@ export default function MatchesManager() {
     match_date_second_leg: '',
     stadium_id_second_leg: '',
     stadium_id: '',
+    home_team_player_stats: [],
+    away_team_player_stats: [],
   })
 
   const isInitialLoad = useRef(true);
@@ -263,6 +285,24 @@ export default function MatchesManager() {
       console.error('Erro ao carregar estádios:', error)
     }
   }
+
+  const fetchPlayersByTeam = async (teamId: string | undefined, setPlayers: React.Dispatch<React.SetStateAction<Player[]>>) => {
+    if (!teamId) {
+      setPlayers([]);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_ENDPOINTS.teams.list()}/${teamId}/players`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: Player[] = await response.json();
+      setPlayers(data);
+    } catch (error) {
+      console.error(`Erro ao buscar jogadores para o time ${teamId}:`, error);
+      setPlayers([]);
+    }
+  };
 
   useEffect(() => {
     fetchData()
@@ -357,6 +397,16 @@ export default function MatchesManager() {
       }
     }
   }, [formData.home_team_id, teams])
+
+  // Buscar jogadores do time da casa quando o home_team_id mudar
+  useEffect(() => {
+    fetchPlayersByTeam(formData.home_team_id, setHomeTeamPlayers);
+  }, [formData.home_team_id]);
+
+  // Buscar jogadores do time visitante quando o away_team_id mudar
+  useEffect(() => {
+    fetchPlayersByTeam(formData.away_team_id, setAwayTeamPlayers);
+  }, [formData.away_team_id]);
 
   const fetchData = async () => {
     try {
@@ -577,6 +627,8 @@ export default function MatchesManager() {
           leg: formData.leg,
           tie_id: formData.tie_id,
           stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+          home_team_player_stats: formData.home_team_player_stats,
+          away_team_player_stats: formData.away_team_player_stats,
         };
       } else if (createTwoLegTie) {
         // Lógica para criar um confronto de ida e volta
@@ -598,6 +650,8 @@ export default function MatchesManager() {
           channel_ids: formData.channel_ids,
           broadcast_channels: formData.broadcast_channels ? 
             formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          home_team_player_stats: formData.home_team_player_stats,
+          away_team_player_stats: formData.away_team_player_stats,
         };
       } else {
         // Lógica para criar uma única partida
@@ -627,6 +681,8 @@ export default function MatchesManager() {
           leg: formData.leg,
           tie_id: formData.tie_id,
           stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+          home_team_player_stats: formData.home_team_player_stats,
+          away_team_player_stats: formData.away_team_player_stats,
         };
       }
 
@@ -693,6 +749,8 @@ export default function MatchesManager() {
       match_date_second_leg: '',
       stadium_id_second_leg: '',
       stadium_id: '',
+      home_team_player_stats: [],
+      away_team_player_stats: [],
     })
     setCreateTwoLegTie(false)
   }
@@ -760,6 +818,8 @@ export default function MatchesManager() {
       match_date_second_leg: '',
       stadium_id_second_leg: '',
       stadium_id: match.stadium?.id?.toString() || '',
+      home_team_player_stats: match.home_team_player_stats || [],
+      away_team_player_stats: match.away_team_player_stats || [],
     } as MatchFormData;
     
     setFormData(newFormData);
@@ -1350,6 +1410,146 @@ export default function MatchesManager() {
                     />
                   </div>
                 </div>
+
+                {/* Seção de Gols e Cartões por Jogador (Time da Casa) */}
+                {homeTeamPlayers.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold text-gray-900">Gols e Cartões - {teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
+                    <p className="text-sm text-gray-500 mb-4">Registre gols e cartões para cada jogador do time da casa.</p>
+                    {homeTeamPlayers.map((player) => {
+                      const playerStat = formData.home_team_player_stats.find(stat => stat.player_id === player.id);
+
+                      const handleStatChange = (statType: keyof MatchPlayerStat, value: number | undefined) => {
+                        setFormData(prevData => {
+                          const updatedStats = prevData.home_team_player_stats.map(stat => 
+                            stat.player_id === player.id ? { ...stat, [statType]: value } : stat
+                          );
+                          // Adiciona o jogador se ele não existe nas estatísticas
+                          if (!updatedStats.some(stat => stat.player_id === player.id)) {
+                            updatedStats.push({ player_id: player.id, [statType]: value });
+                          }
+                          // Filtra stats com valor 0 ou undefined para não enviar para o backend
+                          const filteredStats = updatedStats.filter(stat => stat.goals || stat.yellow_cards || stat.red_cards);
+                          return { ...prevData, home_team_player_stats: filteredStats };
+                        });
+                      };
+
+                      return (
+                        <div key={player.id} className="grid grid-cols-4 gap-2 items-center bg-gray-50 p-3 rounded-md mb-2">
+                          <div className="col-span-1">
+                            <p className="text-sm font-medium text-gray-700">{player.name}</p>
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`home-goals-${player.id}`} className="sr-only">Gols</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`home-goals-${player.id}`}
+                              value={playerStat?.goals ?? ''}
+                              onChange={(e) => handleStatChange('goals', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Gols"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`home-yellow-${player.id}`} className="sr-only">Amarelos</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`home-yellow-${player.id}`}
+                              value={playerStat?.yellow_cards ?? ''}
+                              onChange={(e) => handleStatChange('yellow_cards', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Amarelos"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`home-red-${player.id}`} className="sr-only">Vermelhos</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`home-red-${player.id}`}
+                              value={playerStat?.red_cards ?? ''}
+                              onChange={(e) => handleStatChange('red_cards', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Vermelhos"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Seção de Gols e Cartões por Jogador (Time Visitante) */}
+                {awayTeamPlayers.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold text-gray-900">Gols e Cartões - {teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
+                    <p className="text-sm text-gray-500 mb-4">Registre gols e cartões para cada jogador do time visitante.</p>
+                    {awayTeamPlayers.map((player) => {
+                      const playerStat = formData.away_team_player_stats.find(stat => stat.player_id === player.id);
+
+                      const handleStatChange = (statType: keyof MatchPlayerStat, value: number | undefined) => {
+                        setFormData(prevData => {
+                          const updatedStats = prevData.away_team_player_stats.map(stat => 
+                            stat.player_id === player.id ? { ...stat, [statType]: value } : stat
+                          );
+                          // Adiciona o jogador se ele não existe nas estatísticas
+                          if (!updatedStats.some(stat => stat.player_id === player.id)) {
+                            updatedStats.push({ player_id: player.id, [statType]: value });
+                          }
+                          // Filtra stats com valor 0 ou undefined para não enviar para o backend
+                          const filteredStats = updatedStats.filter(stat => stat.goals || stat.yellow_cards || stat.red_cards);
+                          return { ...prevData, away_team_player_stats: filteredStats };
+                        });
+                      };
+
+                      return (
+                        <div key={player.id} className="grid grid-cols-4 gap-2 items-center bg-gray-50 p-3 rounded-md mb-2">
+                          <div className="col-span-1">
+                            <p className="text-sm font-medium text-gray-700">{player.name}</p>
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`away-goals-${player.id}`} className="sr-only">Gols</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`away-goals-${player.id}`}
+                              value={playerStat?.goals ?? ''}
+                              onChange={(e) => handleStatChange('goals', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Gols"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`away-yellow-${player.id}`} className="sr-only">Amarelos</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`away-yellow-${player.id}`}
+                              value={playerStat?.yellow_cards ?? ''}
+                              onChange={(e) => handleStatChange('yellow_cards', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Amarelos"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <label htmlFor={`away-red-${player.id}`} className="sr-only">Vermelhos</label>
+                            <input
+                              type="number"
+                              min="0"
+                              id={`away-red-${player.id}`}
+                              value={playerStat?.red_cards ?? ''}
+                              onChange={(e) => handleStatChange('red_cards', e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              placeholder="Vermelhos"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-900">Competição</label>
