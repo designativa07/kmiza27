@@ -192,13 +192,13 @@ export class ChatbotService {
         transmissionText = nextMatch.broadcast_channels.join(', ');
       }
 
-      return `⚽ PRÓXIMO JOGO DO ${team.name.toUpperCase()} ⚽
-⚽ Jogo: *{nextMatch.home_team.name} x ${nextMatch.away_team.name}*
+      return `PRÓXIMO JOGO DO ${team.name.toUpperCase()}
+⚽ *${nextMatch.home_team.name} x ${nextMatch.away_team.name}*
 📅 Data: ${formattedDate}
 ⏰ Hora: ${formattedTime}
 
 🏆 Competição: ${nextMatch.competition.name}
-📅 Rodada: ${nextMatch.round?.name || 'A definir'}
+📅 ${nextMatch.round?.name || 'A definir'}
 🏟️ Estádio: ${nextMatch.stadium?.name || 'A definir'}
 
 📺 Transmissão: ${transmissionText}
