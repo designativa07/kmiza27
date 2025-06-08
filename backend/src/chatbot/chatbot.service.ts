@@ -185,7 +185,64 @@ export class ChatbotService {
 ⚽ Acompanhe o placar ao vivo!`;
       }
 
-      // Se não há jogo ao vivo, buscar próximo jogo agendado
+      // Verificar se há jogo hoje que pode estar acontecendo agora (mesmo que marcado como scheduled)
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      
+      const todayMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: 'scheduled' })
+        .andWhere('match.match_date >= :today', { today })
+        .andWhere('match.match_date < :endOfDay', { endOfDay })
+        .orderBy('match.match_date', 'ASC')
+        .getOne();
+
+      if (todayMatch) {
+        const matchTime = new Date(todayMatch.match_date);
+        const timeDiff = now.getTime() - matchTime.getTime();
+        const hoursDiff = timeDiff / (1000 * 60 * 60);
+        
+        // Se o jogo foi há menos de 3 horas e mais de -1 hora (1 hora antes), considerar como possivelmente ao vivo
+        if (hoursDiff >= -1 && hoursDiff <= 3) {
+          const date = new Date(todayMatch.match_date);
+          const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+          const formattedTime = date.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'America/Sao_Paulo'
+          });
+
+          const homeScore = todayMatch.home_score ?? 0;
+          const awayScore = todayMatch.away_score ?? 0;
+          
+          let statusText = '';
+          if (hoursDiff >= 0 && hoursDiff <= 3) {
+            statusText = '🔴 POSSIVELMENTE AO VIVO';
+          } else {
+            statusText = '⏰ JOGO DE HOJE';
+          }
+
+          return `${statusText} - ${team.name.toUpperCase()}
+⚽ *${todayMatch.home_team.name} ${homeScore > 0 || awayScore > 0 ? `${homeScore} x ${awayScore}` : 'vs'} ${todayMatch.away_team.name}*
+📅 Data: ${formattedDate}
+⏰ Horário: ${formattedTime}
+
+🏆 Competição: ${todayMatch.competition.name}
+📅 ${todayMatch.round?.name || 'A definir'}
+🏟️ Estádio: ${todayMatch.stadium?.name || 'A definir'}
+
+${hoursDiff >= 0 && hoursDiff <= 3 ? '🔴 Jogo pode estar acontecendo agora!' : '⚽ Jogo agendado para hoje!'}`;
+        }
+      }
+
+      // Se não há jogo ao vivo nem hoje, buscar próximo jogo agendado
       const nextMatch = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
