@@ -216,4 +216,14 @@ export class ChatbotController {
       return { error: 'Internal server error' };
     }
   }
+
+  @Get('debug/teams')
+  async debugTeams() {
+    return await this.chatbotService.debugTeams();
+  }
+
+  @Get('debug/matches-today')
+  async debugMatchesToday() {
+    return await this.chatbotService.debugMatchesToday();
+  }
 } 
