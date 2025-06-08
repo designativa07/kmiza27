@@ -312,19 +312,37 @@ export class ChatbotService {
         allChannels = [...channelsList];
       }
 
-      // Processar broadcast_channels adicionais (pode ser array ou string)
+      // Processar broadcast_channels adicionais (pode ser array, string ou JSON)
       console.log(`🔍 DEBUG - broadcast_channels para jogo ${nextMatch.id}:`, nextMatch.broadcast_channels);
       console.log(`🔍 DEBUG - tipo de broadcast_channels:`, typeof nextMatch.broadcast_channels);
       
       if (nextMatch.broadcast_channels) {
-        if (Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
-          console.log(`🔍 DEBUG - Processando como array:`, nextMatch.broadcast_channels);
-          allChannels = [...allChannels, ...nextMatch.broadcast_channels];
-        } else if (typeof nextMatch.broadcast_channels === 'string' && nextMatch.broadcast_channels.trim()) {
-          console.log(`🔍 DEBUG - Processando como string:`, nextMatch.broadcast_channels.trim());
-          allChannels = [...allChannels, nextMatch.broadcast_channels.trim()];
+        let processedChannels = nextMatch.broadcast_channels;
+        
+        // Se for string, tentar fazer parse JSON primeiro
+        if (typeof nextMatch.broadcast_channels === 'string') {
+          try {
+            // Tentar fazer parse JSON se a string começar com " ou [
+            if (nextMatch.broadcast_channels.startsWith('"') || nextMatch.broadcast_channels.startsWith('[')) {
+              processedChannels = JSON.parse(nextMatch.broadcast_channels);
+              console.log(`🔍 DEBUG - JSON parseado:`, processedChannels);
+            }
+          } catch (e) {
+            // Se falhar o parse, usar a string original
+            console.log(`🔍 DEBUG - Falha no parse JSON, usando string original`);
+            processedChannels = nextMatch.broadcast_channels;
+          }
+        }
+        
+        // Processar os canais baseado no tipo final
+        if (Array.isArray(processedChannels) && processedChannels.length > 0) {
+          console.log(`🔍 DEBUG - Processando como array:`, processedChannels);
+          allChannels = [...allChannels, ...processedChannels];
+        } else if (typeof processedChannels === 'string' && processedChannels.trim()) {
+          console.log(`🔍 DEBUG - Processando como string:`, processedChannels.trim());
+          allChannels = [...allChannels, processedChannels.trim()];
         } else {
-          console.log(`🔍 DEBUG - broadcast_channels não processado - valor:`, nextMatch.broadcast_channels);
+          console.log(`🔍 DEBUG - broadcast_channels não processado - valor final:`, processedChannels);
         }
       } else {
         console.log(`🔍 DEBUG - broadcast_channels é null/undefined`);
@@ -1307,19 +1325,37 @@ ${result}`;
         allChannels = [...channelsList];
       }
 
-      // Processar broadcast_channels adicionais (pode ser array ou string)
+      // Processar broadcast_channels adicionais (pode ser array, string ou JSON)
       console.log(`🔍 DEBUG - broadcast_channels para jogo ${currentMatch.id}:`, currentMatch.broadcast_channels);
       console.log(`🔍 DEBUG - tipo de broadcast_channels:`, typeof currentMatch.broadcast_channels);
       
       if (currentMatch.broadcast_channels) {
-        if (Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
-          console.log(`🔍 DEBUG - Processando como array:`, currentMatch.broadcast_channels);
-          allChannels = [...allChannels, ...currentMatch.broadcast_channels];
-        } else if (typeof currentMatch.broadcast_channels === 'string' && currentMatch.broadcast_channels.trim()) {
-          console.log(`🔍 DEBUG - Processando como string:`, currentMatch.broadcast_channels.trim());
-          allChannels = [...allChannels, currentMatch.broadcast_channels.trim()];
+        let processedChannels = currentMatch.broadcast_channels;
+        
+        // Se for string, tentar fazer parse JSON primeiro
+        if (typeof currentMatch.broadcast_channels === 'string') {
+          try {
+            // Tentar fazer parse JSON se a string começar com " ou [
+            if (currentMatch.broadcast_channels.startsWith('"') || currentMatch.broadcast_channels.startsWith('[')) {
+              processedChannels = JSON.parse(currentMatch.broadcast_channels);
+              console.log(`🔍 DEBUG - JSON parseado:`, processedChannels);
+            }
+          } catch (e) {
+            // Se falhar o parse, usar a string original
+            console.log(`🔍 DEBUG - Falha no parse JSON, usando string original`);
+            processedChannels = currentMatch.broadcast_channels;
+          }
+        }
+        
+        // Processar os canais baseado no tipo final
+        if (Array.isArray(processedChannels) && processedChannels.length > 0) {
+          console.log(`🔍 DEBUG - Processando como array:`, processedChannels);
+          allChannels = [...allChannels, ...processedChannels];
+        } else if (typeof processedChannels === 'string' && processedChannels.trim()) {
+          console.log(`🔍 DEBUG - Processando como string:`, processedChannels.trim());
+          allChannels = [...allChannels, processedChannels.trim()];
         } else {
-          console.log(`🔍 DEBUG - broadcast_channels não processado - valor:`, currentMatch.broadcast_channels);
+          console.log(`🔍 DEBUG - broadcast_channels não processado - valor final:`, processedChannels);
         }
       } else {
         console.log(`🔍 DEBUG - broadcast_channels é null/undefined`);
