@@ -613,8 +613,7 @@ export default function MatchesManager() {
           phase: formData.phase || undefined,
           match_date: new Date(formData.match_date).toISOString(),
           status: formData.status,
-          broadcast_channels: formData.broadcast_channels ? 
-            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          broadcast_channels: formData.broadcast_channels || null,
           channel_ids: formData.channel_ids,
           home_score: formData.home_score,
           away_score: formData.away_score,
@@ -648,8 +647,7 @@ export default function MatchesManager() {
           stadium_id_second_leg: formData.stadium_id_second_leg ? parseInt(formData.stadium_id_second_leg) : undefined,
           status: formData.status,
           channel_ids: formData.channel_ids,
-          broadcast_channels: formData.broadcast_channels ? 
-            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          broadcast_channels: formData.broadcast_channels || null,
           home_team_player_stats: formData.home_team_player_stats,
           away_team_player_stats: formData.away_team_player_stats,
         };
@@ -667,8 +665,7 @@ export default function MatchesManager() {
           phase: formData.phase || undefined,
           match_date: new Date(formData.match_date).toISOString(),
           status: formData.status,
-          broadcast_channels: formData.broadcast_channels ? 
-            formData.broadcast_channels.split(',').map(s => s.trim()) : [],
+          broadcast_channels: formData.broadcast_channels || null,
           channel_ids: formData.channel_ids,
           home_score: formData.home_score,
           away_score: formData.away_score,
