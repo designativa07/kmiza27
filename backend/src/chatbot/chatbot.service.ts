@@ -1176,4 +1176,139 @@ ${result}`;
       return '❌ Erro ao buscar informações do jogo atual. Tente novamente.';
     }
   }
+
+  /**
+   * Método para debug - listar todos os times
+   */
+  async debugTeams(): Promise<any> {
+    try {
+      console.log('🔍 DEBUG - Listando todos os times cadastrados');
+      
+      const teams = await this.teamsRepository
+        .createQueryBuilder('team')
+        .orderBy('team.name', 'ASC')
+        .getMany();
+      
+      console.log(`📊 Total de times encontrados: ${teams.length}`);
+      
+      // Procurar especificamente por Avaí
+      const avaiTeams = teams.filter(team => 
+        team.name.toLowerCase().includes('ava') || 
+        team.short_name?.toLowerCase().includes('ava')
+      );
+      
+      console.log(`🔍 Times com "ava" no nome:`, avaiTeams.map(t => ({
+        id: t.id,
+        name: t.name,
+        short_name: t.short_name,
+        full_name: t.full_name
+      })));
+      
+      return {
+        success: true,
+        totalTeams: teams.length,
+        avaiTeams: avaiTeams.map(t => ({
+          id: t.id,
+          name: t.name,
+          short_name: t.short_name,
+          full_name: t.full_name,
+          city: t.city,
+          state: t.state
+        })),
+        allTeams: teams.map(t => ({
+          id: t.id,
+          name: t.name,
+          short_name: t.short_name
+        }))
+      };
+      
+    } catch (error) {
+      console.error('🔍 DEBUG TEAMS - Erro:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Método para debug - jogos de hoje
+   */
+  async debugMatchesToday(): Promise<any> {
+    try {
+      console.log('🔍 DEBUG - Verificando jogos de hoje');
+      
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      console.log(`📅 Buscando jogos entre: ${startOfDay.toISOString()} e ${endOfDay.toISOString()}`);
+      console.log(`🕐 Horário atual do servidor: ${new Date().toISOString()}`);
+      console.log(`🌍 Timezone do servidor: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+      
+      const todayMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where('match.match_date >= :start', { start: startOfDay })
+        .andWhere('match.match_date < :end', { end: endOfDay })
+        .orderBy('match.match_date', 'ASC')
+        .getMany();
+      
+      console.log(`⚽ Jogos encontrados para hoje: ${todayMatches.length}`);
+      
+      // Buscar jogos do Avaí especificamente (qualquer data)
+      const avaiMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .where('LOWER(homeTeam.name) LIKE LOWER(:name)', { name: '%ava%' })
+        .orWhere('LOWER(awayTeam.name) LIKE LOWER(:name)', { name: '%ava%' })
+        .orderBy('match.match_date', 'DESC')
+        .limit(10)
+        .getMany();
+      
+      console.log(`🔍 Jogos do Avaí encontrados: ${avaiMatches.length}`);
+      
+      return {
+        success: true,
+        serverTime: {
+          current: new Date().toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          startOfDay: startOfDay.toISOString(),
+          endOfDay: endOfDay.toISOString()
+        },
+        todayMatches: todayMatches.map(match => ({
+          id: match.id,
+          date: match.match_date,
+          homeTeam: match.home_team.name,
+          awayTeam: match.away_team.name,
+          competition: match.competition.name,
+          status: match.status,
+          homeScore: match.home_score,
+          awayScore: match.away_score
+        })),
+        avaiMatches: avaiMatches.map(match => ({
+          id: match.id,
+          date: match.match_date,
+          homeTeam: match.home_team.name,
+          awayTeam: match.away_team.name,
+          competition: match.competition.name,
+          status: match.status,
+          homeScore: match.home_score,
+          awayScore: match.away_score
+        }))
+      };
+      
+    } catch (error) {
+      console.error('🔍 DEBUG MATCHES TODAY - Erro:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 } 
