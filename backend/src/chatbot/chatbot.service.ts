@@ -298,6 +298,7 @@ export class ChatbotService {
       // Determinar transmissão
       let transmissionText = 'A definir';
       let streamingLinks = '';
+      let allChannels: string[] = [];
 
       // Processar canais da tabela match_broadcasts
       if (broadcasts && broadcasts.length > 0) {
@@ -307,15 +308,22 @@ export class ChatbotService {
             return `${channel.name} (${channel.channel_link})`;
           }
           return channel.name;
-        }).join(', ');
-        transmissionText = channelsList;
-      } else if (nextMatch.broadcast_channels) {
-        // Processar broadcast_channels (pode ser array ou string)
+        });
+        allChannels = [...channelsList];
+      }
+
+      // Processar broadcast_channels adicionais (pode ser array ou string)
+      if (nextMatch.broadcast_channels) {
         if (Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
-          transmissionText = nextMatch.broadcast_channels.join(', ');
+          allChannels = [...allChannels, ...nextMatch.broadcast_channels];
         } else if (typeof nextMatch.broadcast_channels === 'string' && nextMatch.broadcast_channels.trim()) {
-          transmissionText = nextMatch.broadcast_channels.trim();
+          allChannels = [...allChannels, nextMatch.broadcast_channels.trim()];
         }
+      }
+
+      // Definir texto de transmissão
+      if (allChannels.length > 0) {
+        transmissionText = allChannels.join(', ');
       }
 
       // Processar links de streaming adicionais
@@ -1276,6 +1284,7 @@ ${result}`;
 
       let transmissionText = 'A definir';
       let streamingLinks = '';
+      let allChannels: string[] = [];
 
       // Processar canais da tabela match_broadcasts
       if (broadcasts && broadcasts.length > 0) {
@@ -1285,15 +1294,22 @@ ${result}`;
             return `${channel.name} (${channel.channel_link})`;
           }
           return channel.name;
-        }).join(', ');
-        transmissionText = channelsList;
-      } else if (currentMatch.broadcast_channels) {
-        // Processar broadcast_channels (pode ser array ou string)
+        });
+        allChannels = [...channelsList];
+      }
+
+      // Processar broadcast_channels adicionais (pode ser array ou string)
+      if (currentMatch.broadcast_channels) {
         if (Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
-          transmissionText = currentMatch.broadcast_channels.join(', ');
+          allChannels = [...allChannels, ...currentMatch.broadcast_channels];
         } else if (typeof currentMatch.broadcast_channels === 'string' && currentMatch.broadcast_channels.trim()) {
-          transmissionText = currentMatch.broadcast_channels.trim();
+          allChannels = [...allChannels, currentMatch.broadcast_channels.trim()];
         }
+      }
+
+      // Definir texto de transmissão
+      if (allChannels.length > 0) {
+        transmissionText = allChannels.join(', ');
       }
 
       // Processar links de streaming adicionais
