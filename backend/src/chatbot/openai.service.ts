@@ -224,8 +224,10 @@ export class OpenAIService {
       'internacional', 'grêmio', 'bahia', 'fortaleza', 'ceará',
       'sport', 'vitória', 'juventude', 'bragantino', 'mirassol',
       'atlético-pr', 'athletico', 'cuiabá', 'cuiaba', 'goiás', 'goias',
-      'coritiba', 'américa-mg', 'america-mg', 'avaí', 'avai',
-      'chapecoense', 'ponte preta', 'guarani', 'operário', 'operario'
+      'coritiba', 'américa-mg', 'america-mg', 'avaí', 'avai', 'avaí fc', 'avai fc',
+      'chapecoense', 'ponte preta', 'guarani', 'operário', 'operario',
+      'crb', 'vila nova', 'novorizontino', 'amazonas', 'paysandu',
+      'sport recife', 'ceara', 'gremio', 'atletico-mg', 'atletico-pr'
     ];
     
     for (const team of teams) {
