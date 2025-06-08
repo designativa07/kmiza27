@@ -204,19 +204,24 @@ export class ChatbotService {
           let transmissionText = 'A definir';
           let streamingLinks = '';
 
-          // Processar canais da tabela match_broadcasts
-          if (broadcasts && broadcasts.length > 0) {
-            const channelsList = broadcasts.map(broadcast => {
-              const channel = broadcast.channel;
-              if (channel.channel_link) {
-                return `${channel.name} (${channel.channel_link})`;
-              }
-              return channel.name;
-            }).join(', ');
-            transmissionText = channelsList;
-          } else if (todayMatch.broadcast_channels && Array.isArray(todayMatch.broadcast_channels) && todayMatch.broadcast_channels.length > 0) {
-            transmissionText = todayMatch.broadcast_channels.join(', ');
-          }
+                     // Processar canais da tabela match_broadcasts
+           if (broadcasts && broadcasts.length > 0) {
+             const channelsList = broadcasts.map(broadcast => {
+               const channel = broadcast.channel;
+               if (channel.channel_link) {
+                 return `${channel.name} (${channel.channel_link})`;
+               }
+               return channel.name;
+             }).join(', ');
+             transmissionText = channelsList;
+           } else if (todayMatch.broadcast_channels) {
+             // Processar broadcast_channels (pode ser array ou string)
+             if (Array.isArray(todayMatch.broadcast_channels) && todayMatch.broadcast_channels.length > 0) {
+               transmissionText = todayMatch.broadcast_channels.join(', ');
+             } else if (typeof todayMatch.broadcast_channels === 'string' && todayMatch.broadcast_channels.trim()) {
+               transmissionText = todayMatch.broadcast_channels.trim();
+             }
+           }
 
           // Processar links de streaming adicionais
           if (todayMatch.streaming_links) {
@@ -304,8 +309,13 @@ export class ChatbotService {
           return channel.name;
         }).join(', ');
         transmissionText = channelsList;
-      } else if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
-        transmissionText = nextMatch.broadcast_channels.join(', ');
+      } else if (nextMatch.broadcast_channels) {
+        // Processar broadcast_channels (pode ser array ou string)
+        if (Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+          transmissionText = nextMatch.broadcast_channels.join(', ');
+        } else if (typeof nextMatch.broadcast_channels === 'string' && nextMatch.broadcast_channels.trim()) {
+          transmissionText = nextMatch.broadcast_channels.trim();
+        }
       }
 
       // Processar links de streaming adicionais
@@ -729,9 +739,15 @@ ${result}`;
               : channel.name;
           }).join(', ');
           response += `📺 ${channelsList}\n`;
-        } else if (match.broadcast_channels && Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
-          // Fallback para o campo antigo
-          response += `📺 ${match.broadcast_channels.join(', ')}\n`;
+        } else if (match.broadcast_channels) {
+          // Processar broadcast_channels (pode ser array ou string)
+          if (Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0) {
+            response += `📺 ${match.broadcast_channels.join(', ')}\n`;
+          } else if (typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim()) {
+            response += `📺 ${match.broadcast_channels.trim()}\n`;
+          } else {
+            response += `📺 Transmissão a confirmar\n`;
+          }
         } else {
           response += `📺 Transmissão a confirmar\n`;
         }
@@ -1271,8 +1287,13 @@ ${result}`;
           return channel.name;
         }).join(', ');
         transmissionText = channelsList;
-      } else if (currentMatch.broadcast_channels && Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
-        transmissionText = currentMatch.broadcast_channels.join(', ');
+      } else if (currentMatch.broadcast_channels) {
+        // Processar broadcast_channels (pode ser array ou string)
+        if (Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
+          transmissionText = currentMatch.broadcast_channels.join(', ');
+        } else if (typeof currentMatch.broadcast_channels === 'string' && currentMatch.broadcast_channels.trim()) {
+          transmissionText = currentMatch.broadcast_channels.trim();
+        }
       }
 
       // Processar links de streaming adicionais
