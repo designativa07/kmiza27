@@ -130,11 +130,6 @@ export class ChatbotService {
 
   private async findNextMatch(teamName: string): Promise<string> {
     try {
-      if (!teamName) {
-        return '❌ Por favor, especifique o nome do time. Ex: "Próximo jogo do Flamengo"';
-      }
-
-      // Buscar o time no banco
       const team = await this.teamsRepository
         .createQueryBuilder('team')
         .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
@@ -142,12 +137,12 @@ export class ChatbotService {
         .getOne();
 
       if (!team) {
-        return `❌ Time "${teamName}" não encontrado. 
+        return `❌ Time "${teamName}" não encontrado.
 
-🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, Santos, Botafogo, etc.`;
+🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, etc.`;
       }
 
-      // Primeiro, verificar se há jogo em andamento (LIVE)
+      // Primeiro, verificar se há jogo ao vivo
       const liveMatch = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
@@ -160,36 +155,15 @@ export class ChatbotService {
         .getOne();
 
       if (liveMatch) {
-        // Jogo em andamento - retornar informações do jogo ao vivo
-        const date = new Date(liveMatch.match_date);
-        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-        const formattedTime = date.toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'America/Sao_Paulo'
-        });
-
-        const homeScore = liveMatch.home_score ?? 0;
-        const awayScore = liveMatch.away_score ?? 0;
-
-        return `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
-⚽ *${liveMatch.home_team.name} ${homeScore} x ${awayScore} ${liveMatch.away_team.name}*
-📅 Data: ${formattedDate}
-⏰ Início: ${formattedTime}
-
-🏆 Competição: ${liveMatch.competition.name}
-📅 ${liveMatch.round?.name || 'A definir'}
-🏟️ Estádio: ${liveMatch.stadium?.name || 'A definir'}
-
-🔴 JOGO EM ANDAMENTO!
-⚽ Acompanhe o placar ao vivo!`;
+        // Se há jogo ao vivo, usar o método getCurrentMatch
+        return this.getCurrentMatch(teamName);
       }
 
-      // Verificar se há jogo hoje que pode estar acontecendo agora (mesmo que marcado como scheduled)
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfDay = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      
+      // Verificar se há jogo hoje que pode estar ao vivo (mesmo que marcado como scheduled)
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
       const todayMatch = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
@@ -199,18 +173,18 @@ export class ChatbotService {
         .leftJoinAndSelect('match.round', 'round')
         .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
         .andWhere('match.status = :status', { status: 'scheduled' })
-        .andWhere('match.match_date >= :today', { today })
-        .andWhere('match.match_date < :endOfDay', { endOfDay })
-        .orderBy('match.match_date', 'ASC')
+        .andWhere('match.match_date >= :start', { start: startOfDay })
+        .andWhere('match.match_date < :end', { end: endOfDay })
         .getOne();
 
       if (todayMatch) {
+        // Verificar se o jogo pode estar acontecendo agora
         const matchTime = new Date(todayMatch.match_date);
-        const timeDiff = now.getTime() - matchTime.getTime();
-        const hoursDiff = timeDiff / (1000 * 60 * 60);
-        
-        // Se o jogo foi há menos de 3 horas e mais de -1 hora (1 hora antes), considerar como possivelmente ao vivo
-        if (hoursDiff >= -1 && hoursDiff <= 3) {
+        const now = new Date();
+        const timeDiff = (now.getTime() - matchTime.getTime()) / (1000 * 60 * 60); // diferença em horas
+
+        // Se o jogo foi há menos de 3 horas e mais de -1 hora, pode estar ao vivo
+        if (timeDiff >= -1 && timeDiff <= 3) {
           const date = new Date(todayMatch.match_date);
           const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
           const formattedTime = date.toLocaleTimeString('pt-BR', { 
@@ -219,26 +193,63 @@ export class ChatbotService {
             timeZone: 'America/Sao_Paulo'
           });
 
-          const homeScore = todayMatch.home_score ?? 0;
-          const awayScore = todayMatch.away_score ?? 0;
-          
-          let statusText = '';
-          if (hoursDiff >= 0 && hoursDiff <= 3) {
-            statusText = '🔴 POSSIVELMENTE AO VIVO';
-          } else {
-            statusText = '⏰ JOGO DE HOJE';
+          // Buscar canais de transmissão
+          const broadcasts = await this.matchBroadcastRepository
+            .createQueryBuilder('broadcast')
+            .leftJoinAndSelect('broadcast.channel', 'channel')
+            .where('broadcast.match_id = :matchId', { matchId: todayMatch.id })
+            .andWhere('channel.active = :active', { active: true })
+            .getMany();
+
+          let transmissionText = 'A definir';
+          let streamingLinks = '';
+
+          // Processar canais da tabela match_broadcasts
+          if (broadcasts && broadcasts.length > 0) {
+            const channelsList = broadcasts.map(broadcast => {
+              const channel = broadcast.channel;
+              if (channel.channel_link) {
+                return `${channel.name} (${channel.channel_link})`;
+              }
+              return channel.name;
+            }).join(', ');
+            transmissionText = channelsList;
+          } else if (todayMatch.broadcast_channels && Array.isArray(todayMatch.broadcast_channels) && todayMatch.broadcast_channels.length > 0) {
+            transmissionText = todayMatch.broadcast_channels.join(', ');
           }
 
-          return `${statusText} - ${team.name.toUpperCase()}
-⚽ *${todayMatch.home_team.name} ${homeScore > 0 || awayScore > 0 ? `${homeScore} x ${awayScore}` : 'vs'} ${todayMatch.away_team.name}*
+          // Processar links de streaming adicionais
+          if (todayMatch.streaming_links) {
+            if (Array.isArray(todayMatch.streaming_links)) {
+              streamingLinks = todayMatch.streaming_links.join('\n🔗 ');
+            } else if (typeof todayMatch.streaming_links === 'string') {
+              streamingLinks = todayMatch.streaming_links;
+            } else if (typeof todayMatch.streaming_links === 'object') {
+              // Se for um objeto, tentar extrair os valores
+              const links = Object.values(todayMatch.streaming_links).filter(link => typeof link === 'string');
+              streamingLinks = links.join('\n🔗 ');
+            }
+          }
+
+          let response = `🔴 POSSIVELMENTE AO VIVO - ${team.name.toUpperCase()}
+⚽ *${todayMatch.home_team.name} x ${todayMatch.away_team.name}*
 📅 Data: ${formattedDate}
-⏰ Horário: ${formattedTime}
+⏰ Início: ${formattedTime}
 
 🏆 Competição: ${todayMatch.competition.name}
 📅 ${todayMatch.round?.name || 'A definir'}
 🏟️ Estádio: ${todayMatch.stadium?.name || 'A definir'}
 
-${hoursDiff >= 0 && hoursDiff <= 3 ? '🔴 Jogo pode estar acontecendo agora!' : '⚽ Jogo agendado para hoje!'}`;
+📺 Transmissão: ${transmissionText}`;
+
+          if (streamingLinks) {
+            response += `\n🔗 ${streamingLinks}`;
+          }
+
+          response += `\n\n🔴 JOGO POSSIVELMENTE EM ANDAMENTO!
+⚽ Acompanhe o placar ao vivo!`;
+
+          return response;
         }
       }
 
@@ -281,9 +292,15 @@ ${hoursDiff >= 0 && hoursDiff <= 3 ? '🔴 Jogo pode estar acontecendo agora!' :
 
       // Determinar transmissão
       let transmissionText = 'A definir';
+      let streamingLinks = '';
+
+      // Processar canais da tabela match_broadcasts
       if (broadcasts && broadcasts.length > 0) {
         const channelsList = broadcasts.map(broadcast => {
           const channel = broadcast.channel;
+          if (channel.channel_link) {
+            return `${channel.name} (${channel.channel_link})`;
+          }
           return channel.name;
         }).join(', ');
         transmissionText = channelsList;
@@ -291,7 +308,20 @@ ${hoursDiff >= 0 && hoursDiff <= 3 ? '🔴 Jogo pode estar acontecendo agora!' :
         transmissionText = nextMatch.broadcast_channels.join(', ');
       }
 
-      return `PRÓXIMO JOGO DO ${team.name.toUpperCase()}
+      // Processar links de streaming adicionais
+      if (nextMatch.streaming_links) {
+        if (Array.isArray(nextMatch.streaming_links)) {
+          streamingLinks = nextMatch.streaming_links.join('\n🔗 ');
+        } else if (typeof nextMatch.streaming_links === 'string') {
+          streamingLinks = nextMatch.streaming_links;
+        } else if (typeof nextMatch.streaming_links === 'object') {
+          // Se for um objeto, tentar extrair os valores
+          const links = Object.values(nextMatch.streaming_links).filter(link => typeof link === 'string');
+          streamingLinks = links.join('\n🔗 ');
+        }
+      }
+
+      let response = `PRÓXIMO JOGO DO ${team.name.toUpperCase()}
 ⚽ *${nextMatch.home_team.name} x ${nextMatch.away_team.name}*
 📅 Data: ${formattedDate}
 ⏰ Hora: ${formattedTime}
@@ -300,9 +330,15 @@ ${hoursDiff >= 0 && hoursDiff <= 3 ? '🔴 Jogo pode estar acontecendo agora!' :
 📅 ${nextMatch.round?.name || 'A definir'}
 🏟️ Estádio: ${nextMatch.stadium?.name || 'A definir'}
 
-📺 Transmissão: ${transmissionText}
+📺 Transmissão: ${transmissionText}`;
 
-Bora torcer! 🔥⚽`;
+      if (streamingLinks) {
+        response += `\n🔗 ${streamingLinks}`;
+      }
+
+      response += `\n\nBora torcer! 🔥⚽`;
+
+      return response;
 
     } catch (error) {
       console.error('Erro ao buscar próximo jogo:', error);
@@ -699,6 +735,25 @@ ${result}`;
         } else {
           response += `📺 Transmissão a confirmar\n`;
         }
+
+        // Adicionar links de streaming adicionais
+        if (match.streaming_links) {
+          let streamingLinks = '';
+          if (Array.isArray(match.streaming_links)) {
+            streamingLinks = match.streaming_links.join('\n🔗 ');
+          } else if (typeof match.streaming_links === 'string') {
+            streamingLinks = match.streaming_links;
+          } else if (typeof match.streaming_links === 'object') {
+            // Se for um objeto, tentar extrair os valores
+            const links = Object.values(match.streaming_links).filter(link => typeof link === 'string');
+            streamingLinks = links.join('\n🔗 ');
+          }
+          
+          if (streamingLinks) {
+            response += `🔗 ${streamingLinks}\n`;
+          }
+        }
+
         response += `\n`;
       }
 
@@ -1204,9 +1259,15 @@ ${result}`;
         .getMany();
 
       let transmissionText = 'A definir';
+      let streamingLinks = '';
+
+      // Processar canais da tabela match_broadcasts
       if (broadcasts && broadcasts.length > 0) {
         const channelsList = broadcasts.map(broadcast => {
           const channel = broadcast.channel;
+          if (channel.channel_link) {
+            return `${channel.name} (${channel.channel_link})`;
+          }
           return channel.name;
         }).join(', ');
         transmissionText = channelsList;
@@ -1214,7 +1275,20 @@ ${result}`;
         transmissionText = currentMatch.broadcast_channels.join(', ');
       }
 
-      return `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
+      // Processar links de streaming adicionais
+      if (currentMatch.streaming_links) {
+        if (Array.isArray(currentMatch.streaming_links)) {
+          streamingLinks = currentMatch.streaming_links.join('\n🔗 ');
+        } else if (typeof currentMatch.streaming_links === 'string') {
+          streamingLinks = currentMatch.streaming_links;
+        } else if (typeof currentMatch.streaming_links === 'object') {
+          // Se for um objeto, tentar extrair os valores
+          const links = Object.values(currentMatch.streaming_links).filter(link => typeof link === 'string');
+          streamingLinks = links.join('\n🔗 ');
+        }
+      }
+
+      let response = `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
 ⚽ *${currentMatch.home_team.name} ${homeScore} x ${awayScore} ${currentMatch.away_team.name}*
 📅 Data: ${formattedDate}
 ⏰ Início: ${formattedTime}
@@ -1223,10 +1297,16 @@ ${result}`;
 📅 ${currentMatch.round?.name || 'A definir'}
 🏟️ Estádio: ${currentMatch.stadium?.name || 'A definir'}
 
-📺 Transmissão: ${transmissionText}
+📺 Transmissão: ${transmissionText}`;
 
-🔴 JOGO EM ANDAMENTO!
+      if (streamingLinks) {
+        response += `\n🔗 ${streamingLinks}`;
+      }
+
+      response += `\n\n🔴 JOGO EM ANDAMENTO!
 ⚽ Acompanhe o placar ao vivo!`;
+
+      return response;
 
     } catch (error) {
       console.error('Erro ao buscar jogo atual:', error);
