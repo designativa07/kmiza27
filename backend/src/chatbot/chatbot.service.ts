@@ -313,12 +313,21 @@ export class ChatbotService {
       }
 
       // Processar broadcast_channels adicionais (pode ser array ou string)
+      console.log(`🔍 DEBUG - broadcast_channels para jogo ${nextMatch.id}:`, nextMatch.broadcast_channels);
+      console.log(`🔍 DEBUG - tipo de broadcast_channels:`, typeof nextMatch.broadcast_channels);
+      
       if (nextMatch.broadcast_channels) {
         if (Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+          console.log(`🔍 DEBUG - Processando como array:`, nextMatch.broadcast_channels);
           allChannels = [...allChannels, ...nextMatch.broadcast_channels];
         } else if (typeof nextMatch.broadcast_channels === 'string' && nextMatch.broadcast_channels.trim()) {
+          console.log(`🔍 DEBUG - Processando como string:`, nextMatch.broadcast_channels.trim());
           allChannels = [...allChannels, nextMatch.broadcast_channels.trim()];
+        } else {
+          console.log(`🔍 DEBUG - broadcast_channels não processado - valor:`, nextMatch.broadcast_channels);
         }
+      } else {
+        console.log(`🔍 DEBUG - broadcast_channels é null/undefined`);
       }
 
       // Definir texto de transmissão
@@ -1299,12 +1308,21 @@ ${result}`;
       }
 
       // Processar broadcast_channels adicionais (pode ser array ou string)
+      console.log(`🔍 DEBUG - broadcast_channels para jogo ${currentMatch.id}:`, currentMatch.broadcast_channels);
+      console.log(`🔍 DEBUG - tipo de broadcast_channels:`, typeof currentMatch.broadcast_channels);
+      
       if (currentMatch.broadcast_channels) {
         if (Array.isArray(currentMatch.broadcast_channels) && currentMatch.broadcast_channels.length > 0) {
+          console.log(`🔍 DEBUG - Processando como array:`, currentMatch.broadcast_channels);
           allChannels = [...allChannels, ...currentMatch.broadcast_channels];
         } else if (typeof currentMatch.broadcast_channels === 'string' && currentMatch.broadcast_channels.trim()) {
+          console.log(`🔍 DEBUG - Processando como string:`, currentMatch.broadcast_channels.trim());
           allChannels = [...allChannels, currentMatch.broadcast_channels.trim()];
+        } else {
+          console.log(`🔍 DEBUG - broadcast_channels não processado - valor:`, currentMatch.broadcast_channels);
         }
+      } else {
+        console.log(`🔍 DEBUG - broadcast_channels é null/undefined`);
       }
 
       // Definir texto de transmissão
