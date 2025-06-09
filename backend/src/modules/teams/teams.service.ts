@@ -36,8 +36,16 @@ export class TeamsService {
   }
 
   async create(teamData: Partial<Team>): Promise<Team> {
-    const team = this.teamRepository.create(teamData);
-    return this.teamRepository.save(team);
+    try {
+      const team = this.teamRepository.create(teamData);
+      return this.teamRepository.save(team);
+    } catch (error) {
+      console.error("Erro ao criar o time:", error);
+      if (error.code === '23505') { // Código de erro PostgreSQL para violação de restrição única
+        throw new BadRequestException('Já existe um time com este slug ou nome.');
+      }
+      throw new BadRequestException('Erro ao criar o time. Verifique os dados fornecidos.');
+    }
   }
 
   async update(id: number, teamData: Partial<Team>): Promise<Team | null> {
