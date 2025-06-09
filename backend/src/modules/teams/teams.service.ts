@@ -41,6 +41,12 @@ export class TeamsService {
   }
 
   async update(id: number, teamData: Partial<Team>): Promise<Team | null> {
+    if (teamData.slug) {
+      const existingTeam = await this.teamRepository.findOne({ where: { slug: teamData.slug } });
+      if (existingTeam && existingTeam.id !== id) {
+        throw new BadRequestException('Já existe um time com este slug.');
+      }
+    }
     await this.teamRepository.update(id, teamData);
     return this.findOne(id);
   }
