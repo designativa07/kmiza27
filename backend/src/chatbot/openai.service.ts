@@ -36,7 +36,6 @@ export class OpenAIService implements OnModuleInit {
     }
     this.teamNames = [...new Set(this.teamNames)].sort((a, b) => b.length - a.length);
     console.log(`⚽ Carregados ${this.teamNames.length} nomes de times para reconhecimento.`);
-    console.log("Lista de teamNames carregados:", this.teamNames);
   }
 
   private removeAccents(str: string): string {
