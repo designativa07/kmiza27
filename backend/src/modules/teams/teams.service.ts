@@ -55,8 +55,16 @@ export class TeamsService {
         throw new BadRequestException('Já existe um time com este slug.');
       }
     }
+
+    const dataToUpdate: Partial<Team> = { ...teamData };
+
+    // Garante que stadium_id seja null se for uma string vazia
+    if (typeof dataToUpdate.stadium_id === 'string' && dataToUpdate.stadium_id === '') {
+      (dataToUpdate as any).stadium_id = null; // Cast para any para permitir atribuição de null
+    }
+
     try {
-      await this.teamRepository.update(id, teamData);
+      await this.teamRepository.update(id, dataToUpdate);
       return this.findOne(id);
     } catch (error) {
       console.error("Erro ao atualizar o time:", error);

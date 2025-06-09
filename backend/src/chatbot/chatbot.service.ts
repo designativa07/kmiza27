@@ -129,6 +129,7 @@ export class ChatbotService {
   }
 
   private async findNextMatch(teamName: string): Promise<string> {
+    this.logger.log(`🔍 Procurando próximo jogo para o time: ${teamName}`);
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
@@ -137,10 +138,11 @@ export class ChatbotService {
         .getOne();
 
       if (!team) {
-        return `❌ Time "${teamName}" não encontrado.
-
-🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, etc.`;
+        this.logger.warn(`Time "${teamName}" não encontrado no banco de dados.`);
+        return `❌ Time "${teamName}" não encontrado.\n\n🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, etc.`;
       }
+
+      this.logger.log(`Time encontrado: ${team.name} (ID: ${team.id})`);
 
       // Primeiro, verificar se há jogo ao vivo
       const liveMatch = await this.matchesRepository
