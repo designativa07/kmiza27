@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { BotConfigService } from '../modules/bot-config/bot-config.service';
+import { TeamsService } from '../modules/teams/teams.service';
 
 export interface MessageAnalysis {
   intent: string;
@@ -9,10 +10,34 @@ export interface MessageAnalysis {
 }
 
 @Injectable()
-export class OpenAIService {
-  
-  constructor(private botConfigService: BotConfigService) {}
-  
+export class OpenAIService implements OnModuleInit {
+  private teamNames: string[] = [];
+
+  constructor(
+    private botConfigService: BotConfigService,
+    private teamsService: TeamsService,
+  ) {}
+
+  async onModuleInit() {
+    await this.loadTeamNames();
+  }
+
+  private async loadTeamNames() {
+    this.teamNames = [];
+    const teams = await this.teamsService.findAll();
+    for (const team of teams) {
+      this.teamNames.push(team.name.toLowerCase());
+      if (team.short_name) {
+        this.teamNames.push(team.short_name.toLowerCase());
+      }
+      if (team.slug) {
+        this.teamNames.push(team.slug.toLowerCase());
+      }
+    }
+    this.teamNames = [...new Set(this.teamNames)].sort((a, b) => b.length - a.length);
+    console.log(`⚽ Carregados ${this.teamNames.length} nomes de times para reconhecimento.`);
+  }
+
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
     try {
       // Análise simples por enquanto (pode ser expandida com OpenAI real)
@@ -218,19 +243,7 @@ export class OpenAIService {
   }
   
   private extractTeamName(message: string): string | undefined {
-    const teams = [
-      'flamengo', 'palmeiras', 'corinthians', 'são paulo', 'santos', 
-      'botafogo', 'fluminense', 'vasco', 'atlético-mg', 'cruzeiro', 
-      'internacional', 'grêmio', 'bahia', 'fortaleza', 'ceará',
-      'sport', 'vitória', 'juventude', 'bragantino', 'mirassol',
-      'atlético-pr', 'athletico', 'cuiabá', 'cuiaba', 'goiás', 'goias',
-      'coritiba', 'américa-mg', 'america-mg', 'avaí', 'avai', 'avaí fc', 'avai fc',
-      'chapecoense', 'ponte preta', 'guarani', 'operário', 'operario',
-      'crb', 'vila nova', 'novorizontino', 'amazonas', 'paysandu',
-      'sport recife', 'ceara', 'gremio', 'atletico-mg', 'atletico-pr'
-    ];
-    
-    for (const team of teams) {
+    for (const team of this.teamNames) {
       if (message.includes(team)) {
         return team;
       }
