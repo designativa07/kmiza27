@@ -17,6 +17,7 @@ import { MatchBroadcast } from '../entities/match-broadcast.entity';
 import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
+import { TeamsModule } from '../modules/teams/teams.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { BotConfigModule } from '../modules/bot-config/bot-config.module';
     ]),
     UsersModule,
     BotConfigModule,
+    TeamsModule,
   ],
   controllers: [ChatbotController],
   providers: [
