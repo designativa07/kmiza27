@@ -26,22 +26,27 @@ export class OpenAIService implements OnModuleInit {
     this.teamNames = [];
     const teams = await this.teamsService.findAll();
     for (const team of teams) {
-      this.teamNames.push(team.name.toLowerCase());
+      this.teamNames.push(this.removeAccents(team.name.toLowerCase()));
       if (team.short_name) {
-        this.teamNames.push(team.short_name.toLowerCase());
+        this.teamNames.push(this.removeAccents(team.short_name.toLowerCase()));
       }
       if (team.slug) {
-        this.teamNames.push(team.slug.toLowerCase());
+        this.teamNames.push(this.removeAccents(team.slug.toLowerCase()));
       }
     }
     this.teamNames = [...new Set(this.teamNames)].sort((a, b) => b.length - a.length);
     console.log(`⚽ Carregados ${this.teamNames.length} nomes de times para reconhecimento.`);
+    console.log("Lista de teamNames carregados:", this.teamNames);
+  }
+
+  private removeAccents(str: string): string {
+    return str.normalize("NFD").replace(/\p{Diacritic}/gu, "");
   }
 
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
     try {
       // Análise simples por enquanto (pode ser expandida com OpenAI real)
-      const lowerMessage = message.toLowerCase();
+      const lowerMessage = this.removeAccents(message.toLowerCase());
       console.log(`🔍 Analisando mensagem: "${message}" -> "${lowerMessage}"`);
       
       // Detectar intenção de próximo jogo
