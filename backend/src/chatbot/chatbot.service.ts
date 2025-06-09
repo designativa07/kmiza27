@@ -386,22 +386,24 @@ export class ChatbotService {
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {
         return `❌ Time "${teamName}" não encontrado.`;
       }
 
+      const fullNameDisplay = team.full_name || team.name || 'A definir';
+
       return `ℹ️ INFORMAÇÕES DO ${team.name.toUpperCase()} ℹ️
 
-📛 Nome completo: ${team.full_name}
-🏷️ Sigla: ${team.short_name}
-🏙️ Cidade: ${team.city}
-🗺️ Estado: ${team.state}
-🌍 País: ${team.country}
-📅 Fundação: ${team.founded_year}
+📛 Nome completo: ${fullNameDisplay}
+🏷️ Sigla: ${team.short_name || 'A definir'}
+🏙️ Cidade: ${team.city || 'A definir'}
+🗺️ Estado: ${team.state || 'A definir'}
+🌍 País: ${team.country || 'A definir'}
+📅 Fundação: ${team.founded_year || 'A definir'}
 
 ⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
 
