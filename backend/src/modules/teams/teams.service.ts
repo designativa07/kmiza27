@@ -47,8 +47,13 @@ export class TeamsService {
         throw new BadRequestException('Já existe um time com este slug.');
       }
     }
-    await this.teamRepository.update(id, teamData);
-    return this.findOne(id);
+    try {
+      await this.teamRepository.update(id, teamData);
+      return this.findOne(id);
+    } catch (error) {
+      console.error("Erro ao atualizar o time:", error);
+      throw new BadRequestException('Erro ao atualizar o time. Verifique os dados fornecidos.');
+    }
   }
 
   async remove(id: number): Promise<void> {
