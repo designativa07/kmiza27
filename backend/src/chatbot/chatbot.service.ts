@@ -462,29 +462,14 @@ export class ChatbotService {
 
   private async getTodayMatches(): Promise<string> {
     try {
-      const today = new Date();
-      
-      // Get today's date components in America/Sao_Paulo
-      const options: Intl.DateTimeFormatOptions = {
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric',
-          timeZone: 'America/Sao_Paulo',
-      };
-      const formatter = new Intl.DateTimeFormat('en-US', options);
-      const parts = formatter.formatToParts(today);
+      const now = new Date();
 
-      const year = parseInt(parts.find(p => p.type === 'year')?.value || '', 10);
-      const month = parseInt(parts.find(p => p.type === 'month')?.value || '', 10) - 1; // Month is 0-indexed
-      const day = parseInt(parts.find(p => p.type === 'day')?.value || '', 10);
+      // Create Date objects for the start and end of *that* day in Sao Paulo's local time.
+      const startOfSaoPauloDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const endOfSaoPauloDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-      // Create Date objects representing start and end of the day in America/Sao_Paulo
-      const startOfLocalDay = new Date(year, month, day, 0, 0, 0, 0);
-      const endOfLocalDay = new Date(year, month, day, 23, 59, 59, 999);
-
-      // Convert these local times to UTC for the database query.
-      const startQueryDate = new Date(startOfLocalDay.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const endQueryDate = new Date(endOfLocalDay.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const startQueryDate = startOfSaoPauloDay;
+      const endQueryDate = endOfSaoPauloDay;
 
       const todayMatches = await this.matchesRepository
         .createQueryBuilder('match')
@@ -543,8 +528,15 @@ export class ChatbotService {
 
   private async getWeekMatches(): Promise<string> {
     try {
-      const today = new Date();
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const startOfTodaySaoPaulo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+      // End of next week in Sao Paulo local time (7 days from start of today)
+      const endOfNextWeekSaoPaulo = new Date(startOfTodaySaoPaulo.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 full days
+      endOfNextWeekSaoPaulo.setHours(23, 59, 59, 999); // Set to end of the day
+
+      const startQueryDate = startOfTodaySaoPaulo;
+      const endQueryDate = endOfNextWeekSaoPaulo;
 
       const weekMatches = await this.matchesRepository
         .createQueryBuilder('match')
@@ -552,8 +544,8 @@ export class ChatbotService {
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where('match.match_date >= :start', { start: today })
-        .andWhere('match.match_date <= :end', { end: nextWeek })
+        .where('match.match_date >= :start', { start: startQueryDate })
+        .andWhere('match.match_date <= :end', { end: endQueryDate })
         .andWhere('match.status = :status', { status: 'scheduled' })
         .orderBy('match.match_date', 'ASC')
         .limit(15)

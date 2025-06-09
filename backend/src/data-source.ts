@@ -1,13 +1,15 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+// import * as pg from 'pg'; // Não é mais necessário
 
 dotenv.config(); // Carrega as variáveis de ambiente do .env
 
 const entitiesPath = path.join(__dirname, 'entities/**/*.entity{.ts,.js}');
 const migrationsPath = path.join(__dirname, 'migrations/*{.ts,.js}');
 
-const dataSourceOptions: DataSourceOptions = {
+const dataSourceOptions: PostgresConnectionOptions = {
   type: 'postgres',
   host: process.env.DB_HOST || 'h4xd66.easypanel.host',
   port: parseInt(process.env.DB_PORT || '5433', 10),
@@ -21,6 +23,7 @@ const dataSourceOptions: DataSourceOptions = {
   ssl: false,
   extra: {
     connectionTimeoutMillis: 20000,
+    options: '-c TimeZone=America/Sao_Paulo', // Configuração do fuso horário para a sessão do PostgreSQL
   },
 };
 
