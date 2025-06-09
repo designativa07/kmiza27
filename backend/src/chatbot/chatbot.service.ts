@@ -463,8 +463,28 @@ export class ChatbotService {
   private async getTodayMatches(): Promise<string> {
     try {
       const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      // Get today's date components in America/Sao_Paulo
+      const options: Intl.DateTimeFormatOptions = {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          timeZone: 'America/Sao_Paulo',
+      };
+      const formatter = new Intl.DateTimeFormat('en-US', options);
+      const parts = formatter.formatToParts(today);
+
+      const year = parseInt(parts.find(p => p.type === 'year')?.value || '', 10);
+      const month = parseInt(parts.find(p => p.type === 'month')?.value || '', 10) - 1; // Month is 0-indexed
+      const day = parseInt(parts.find(p => p.type === 'day')?.value || '', 10);
+
+      // Create Date objects representing start and end of the day in America/Sao_Paulo
+      const startOfLocalDay = new Date(year, month, day, 0, 0, 0, 0);
+      const endOfLocalDay = new Date(year, month, day, 23, 59, 59, 999);
+
+      // Convert these local times to UTC for the database query.
+      const startQueryDate = new Date(startOfLocalDay.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const endQueryDate = new Date(endOfLocalDay.toLocaleString('en-US', { timeZone: 'UTC' }));
 
       const todayMatches = await this.matchesRepository
         .createQueryBuilder('match')
@@ -472,23 +492,23 @@ export class ChatbotService {
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where('match.match_date >= :start', { start: startOfDay })
-        .andWhere('match.match_date < :end', { end: endOfDay })
+        .where('match.match_date >= :start', { start: startQueryDate })
+        .andWhere('match.match_date <= :end', { end: endQueryDate })
         .orderBy('match.match_date', 'ASC')
         .getMany();
 
       if (todayMatches.length === 0) {
-        return `📅 JOGOS DE HOJE 📅
-
-😔 Não há jogos agendados para hoje.
-
-⚽ Quer saber sobre o próximo jogo de algum time específico?`;
+        return `📅 JOGOS DE HOJE 📅\n\n😔 Não há jogos agendados para hoje.\n\n⚽ Quer saber sobre o próximo jogo de algum time específico?`;
       }
 
       let response = `📅 JOGOS DE HOJE 📅\n\n`;
 
       todayMatches.forEach(match => {
-        const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo' // Adicionar fuso horário aqui
+        });
         
         // Determinar emoji e status baseado no status do jogo
         let statusEmoji = '⏰';
