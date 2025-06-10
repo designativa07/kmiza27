@@ -175,8 +175,20 @@ export class OpenAIService implements OnModuleInit {
         }
       }
 
-      // Detectar informações de um jogador
+      // Detectar informações de um jogador (mas só se não for um time conhecido)
       if ((lowerMessage.includes('jogador') || lowerMessage.includes('info') || lowerMessage.includes('dados')) && (lowerMessage.includes('do') || lowerMessage.includes('da')) && lowerMessage.length > 10) {
+        // Primeiro verificar se é um time conhecido
+        const teamName = this.extractTeamName(lowerMessage);
+        if (teamName) {
+          console.log(`✅ Detectado informações do time (não jogador): ${teamName}`);
+          return {
+            intent: 'team_info',
+            team: teamName,
+            confidence: 0.90
+          };
+        }
+        
+        // Só buscar por jogador se não for um time
         const player = this.extractPlayerName(lowerMessage);
         if (player) {
           console.log(`✅ Detectado solicitação de informações do jogador: ${player}`);
