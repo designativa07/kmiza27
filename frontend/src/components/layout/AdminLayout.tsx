@@ -30,7 +30,6 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Estatísticas', href: '/stats', icon: ChartBarIcon },
   { name: 'Usuários', href: '/users', icon: UsersIcon },
-  { name: 'Administradores', href: '/admins', icon: UserGroupIcon },
   { name: 'Jogadores', href: '/players', icon: UserIcon },
   { name: 'Competições', href: '/competitions', icon: TrophyIcon },
   { name: 'Times', href: '/teams', icon: ShieldCheckIcon },
@@ -38,7 +37,6 @@ const navigation = [
   { name: 'Canais', href: '/channels', icon: SignalIcon },
   { name: 'Notificações', href: '/notifications', icon: BellIcon },
   { name: 'Estádios', href: '/stadiums', icon: BuildingOfficeIcon },
-  { name: 'Configurações', href: '/settings', icon: Cog6ToothIcon },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

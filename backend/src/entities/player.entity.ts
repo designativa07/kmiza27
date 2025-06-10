@@ -20,6 +20,9 @@ export class Player {
   @Column({ length: 100, nullable: true })
   nationality: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, default: 'active' })
+  state: string; // Ex: 'active', 'retired', 'injured'
+
   @Column({ length: 255, nullable: true })
   image_url: string; // URL da foto do jogador
 

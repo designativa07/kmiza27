@@ -6,6 +6,7 @@ export interface MessageAnalysis {
   intent: string;
   team?: string;
   competition?: string;
+  player?: string;
   confidence: number;
 }
 
@@ -161,6 +162,32 @@ export class OpenAIService implements OnModuleInit {
         };
       }
 
+      // Detectar elenco do time
+      if ((lowerMessage.includes('elenco') || lowerMessage.includes('jogadores')) && lowerMessage.includes('do')) {
+        const team = this.extractTeamName(lowerMessage);
+        if (team) {
+          console.log(`✅ Detectado solicitação de elenco para o time: ${team}`);
+          return {
+            intent: 'team_squad',
+            team,
+            confidence: 0.90
+          };
+        }
+      }
+
+      // Detectar informações de um jogador
+      if ((lowerMessage.includes('jogador') || lowerMessage.includes('info') || lowerMessage.includes('dados')) && (lowerMessage.includes('do') || lowerMessage.includes('da')) && lowerMessage.length > 10) {
+        const player = this.extractPlayerName(lowerMessage);
+        if (player) {
+          console.log(`✅ Detectado solicitação de informações do jogador: ${player}`);
+          return {
+            intent: 'player_info',
+            player,
+            confidence: 0.90
+          };
+        }
+      }
+
       // Detectar informações de canais
       if (lowerMessage.includes('canais') || lowerMessage.includes('lista') ||
           (lowerMessage.includes('quais') && lowerMessage.includes('canal')) ||
@@ -264,6 +291,62 @@ export class OpenAIService implements OnModuleInit {
     if (message.includes('série b') || message.includes('serie b')) return 'brasileiro-serie-b';
     if (message.includes('sul-americana')) return 'sul-americana';
     if (message.includes('champions')) return 'champions-league';
+    
+    return undefined;
+  }
+
+  private extractPlayerName(message: string): string | undefined {
+    // Remover termos comuns que indicam intenção de jogador, mas não fazem parte do nome
+    const cleanedMessage = message.replace(/(informações do|info do|dados do|qual o jogador|quem é o jogador|elenco do)/g, '').trim();
+    
+    // Tentar extrair o nome do jogador com base em palavras capitalizadas ou nomes compostos
+    const playerKeywords = [
+      // Exemplo de nomes que podem ser comuns em um contexto de futebol
+      'messi', 'cristiano ronaldo', 'neymar', 'haaland', 'mbappé', 'vinicius junior', 'rodrygo', 'casemiro',
+      'paquetá', 'richarlison', 'firmino', 'gabriel jesus', 'alisson', 'ederson', 'thiago silva',
+      'marquinhos', 'militao', 'daniel alves', 'fagner', 'lucas moura', 'philippe coutinho',
+      'kroos', 'modric', 'de bruyne', 'salah', 'mané', 'lewandowski', 'benzema', 'suárez', 'cavani',
+      'ramos', 'van dijk', 'ruben dias', 'kimmich', 'goretzka', 'foden', 'mount', 'kane', 'sterling',
+      'grealish', 'sancho', 'upamecano', 'hernandez', 'koulibaly', 'brozovic', 'jorginho', 'verratti',
+      'pedri', 'gavi', 'araújo', 'valverde', 'vlahovic', 'osimhen', 'rafael leao', 'di maria',
+      'dybala', 'lautaro martinez', 'alvarez', 'enzo fernandez', 'mac allister', 'griezmann',
+      'felix', 'joao felix', 'ancelotti', 'guardiola', 'klopp', 'mourinho', 'tite', 'dorival',
+      'abel ferreira', 'fernando diniz', 'renato gaúcho', 'coudet', 'sampaoli', 'odair hellmann',
+      'bruno lage', 'roger machado', 'mano menezes', 'luxemburgo', 'felipão', 'carille', 'jair ventura',
+      'lisca', 'enderson moreira', 'cuca', 'marcelo fernandes', 'paulo sousa', 'jorge jesus',
+      'gabigol', 'pedro', 'arrascaeta', 'everton ribeiro', 'bruno henrique', 'filipe luis',
+      'david luiz', 'santos', 'rodinei', 'leo pereira', 'fabricio bruno', 'joao gomes',
+      'gerson', 'pulgar', 'thiago maia', 'vidal', 'cebolinha', 'marinho', 'kiffer',
+      'weverton', 'gustavo gomez', 'murilo', 'piquerez', 'zé rafael', 'raphael veiga',
+      'dudu', 'ron', 'artur', 'endo', 'deyverson', 'borja', 'luiz adriano',
+      'cassio', 'fagner', 'gil', 'balbuena', 'fábio santos', 'renato augusto',
+      'roger guedes', 'yuri alberto', 'willian', 'giuliano', 'maycon', 'du queiroz',
+      'fausto vera', 'mosquito', 'romero', 'paulistinha', 'sócrates', 'rivellino',
+      'carlos tevez', 'jô', 'liédson', 'ricardinho', 'marcelinho carioca',
+      'rafael', 'arboleda', 'bobs', 'diego costa', 'calleri', 'luciano',
+      'ganso', 'fernando', 'alexandre pato', 'rodrigo nestor', 'luan', 'galoppo',
+      'wellington rato', 'pablo maia', 'caio paulista', 'rafinha', 'alanderson',
+      // Adicione mais nomes ou padrões conforme necessário
+    ];
+
+    // Tentativa de encontrar um nome de jogador exato ou composto
+    for (const keyword of playerKeywords) {
+      if (cleanedMessage.includes(this.removeAccents(keyword.toLowerCase()))) {
+        return keyword; // Retorna o nome original com capitalização
+      }
+    }
+
+    // Fallback: se nenhuma palavra-chave for encontrada, tente extrair a última sequência de palavras
+    // Isso pode ser útil para nomes não listados explicitamente
+    const words = cleanedMessage.split(' ').filter(Boolean);
+    if (words.length > 0) {
+      // Retorna a última palavra como um palpite de nome de jogador
+      // Ou uma combinação das duas últimas palavras se a última for curta
+      if (words.length >= 2 && words[words.length - 1].length <= 3) {
+        return words.slice(-2).join(' ');
+      }
+      return words[words.length - 1];
+    }
     
     return undefined;
   }

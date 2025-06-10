@@ -22,7 +22,6 @@ import {
   FunnelIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
-import Sidebar from './Sidebar'
 import StatsCards from './StatsCards'
 
 import TeamsManager from './TeamsManager'
@@ -63,27 +62,6 @@ interface UserStats {
   stadiums: number
   players: number
 }
-
-// Navegação reorganizada com melhor sequência lógica
-const navigation = [
-  { name: 'Dashboard', href: '#', icon: ChartBarIcon, current: true },
-  { name: 'Times', href: '#', icon: UserGroupIcon, current: false },
-  { name: 'Jogadores', href: '#', icon: UsersIcon, current: false },
-  { name: 'Estádios', href: '#', icon: BuildingOfficeIcon, current: false },
-  { name: 'Competições', href: '#', icon: TrophyIcon, current: false },
-  { name: 'Jogos', href: '#', icon: CalendarIcon, current: false },
-  { name: 'Classificações', href: '#', icon: ChartBarIcon, current: false },
-  { name: 'Canais', href: '#', icon: TvIcon, current: false },
-  { name: 'Usuários', href: '#', icon: UsersIcon, current: false },
-  { name: 'Estatísticas de Usuários', href: '#', icon: ChartPieIcon, current: false },
-  { name: 'Administradores', href: '#', icon: WrenchScrewdriverIcon, current: false },
-  { name: 'Conversas WhatsApp', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
-  { name: 'Automação IA', href: '#', icon: CogIcon, current: false },
-  { name: 'Notificações', href: '#', icon: BellIcon, current: false },
-  { name: 'Status do Sistema', href: '#', icon: ServerIcon, current: false },
-  { name: 'Chatbot', href: '#', icon: ChatBubbleLeftRightIcon, current: false },
-  { name: 'Configurações', href: '#', icon: CogIcon, current: false },
-]
 
 export default function Dashboard() {
   const { user, logout, isAuthenticated } = useAuth()
@@ -490,8 +468,7 @@ export default function Dashboard() {
             </div>
 
             {/* Outras seções do Dashboard (ex: gráficos, tabelas recentes, etc.) */}
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-12 mb-6">Visão Detalhada</h2>
-
+            
             {/* Exemplo de componente de visão geral do Dashboard que pode ser adicionado */}
             {/* <DashboardOverview /> */}
           </div>
@@ -539,12 +516,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900">
-      <Sidebar 
-        navigation={navigation} 
-        currentPage={currentPage} 
-        setCurrentPage={setCurrentPage} 
-      />
-      
       <div className="flex flex-1 flex-col overflow-hidden lg:ml-72">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white dark:bg-slate-800 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">

@@ -21,6 +21,9 @@ export class Team {
   @Column({ type: 'varchar', length: 50, nullable: true })
   short_name: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  short_code: string;
+
   @Column({ type: 'text', nullable: true })
   logo_url: string;
 
