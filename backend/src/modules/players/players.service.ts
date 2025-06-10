@@ -32,24 +32,32 @@ export class PlayersService {
 
   async findAllPlayers(): Promise<Player[]> {
     try {
-      console.log('🔍 PlayersService: Tentando buscar jogadores com relações...');
+      console.log('🔍 PlayersService: Buscando jogadores sem relações primeiro...');
       const players = await this.playersRepository.find({
-        relations: ['team_history', 'team_history.team'],
+        order: { created_at: 'DESC' }
       });
-      console.log(`✅ PlayersService: ${players.length} jogadores encontrados com relações`);
+      console.log(`✅ PlayersService: ${players.length} jogadores encontrados`);
+      
+      // Se funcionou, tentar buscar com relações para jogadores que têm histórico
+      if (players.length > 0) {
+        try {
+          console.log('🔄 PlayersService: Tentando buscar com relações...');
+          const playersWithHistory = await this.playersRepository.find({
+            relations: ['team_history', 'team_history.team'],
+            order: { created_at: 'DESC' }
+          });
+          console.log(`✅ PlayersService: ${playersWithHistory.length} jogadores encontrados com relações`);
+          return playersWithHistory;
+        } catch (relationError) {
+          console.error('❌ PlayersService: Erro ao buscar relações, retornando sem relações:', relationError);
+          return players;
+        }
+      }
+      
       return players;
     } catch (error) {
-      console.error('❌ PlayersService: Erro ao buscar jogadores com relações:', error);
-      console.log('🔄 PlayersService: Tentando fallback sem relações...');
-      try {
-        const playersSimple = await this.playersRepository.find();
-        console.log(`✅ PlayersService: ${playersSimple.length} jogadores encontrados sem relações`);
-        return playersSimple;
-      } catch (fallbackError) {
-        console.error('❌ PlayersService: Erro no fallback:', fallbackError);
-        console.log('🔄 PlayersService: Retornando array vazio como último recurso');
-        return [];
-      }
+      console.error('❌ PlayersService: Erro ao buscar jogadores:', error);
+      return [];
     }
   }
 

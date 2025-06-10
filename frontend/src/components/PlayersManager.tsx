@@ -52,6 +52,7 @@ interface Player {
   position?: string
   date_of_birth?: string
   nationality?: string
+  state?: string
   image_url?: string
   team_history?: PlayerTeamHistory[]
   goals?: Goal[];
@@ -63,6 +64,7 @@ interface PlayerFormData {
   position: string
   date_of_birth: string
   nationality: string
+  state: string
   image_url: string
 }
 
@@ -88,6 +90,7 @@ export default function PlayersManager() {
     position: '',
     date_of_birth: '',
     nationality: '',
+    state: 'active',
     image_url: '',
   })
   const [historyFormData, setHistoryFormData] = useState<PlayerTeamHistoryFormData>({
@@ -206,6 +209,7 @@ export default function PlayersManager() {
       position: player.position || '',
       date_of_birth: player.date_of_birth ? format(parseISO(player.date_of_birth), 'yyyy-MM-dd') : '',
       nationality: player.nationality || '',
+      state: player.state || 'active',
       image_url: player.image_url || '',
     })
     setShowPlayerModal(true)
@@ -255,6 +259,7 @@ export default function PlayersManager() {
       position: '',
       date_of_birth: '',
       nationality: '',
+      state: 'active',
       image_url: '',
     })
   }
@@ -338,6 +343,9 @@ export default function PlayersManager() {
                       Nacionalidade
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Estado
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Nascimento
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -366,6 +374,21 @@ export default function PlayersManager() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {player.nationality || 'N/A'}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          player.state === 'active' ? 'bg-green-100 text-green-800' :
+                          player.state === 'retired' ? 'bg-gray-100 text-gray-800' :
+                          player.state === 'injured' ? 'bg-red-100 text-red-800' :
+                          player.state === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {player.state === 'active' ? 'Ativo' :
+                           player.state === 'retired' ? 'Aposentado' :
+                           player.state === 'injured' ? 'Lesionado' :
+                           player.state === 'inactive' ? 'Inativo' :
+                           'N/A'}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {formatDate(player.date_of_birth)}
@@ -458,6 +481,21 @@ export default function PlayersManager() {
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, nationality: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   />
+                </div>
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
+                  <select
+                    name="state"
+                    id="state"
+                    value={formData.state}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, state: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="retired">Aposentado</option>
+                    <option value="injured">Lesionado</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
                 </div>
                 <div>
                   <label htmlFor="image_url" className="block text-sm font-medium text-gray-700">URL da Imagem</label>
