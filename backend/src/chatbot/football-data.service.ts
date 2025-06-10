@@ -246,14 +246,59 @@ export class FootballDataService {
 
   async getCompetitionStats(competitionName: string): Promise<string> {
     try {
-      const competition = await this.competitionsRepository
-        .createQueryBuilder('competition')
-        .where('UNACCENT(LOWER(competition.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${competitionName}%` })
-        .getOne();
-
-      if (!competition) {
+      // Usar a mesma lógica de busca melhorada dos artilheiros
+      const normalizedCompName = competitionName.toLowerCase();
+      
+      // Buscar todas as competições
+      const allCompetitions = await this.competitionsRepository.find();
+      
+      // Filtrar usando a mesma lógica do getTopScorers
+      let matchingCompetitions = allCompetitions.filter(comp => {
+        const compName = comp.name.toLowerCase();
+        
+        // Busca direta por nome
+        if (compName.includes(normalizedCompName)) {
+          return true;
+        }
+        
+        // Mapeamentos específicos
+        const searchMappings = [
+          { search: ['série b', 'serie b'], comp: ['série b', 'serie b'] },
+          { search: ['série a', 'serie a', 'brasileir'], comp: ['brasileir'] },
+          { search: ['libertador'], comp: ['libertador'] },
+          { search: ['copa do brasil', 'copa brasil'], comp: ['copa do brasil', 'copa brasil'] },
+          { search: ['sul-americana', 'sulamericana'], comp: ['sul-americana', 'sulamericana'] }
+        ];
+        
+        for (const mapping of searchMappings) {
+          const searchMatches = mapping.search.some(term => normalizedCompName.includes(term));
+          const compMatches = mapping.comp.some(term => compName.includes(term));
+          if (searchMatches && compMatches) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      // Priorizar correspondência específica (como nos artilheiros)
+      if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
+        const serieBMatches = matchingCompetitions.filter(comp => 
+          comp.name.toLowerCase().includes('série b') || comp.name.toLowerCase().includes('serie b')
+        );
+        if (serieBMatches.length > 0) {
+          matchingCompetitions = serieBMatches;
+        }
+      }
+      
+      if (matchingCompetitions.length === 0) {
         return `❌ Competição "${competitionName}" não encontrada.`;
       }
+      
+      // Usar a primeira competição encontrada (a mais específica)
+      const competition = matchingCompetitions[0];
+      
+      console.log(`📊 Estatísticas para: ${competition.name}`);
 
       // Buscar estatísticas da competição
       const totalMatches = await this.matchesRepository
