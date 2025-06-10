@@ -14,6 +14,8 @@ import { Round } from '../entities/round.entity';
 import { Goal } from '../entities/goal.entity';
 import { Channel } from '../entities/channel.entity';
 import { MatchBroadcast } from '../entities/match-broadcast.entity';
+import { Player } from '../entities/player.entity';
+import { PlayerTeamHistory } from '../entities/player-team-history.entity';
 import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
@@ -31,6 +33,8 @@ import { TeamsModule } from '../modules/teams/teams.module';
       Goal,
       Channel,
       MatchBroadcast,
+      Player,
+      PlayerTeamHistory,
     ]),
     UsersModule,
     BotConfigModule,
