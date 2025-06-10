@@ -1268,6 +1268,29 @@ Para mais informações acesse Kmiza27.com`;
   }
 
   /**
+   * Debug da análise de mensagem
+   */
+  async debugMessageAnalysis(message: string) {
+    try {
+      console.log(`🐛 DEBUG: Analisando mensagem "${message}"`);
+      
+      const analysis = await this.openAIService.analyzeMessage(message);
+      
+      return {
+        message,
+        analysis,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        message,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
    * Verificar se as respostas automáticas estão habilitadas
    */
   async isAutoResponseEnabled(): Promise<boolean> {

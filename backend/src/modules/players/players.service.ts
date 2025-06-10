@@ -61,6 +61,24 @@ export class PlayersService {
     }
   }
 
+  async searchPlayersByName(searchTerm: string): Promise<Player[]> {
+    try {
+      console.log(`🔍 PlayersService: Buscando jogadores com nome: "${searchTerm}"`);
+      
+      const players = await this.playersRepository
+        .createQueryBuilder('player')
+        .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${searchTerm}%` })
+        .orderBy('player.name', 'ASC')
+        .getMany();
+      
+      console.log(`✅ PlayersService: ${players.length} jogadores encontrados para "${searchTerm}"`);
+      return players;
+    } catch (error) {
+      console.error(`❌ PlayersService: Erro ao buscar jogadores por nome "${searchTerm}":`, error);
+      return [];
+    }
+  }
+
   async findPlayerById(id: number): Promise<Player> {
     const player = await this.playersRepository.findOne({
       where: { id },

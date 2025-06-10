@@ -175,12 +175,32 @@ export class OpenAIService implements OnModuleInit {
         }
       }
 
-      // Detectar informações de um jogador (mas só se não for um time conhecido)
-      if ((lowerMessage.includes('jogador') || lowerMessage.includes('info') || lowerMessage.includes('dados')) && (lowerMessage.includes('do') || lowerMessage.includes('da')) && lowerMessage.length > 10) {
-        // Primeiro verificar se é um time conhecido
+      // Detectar informações de jogador - PRIORIDADE ALTA quando contém "jogador"
+      if (lowerMessage.includes('jogador')) {
+        // Extrair nome do jogador removendo palavras de contexto
+        const playerName = lowerMessage
+          .replace(/jogador\s+/g, '')
+          .replace(/informações\s+(do|da)\s+/g, '')
+          .replace(/info\s+(do|da)\s+/g, '')
+          .replace(/dados\s+(do|da)\s+/g, '')
+          .trim();
+        
+        if (playerName.length > 2) {
+          console.log(`✅ Detectado solicitação de informações do jogador: ${playerName}`);
+          return {
+            intent: 'player_info',
+            player: playerName,
+            confidence: 0.95
+          };
+        }
+      }
+
+      // Detectar informações genéricas (info/dados) - só se NÃO contém "jogador"
+      if (!lowerMessage.includes('jogador') && (lowerMessage.includes('info') || lowerMessage.includes('dados') || lowerMessage.includes('informações')) && (lowerMessage.includes('do') || lowerMessage.includes('da')) && lowerMessage.length > 10) {
+        // Para mensagens genéricas, verificar se é um time conhecido
         const teamName = this.extractTeamName(lowerMessage);
         if (teamName) {
-          console.log(`✅ Detectado informações do time (não jogador): ${teamName}`);
+          console.log(`✅ Detectado informações do time: ${teamName}`);
           return {
             intent: 'team_info',
             team: teamName,
@@ -188,14 +208,14 @@ export class OpenAIService implements OnModuleInit {
           };
         }
         
-        // Só buscar por jogador se não for um time
+        // Se não é time, tentar como jogador
         const player = this.extractPlayerName(lowerMessage);
         if (player) {
           console.log(`✅ Detectado solicitação de informações do jogador: ${player}`);
           return {
             intent: 'player_info',
             player,
-            confidence: 0.90
+            confidence: 0.85
           };
         }
       }
@@ -287,8 +307,18 @@ export class OpenAIService implements OnModuleInit {
   
   private extractTeamName(message: string): string | undefined {
     for (const team of this.teamNames) {
-      if (message.includes(team)) {
-        return team;
+      // Usar regex com word boundaries para evitar falsos positivos
+      // Para siglas curtas (<=3 chars), ser mais restritivo
+      if (team.length <= 3) {
+        const regex = new RegExp(`\\b${team}\\b`, 'i');
+        if (regex.test(message)) {
+          return team;
+        }
+      } else {
+        // Para nomes longos, usar busca normal
+        if (message.includes(team)) {
+          return team;
+        }
       }
     }
     
@@ -309,7 +339,7 @@ export class OpenAIService implements OnModuleInit {
 
   private extractPlayerName(message: string): string | undefined {
     // Remover termos comuns que indicam intenção de jogador, mas não fazem parte do nome
-    const cleanedMessage = message.replace(/(informações do|info do|dados do|qual o jogador|quem é o jogador|elenco do)/g, '').trim();
+    const cleanedMessage = message.replace(/(informações do|info do|dados do|qual o jogador|quem é o jogador|elenco do|jogador )/g, '').trim();
     
     // Tentar extrair o nome do jogador com base em palavras capitalizadas ou nomes compostos
     const playerKeywords = [

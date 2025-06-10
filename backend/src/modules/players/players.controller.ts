@@ -26,12 +26,19 @@ export class PlayersController {
   }
 
   @Get()
-  async findAll(): Promise<Player[]> {
+  async findAll(@Query('search') search?: string): Promise<Player[]> {
     try {
       console.log('🔍 PlayersController: Iniciando busca de jogadores...');
-      const players = await this.playersService.findAllPlayers();
-      console.log(`✅ PlayersController: ${players.length} jogadores encontrados`);
-      return players;
+      if (search) {
+        console.log(`🔍 PlayersController: Buscando por: "${search}"`);
+        const players = await this.playersService.searchPlayersByName(search);
+        console.log(`✅ PlayersController: ${players.length} jogadores encontrados com a busca "${search}"`);
+        return players;
+      } else {
+        const players = await this.playersService.findAllPlayers();
+        console.log(`✅ PlayersController: ${players.length} jogadores encontrados (todos)`);
+        return players;
+      }
     } catch (error) {
       console.error('❌ PlayersController: Erro ao buscar jogadores:', error);
       throw error;
