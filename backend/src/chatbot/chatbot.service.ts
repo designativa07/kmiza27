@@ -129,6 +129,10 @@ export class ChatbotService {
           response = await this.getPlayerInfo(analysis.player ?? '');
           break;
 
+        case 'team_info':
+          response = await this.getTeamInfo(analysis.team ?? '');
+          break;
+
         default:
           response = await this.getWelcomeMessage();
       }
@@ -1594,8 +1598,6 @@ Para mais informações acesse Kmiza27.com`;
     const player = await this.playerRepository
       .createQueryBuilder('player')
       .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
-      .orWhere('UNACCENT(LOWER(player.first_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
-      .orWhere('UNACCENT(LOWER(player.last_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
       .getOne();
 
     if (!player) {
