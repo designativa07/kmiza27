@@ -207,10 +207,7 @@ export class ChatbotService {
         if (timeDiff >= -1 && timeDiff <= 3) {
           const date = new Date(todayMatch.match_date);
           const formattedDate = date.toLocaleDateString('pt-BR');
-          const formattedTime = date.toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit'
-          });
+          const formattedTime = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
 
           // Buscar canais de transmissão
           const broadcasts = await this.matchBroadcastRepository
@@ -300,10 +297,7 @@ export class ChatbotService {
       // Usar formatação simples de data (dados já estão no horário correto)
       const date = new Date(nextMatch.match_date);
       const formattedDate = date.toLocaleDateString('pt-BR');
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
+      const formattedTime = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
 
       // Buscar canais de transmissão da nova tabela match_broadcasts
       const broadcasts = await this.matchBroadcastRepository
@@ -505,10 +499,8 @@ export class ChatbotService {
       let response = `📅 JOGOS DE HOJE 📅\n\n`;
 
       todayMatches.forEach(match => {
-        const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit'
-        });
+        const matchDate = new Date(match.match_date);
+        const time = `${matchDate.getUTCHours().toString().padStart(2, '0')}:${matchDate.getUTCMinutes().toString().padStart(2, '0')}`;
         
         // Determinar emoji e status baseado no status do jogo
         let statusEmoji = '⏰';
@@ -579,7 +571,7 @@ export class ChatbotService {
       weekMatches.forEach(match => {
         const date = new Date(match.match_date);
         const formattedDate = date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-        const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const time = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
         
         response += `📅 ${formattedDate} - ${time}\n`;
         response += `🏆 ${match.competition.name}\n`;
@@ -727,10 +719,7 @@ export class ChatbotService {
 
       const date = new Date(lastMatch.match_date);
       const formattedDate = date.toLocaleDateString('pt-BR');
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
+      const formattedTime = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
 
       const teamScore = lastMatch.home_score ?? 0;
       const opponentScore = lastMatch.away_score ?? 0;
@@ -793,10 +782,7 @@ ${result}`;
       for (const match of upcomingMatches) {
         const date = new Date(match.match_date);
         const formattedDate = date.toLocaleDateString('pt-BR');
-        const time = date.toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit'
-        });
+        const time = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
         
         const isHome = match.home_team.id === team.id;
         const opponent = isHome ? match.away_team.name : match.home_team.name;
@@ -1366,10 +1352,7 @@ Para mais informações acesse Kmiza27.com`;
 
       const date = new Date(currentMatch.match_date);
       const formattedDate = date.toLocaleDateString('pt-BR');
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
+      const formattedTime = `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`;
 
       const homeScore = currentMatch.home_score ?? 0;
       const awayScore = currentMatch.away_score ?? 0;
