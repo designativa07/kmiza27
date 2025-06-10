@@ -20,6 +20,21 @@ export class MatchesController {
     return this.matchesService.createTwoLegTie(createTwoLegTieDto);
   }
 
+  @Get('top-scorers')
+  async getTopScorers(@Res() res: Response) {
+    const topScorers = await this.matchesService.getTopScorers();
+    
+    // Adicionar headers para evitar cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    
+    return res.json(topScorers);
+  }
+
   @Get()
   async findAll(@Res() res: Response) {
     const matches = await this.matchesService.findAll();

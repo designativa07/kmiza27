@@ -1,6 +1,25 @@
-import { IsOptional, IsNumber, IsString, IsDateString, IsEnum, IsArray } from 'class-validator';
+import { IsOptional, IsNumber, IsString, IsDateString, IsEnum, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { MatchStatus } from '../../../entities/match.entity';
 import { MatchLeg } from '../../../entities/match.entity';
+
+export class MatchPlayerStatDto {
+  @IsOptional()
+  @IsNumber()
+  player_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  goals?: number;
+
+  @IsOptional()
+  @IsNumber()
+  yellow_cards?: number;
+
+  @IsOptional()
+  @IsNumber()
+  red_cards?: number;
+}
 
 export class UpdateMatchDto {
   @IsOptional()
@@ -102,4 +121,16 @@ export class UpdateMatchDto {
   @IsOptional()
   @IsNumber()
   qualified_team_id?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MatchPlayerStatDto)
+  home_team_player_stats?: MatchPlayerStatDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MatchPlayerStatDto)
+  away_team_player_stats?: MatchPlayerStatDto[];
 } 

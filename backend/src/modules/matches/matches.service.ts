@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Match, Round, MatchBroadcast, Channel, Competition, Team, Stadium } from '../../entities';
+import { Match, Round, MatchBroadcast, Channel, Competition, Team, Stadium, Player } from '../../entities';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { MatchStatus, MatchLeg } from '../../entities/match.entity';
@@ -25,6 +25,8 @@ export class MatchesService {
     private teamRepository: Repository<Team>,
     @InjectRepository(Stadium)
     private stadiumRepository: Repository<Stadium>,
+    @InjectRepository(Player)
+    private playerRepository: Repository<Player>,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -85,6 +87,8 @@ export class MatchesService {
       home_aggregate_score: createMatchDto.home_aggregate_score,
       away_aggregate_score: createMatchDto.away_aggregate_score,
       qualified_team_id: createMatchDto.qualified_team_id,
+      home_team_player_stats: createMatchDto.home_team_player_stats,
+      away_team_player_stats: createMatchDto.away_team_player_stats,
     };
 
     // Se for o primeiro jogo de um confronto e não tiver um tie_id, gerar um novo
@@ -339,6 +343,12 @@ export class MatchesService {
       if (updateMatchDto.qualified_team_id !== undefined) {
         updateData.qualified_team_id = updateMatchDto.qualified_team_id;
       }
+      if (updateMatchDto.home_team_player_stats !== undefined) {
+        updateData.home_team_player_stats = updateMatchDto.home_team_player_stats;
+      }
+      if (updateMatchDto.away_team_player_stats !== undefined) {
+        updateData.away_team_player_stats = updateMatchDto.away_team_player_stats;
+      }
       
       // Relacionamentos - usar os nomes das colunas de foreign key
       if (updateMatchDto.home_team_id !== undefined) {
@@ -533,5 +543,118 @@ export class MatchesService {
     }
     await this.matchRepository.save(tieMatches);
     console.log(`Placar agregado e classificado atualizados para o confronto ${match.tie_id}. Classificado: ${qualifiedTeamId}`);
+  }
+
+  async getTopScorers(): Promise<any[]> {
+    try {
+      console.log('🔍 Buscando artilheiros...');
+      
+      // Buscar todas as partidas finalizadas com estatísticas de jogadores
+      const matches = await this.matchRepository.find({
+        where: { status: MatchStatus.FINISHED },
+        relations: ['home_team', 'away_team', 'competition'],
+        select: {
+          id: true,
+          home_team_player_stats: true,
+          away_team_player_stats: true,
+          home_team: { id: true, name: true, short_name: true, logo_url: true },
+          away_team: { id: true, name: true, short_name: true, logo_url: true },
+          competition: { id: true, name: true, season: true }
+        }
+      });
+
+      console.log(`📊 Encontradas ${matches.length} partidas finalizadas`);
+
+      // Mapa para armazenar estatísticas dos jogadores
+      const playerStatsMap = new Map<string, any>();
+
+      for (const match of matches) {
+        // Processar estatísticas do time da casa
+        if (match.home_team_player_stats && Array.isArray(match.home_team_player_stats)) {
+          await this.processTeamPlayerStats(
+            match.home_team_player_stats,
+            match.home_team,
+            match.competition,
+            playerStatsMap
+          );
+        }
+
+        // Processar estatísticas do time visitante
+        if (match.away_team_player_stats && Array.isArray(match.away_team_player_stats)) {
+          await this.processTeamPlayerStats(
+            match.away_team_player_stats,
+            match.away_team,
+            match.competition,
+            playerStatsMap
+          );
+        }
+      }
+
+      // Converter mapa para array e ordenar por gols
+      const topScorers = Array.from(playerStatsMap.values())
+        .filter(stat => stat.goals > 0)
+        .sort((a, b) => {
+          if (b.goals !== a.goals) {
+            return b.goals - a.goals;
+          }
+          return b.goals_per_match - a.goals_per_match;
+        });
+
+      console.log(`🏆 Encontrados ${topScorers.length} artilheiros`);
+      return topScorers;
+
+    } catch (error) {
+      console.error('❌ Erro ao buscar artilheiros:', error);
+      throw error;
+    }
+  }
+
+  private async processTeamPlayerStats(
+    playerStats: any[],
+    team: Team,
+    competition: Competition,
+    playerStatsMap: Map<string, any>
+  ): Promise<void> {
+    for (const stat of playerStats) {
+      if (stat.goals && stat.goals > 0) {
+        const key = `${stat.player_id}-${competition.id}`;
+        
+        // Buscar dados do jogador se ainda não temos
+        let playerData: Player | null = null;
+        try {
+          playerData = await this.playerRepository.findOne({
+            where: { id: stat.player_id },
+            select: ['id', 'name', 'position', 'image_url']
+          });
+        } catch (error) {
+          console.error(`Erro ao buscar jogador ${stat.player_id}:`, error);
+          continue;
+        }
+
+        if (playerData) {
+          if (playerStatsMap.has(key)) {
+            // Atualizar estatísticas existentes
+            const existing = playerStatsMap.get(key);
+            existing.goals += stat.goals;
+            existing.matches_played += 1;
+            existing.yellow_cards = (existing.yellow_cards || 0) + (stat.yellow_cards || 0);
+            existing.red_cards = (existing.red_cards || 0) + (stat.red_cards || 0);
+            existing.goals_per_match = existing.goals / existing.matches_played;
+          } else {
+            // Criar nova entrada
+            playerStatsMap.set(key, {
+              player: playerData,
+              team: team,
+              goals: stat.goals,
+              matches_played: 1,
+              yellow_cards: stat.yellow_cards || 0,
+              red_cards: stat.red_cards || 0,
+              goals_per_match: stat.goals,
+              competition: competition
+            });
+          }
+        }
+      }
+    }
   }
 } 
