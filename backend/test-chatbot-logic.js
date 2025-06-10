@@ -18,10 +18,10 @@ async function testMessage(message) {
     console.log(`📊 Status: ${response.status}`);
     const data = await response.json();
     
-    if (data.response.includes('não encontrado')) {
-      console.log(`❌ FALHOU: ${data.response}`);
+    if (data.response.includes('Não há dados')) {
+      console.log(`❌ AINDA COM PROBLEMA: ${data.response.substring(0, 200)}...`);
     } else {
-      console.log(`✅ SUCESSO: ${data.response.substring(0, 100)}...`);
+      console.log(`✅ CORRIGIDO: ${data.response.substring(0, 300)}...`);
     }
     
   } catch (error) {
@@ -51,36 +51,56 @@ async function debugExtraction(message) {
   }
 }
 
+async function debugStandings() {
+  console.log('\n🔍 DEBUG: Verificando API de classificação...');
+  
+  try {
+    const response = await fetch(`${baseUrl}/standings`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`📊 Standings API Status: ${response.status}`);
+      console.log(`📊 Dados retornados: ${JSON.stringify(data).substring(0, 200)}...`);
+    } else {
+      console.log(`⚠️ Standings API falhou: ${response.status}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Erro na API standings: ${error.message}`);
+  }
+}
+
+async function debugGoals() {
+  console.log('\n🔍 DEBUG: Verificando dados de gols...');
+  
+  try {
+    const response = await fetch(`${baseUrl}/matches/top-scorers`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`⚽ Top Scorers API Status: ${response.status}`);
+      console.log(`⚽ Dados retornados: ${JSON.stringify(data).substring(0, 200)}...`);
+    } else {
+      console.log(`⚠️ Top Scorers API falhou: ${response.status}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Erro na API top scorers: ${error.message}`);
+  }
+}
+
 async function main() {
-  console.log('🔍 Testando variações do Avaí...\n');
+  console.log('🎯 Testando CORREÇÃO DOS ARTILHEIROS...\n');
   
-  // Testes que estão falhando no WhatsApp
-  const failingTests = [
-    'avai',
-    'informações do avai',
-    'próximo jogo do avai',
-    'proximo jogo do avai'
-  ];
-  
-  // Testes que estão funcionando
-  const workingTests = [
-    'posição do avai',
-    'posição do Avaí',
-    'ultimo jogo do avai'
-  ];
-  
-  console.log('❌ TESTES QUE ESTÃO FALHANDO:');
-  for (const message of failingTests) {
-    await testMessage(message);
-  }
-  
-  console.log('\n✅ TESTES QUE FUNCIONAM:');
-  for (const message of workingTests) {
-    await testMessage(message);
-  }
-  
-  console.log('\n🧪 TESTE BRUNO HENRIQUE:');
-  await testMessage('jogador Bruno Henrique');
+  await testMessage('artilheiros');
+  await testMessage('artilheiros do brasileirao');
+  await testMessage('goleadores');
 }
 
 main(); 
