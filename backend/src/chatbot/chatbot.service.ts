@@ -1578,7 +1578,7 @@ Para mais informações acesse Kmiza27.com`;
       return `Nenhum jogador encontrado para o time *${team.name}* no momento.`;
     }
 
-    let squadList = `⚽ Elenco do *${team.name}* (${team.short_code}):\n\n`;
+    let squadList = `⚽ Elenco do *${team.name}* ${(team as any).short_code ? `(${(team as any).short_code})` : ''}:\n\n`;
     players.forEach(p => {
       const position = p.player.position ? ` (${p.player.position})` : '';
       const number = p.jersey_number ? ` #${p.jersey_number}` : '';
