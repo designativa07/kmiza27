@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
-import { Match } from '../entities/match.entity';
+import { Match, MatchStatus } from '../entities/match.entity';
 import { Competition } from '../entities/competition.entity';
 import { CompetitionTeam } from '../entities/competition-team.entity';
 import { Stadium } from '../entities/stadium.entity';
@@ -110,7 +110,7 @@ export class ChatbotService {
           break;
 
         case 'top_scorers':
-          response = await this.footballDataService.getTopScorers(analysis.competition);
+          response = await this.getTopScorers(analysis.competition);
           break;
 
         case 'channels_info':
@@ -1651,5 +1651,147 @@ Posição: ${position}
 Nacionalidade: ${player.nationality || 'A definir'}
 Data de Nascimento: ${dateOfBirth}
 Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
+  }
+
+  private async getTopScorers(competitionName?: string): Promise<string> {
+    try {
+      console.log(`⚽ Procurando artilheiros para: ${competitionName || 'todas as competições'}`);
+
+      // Buscar todas as partidas finalizadas com estatísticas de jogadores
+      const matches = await this.matchesRepository.find({
+        where: { status: MatchStatus.FINISHED },
+        relations: ['home_team', 'away_team', 'competition'],
+        select: {
+          id: true,
+          home_team_player_stats: true,
+          away_team_player_stats: true,
+          home_team: { id: true, name: true, short_name: true },
+          away_team: { id: true, name: true, short_name: true },
+          competition: { id: true, name: true, season: true }
+        }
+      });
+
+      console.log(`📊 Encontradas ${matches.length} partidas finalizadas`);
+
+      // Filtrar por competição se especificada
+      let filteredMatches = matches;
+      if (competitionName) {
+        const normalizedCompName = competitionName.toLowerCase();
+        filteredMatches = matches.filter(match => {
+          if (!match.competition) return false;
+          const compName = match.competition.name.toLowerCase();
+          return compName.includes(normalizedCompName) || 
+                 compName.includes('brasileir') && normalizedCompName.includes('brasileir');
+        });
+        console.log(`🔍 Filtradas ${filteredMatches.length} partidas para "${competitionName}"`);
+      }
+
+      // Mapa para armazenar estatísticas dos jogadores
+      const playerStatsMap = new Map<string, any>();
+
+      for (const match of filteredMatches) {
+        // Processar estatísticas do time da casa
+        if (match.home_team_player_stats && Array.isArray(match.home_team_player_stats)) {
+          await this.processPlayerStats(
+            match.home_team_player_stats,
+            match.home_team,
+            match.competition,
+            playerStatsMap
+          );
+        }
+
+        // Processar estatísticas do time visitante
+        if (match.away_team_player_stats && Array.isArray(match.away_team_player_stats)) {
+          await this.processPlayerStats(
+            match.away_team_player_stats,
+            match.away_team,
+            match.competition,
+            playerStatsMap
+          );
+        }
+      }
+
+      // Converter mapa para array e ordenar por gols
+      const topScorers = Array.from(playerStatsMap.values())
+        .filter(stat => stat.goals > 0)
+        .sort((a, b) => {
+          if (b.goals !== a.goals) {
+            return b.goals - a.goals;
+          }
+          return b.goals_per_match - a.goals_per_match;
+        })
+        .slice(0, 10);
+
+      console.log(`🏆 Encontrados ${topScorers.length} artilheiros`);
+
+      if (topScorers.length === 0) {
+        return `⚽ ARTILHEIROS ⚽${competitionName ? ` - ${competitionName.toUpperCase()}` : ''}
+
+😔 Ainda não há dados de artilharia disponíveis.`;
+      }
+
+      let response = `⚽ ARTILHEIROS ⚽`;
+      if (competitionName) {
+        response += ` - ${competitionName.toUpperCase()}`;
+      }
+      response += `\n\n`;
+
+      topScorers.forEach((scorer, index) => {
+        const position = index + 1;
+        const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
+        response += `${emoji} ${scorer.player.name} (${scorer.team.short_name || scorer.team.name}) - ${scorer.goals} gols\n`;
+      });
+
+      return response;
+
+    } catch (error) {
+      console.error('❌ Erro ao buscar artilheiros:', error);
+      return '❌ Erro ao buscar artilheiros.';
+    }
+  }
+
+  private async processPlayerStats(
+    playerStats: any[],
+    team: any,
+    competition: any,
+    playerStatsMap: Map<string, any>
+  ): Promise<void> {
+    for (const stat of playerStats) {
+      if (stat.goals && stat.goals > 0) {
+        const key = `${stat.player_id}`;
+        
+        // Buscar dados do jogador se ainda não temos
+        let playerData: Player | null = null;
+        try {
+          playerData = await this.playerRepository.findOne({
+            where: { id: stat.player_id },
+            select: ['id', 'name', 'position', 'image_url']
+          });
+        } catch (error) {
+          console.error(`Erro ao buscar jogador ${stat.player_id}:`, error);
+          continue;
+        }
+
+        if (playerData) {
+          if (playerStatsMap.has(key)) {
+            // Atualizar estatísticas existentes
+            const existing = playerStatsMap.get(key);
+            existing.goals += stat.goals;
+            existing.matches_played += 1;
+            existing.goals_per_match = existing.goals / existing.matches_played;
+          } else {
+            // Criar nova entrada
+            playerStatsMap.set(key, {
+              player: playerData,
+              team: team,
+              goals: stat.goals,
+              matches_played: 1,
+              goals_per_match: stat.goals,
+              competition: competition
+            });
+          }
+        }
+      }
+    }
   }
 } 
