@@ -301,6 +301,33 @@ export default function PlayersManager() {
     );
   };
 
+  const handleRemovePlayerFromTeamHistory = async (historyId: number, teamId: number) => {
+    if (!confirm('Tem certeza que deseja remover este jogador deste time?')) {
+      return;
+    }
+    try {
+      const response = await fetch(`${API_ENDPOINTS.teams.list()}/${teamId}/players/${historyId}/remove`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ end_date: new Date().toISOString() }),
+      });
+
+      if (response.ok) {
+        console.log('Histórico removido com sucesso!');
+        fetchData(); // Recarregar os dados para atualizar a lista
+      } else {
+        const errorText = await response.text();
+        console.error('Erro ao remover histórico:', response.status, errorText);
+        alert(`Erro ao remover histórico: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Erro ao remover histórico de time:', error);
+      alert('Erro de conexão ao remover histórico de time.');
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-4">Carregando jogadores...</div>;
   }
@@ -634,7 +661,7 @@ export default function PlayersManager() {
                           </p>
                         </div>
                         <button
-                          onClick={() => console.log('Remover histórico:', history.id)}
+                          onClick={() => handleRemovePlayerFromTeamHistory(history.id, history.team.id)}
                           className="ml-4 text-red-600 hover:text-red-900 text-sm"
                         >
                           Remover

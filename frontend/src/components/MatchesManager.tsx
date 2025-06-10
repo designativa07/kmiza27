@@ -231,7 +231,7 @@ function PlayerAutocomplete({
   return (
     <div>
       <label className="block text-sm font-medium text-gray-900">{label}</label>
-      <Combobox value={selectedPlayer || null} onChange={(player: Player) => onChange(player.id)}>
+      <Combobox value={selectedPlayer || null} onChange={(player: Player | null) => onChange(player?.id)}>
         <div className="relative mt-1">
           <Combobox.Input
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
@@ -260,6 +260,17 @@ function PlayerAutocomplete({
       </Combobox>
     </div>
   )
+}
+
+// Nova interface para corresponder à estrutura de PlayerTeamHistory retornada pelo backend
+interface PlayerTeamHistoryResponse {
+  id: number; // ID do registro no histórico do time do jogador
+  player: Player; // Objeto Player aninhado
+  team: Team; // Objeto Team aninhado
+  start_date: string;
+  end_date?: string | null;
+  jersey_number?: string | null;
+  role?: string | null;
 }
 
 export default function MatchesManager() {
@@ -344,8 +355,10 @@ export default function MatchesManager() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data: Player[] = await response.json();
-      setPlayers(data);
+      // A resposta do backend agora é PlayerTeamHistoryResponse[], então mapeamos para Player[]
+      const data: PlayerTeamHistoryResponse[] = await response.json();
+      const players = data.map(entry => entry.player); // Extrai o objeto player de cada entrada
+      setPlayers(players);
     } catch (error) {
       console.error(`Erro ao buscar jogadores para o time ${teamId}:`, error);
       setPlayers([]);
