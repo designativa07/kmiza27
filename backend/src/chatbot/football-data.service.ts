@@ -248,7 +248,7 @@ export class FootballDataService {
     try {
       const competition = await this.competitionsRepository
         .createQueryBuilder('competition')
-        .where('LOWER(competition.name) LIKE LOWER(:name)', { name: `%${competitionName}%` })
+        .where('UNACCENT(LOWER(competition.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${competitionName}%` })
         .getOne();
 
       if (!competition) {
@@ -267,19 +267,51 @@ export class FootballDataService {
         .andWhere('match.status = :status', { status: 'finished' })
         .getCount();
 
-      const totalGoals = await this.goalsRepository
-        .createQueryBuilder('goal')
-        .leftJoin('goal.match', 'match')
+      // Calcular gols a partir dos resultados das partidas (não da tabela goals)
+      const matchResults = await this.matchesRepository
+        .createQueryBuilder('match')
+        .select([
+          'SUM(COALESCE(match.home_score, 0)) as home_goals',
+          'SUM(COALESCE(match.away_score, 0)) as away_goals'
+        ])
         .where('match.competition_id = :competitionId', { competitionId: competition.id })
-        .andWhere('goal.type != :ownGoal', { ownGoal: 'own_goal' })
-        .getCount();
+        .andWhere('match.status = :status', { status: 'finished' })
+        .andWhere('match.home_score IS NOT NULL')
+        .andWhere('match.away_score IS NOT NULL')
+        .getRawOne();
 
+      const totalGoals = (parseInt(matchResults.home_goals) || 0) + (parseInt(matchResults.away_goals) || 0);
       const avgGoalsPerMatch = finishedMatches > 0 ? (totalGoals / finishedMatches).toFixed(2) : '0.00';
 
       const teamsCount = await this.competitionTeamsRepository
         .createQueryBuilder('ct')
         .where('ct.competition = :competitionId', { competitionId: competition.id })
         .getCount();
+
+      // Buscar partida com mais gols
+      const highestScoringMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .select([
+          'match.id',
+          'match.home_score',
+          'match.away_score',
+          'homeTeam.name',
+          'awayTeam.name'
+        ])
+        .where('match.competition_id = :competitionId', { competitionId: competition.id })
+        .andWhere('match.status = :status', { status: 'finished' })
+        .andWhere('match.home_score IS NOT NULL')
+        .andWhere('match.away_score IS NOT NULL')
+        .orderBy('(match.home_score + match.away_score)', 'DESC')
+        .getOne();
+
+      let highestScoringInfo = 'N/A';
+      if (highestScoringMatch) {
+        const totalGoalsMatch = highestScoringMatch.home_score + highestScoringMatch.away_score;
+        highestScoringInfo = `${highestScoringMatch.home_team.name} ${highestScoringMatch.home_score} x ${highestScoringMatch.away_score} ${highestScoringMatch.away_team.name} (${totalGoalsMatch} gols)`;
+      }
 
       return `📊 ESTATÍSTICAS - ${competition.name.toUpperCase()} 📊
 
@@ -296,6 +328,7 @@ export class FootballDataService {
 🥅 Estatísticas de Gols:
 ⚽ Total de gols: ${totalGoals}
 📊 Média por jogo: ${avgGoalsPerMatch}
+🔥 Jogo com mais gols: ${highestScoringInfo}
 
 📈 Status: ${competition.is_active ? 'Ativa' : 'Inativa'}`;
 
