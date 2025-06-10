@@ -10,6 +10,8 @@ import { Round } from '../entities/round.entity';
 import { User } from '../entities/user.entity';
 import { MatchBroadcast } from '../entities/match-broadcast.entity';
 import { Channel } from '../entities/channel.entity';
+import { Player } from '../entities/player.entity';
+import { PlayerTeamHistory } from '../entities/player-team-history.entity';
 import { OpenAIService } from './openai.service';
 import { EvolutionService } from './evolution.service';
 import { FootballDataService } from './football-data.service';
@@ -34,6 +36,10 @@ export class ChatbotService {
     private matchBroadcastRepository: Repository<MatchBroadcast>,
     @InjectRepository(Channel)
     private channelRepository: Repository<Channel>,
+    @InjectRepository(Player)
+    private playerRepository: Repository<Player>,
+    @InjectRepository(PlayerTeamHistory)
+    private playerTeamHistoryRepository: Repository<PlayerTeamHistory>,
     private openAIService: OpenAIService,
     private evolutionService: EvolutionService,
     private footballDataService: FootballDataService,
@@ -113,6 +119,14 @@ export class ChatbotService {
 
         case 'competition_stats':
           response = await this.footballDataService.getCompetitionStats(analysis.competition ?? '');
+          break;
+
+        case 'team_squad':
+          response = await this.getTeamSquad(analysis.team ?? '');
+          break;
+
+        case 'player_info':
+          response = await this.getPlayerInfo(analysis.player ?? '');
           break;
 
         default:
@@ -1532,5 +1546,81 @@ ${result}`;
         error: error.message
       };
     }
+  }
+
+  private async getTeamSquad(teamName: string): Promise<string> {
+    this.logger.log(`🔍 Procurando elenco para o time: ${teamName}`);
+    const team = await this.teamsRepository
+      .createQueryBuilder('team')
+      .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+      .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+      .getOne();
+
+    if (!team) {
+      this.logger.warn(`Time "${teamName}" não encontrado para listar o elenco.`);
+      return `❌ Time "${teamName}" não encontrado. Tente novamente com um nome de time válido.`;
+    }
+
+    const players = await this.playerTeamHistoryRepository
+      .createQueryBuilder('pth')
+      .leftJoinAndSelect('pth.player', 'player')
+      .leftJoinAndSelect('pth.team', 'team')
+      .where('pth.team_id = :teamId', { teamId: team.id })
+      .andWhere('pth.end_date IS NULL') // Jogadores atualmente no time
+      .orderBy('player.name', 'ASC')
+      .getMany();
+
+    if (!players || players.length === 0) {
+      return `Nenhum jogador encontrado para o time *${team.name}* no momento.`;
+    }
+
+    let squadList = `⚽ Elenco do *${team.name}* (${team.short_code}):\n\n`;
+    players.forEach(p => {
+      const position = p.player.position ? ` (${p.player.position})` : '';
+      const number = p.jersey_number ? ` #${p.jersey_number}` : '';
+      squadList += `• ${p.player.name}${number}${position}\n`;
+    });
+
+    return squadList;
+  }
+
+  private async getPlayerInfo(playerName: string): Promise<string> {
+    this.logger.log(`🔍 Procurando informações do jogador: ${playerName}`);
+
+    const player = await this.playerRepository
+      .createQueryBuilder('player')
+      .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
+      .orWhere('UNACCENT(LOWER(player.first_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
+      .orWhere('UNACCENT(LOWER(player.last_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
+      .getOne();
+
+    if (!player) {
+      this.logger.warn(`Jogador "${playerName}" não encontrado.`);
+      return `❌ Jogador "${playerName}" não encontrado. Tente novamente com o nome completo ou um nome mais comum.`;
+    }
+
+    const playerTeamHistory = await this.playerTeamHistoryRepository
+      .createQueryBuilder('pth')
+      .leftJoinAndSelect('pth.team', 'team')
+      .where('pth.player_id = :playerId', { playerId: player.id })
+      .andWhere('pth.end_date IS NULL') // História atual
+      .getOne();
+
+    let teamInfo = 'N/A';
+    let playerNumber = 'A definir';
+    if (playerTeamHistory && playerTeamHistory.team) {
+      teamInfo = playerTeamHistory.team.name;
+      playerNumber = playerTeamHistory.jersey_number ? `#${playerTeamHistory.jersey_number}` : 'A definir';
+    }
+
+    const position = player.state === 'active' ? player.position : 'Aposentado/Inativo';
+    const dateOfBirth = player.date_of_birth ? new Date(player.date_of_birth).toLocaleDateString('pt-BR') : 'A definir';
+
+    return `👤 *${player.name}* ${playerNumber}
+Time Atual: ${teamInfo}
+Posição: ${position}
+Nacionalidade: ${player.nationality || 'A definir'}
+Data de Nascimento: ${dateOfBirth}
+Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
   }
 } 
