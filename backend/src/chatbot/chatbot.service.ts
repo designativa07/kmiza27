@@ -639,28 +639,57 @@ export class ChatbotService {
         return `❌ Time "${teamName}" não encontrado.`;
       }
 
-      // Buscar posição do time nas competições ativas
-      const positions = await this.competitionTeamsRepository
+      // Buscar competições em que o time participa
+      const competitionTeams = await this.competitionTeamsRepository
         .createQueryBuilder('ct')
         .leftJoinAndSelect('ct.competition', 'competition')
         .where('ct.team = :teamId', { teamId: team.id })
         .andWhere('competition.is_active = :active', { active: true })
         .getMany();
 
-      if (positions.length === 0) {
+      if (competitionTeams.length === 0) {
         return `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊
 
 😔 O time não está participando de competições ativas no momento.`;
       }
 
       let response = `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊\n\n`;
+      let foundAnyData = false;
 
-      positions.forEach(pos => {
-        response += `🏆 ${pos.competition.name}\n`;
-        response += `📍 ${pos.position}º lugar - ${pos.points} pontos\n`;
-        response += `⚽ J:${pos.played} V:${pos.won} E:${pos.drawn} D:${pos.lost}\n`;
-        response += `🥅 GP:${pos.goals_for} GC:${pos.goals_against} SG:${pos.goal_difference}\n\n`;
-      });
+      for (const ct of competitionTeams) {
+        try {
+          // Usar StandingsService para calcular classificação dinâmica
+          const standings = await this.standingsService.getCompetitionStandings(ct.competition.id);
+          
+          // Encontrar a posição do time
+          const teamStanding = standings.find(standing => standing.team.id === team.id);
+          
+          if (teamStanding) {
+            foundAnyData = true;
+            response += `🏆 ${ct.competition.name}\n`;
+            response += `📍 ${teamStanding.position}º lugar - ${teamStanding.points} pontos\n`;
+            response += `⚽ J:${teamStanding.played} V:${teamStanding.won} E:${teamStanding.drawn} D:${teamStanding.lost}\n`;
+            response += `🥅 GP:${teamStanding.goals_for} GC:${teamStanding.goals_against} SG:${teamStanding.goal_difference}\n\n`;
+          } else {
+            // Se não encontrou na classificação dinâmica, mostrar dados básicos
+            response += `🏆 ${ct.competition.name}\n`;
+            response += `📍 Posição a calcular - 0 pontos\n`;
+            response += `⚽ Aguardando dados de partidas\n\n`;
+          }
+        } catch (error) {
+          console.error(`Erro ao calcular classificação para ${ct.competition.name}:`, error);
+          // Fallback para dados estáticos se houver erro
+          response += `🏆 ${ct.competition.name}\n`;
+          response += `📍 ${ct.position || 'TBD'}º lugar - ${ct.points} pontos\n`;
+          response += `⚽ J:${ct.played} V:${ct.won} E:${ct.drawn} D:${ct.lost}\n`;
+          response += `🥅 GP:${ct.goals_for} GC:${ct.goals_against} SG:${ct.goal_difference}\n\n`;
+        }
+      }
+
+      if (!foundAnyData) {
+        response += `😔 Dados de classificação ainda não disponíveis.\n`;
+        response += `📈 As posições serão calculadas automaticamente conforme os jogos acontecem.`;
+      }
 
       return response;
 
