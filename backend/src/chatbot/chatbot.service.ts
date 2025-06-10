@@ -1711,6 +1711,10 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
       });
 
       console.log(`📊 Encontradas ${matches.length} partidas finalizadas`);
+      
+      // Debug: mostrar competições disponíveis
+      const availableCompetitions = [...new Set(matches.map(m => m.competition?.name).filter(Boolean))];
+      console.log(`🏆 Competições disponíveis: ${availableCompetitions.join(', ')}`);
 
       // Filtrar por competição se especificada
       let filteredMatches = matches;
@@ -1738,7 +1742,9 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
         // Se encontrou correspondência específica, usar ela
         if (exactMatches.length > 0) {
           filteredMatches = exactMatches;
+          const foundComps = [...new Set(exactMatches.map(m => m.competition?.name).filter(Boolean))];
           console.log(`🎯 Correspondência específica: ${exactMatches.length} partidas para "${competitionName}"`);
+          console.log(`📋 Competições encontradas: ${foundComps.join(', ')}`);
         } else {
           // Caso contrário, usar filtro genérico
           filteredMatches = matches.filter(match => {
@@ -1772,7 +1778,9 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
             
             return false;
           });
+          const foundCompsGeneric = [...new Set(filteredMatches.map(m => m.competition?.name).filter(Boolean))];
           console.log(`🔍 Filtradas ${filteredMatches.length} partidas para "${competitionName}"`);
+          console.log(`📋 Competições encontradas (genérico): ${foundCompsGeneric.join(', ')}`);
         }
       }
 
