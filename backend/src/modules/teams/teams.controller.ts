@@ -100,4 +100,9 @@ export class TeamsController {
   async getTeamPlayersHistory(@Param('teamId') teamId: string): Promise<PlayerTeamHistory[]> {
     return this.teamsService.getTeamPlayersHistory(+teamId);
   }
+
+  @Get(':teamId/players')
+  async getTeamActivePlayers(@Param('teamId') teamId: string): Promise<PlayerTeamHistory[]> {
+    return this.teamsService.getTeamActivePlayers(+teamId);
+  }
 } 
