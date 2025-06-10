@@ -855,7 +855,9 @@ ${result}`;
 ⚽ *Próximos jogos* - "Próximo jogo do Flamengo"
 🔴 *Jogos ao vivo* - "Jogo atual do Avaí" ou "Avaí está jogando?"
 🏁 *Último jogo* - "Último jogo do Palmeiras"
-ℹ️ *Info do time* - "Informações do Corinthians"  
+ℹ️ *Info do time* - "Informações do Corinthians"
+👥 *Elenco do time* - "Elenco do Flamengo"
+👤 *Info do jogador* - "Informações do jogador Neymar"
 📊 *Tabelas* - "Tabela do Brasileirão"
 📍 *Posição* - "Posição do São Paulo"
 📈 *Estatísticas* - "Estatísticas do Santos"
@@ -866,7 +868,9 @@ ${result}`;
 🗓️ *Jogos da semana* - "Jogos da semana"
 🏆 *Competições* - "Estatísticas da Libertadores"
 
-💬 O que você gostaria de saber?`;
+💬 O que você gostaria de saber?
+
+Para mais informações acesse Kmiza27.com`;
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {
