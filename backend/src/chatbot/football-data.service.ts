@@ -263,7 +263,7 @@ export class FootballDataService {
         
         // Mapeamentos específicos
         const searchMappings = [
-          { search: ['série b', 'serie b'], comp: ['série b', 'serie b'] },
+          { search: ['série b', 'serie b'], comp: ['série b', 'serie b', 'brasileiro série b', 'brasileiro serie b'] },
           { search: ['série a', 'serie a', 'brasileir'], comp: ['brasileir'] },
           { search: ['libertador'], comp: ['libertador'] },
           { search: ['copa do brasil', 'copa brasil'], comp: ['copa do brasil', 'copa brasil'] },
@@ -281,15 +281,16 @@ export class FootballDataService {
         return false;
       });
       
-      // Priorizar correspondência específica (como nos artilheiros)
-      if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
-        const serieBMatches = matchingCompetitions.filter(comp => 
-          comp.name.toLowerCase().includes('série b') || comp.name.toLowerCase().includes('serie b')
-        );
-        if (serieBMatches.length > 0) {
-          matchingCompetitions = serieBMatches;
+              // Priorizar correspondência específica (como nos artilheiros)
+        if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
+          const serieBMatches = matchingCompetitions.filter(comp => 
+            comp.name.toLowerCase().includes('série b') || comp.name.toLowerCase().includes('serie b') ||
+            comp.name.toLowerCase().includes('brasileiro série b') || comp.name.toLowerCase().includes('brasileiro serie b')
+          );
+          if (serieBMatches.length > 0) {
+            matchingCompetitions = serieBMatches;
+          }
         }
-      }
       
       if (matchingCompetitions.length === 0) {
         return `❌ Competição "${competitionName}" não encontrada.`;
