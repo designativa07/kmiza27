@@ -93,6 +93,12 @@ export class Match {
   @Column({ type: 'jsonb', nullable: true })
   match_stats: any;
 
+  @Column({ type: 'jsonb', nullable: true })
+  home_team_player_stats: any;
+
+  @Column({ type: 'jsonb', nullable: true })
+  away_team_player_stats: any;
+
   @Column({
     type: 'enum',
     enum: MatchLeg,

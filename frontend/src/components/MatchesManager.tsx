@@ -217,6 +217,51 @@ function TeamAutocomplete({
   )
 }
 
+// Componente auxiliar para autocomplete de jogadores
+function PlayerAutocomplete({
+  players,
+  value,
+  onChange,
+  label
+}: { players: Player[], value: number | undefined, onChange: (id: number | undefined) => void, label: string }) {
+  const [query, setQuery] = useState('')
+  const filteredPlayers = query === '' ? players : players.filter(player => player?.name?.toLowerCase().includes(query.toLowerCase()))
+  const selectedPlayer = players.find(player => player.id === value)
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-900">{label}</label>
+      <Combobox value={selectedPlayer || null} onChange={(player: Player) => onChange(player.id)}>
+        <div className="relative mt-1">
+          <Combobox.Input
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+            displayValue={(player: Player | null) => player?.name || ''}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+            placeholder="Digite para buscar..."
+          />
+          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            {filteredPlayers.length === 0 && query !== '' ? (
+              <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                Nenhum jogador encontrado
+              </div>
+            ) : (
+              filteredPlayers.map((player: Player) => (
+                <Combobox.Option
+                  key={player.id}
+                  value={player}
+                  className={({ active }: { active: boolean }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-600 text-white' : 'text-gray-900'}`}
+                >
+                  {player?.name || 'Jogador sem nome'}
+                </Combobox.Option>
+              ))
+            )}
+          </Combobox.Options>
+        </div>
+      </Combobox>
+    </div>
+  )
+}
+
 export default function MatchesManager() {
   const [matches, setMatches] = useState<Match[]>([])
   const [filteredMatches, setFilteredMatches] = useState<Match[]>([])
@@ -233,6 +278,9 @@ export default function MatchesManager() {
   const [homeTeamPlayers, setHomeTeamPlayers] = useState<Player[]>([])
   const [awayTeamPlayers, setAwayTeamPlayers] = useState<Player[]>([])
   
+  const [selectedHomeGoalPlayerId, setSelectedHomeGoalPlayerId] = useState<number | undefined>(undefined);
+  const [selectedAwayGoalPlayerId, setSelectedAwayGoalPlayerId] = useState<number | undefined>(undefined);
+
   // Estados dos filtros
   const [filters, setFilters] = useState({
     competition: '',
@@ -750,6 +798,8 @@ export default function MatchesManager() {
       away_team_player_stats: [],
     })
     setCreateTwoLegTie(false)
+    setSelectedHomeGoalPlayerId(undefined); // Resetar jogador selecionado para gols
+    setSelectedAwayGoalPlayerId(undefined); // Resetar jogador selecionado para gols
   }
 
   const handleEdit = (match: Match) => {
@@ -815,8 +865,8 @@ export default function MatchesManager() {
       match_date_second_leg: '',
       stadium_id_second_leg: '',
       stadium_id: match.stadium?.id?.toString() || '',
-      home_team_player_stats: match.home_team_player_stats || [],
-      away_team_player_stats: match.away_team_player_stats || [],
+      home_team_player_stats: match.home_team_player_stats || [], // Inicializar com dados existentes
+      away_team_player_stats: match.away_team_player_stats || [], // Inicializar com dados existentes
     } as MatchFormData;
     
     setFormData(newFormData);
@@ -1055,6 +1105,85 @@ export default function MatchesManager() {
       </div>
     )
   }
+
+  // Funções para manipular gols por jogador
+  const handleAddGoal = (teamType: 'home' | 'away') => {
+    setFormData(prevData => {
+      const currentStats = teamType === 'home' ? prevData.home_team_player_stats : prevData.away_team_player_stats;
+      const selectedPlayerId = teamType === 'home' ? selectedHomeGoalPlayerId : selectedAwayGoalPlayerId;
+
+      if (selectedPlayerId === undefined) {
+        alert('Por favor, selecione um jogador para adicionar o gol.');
+        return prevData;
+      }
+
+      const playerStatIndex = currentStats.findIndex(stat => stat.player_id === selectedPlayerId);
+      let updatedStats;
+
+      if (playerStatIndex > -1) {
+        updatedStats = currentStats.map((stat, index) =>
+          index === playerStatIndex ? { ...stat, goals: (stat.goals || 0) + 1 } : stat
+        );
+      } else {
+        updatedStats = [...currentStats, { player_id: selectedPlayerId, goals: 1 }];
+      }
+
+      if (teamType === 'home') {
+        setSelectedHomeGoalPlayerId(undefined); // Resetar após adicionar
+        return { ...prevData, home_team_player_stats: updatedStats };
+      } else {
+        setSelectedAwayGoalPlayerId(undefined); // Resetar após adicionar
+        return { ...prevData, away_team_player_stats: updatedStats };
+      }
+    });
+  };
+
+  const handleRemoveGoal = (teamType: 'home' | 'away', playerIdToRemove: number) => {
+    setFormData(prevData => {
+      const currentStats = teamType === 'home' ? prevData.home_team_player_stats : prevData.away_team_player_stats;
+      const updatedStats = currentStats.map(stat =>
+        stat.player_id === playerIdToRemove ? { ...stat, goals: Math.max(0, (stat.goals || 0) - 1) } : stat
+      ).filter(stat => stat.goals && stat.goals > 0); // Remover se os gols chegarem a zero
+
+      if (teamType === 'home') {
+        return { ...prevData, home_team_player_stats: updatedStats };
+      } else {
+        return { ...prevData, away_team_player_stats: updatedStats };
+      }
+    });
+  };
+
+  const handleGoalPlayerChange = (teamType: 'home' | 'away', playerId: number | undefined) => {
+    if (teamType === 'home') {
+      setSelectedHomeGoalPlayerId(playerId);
+    } else {
+      setSelectedAwayGoalPlayerId(playerId);
+    }
+  };
+
+  // Função para calcular o placar total baseado nos gols dos jogadores
+  const calculateTotalScore = (playerStats: MatchPlayerStat[]): number => {
+    return playerStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+  };
+
+  // Função para sincronizar o placar total com os gols dos jogadores
+  const syncScoreWithPlayerGoals = () => {
+    const homeScore = calculateTotalScore(formData.home_team_player_stats);
+    const awayScore = calculateTotalScore(formData.away_team_player_stats);
+    
+    setFormData(prevData => ({
+      ...prevData,
+      home_score: homeScore,
+      away_score: awayScore
+    }));
+  };
+
+  // Efeito para sincronizar automaticamente o placar quando os gols dos jogadores mudarem
+  useEffect(() => {
+    if (formData.home_team_player_stats.length > 0 || formData.away_team_player_stats.length > 0) {
+      syncScoreWithPlayerGoals();
+    }
+  }, [formData.home_team_player_stats, formData.away_team_player_stats]);
 
   if (loading) {
     return <div className="text-center">Carregando jogos...</div>
@@ -1306,14 +1435,24 @@ export default function MatchesManager() {
                     <label htmlFor="home_score" className="block text-sm font-medium text-gray-700">
                       Placar Casa
                     </label>
-                    <input
-                      type="number"
-                      name="home_score"
-                      id="home_score"
-                      value={formData.home_score === undefined ? '' : formData.home_score}
-                      onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        name="home_score"
+                        id="home_score"
+                        value={formData.home_score === undefined ? '' : formData.home_score}
+                        onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : Number(e.target.value) })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={syncScoreWithPlayerGoals}
+                        className="mt-1 px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        title="Sincronizar placar com gols dos jogadores"
+                      >
+                        Sync
+                      </button>
+                    </div>
                   </div>
 
                   <div>
@@ -1359,7 +1498,109 @@ export default function MatchesManager() {
                     />
                   </div>
                 </div>
-                
+
+                {/* Seção para Adicionar Gols (Time da Casa) */}
+                <div className="mt-6 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Total: {calculateTotalScore(formData.home_team_player_stats)} gol(s)
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {formData.home_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
+                      const player = homeTeamPlayers.find(p => p.id === stat.player_id);
+                      return (
+                        <div key={stat.player_id} className="flex items-center gap-2">
+                          <p className="text-sm text-gray-700 font-medium w-3/4">{player?.name || 'Jogador desconhecido'}:</p>
+                          <span className="text-lg font-bold text-green-600">{stat.goals} Gol(s)</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGoal('home', stat.player_id)}
+                            className="p-1 text-red-600 hover:text-red-900"
+                            title="Remover gol(s) deste jogador"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex items-end gap-2">
+                    <div className="flex-1">
+                      <PlayerAutocomplete
+                        players={homeTeamPlayers}
+                        value={selectedHomeGoalPlayerId}
+                        onChange={(playerId) => handleGoalPlayerChange('home', playerId)}
+                        label="Adicionar Gol para Jogador"
+                      />
+                      {!formData.home_team_id && (
+                        <p className="mt-1 text-sm text-gray-500">Selecione o time da casa primeiro</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddGoal('home')}
+                      disabled={!formData.home_team_id || !selectedHomeGoalPlayerId}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      title={!formData.home_team_id ? "Selecione o time da casa primeiro" : !selectedHomeGoalPlayerId ? "Selecione um jogador" : "Adicionar gol"}
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seção para Adicionar Gols (Time Visitante) */}
+                <div className="mt-6 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Total: {calculateTotalScore(formData.away_team_player_stats)} gol(s)
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {formData.away_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
+                      const player = awayTeamPlayers.find(p => p.id === stat.player_id);
+                      return (
+                        <div key={stat.player_id} className="flex items-center gap-2">
+                          <p className="text-sm text-gray-700 font-medium w-3/4">{player?.name || 'Jogador desconhecido'}:</p>
+                          <span className="text-lg font-bold text-green-600">{stat.goals} Gol(s)</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGoal('away', stat.player_id)}
+                            className="p-1 text-red-600 hover:text-red-900"
+                            title="Remover gol(s) deste jogador"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex items-end gap-2">
+                    <div className="flex-1">
+                      <PlayerAutocomplete
+                        players={awayTeamPlayers}
+                        value={selectedAwayGoalPlayerId}
+                        onChange={(playerId) => handleGoalPlayerChange('away', playerId)}
+                        label="Adicionar Gol para Jogador"
+                      />
+                      {!formData.away_team_id && (
+                        <p className="mt-1 text-sm text-gray-500">Selecione o time visitante primeiro</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddGoal('away')}
+                      disabled={!formData.away_team_id || !selectedAwayGoalPlayerId}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      title={!formData.away_team_id ? "Selecione o time visitante primeiro" : !selectedAwayGoalPlayerId ? "Selecione um jogador" : "Adicionar gol"}
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Campos de cartões */}
                 <div className="grid grid-cols-4 gap-4">
                   <div>
@@ -1408,164 +1649,26 @@ export default function MatchesManager() {
                   </div>
                 </div>
 
-                {/* Seção de Gols e Cartões por Jogador (Time da Casa) */}
-                {homeTeamPlayers.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-900">Gols e Cartões - {teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
-                    <p className="text-sm text-gray-500 mb-4">Registre gols e cartões para cada jogador do time da casa.</p>
-                    {homeTeamPlayers.map((player) => {
-                      const playerStat = formData.home_team_player_stats.find(stat => stat.player_id === player.id);
-
-                      const handleStatChange = (statType: keyof MatchPlayerStat, value: number | undefined) => {
-                        setFormData(prevData => {
-                          const updatedStats = prevData.home_team_player_stats.map(stat => 
-                            stat.player_id === player.id ? { ...stat, [statType]: value } : stat
-                          );
-                          // Adiciona o jogador se ele não existe nas estatísticas
-                          if (!updatedStats.some(stat => stat.player_id === player.id)) {
-                            updatedStats.push({ player_id: player.id, [statType]: value });
-                          }
-                          // Filtra stats com valor 0 ou undefined para não enviar para o backend
-                          const filteredStats = updatedStats.filter(stat => stat.goals || stat.yellow_cards || stat.red_cards);
-                          return { ...prevData, home_team_player_stats: filteredStats };
-                        });
-                      };
-
-                      return (
-                        <div key={player.id} className="grid grid-cols-4 gap-2 items-center bg-gray-50 p-3 rounded-md mb-2">
-                          <div className="col-span-1">
-                            <p className="text-sm font-medium text-gray-700">{player.name}</p>
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`home-goals-${player.id}`} className="sr-only">Gols</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`home-goals-${player.id}`}
-                              value={playerStat?.goals ?? ''}
-                              onChange={(e) => handleStatChange('goals', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Gols"
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`home-yellow-${player.id}`} className="sr-only">Amarelos</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`home-yellow-${player.id}`}
-                              value={playerStat?.yellow_cards ?? ''}
-                              onChange={(e) => handleStatChange('yellow_cards', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Amarelos"
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`home-red-${player.id}`} className="sr-only">Vermelhos</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`home-red-${player.id}`}
-                              value={playerStat?.red_cards ?? ''}
-                              onChange={(e) => handleStatChange('red_cards', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Vermelhos"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Seção de Gols e Cartões por Jogador (Time Visitante) */}
-                {awayTeamPlayers.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-900">Gols e Cartões - {teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
-                    <p className="text-sm text-gray-500 mb-4">Registre gols e cartões para cada jogador do time visitante.</p>
-                    {awayTeamPlayers.map((player) => {
-                      const playerStat = formData.away_team_player_stats.find(stat => stat.player_id === player.id);
-
-                      const handleStatChange = (statType: keyof MatchPlayerStat, value: number | undefined) => {
-                        setFormData(prevData => {
-                          const updatedStats = prevData.away_team_player_stats.map(stat => 
-                            stat.player_id === player.id ? { ...stat, [statType]: value } : stat
-                          );
-                          // Adiciona o jogador se ele não existe nas estatísticas
-                          if (!updatedStats.some(stat => stat.player_id === player.id)) {
-                            updatedStats.push({ player_id: player.id, [statType]: value });
-                          }
-                          // Filtra stats com valor 0 ou undefined para não enviar para o backend
-                          const filteredStats = updatedStats.filter(stat => stat.goals || stat.yellow_cards || stat.red_cards);
-                          return { ...prevData, away_team_player_stats: filteredStats };
-                        });
-                      };
-
-                      return (
-                        <div key={player.id} className="grid grid-cols-4 gap-2 items-center bg-gray-50 p-3 rounded-md mb-2">
-                          <div className="col-span-1">
-                            <p className="text-sm font-medium text-gray-700">{player.name}</p>
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`away-goals-${player.id}`} className="sr-only">Gols</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`away-goals-${player.id}`}
-                              value={playerStat?.goals ?? ''}
-                              onChange={(e) => handleStatChange('goals', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Gols"
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`away-yellow-${player.id}`} className="sr-only">Amarelos</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`away-yellow-${player.id}`}
-                              value={playerStat?.yellow_cards ?? ''}
-                              onChange={(e) => handleStatChange('yellow_cards', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Amarelos"
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <label htmlFor={`away-red-${player.id}`} className="sr-only">Vermelhos</label>
-                            <input
-                              type="number"
-                              min="0"
-                              id={`away-red-${player.id}`}
-                              value={playerStat?.red_cards ?? ''}
-                              onChange={(e) => handleStatChange('red_cards', e.target.value === '' ? undefined : Number(e.target.value))}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Vermelhos"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-900">Competição</label>
-                  <select
-                    required
-                    value={formData.competition_id}
-                    onChange={(e) => setFormData({ ...formData, competition_id: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  >
-                    <option value="">Selecione...</option>
-                    {competitions.map((comp) => (
-                      <option key={comp.id} value={comp.id}>{comp.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4">
+                {/* Outros campos do formulário (competição, data, status, etc.) */}
+                <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Rodada</label>
+                    <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700">
+                      Competição
+                    </label>
+                    <select
+                      required
+                      value={formData.competition_id}
+                      onChange={(e) => setFormData({ ...formData, competition_id: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    >
+                      <option value="">Selecione...</option>
+                      {competitions.map((comp) => (
+                        <option key={comp.id} value={comp.id}>{comp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Rodada</label>
                     <div className="space-y-2">
                       <select
                         value={formData.round_id}
@@ -1591,7 +1694,7 @@ export default function MatchesManager() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Grupo</label>
+                    <label className="block text-sm font-medium text-gray-700">Grupo</label>
                     <input
                       type="text"
                       value={formData.group_name}
@@ -1601,7 +1704,7 @@ export default function MatchesManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Fase</label>
+                    <label className="block text-sm font-medium text-gray-700">Fase</label>
                     <input
                       type="text"
                       value={formData.phase}
@@ -1614,7 +1717,7 @@ export default function MatchesManager() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Data e Hora</label>
+                    <label className="block text-sm font-medium text-gray-700">Data e Hora</label>
                     <input
                       type="datetime-local"
                       required
@@ -1624,7 +1727,7 @@ export default function MatchesManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900">Status</label>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}

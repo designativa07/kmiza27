@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSearchParams } from 'next/navigation'
 import { 
   ChartBarIcon, 
   UsersIcon, 
@@ -20,7 +21,11 @@ import {
   WrenchScrewdriverIcon,
   PlusIcon,
   FunnelIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  CpuChipIcon,
+  ComputerDesktopIcon
 } from '@heroicons/react/24/outline'
 import StatsCards from './StatsCards'
 
@@ -43,6 +48,7 @@ import CompetitionTeamsManager from './CompetitionTeamsManager'
 import UserStats from './UserStats'
 import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
+import TopScorersTable from './TopScorersTable'
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
@@ -65,8 +71,10 @@ interface UserStats {
 
 export default function Dashboard() {
   const { user, logout, isAuthenticated } = useAuth()
+  const searchParams = useSearchParams()
   const [currentPage, setCurrentPage] = useState('Dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
@@ -88,6 +96,38 @@ export default function Dashboard() {
       return
     }
   }, [isAuthenticated])
+
+  // Detectar parâmetros da URL para navegação direta
+  useEffect(() => {
+    const page = searchParams.get('page')
+    if (page) {
+      const pageMap: { [key: string]: string } = {
+        'dashboard': 'Dashboard',
+        'times': 'Times',
+        'jogadores': 'Jogadores',
+        'estadios': 'Estádios',
+        'competicoes': 'Competições',
+        'jogos': 'Jogos',
+        'classificacoes': 'Classificações',
+        'artilharia': 'Artilharia',
+        'canais': 'Canais',
+        'usuarios': 'Usuários',
+        'estatisticas-usuarios': 'Estatísticas de Usuários',
+        'administradores': 'Administradores',
+        'conversas': 'Conversas WhatsApp',
+        'automacao': 'Automação IA',
+        'notificacoes': 'Notificações',
+        'status': 'Status do Sistema',
+        'chatbot': 'Chatbot',
+        'configuracoes': 'Configurações'
+      }
+      
+      const targetPage = pageMap[page.toLowerCase()]
+      if (targetPage) {
+        setCurrentPage(targetPage)
+      }
+    }
+  }, [searchParams])
 
   // Função para fazer logout
   const handleLogout = () => {
@@ -465,6 +505,32 @@ export default function Dashboard() {
                   </div>
                 </dd>
               </div>
+
+              {/* Card Artilharia */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setCurrentPage('Artilharia')}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-yellow-500 p-3">
+                    <TrophyIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Artilharia</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">🏆</p>
+                  <p className="ml-2 flex items-baseline text-sm font-semibold text-yellow-600">
+                    Top Scorers
+                  </p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-yellow-600 hover:text-yellow-500">
+                        Ver artilharia →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
             </div>
 
             {/* Outras seções do Dashboard (ex: gráficos, tabelas recentes, etc.) */}
@@ -503,6 +569,8 @@ export default function Dashboard() {
         return <StatusContent />
       case 'Chatbot':
         return <ChatbotSettings />
+      case 'Artilharia':
+        return <TopScorersTable />
       case 'Configurações':
         return <SystemSettings />
       default:
@@ -514,10 +582,136 @@ export default function Dashboard() {
     }
   }
 
+  const menuItems = [
+    { name: 'Dashboard', icon: ChartBarIcon, page: 'Dashboard' },
+    { name: 'Times', icon: ShieldCheckIcon, page: 'Times' },
+    { name: 'Jogadores', icon: UserIcon, page: 'Jogadores' },
+    { name: 'Estádios', icon: BuildingOfficeIcon, page: 'Estádios' },
+    { name: 'Competições', icon: TrophyIcon, page: 'Competições' },
+    { name: 'Jogos', icon: CalendarIcon, page: 'Jogos' },
+    { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
+    { name: 'Artilharia', icon: TrophyIcon, page: 'Artilharia' },
+    { name: 'Canais', icon: TvIcon, page: 'Canais' },
+    { name: 'Usuários', icon: UsersIcon, page: 'Usuários' },
+    { name: 'Estatísticas de Usuários', icon: ChartBarIcon, page: 'Estatísticas de Usuários' },
+    { name: 'Administradores', icon: WrenchScrewdriverIcon, page: 'Administradores' },
+    { name: 'Conversas WhatsApp', icon: ChatBubbleLeftRightIcon, page: 'Conversas WhatsApp' },
+    { name: 'Automação IA', icon: CpuChipIcon, page: 'Automação IA' },
+    { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
+    { name: 'Status do Sistema', icon: ComputerDesktopIcon, page: 'Status do Sistema' },
+    { name: 'Chatbot', icon: ChatBubbleLeftRightIcon, page: 'Chatbot' },
+    { name: 'Configurações', icon: CogIcon, page: 'Configurações' }
+  ]
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900">
+      {/* Mobile sidebar */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
+        <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-800 shadow-xl z-60">
+          <div className="flex h-16 items-center justify-between px-4">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Kmiza27 Admin</h1>
+            <button onClick={() => setSidebarOpen(false)}>
+              <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <nav className="mt-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
+            {menuItems.map((item) => {
+              const isActive = currentPage === item.page
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => {
+                    setCurrentPage(item.page)
+                    setSidebarOpen(false)
+                  }}
+                  className={`flex w-full items-center px-4 py-3 text-sm font-medium ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.name}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-72 lg:flex-col">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-slate-800 px-6 shadow-lg border-r border-gray-200 dark:border-slate-700">
+          <div className="flex h-16 shrink-0 items-center">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Kmiza27 Admin</h1>
+          </div>
+          <nav className="flex flex-1 flex-col">
+            <ul role="list" className="flex flex-1 flex-col gap-y-7">
+              <li>
+                <ul role="list" className="-mx-2 space-y-1">
+                  {menuItems.map((item) => {
+                    const isActive = currentPage === item.page
+                    return (
+                      <li key={item.name}>
+                        <button
+                          onClick={() => setCurrentPage(item.page)}
+                          className={`group flex w-full gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
+                            isActive
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                              : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-blue-900/20'
+                          }`}
+                        >
+                          <item.icon className="h-6 w-6 shrink-0" />
+                          {item.name}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+            </ul>
+            
+            {/* Status do Sistema no final do menu */}
+            <div className="mt-auto pb-4">
+              <div className="px-2">
+                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                  Status do Sistema
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Backend Online
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    WhatsApp Conectado
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Banco de Dados OK
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </div>
+
       <div className="flex flex-1 flex-col overflow-hidden lg:ml-72">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white dark:bg-slate-800 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            className="-m-2.5 p-2.5 text-gray-700 dark:text-gray-300 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <form className="relative flex flex-1" action="#" method="GET">
               <label htmlFor="search-field" className="sr-only">Pesquisar</label>
