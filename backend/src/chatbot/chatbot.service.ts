@@ -206,11 +206,10 @@ export class ChatbotService {
         // Se o jogo foi há menos de 3 horas e mais de -1 hora, pode estar ao vivo
         if (timeDiff >= -1 && timeDiff <= 3) {
           const date = new Date(todayMatch.match_date);
-          const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+          const formattedDate = date.toLocaleDateString('pt-BR');
           const formattedTime = date.toLocaleTimeString('pt-BR', { 
             hour: '2-digit', 
-            minute: '2-digit',
-            timeZone: 'America/Sao_Paulo'
+            minute: '2-digit'
           });
 
           // Buscar canais de transmissão
@@ -298,13 +297,12 @@ export class ChatbotService {
 🔍 Verifique novamente em breve ou pergunte sobre outro time!`;
       }
 
-      // Usar formatação simples de data (sem conversão de timezone)
+      // Usar formatação simples de data (dados já estão no horário correto)
       const date = new Date(nextMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { 
         hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo' // Corrigido para horário de Brasília
+        minute: '2-digit'
       });
 
       // Buscar canais de transmissão da nova tabela match_broadcasts
@@ -509,8 +507,7 @@ export class ChatbotService {
       todayMatches.forEach(match => {
         const time = new Date(match.match_date).toLocaleTimeString('pt-BR', { 
           hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'America/Sao_Paulo' // Adicionar fuso horário aqui
+          minute: '2-digit'
         });
         
         // Determinar emoji e status baseado no status do jogo
@@ -729,11 +726,10 @@ export class ChatbotService {
       }
 
       const date = new Date(lastMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { 
         hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
+        minute: '2-digit'
       });
 
       const teamScore = lastMatch.home_score ?? 0;
@@ -796,11 +792,10 @@ ${result}`;
 
       for (const match of upcomingMatches) {
         const date = new Date(match.match_date);
-        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const formattedDate = date.toLocaleDateString('pt-BR');
         const time = date.toLocaleTimeString('pt-BR', { 
           hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'America/Sao_Paulo'
+          minute: '2-digit'
         });
         
         const isHome = match.home_team.id === team.id;
@@ -1370,11 +1365,10 @@ Para mais informações acesse Kmiza27.com`;
       }
 
       const date = new Date(currentMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { 
         hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
+        minute: '2-digit'
       });
 
       const homeScore = currentMatch.home_score ?? 0;
