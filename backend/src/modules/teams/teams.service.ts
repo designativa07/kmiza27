@@ -179,4 +179,17 @@ export class TeamsService {
       order: { start_date: 'DESC' },
     });
   }
+
+  async getTeamActivePlayers(teamId: number): Promise<PlayerTeamHistory[]> {
+    const team = await this.teamRepository.findOneBy({ id: teamId });
+    if (!team) {
+      throw new NotFoundException('Time não encontrado');
+    }
+
+    return this.playerTeamHistoryRepository.find({
+      where: { team: { id: teamId }, end_date: IsNull() },
+      relations: ['player'],
+      order: { start_date: 'DESC' },
+    });
+  }
 } 
