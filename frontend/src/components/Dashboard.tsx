@@ -758,49 +758,39 @@ export default function Dashboard() {
                 {showUserMenu && (
                   <div 
                     id="user-menu"
-                    className="absolute right-0 z-50 mt-2.5 w-48 origin-top-right rounded-md bg-white dark:bg-slate-800 py-2 shadow-lg ring-1 ring-gray-900/5 dark:ring-slate-700 focus:outline-none" 
+                    className="absolute right-0 z-50 mt-2.5 w-56 origin-top-right rounded-lg bg-white dark:bg-slate-800 shadow-xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none" 
                     role="menu" 
                     aria-orientation="vertical" 
                     aria-labelledby="user-menu-button"
                   >
-                    <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-600">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user?.name || user?.username || 'Usuário'}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {user?.email || 'Administrador'}
-                      </p>
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center">
+                        <img
+                          className="h-10 w-10 rounded-full bg-gray-50 ring-2 ring-white dark:ring-slate-800"
+                          src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                          alt="Foto do usuário"
+                        />
+                        <div className="ml-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {user?.name || user?.username || 'Usuário'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {user?.email || 'Administrador'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        setCurrentPage('Configurações')
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                      role="menuitem"
-                    >
-                      ⚙️ Configurações
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        setCurrentPage('Administradores')
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                      role="menuitem"
-                    >
-                      👥 Gerenciar Admins
-                    </button>
-                    
-                    <div className="border-t border-gray-200 dark:border-slate-600 mt-1 pt-1">
+                    <div className="p-2">
                       <button
                         onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="flex w-full items-center px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors group"
                         role="menuitem"
                       >
-                        🚪 Sair
+                        <svg className="mr-3 h-4 w-4 text-red-500 group-hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sair
                       </button>
                     </div>
                   </div>

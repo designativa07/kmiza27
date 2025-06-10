@@ -189,6 +189,11 @@ export class ChatbotController {
     }
   }
 
+  @Post('debug-analysis')
+  async debugAnalysis(@Body() body: { message: string }) {
+    return this.chatbotService.debugMessageAnalysis(body.message);
+  }
+
   @Post('simulate-whatsapp')
   async simulateWhatsApp(@Body() body: { phoneNumber: string; message: string }) {
     try {
