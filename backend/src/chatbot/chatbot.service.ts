@@ -1728,7 +1728,8 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
           
           // Prioridade para correspondências mais específicas
           if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
-            return compName.includes('série b') || compName.includes('serie b');
+            return compName.includes('série b') || compName.includes('serie b') || 
+                   compName.includes('brasileiro série b') || compName.includes('brasileiro serie b');
           }
           
           if (normalizedCompName.includes('série a') || normalizedCompName.includes('serie a')) {
@@ -1758,8 +1759,8 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
             
             // Mapeamentos específicos para melhor correspondência
             const searchMappings = [
-              // Brasileirão (genérico)
-              { search: ['brasileir'], comp: ['brasileir'] },
+              // Brasileirão (genérico) - incluindo "brasileiro"
+              { search: ['brasileir', 'brasileiro'], comp: ['brasileir', 'brasileiro'] },
               // Libertadores
               { search: ['libertador'], comp: ['libertador'] },
               // Copa do Brasil
