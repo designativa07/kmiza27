@@ -631,8 +631,8 @@ export class ChatbotService {
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {
@@ -674,8 +674,8 @@ export class ChatbotService {
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {
@@ -736,8 +736,8 @@ ${result}`;
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {
@@ -1312,8 +1312,8 @@ Para mais informações acesse Kmiza27.com`;
       // Buscar o time no banco
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {

@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const baseUrl = 'https://kmizabot.h4xd66.easypanel.host';
 
 async function testMessage(message) {
-  console.log(`\n🔍 Testando mensagem: "${message}"`);
+  console.log(`\n🔍 Testando: "${message}"`);
   
   try {
     const response = await fetch(`${baseUrl}/chatbot/test-message`, {
@@ -17,7 +17,12 @@ async function testMessage(message) {
     
     console.log(`📊 Status: ${response.status}`);
     const data = await response.json();
-    console.log(`✅ Resposta: ${data.response}`);
+    
+    if (data.response.includes('não encontrado')) {
+      console.log(`❌ FALHOU: ${data.response}`);
+    } else {
+      console.log(`✅ SUCESSO: ${data.response.substring(0, 100)}...`);
+    }
     
   } catch (error) {
     console.error(`❌ Erro: ${error.message}`);
@@ -47,20 +52,35 @@ async function debugExtraction(message) {
 }
 
 async function main() {
-  console.log('🔍 Testando lógica do chatbot...\n');
+  console.log('🔍 Testando variações do Avaí...\n');
   
-  const testMessages = [
-    'jogador Bruno Henrique',
-    'jogador bruno henrique',
-    'informações do jogador Bruno Henrique',
-    'info do jogador Bruno Henrique',
-    'dados do jogador Bruno Henrique'
+  // Testes que estão falhando no WhatsApp
+  const failingTests = [
+    'avai',
+    'informações do avai',
+    'próximo jogo do avai',
+    'proximo jogo do avai'
   ];
   
-  for (const message of testMessages) {
-    await debugExtraction(message);
+  // Testes que estão funcionando
+  const workingTests = [
+    'posição do avai',
+    'posição do Avaí',
+    'ultimo jogo do avai'
+  ];
+  
+  console.log('❌ TESTES QUE ESTÃO FALHANDO:');
+  for (const message of failingTests) {
     await testMessage(message);
   }
+  
+  console.log('\n✅ TESTES QUE FUNCIONAM:');
+  for (const message of workingTests) {
+    await testMessage(message);
+  }
+  
+  console.log('\n🧪 TESTE BRUNO HENRIQUE:');
+  await testMessage('jogador Bruno Henrique');
 }
 
 main(); 
