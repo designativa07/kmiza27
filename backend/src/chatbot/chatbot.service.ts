@@ -1716,13 +1716,64 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
       let filteredMatches = matches;
       if (competitionName) {
         const normalizedCompName = competitionName.toLowerCase();
-        filteredMatches = matches.filter(match => {
+        
+        // Primeiro, tentar correspondência exata mais específica
+        const exactMatches = matches.filter(match => {
           if (!match.competition) return false;
           const compName = match.competition.name.toLowerCase();
-          return compName.includes(normalizedCompName) || 
-                 compName.includes('brasileir') && normalizedCompName.includes('brasileir');
+          
+          // Prioridade para correspondências mais específicas
+          if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
+            return compName.includes('série b') || compName.includes('serie b');
+          }
+          
+          if (normalizedCompName.includes('série a') || normalizedCompName.includes('serie a')) {
+            return (compName.includes('série a') || compName.includes('serie a')) && 
+                   !(compName.includes('série b') || compName.includes('serie b'));
+          }
+          
+          return false;
         });
-        console.log(`🔍 Filtradas ${filteredMatches.length} partidas para "${competitionName}"`);
+        
+        // Se encontrou correspondência específica, usar ela
+        if (exactMatches.length > 0) {
+          filteredMatches = exactMatches;
+          console.log(`🎯 Correspondência específica: ${exactMatches.length} partidas para "${competitionName}"`);
+        } else {
+          // Caso contrário, usar filtro genérico
+          filteredMatches = matches.filter(match => {
+            if (!match.competition) return false;
+            const compName = match.competition.name.toLowerCase();
+            
+            // Busca direta por nome
+            if (compName.includes(normalizedCompName)) {
+              return true;
+            }
+            
+            // Mapeamentos específicos para melhor correspondência
+            const searchMappings = [
+              // Brasileirão (genérico)
+              { search: ['brasileir'], comp: ['brasileir'] },
+              // Libertadores
+              { search: ['libertador'], comp: ['libertador'] },
+              // Copa do Brasil
+              { search: ['copa do brasil', 'copa brasil'], comp: ['copa do brasil', 'copa brasil'] },
+              // Sul-Americana
+              { search: ['sul-americana', 'sulamericana'], comp: ['sul-americana', 'sulamericana'] }
+            ];
+            
+            for (const mapping of searchMappings) {
+              const searchMatches = mapping.search.some(term => normalizedCompName.includes(term));
+              const compMatches = mapping.comp.some(term => compName.includes(term));
+              if (searchMatches && compMatches) {
+                return true;
+              }
+            }
+            
+            return false;
+          });
+          console.log(`🔍 Filtradas ${filteredMatches.length} partidas para "${competitionName}"`);
+        }
       }
 
       // Mapa para armazenar estatísticas dos jogadores
