@@ -1727,13 +1727,17 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
           const compName = match.competition.name.toLowerCase();
           
           // Prioridade para correspondências mais específicas
-          if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
+          // Verificar se a competição solicitada é Série B (vem como 'brasileiro-serie-b' do openai.service)
+          if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b') || normalizedCompName === 'brasileiro-serie-b') {
             return compName.includes('série b') || compName.includes('serie b') || 
                    compName.includes('brasileiro série b') || compName.includes('brasileiro serie b');
           }
           
-          if (normalizedCompName.includes('série a') || normalizedCompName.includes('serie a')) {
-            return (compName.includes('série a') || compName.includes('serie a')) && 
+          // Verificar se a competição solicitada é Série A (incluindo 'brasileirao' genérico)
+          if (normalizedCompName.includes('série a') || normalizedCompName.includes('serie a') || normalizedCompName === 'brasileirao') {
+            return (compName.includes('série a') || compName.includes('serie a') || 
+                   compName.includes('brasileiro série a') || compName.includes('brasileiro serie a') ||
+                   (compName.includes('brasileir') && !compName.includes('série b') && !compName.includes('serie b'))) && 
                    !(compName.includes('série b') || compName.includes('serie b'));
           }
           
@@ -1759,6 +1763,8 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
             
             // Mapeamentos específicos para melhor correspondência
             const searchMappings = [
+              // Série B específica
+              { search: ['brasileiro-serie-b'], comp: ['série b', 'serie b', 'brasileiro série b', 'brasileiro serie b'] },
               // Brasileirão (genérico) - incluindo "brasileiro"
               { search: ['brasileir', 'brasileiro'], comp: ['brasileir', 'brasileiro'] },
               // Libertadores
