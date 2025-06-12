@@ -250,19 +250,31 @@ export default function TeamsManager() {
       
       const method = editingTeam ? 'PATCH' : 'POST'
       
+      // Preparar dados para envio, tratando campos vazios
+      const dataToSend = {
+        name: formData.name,
+        short_name: formData.short_name,
+        city: formData.city || null,
+        state: formData.state || null,
+        founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
+        logo_url: formData.logo_url || null,
+        stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : null
+      }
+
+      // Log para debug
+      console.log('🚀 Enviando dados do time:', dataToSend)
+      
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          founded_year: formData.founded_year ? parseInt(formData.founded_year) : null
-        }),
+        body: JSON.stringify(dataToSend),
       })
 
       if (response.ok) {
         const savedTeam = await response.json()
+        console.log('✅ Time salvo com sucesso:', savedTeam)
         
         if (selectedFile) {
           const uploadedPath = await uploadEscudo(savedTeam.id)
@@ -279,9 +291,19 @@ export default function TeamsManager() {
         
         fetchTeams()
         resetForm()
+      } else {
+        // Log do erro para debug
+        const errorText = await response.text()
+        console.error('❌ Erro ao salvar time:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        })
+        alert(`Erro ao salvar time: ${response.status} - ${response.statusText}`)
       }
     } catch (error) {
-      console.error('Erro ao salvar time:', error)
+      console.error('❌ Erro de conexão ao salvar time:', error)
+      alert('Erro de conexão ao salvar time.')
     }
   }
 
