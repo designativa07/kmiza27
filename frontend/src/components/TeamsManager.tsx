@@ -55,7 +55,6 @@ export default function TeamsManager() {
   const [uploading, setUploading] = useState(false)
   const [logoInputType, setLogoInputType] = useState<'upload' | 'url'>('upload')
   const [stadiums, setStadiums] = useState<Stadium[]>([])
-  const [selectedStadiumId, setSelectedStadiumId] = useState<string>('')
   const [showRosterModal, setShowRosterModal] = useState(false)
   const [managingTeamRoster, setManagingTeamRoster] = useState<Team | null>(null)
   const [teamPlayersHistory, setTeamPlayersHistory] = useState<PlayerTeamHistory[]>([])
@@ -205,7 +204,7 @@ export default function TeamsManager() {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     
@@ -771,11 +770,8 @@ export default function TeamsManager() {
                   <select
                     id="stadium_id"
                     name="stadium_id"
-                    value={selectedStadiumId}
-                    onChange={(e) => {
-                      setSelectedStadiumId(e.target.value)
-                      setFormData(prev => ({ ...prev, stadium_id: e.target.value }))
-                    }}
+                    value={formData.stadium_id}
+                    onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   >
                     <option value="">Nenhum</option>

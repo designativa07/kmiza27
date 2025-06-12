@@ -296,9 +296,14 @@ export default function MatchesManager() {
   const [filters, setFilters] = useState({
     competition: '',
     round: '',
+    group: '',
     phase: '',
     status: ''
   })
+
+  // Estados para rodadas e grupos dinâmicos baseados na competição
+  const [availableRoundsForFilter, setAvailableRoundsForFilter] = useState<string[]>([])
+  const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState<string[]>([])
 
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(1)
@@ -416,7 +421,8 @@ export default function MatchesManager() {
           setFilters(prev => ({
             ...prev,
             competition: initialCompetitionId,
-            round: initialRoundName
+            round: initialRoundName.match(/^\d+$|rodada/i) ? initialRoundName : '',
+            group: !initialRoundName.match(/^\d+$|rodada/i) && initialRoundName ? initialRoundName : ''
           }));
           if (initialCompetitionId) {
             fetchRoundsByCompetition(initialCompetitionId);
@@ -438,6 +444,19 @@ export default function MatchesManager() {
   useEffect(() => {
     applyPagination()
   }, [filteredMatches, currentPage, itemsPerPage])
+
+  // Buscar rodadas e grupos quando a competição do filtro mudar
+  useEffect(() => {
+    if (filters.competition && matches.length > 0) {
+      fetchRoundsAndGroupsForFilter(filters.competition)
+      // Limpar filtros de rodada e grupo quando mudar a competição
+      setFilters(prev => ({
+        ...prev,
+        round: '',
+        group: ''
+      }))
+    }
+  }, [filters.competition, matches])
 
   // Buscar rodadas quando a competição for selecionada no formulário
   useEffect(() => {
@@ -520,6 +539,63 @@ export default function MatchesManager() {
     }
   }
 
+  // Nova função para buscar rodadas e grupos para os filtros baseados na competição
+  const fetchRoundsAndGroupsForFilter = (competitionId: string) => {
+    if (!competitionId) {
+      setAvailableRoundsForFilter([])
+      setAvailableGroupsForFilter([])
+      return
+    }
+
+    // Filtrar matches da competição selecionada
+    const competitionMatches = matches.filter(match => 
+      match.competition?.id?.toString() === competitionId
+    )
+
+    // Extrair rodadas (apenas números ou que contenham "Rodada")
+    const rounds = new Set<string>()
+    competitionMatches.forEach(match => {
+      if (match.round?.name) {
+        const roundName = match.round.name
+        if (/^\d+$/.test(roundName) || /rodada/i.test(roundName)) {
+          rounds.add(roundName)
+        }
+      }
+    })
+
+    // Extrair grupos (letras ou grupos que não sejam fases)
+    const groups = new Set<string>()
+    competitionMatches.forEach(match => {
+      if (match.group_name) {
+        const groupName = match.group_name
+        // Verificar se não é uma fase
+        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória', 'playoff']
+        const isPhase = phaseKeywords.some(keyword => 
+          groupName.toLowerCase().includes(keyword)
+        )
+        if (!isPhase) {
+          groups.add(groupName)
+        }
+      }
+    })
+
+    // Ordenar rodadas numericamente
+    const sortedRounds = Array.from(rounds).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''))
+      const numB = parseInt(b.replace(/\D/g, ''))
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB
+      }
+      return a.localeCompare(b)
+    })
+
+    // Ordenar grupos alfabeticamente
+    const sortedGroups = Array.from(groups).sort()
+
+    setAvailableRoundsForFilter(sortedRounds)
+    setAvailableGroupsForFilter(sortedGroups)
+  }
+
   const applyFilters = () => {
     console.log('🔍 Debug - Aplicando filtros:', filters)
     console.log('🔍 Debug - Total de matches antes do filtro:', matches.length)
@@ -535,18 +611,21 @@ export default function MatchesManager() {
     if (filters.round) {
       const beforeCount = filtered.length
       console.log('🔍 Debug - Filtro rodada aplicado:', filters.round)
-      console.log('🔍 Debug - Matches antes do filtro de rodada:', 
-        filtered.map((m: Match) => ({ id: m.id, round: m.round?.name, group: m.group_name }))
-      )
       
       filtered = filtered.filter(match => 
-        match.round?.name === filters.round ||
-        match.group_name === filters.round
+        match.round?.name === filters.round
       )
       console.log(`🔍 Debug - Filtro rodada: ${beforeCount} -> ${filtered.length}`)
-      console.log('🔍 Debug - Matches após filtro de rodada:', 
-        filtered.map((m: Match) => ({ id: m.id, round: m.round?.name, group: m.group_name }))
+    }
+
+    if (filters.group) {
+      const beforeCount = filtered.length
+      console.log('🔍 Debug - Filtro grupo aplicado:', filters.group)
+      
+      filtered = filtered.filter(match => 
+        match.group_name === filters.group
       )
+      console.log(`🔍 Debug - Filtro grupo: ${beforeCount} -> ${filtered.length}`)
     }
 
     if (filters.phase) {
@@ -586,9 +665,12 @@ export default function MatchesManager() {
     setFilters({
       competition: '',
       round: '',
+      group: '',
       phase: '',
       status: ''
     })
+    setAvailableRoundsForFilter([])
+    setAvailableGroupsForFilter([])
     isInitialLoad.current = true; // Resetar para que a auto-seleção ocorra no próximo carregamento
   }
 
@@ -1239,7 +1321,7 @@ export default function MatchesManager() {
 
       {/* Filtros - agora sempre visíveis e sem condição */}
       <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Competição</label>
             <select
@@ -1255,15 +1337,31 @@ export default function MatchesManager() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rodada/Grupo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rodada</label>
             <select
               value={filters.round}
               onChange={(e) => setFilters({ ...filters, round: e.target.value })}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
+              disabled={!filters.competition}
             >
               <option value="">Todas</option>
-              {getUniqueRounds().map((round) => (
+              {availableRoundsForFilter.map((round) => (
                 <option key={round} value={round}>{round}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+            <select
+              value={filters.group}
+              onChange={(e) => setFilters({ ...filters, group: e.target.value })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
+              disabled={!filters.competition}
+            >
+              <option value="">Todos</option>
+              {availableGroupsForFilter.map((group) => (
+                <option key={group} value={group}>{group}</option>
               ))}
             </select>
           </div>
