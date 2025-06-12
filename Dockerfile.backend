@@ -67,14 +67,14 @@ RUN npm run build
 
 # Stage 3: Production Dependencies
 FROM node:18-alpine AS prod-deps
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Copiar package files
 COPY backend/package*.json ./
 
-# Instalar apenas dependências de produção
-RUN npm cache clean --force && \
-    npm install --only=production --legacy-peer-deps
+# Instalar apenas dependências de produção sem limpar cache agressivamente
+RUN npm install --only=production --legacy-peer-deps --no-audit --no-fund
 
 # Stage 4: Runner
 FROM node:18-alpine AS runner
