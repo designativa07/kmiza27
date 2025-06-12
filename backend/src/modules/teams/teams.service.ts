@@ -37,22 +37,44 @@ export class TeamsService {
 
   async create(teamData: Partial<Team>): Promise<Team> {
     try {
+      console.log('🏗️ Criando time com dados:', teamData);
+
       // Garantir que exista um slug único caso ele não seja enviado no DTO
       if (!teamData.slug && teamData.name) {
         teamData.slug = await this.generateUniqueSlug(teamData.name);
+        console.log('🔗 Slug gerado:', teamData.slug);
       }
 
+      // Validar campos obrigatórios
+      if (!teamData.name) {
+        throw new BadRequestException('Nome do time é obrigatório.');
+      }
+
+      console.log('✅ Dados finais para criação:', teamData);
+
       const team = this.teamRepository.create(teamData);
-      return this.teamRepository.save(team);
+      const savedTeam = await this.teamRepository.save(team);
+      
+      console.log('🎉 Time criado com sucesso:', savedTeam);
+      return savedTeam;
     } catch (error) {
-      console.error("Erro ao criar o time:", error);
+      console.error("❌ Erro ao criar o time:", error);
+      
+      if (error instanceof BadRequestException) {
+        throw error; // Re-throw BadRequestException
+      }
+      
       if (error.code === '23505') { // Código de erro PostgreSQL para violação de restrição única
         throw new BadRequestException('Já existe um time com este slug ou nome.');
       }
       if (error.code === '23502') { // NOT NULL violation (por exemplo, name ausente)
         throw new BadRequestException('Campos obrigatórios não foram enviados.');
       }
-      throw new BadRequestException('Erro ao criar o time. Verifique os dados fornecidos.');
+      if (error.code === '23503') { // Foreign key violation
+        throw new BadRequestException('Referência inválida (ex: estádio não existe).');
+      }
+      
+      throw new BadRequestException(`Erro ao criar o time: ${error.message}`);
     }
   }
 
