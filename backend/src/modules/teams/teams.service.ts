@@ -37,6 +37,11 @@ export class TeamsService {
 
   async create(teamData: Partial<Team>): Promise<Team> {
     try {
+      // Garantir que exista um slug único caso ele não seja enviado no DTO
+      if (!teamData.slug && teamData.name) {
+        teamData.slug = await this.generateUniqueSlug(teamData.name);
+      }
+
       const team = this.teamRepository.create(teamData);
       return this.teamRepository.save(team);
     } catch (error) {
@@ -44,8 +49,37 @@ export class TeamsService {
       if (error.code === '23505') { // Código de erro PostgreSQL para violação de restrição única
         throw new BadRequestException('Já existe um time com este slug ou nome.');
       }
+      if (error.code === '23502') { // NOT NULL violation (por exemplo, name ausente)
+        throw new BadRequestException('Campos obrigatórios não foram enviados.');
+      }
       throw new BadRequestException('Erro ao criar o time. Verifique os dados fornecidos.');
     }
+  }
+
+  /**
+   * Gera um slug "url-friendly" a partir do nome do time e garante unicidade no banco.
+   */
+  private async generateUniqueSlug(name: string): Promise<string> {
+    // Função básica de slugify sem dependências externas
+    const baseSlug = name
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentuação
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 250); // reserva espaço para sufixo se necessário
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Verificar se o slug já existe; se existir, acrescentar sufixo incremental
+    while (await this.teamRepository.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`.substring(0, 255);
+      counter++;
+    }
+
+    return slug;
   }
 
   async update(id: number, teamData: Partial<Team>): Promise<Team | null> {
