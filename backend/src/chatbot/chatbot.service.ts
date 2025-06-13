@@ -483,13 +483,14 @@ export class ChatbotService {
       console.log('🔍 Buscando jogos de hoje...');
 
       // Usar query SQL direta com timezone do Brasil para maior precisão
+      // Converter a data atual para o timezone de São Paulo e buscar jogos desse dia
       const todayMatches = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
+        .where(`DATE(match.match_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')`)
         .orderBy('match.match_date', 'ASC')
         .getMany();
 
@@ -1579,7 +1580,7 @@ Para mais informações acesse Kmiza27.com`;
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
+        .where(`DATE(match.match_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')`)
         .orderBy('match.match_date', 'ASC')
         .getMany();
       
