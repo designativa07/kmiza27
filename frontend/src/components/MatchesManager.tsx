@@ -91,7 +91,7 @@ interface MatchFormData {
   tie_id: string;
   match_date_second_leg?: string;
   stadium_id_second_leg?: string;
-  stadium_id?: number | null; // Corrigido para number | null
+  stadium_id?: string | null; // Alterado para string | null
   home_team_player_stats: MatchPlayerStat[];
   away_team_player_stats: MatchPlayerStat[];
 }
@@ -333,7 +333,7 @@ export default function MatchesManager() {
     tie_id: '',
     match_date_second_leg: '',
     stadium_id_second_leg: '',
-    stadium_id: null, // Corrigido para number | null
+    stadium_id: null, // Inicializar como null
     home_team_player_stats: [],
     away_team_player_stats: [],
   })
@@ -742,92 +742,72 @@ export default function MatchesManager() {
       let method: string;
       let payload: any;
 
+      const basePayload = {
+        competition_id: parseInt(String(formData.competition_id || '')),
+        round_id: formData.round_id ? parseInt(String(formData.round_id)) : undefined,
+        round_name: formData.round_name || undefined,
+        group_name: formData.group_name || undefined,
+        phase: formData.phase || undefined,
+        status: formData.status,
+        broadcast_channels: formData.broadcast_channels || null,
+        channel_ids: formData.channel_ids,
+        home_score: formData.home_score,
+        away_score: formData.away_score,
+        home_yellow_cards: formData.home_yellow_cards,
+        away_yellow_cards: formData.away_yellow_cards,
+        home_red_cards: formData.home_red_cards,
+        away_red_cards: formData.away_red_cards,
+        home_score_penalties: formData.home_score_penalties,
+        away_score_penalties: formData.away_score_penalties,
+        leg: formData.leg,
+        tie_id: formData.tie_id === '' ? null : formData.tie_id,
+        home_team_player_stats: formData.home_team_player_stats,
+        away_team_player_stats: formData.away_team_player_stats,
+      };
+
       if (editingMatch) {
-        // Lógica para edição de partida existente
         url = `${API_ENDPOINTS.matches.list()}/${editingMatch.id}`;
         method = 'PATCH';
         payload = {
-          home_team_id: parseInt(formData.home_team_id),
-          away_team_id: parseInt(formData.away_team_id),
-          competition_id: parseInt(formData.competition_id),
-          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
-          round_name: formData.round_name || undefined,
-          group_name: formData.group_name || undefined,
-          phase: formData.phase || undefined,
-          match_date: new Date(formData.match_date).toISOString(),
-          status: formData.status,
-          broadcast_channels: formData.broadcast_channels || null,
-          channel_ids: formData.channel_ids,
-          home_score: formData.home_score,
-          away_score: formData.away_score,
-          home_yellow_cards: formData.home_yellow_cards,
-          away_yellow_cards: formData.away_yellow_cards,
-          home_red_cards: formData.home_red_cards,
-          away_red_cards: formData.away_red_cards,
-          home_score_penalties: formData.home_score_penalties,
-          away_score_penalties: formData.away_score_penalties,
-          leg: formData.leg,
-          tie_id: formData.tie_id,
-          stadium_id: formData.stadium_id, // Usar stadium_id diretamente do formData
-          home_team_player_stats: formData.home_team_player_stats,
-          away_team_player_stats: formData.away_team_player_stats,
+          home_team_id: parseInt(String(formData.home_team_id || '')),
+          away_team_id: parseInt(String(formData.away_team_id || '')),
+          stadium_id: formData.stadium_id === null || formData.stadium_id === ''
+            ? null
+            : parseInt(String(formData.stadium_id)),
+          ...basePayload,
         };
       } else if (createTwoLegTie) {
-        // Lógica para criar um confronto de ida e volta
         url = API_ENDPOINTS.matches.createTwoLegTie();
         method = 'POST';
         payload = {
-          home_team_id: parseInt(formData.home_team_id),
-          away_team_id: parseInt(formData.away_team_id),
-          competition_id: parseInt(formData.competition_id),
-          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
-          round_name: formData.round_name || undefined,
-          group_name: formData.group_name || undefined,
-          phase: formData.phase || undefined,
+          home_team_id: parseInt(String(formData.home_team_id || '')),
+          away_team_id: parseInt(String(formData.away_team_id || '')),
           match_date_first_leg: new Date(formData.match_date).toISOString(),
-          stadium_id_first_leg: formData.stadium_id, // Usar stadium_id diretamente do formData
+          stadium_id_first_leg: formData.stadium_id === null || formData.stadium_id === ''
+            ? null
+            : parseInt(String(formData.stadium_id)),
           match_date_second_leg: new Date(formData.match_date_second_leg!).toISOString(),
-          stadium_id_second_leg: formData.stadium_id_second_leg ? parseInt(formData.stadium_id_second_leg) : undefined,
-          status: formData.status,
-          channel_ids: formData.channel_ids,
-          broadcast_channels: formData.broadcast_channels || null,
-          home_team_player_stats: formData.home_team_player_stats,
-          away_team_player_stats: formData.away_team_player_stats,
+          stadium_id_second_leg: formData.stadium_id_second_leg === null || formData.stadium_id_second_leg === ''
+            ? null
+            : parseInt(String(formData.stadium_id_second_leg)),
+          ...basePayload,
         };
       } else {
-        // Lógica para criar uma única partida
         url = API_ENDPOINTS.matches.list();
         method = 'POST';
         payload = {
-          home_team_id: parseInt(formData.home_team_id),
-          away_team_id: parseInt(formData.away_team_id),
-          competition_id: parseInt(formData.competition_id),
-          round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
-          round_name: formData.round_name || undefined,
-          group_name: formData.group_name || undefined,
-          phase: formData.phase || undefined,
+          home_team_id: parseInt(String(formData.home_team_id || '')),
+          away_team_id: parseInt(String(formData.away_team_id || '')),
           match_date: new Date(formData.match_date).toISOString(),
-          status: formData.status,
-          broadcast_channels: formData.broadcast_channels || null,
-          channel_ids: formData.channel_ids,
-          home_score: formData.home_score,
-          away_score: formData.away_score,
-          home_yellow_cards: formData.home_yellow_cards,
-          away_yellow_cards: formData.away_yellow_cards,
-          home_red_cards: formData.home_red_cards,
-          away_red_cards: formData.away_red_cards,
-          home_score_penalties: formData.home_score_penalties,
-          away_score_penalties: formData.away_score_penalties,
-          leg: formData.leg,
-          tie_id: formData.tie_id,
-          stadium_id: formData.stadium_id, // Usar stadium_id diretamente do formData
-          home_team_player_stats: formData.home_team_player_stats,
-          away_team_player_stats: formData.away_team_player_stats,
+          stadium_id: formData.stadium_id === null || formData.stadium_id === ''
+            ? null
+            : parseInt(String(formData.stadium_id)),
+          ...basePayload,
         };
       }
 
-      console.log('🔍 Frontend - Enviando payload:', payload);
-      
+      console.log('🔍 Frontend - Enviando payload COMPLETO:', payload);
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -840,18 +820,13 @@ export default function MatchesManager() {
 
       if (response.ok) {
         console.log('✅ Frontend - Resposta OK');
-        
-        // Fechar modal e resetar form primeiro
         setShowModal(false)
         setEditingMatch(null)
         resetForm()
-        
-        // Aguardar um pouco para garantir que a transação foi commitada no banco
         setTimeout(() => {
           console.log('🔄 Recarregando dados após atualização...');
           fetchData()
-        }, 500) // 500ms de delay
-        
+        }, 500)
       } else {
         const errorText = await response.text();
         console.error('❌ Frontend - Erro na resposta:', response.status, errorText);
@@ -888,30 +863,27 @@ export default function MatchesManager() {
       tie_id: '',
       match_date_second_leg: '',
       stadium_id_second_leg: '',
-      stadium_id: null, // Definir como null
+      stadium_id: null, // Inicializar como null
       home_team_player_stats: [],
       away_team_player_stats: [],
     })
     setCreateTwoLegTie(false)
-    setSelectedHomeGoalPlayerId(undefined); // Resetar jogador selecionado para gols
-    setSelectedAwayGoalPlayerId(undefined); // Resetar jogador selecionado para gols
+    setSelectedHomeGoalPlayerId(undefined);
+    setSelectedAwayGoalPlayerId(undefined);
   }
 
   const handleEdit = (match: Match) => {
     setEditingMatch(match)
     setCreateTwoLegTie(false)
-    
+
     const processBroadcastChannels = (channels: any): string => {
       if (!channels) return '';
-      
       if (typeof channels === 'string') {
         return channels;
       }
-      
       if (Array.isArray(channels)) {
         return channels.join(', ');
       }
-      
       if (typeof channels === 'object') {
         const allChannels: string[] = [];
         Object.values(channels).forEach((channelList: any) => {
@@ -921,20 +893,14 @@ export default function MatchesManager() {
         });
         return allChannels.join(', ');
       }
-      
       return '';
     };
-    
-    // Converter data para formato datetime-local mantendo o horário local correto
-    // Criar um objeto Date e ajustar para o timezone local
+
     const date = new Date(match.match_date);
-    // Obter o offset do timezone local em minutos
     const timezoneOffset = date.getTimezoneOffset();
-    // Ajustar a data subtraindo o offset (para compensar a diferença de timezone)
     const localDate = new Date(date.getTime() - (timezoneOffset * 60000));
-    // Converter para string no formato datetime-local (YYYY-MM-DDTHH:mm)
     const formattedDate = localDate.toISOString().slice(0, 16);
-    
+
     const newFormData = {
       home_team_id: match.home_team?.id?.toString() || '',
       away_team_id: match.away_team?.id?.toString() || '',
@@ -959,13 +925,14 @@ export default function MatchesManager() {
       tie_id: match.tie_id || '',
       match_date_second_leg: '',
       stadium_id_second_leg: '',
-      stadium_id: match.stadium?.id ?? null, // Atribuir null se não houver estádio
+      stadium_id: match.stadium?.id?.toString() || null, // Atribuir string ou null
       home_team_player_stats: match.home_team_player_stats || [],
       away_team_player_stats: match.away_team_player_stats || [],
     } as MatchFormData;
-    
+
     setFormData(newFormData);
     setShowModal(true)
+    console.log('🔍 handleEdit - stadium_id após processamento:', newFormData.stadium_id);
   }
 
   const handleDelete = async (id: number) => {
@@ -1903,10 +1870,8 @@ export default function MatchesManager() {
                       onChange={(e) => {
                         setCreateTwoLegTie(e.target.checked);
                         if (e.target.checked) {
-                          // Se marcado, sugere 'first_leg' e limpa 'tie_id'
                           setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
                         } else {
-                          // Se desmarcado, reseta leg e tie_id
                           setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null })); // Definir como null
                         }
                       }}
@@ -1970,12 +1935,13 @@ export default function MatchesManager() {
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Estádio</label>
                     <select
-                      value={(formData.stadium_id ?? '') as string} // Manter conversão para string para o select
+                      value={(formData.stadium_id ?? '') as string}
                       onChange={(e) => {
                         const value = e.target.value;
+                        console.log('🔍 onChange Stadium Select - e.target.value:', value);
                         setFormData({
                           ...formData,
-                          stadium_id: value === '' ? null : parseInt(value), // Converter para number ou null
+                          stadium_id: value === '' ? null : value, // Armazenar como string ou null
                         });
                       }}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
