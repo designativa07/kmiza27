@@ -364,7 +364,7 @@ export class MatchesService {
         updateData.round = { id: updateMatchDto.round_id };
       }
       if (updateMatchDto.stadium_id !== undefined) {
-        updateData.stadium = { id: updateMatchDto.stadium_id };
+        updateData.stadium = updateMatchDto.stadium_id === null ? null : { id: updateMatchDto.stadium_id };
       }
       
       console.log('🔍 MatchesService.update - Dados processados:', updateData);
