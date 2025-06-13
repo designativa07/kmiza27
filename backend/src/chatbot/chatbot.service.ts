@@ -480,28 +480,54 @@ export class ChatbotService {
 
   private async getTodayMatches(): Promise<string> {
     try {
-      const now = new Date();
+      console.log('🔍 Buscando jogos de hoje...');
 
-      // Create Date objects for the start and end of *that* day in Sao Paulo's local time.
-      const startOfSaoPauloDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      const endOfSaoPauloDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-      const startQueryDate = startOfSaoPauloDay;
-      const endQueryDate = endOfSaoPauloDay;
-
+      // Usar query SQL direta com timezone do Brasil para maior precisão
       const todayMatches = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where('match.match_date >= :start', { start: startQueryDate })
-        .andWhere('match.match_date <= :end', { end: endQueryDate })
+        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
         .orderBy('match.match_date', 'ASC')
         .getMany();
 
+      console.log(`⚽ Encontrados ${todayMatches.length} jogos para hoje`);
+
       if (todayMatches.length === 0) {
-        return `📅 JOGOS DE HOJE 📅\n\n😔 Não há jogos agendados para hoje.\n\n⚽ Quer saber sobre o próximo jogo de algum time específico?`;
+        // Buscar próximos jogos para mostrar como alternativa
+        const nextMatches = await this.matchesRepository
+          .createQueryBuilder('match')
+          .leftJoinAndSelect('match.competition', 'competition')
+          .leftJoinAndSelect('match.home_team', 'homeTeam')
+          .leftJoinAndSelect('match.away_team', 'awayTeam')
+          .where(`match.match_date > NOW() AT TIME ZONE 'America/Sao_Paulo'`)
+          .andWhere('match.status = :status', { status: 'scheduled' })
+          .orderBy('match.match_date', 'ASC')
+          .limit(3)
+          .getMany();
+
+        let response = `📅 JOGOS DE HOJE 📅\n\n😔 Não há jogos agendados para hoje.`;
+        
+        if (nextMatches.length > 0) {
+          response += `\n\n📅 PRÓXIMOS JOGOS:\n\n`;
+          nextMatches.forEach(match => {
+            const matchDate = new Date(match.match_date);
+            const date = matchDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const time = matchDate.toLocaleTimeString('pt-BR', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              timeZone: 'America/Sao_Paulo'
+            });
+            response += `📅 ${date} - ${time}\n`;
+            response += `🏆 ${match.competition.name}\n`;
+            response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n\n`;
+          });
+        }
+        
+        response += `\n⚽ Quer saber sobre o próximo jogo de algum time específico?`;
+        return response;
       }
 
       let response = `📅 JOGOS DE HOJE 📅\n\n`;
@@ -1543,23 +1569,17 @@ Para mais informações acesse Kmiza27.com`;
   async debugMatchesToday(): Promise<any> {
     try {
       console.log('🔍 DEBUG - Verificando jogos de hoje');
-      
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-      
-      console.log(`📅 Buscando jogos entre: ${startOfDay.toISOString()} e ${endOfDay.toISOString()}`);
       console.log(`🕐 Horário atual do servidor: ${new Date().toISOString()}`);
       console.log(`🌍 Timezone do servidor: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
       
+      // Usar a mesma lógica do método getTodayMatches
       const todayMatches = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
         .leftJoinAndSelect('match.stadium', 'stadium')
-        .where('match.match_date >= :start', { start: startOfDay })
-        .andWhere('match.match_date < :end', { end: endOfDay })
+        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
         .orderBy('match.match_date', 'ASC')
         .getMany();
       
@@ -1584,8 +1604,7 @@ Para mais informações acesse Kmiza27.com`;
         serverTime: {
           current: new Date().toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          startOfDay: startOfDay.toISOString(),
-          endOfDay: endOfDay.toISOString()
+          saoPauloTime: new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"})
         },
         todayMatches: todayMatches.map(match => ({
           id: match.id,
