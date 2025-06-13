@@ -1971,7 +1971,13 @@ export default function MatchesManager() {
                     <label className="block text-sm font-medium text-gray-900">Estádio</label>
                     <select
                       value={(formData.stadium_id ?? '') as string}
-                      onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData({
+                          ...formData,
+                          stadium_id: value === '' ? null : parseInt(value),
+                        });
+                      }}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                     >
                       <option value="">Selecione o estádio</option>
