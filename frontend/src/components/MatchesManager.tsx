@@ -91,7 +91,7 @@ interface MatchFormData {
   tie_id: string;
   match_date_second_leg?: string;
   stadium_id_second_leg?: string;
-  stadium_id?: string;
+  stadium_id?: number | null; // Corrigido para number | null
   home_team_player_stats: MatchPlayerStat[];
   away_team_player_stats: MatchPlayerStat[];
 }
@@ -333,7 +333,7 @@ export default function MatchesManager() {
     tie_id: '',
     match_date_second_leg: '',
     stadium_id_second_leg: '',
-    stadium_id: '',
+    stadium_id: null, // Corrigido para number | null
     home_team_player_stats: [],
     away_team_player_stats: [],
   })
@@ -768,13 +768,13 @@ export default function MatchesManager() {
           away_score_penalties: formData.away_score_penalties,
           leg: formData.leg,
           tie_id: formData.tie_id,
-          stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+          stadium_id: formData.stadium_id, // Usar stadium_id diretamente do formData
           home_team_player_stats: formData.home_team_player_stats,
           away_team_player_stats: formData.away_team_player_stats,
         };
       } else if (createTwoLegTie) {
         // Lógica para criar um confronto de ida e volta
-        url = API_ENDPOINTS.matches.createTwoLegTie(); // Novo endpoint para ida e volta
+        url = API_ENDPOINTS.matches.createTwoLegTie();
         method = 'POST';
         payload = {
           home_team_id: parseInt(formData.home_team_id),
@@ -785,7 +785,7 @@ export default function MatchesManager() {
           group_name: formData.group_name || undefined,
           phase: formData.phase || undefined,
           match_date_first_leg: new Date(formData.match_date).toISOString(),
-          stadium_id_first_leg: formData.stadium_id ? parseInt(formData.stadium_id) : undefined, // Assumindo que stadium_id é para a primeira leg
+          stadium_id_first_leg: formData.stadium_id, // Usar stadium_id diretamente do formData
           match_date_second_leg: new Date(formData.match_date_second_leg!).toISOString(),
           stadium_id_second_leg: formData.stadium_id_second_leg ? parseInt(formData.stadium_id_second_leg) : undefined,
           status: formData.status,
@@ -820,7 +820,7 @@ export default function MatchesManager() {
           away_score_penalties: formData.away_score_penalties,
           leg: formData.leg,
           tie_id: formData.tie_id,
-          stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : undefined,
+          stadium_id: formData.stadium_id, // Usar stadium_id diretamente do formData
           home_team_player_stats: formData.home_team_player_stats,
           away_team_player_stats: formData.away_team_player_stats,
         };
@@ -888,7 +888,7 @@ export default function MatchesManager() {
       tie_id: '',
       match_date_second_leg: '',
       stadium_id_second_leg: '',
-      stadium_id: '',
+      stadium_id: null, // Definir como null
       home_team_player_stats: [],
       away_team_player_stats: [],
     })
@@ -959,9 +959,9 @@ export default function MatchesManager() {
       tie_id: match.tie_id || '',
       match_date_second_leg: '',
       stadium_id_second_leg: '',
-      stadium_id: match.stadium?.id?.toString() || '',
-      home_team_player_stats: match.home_team_player_stats || [], // Inicializar com dados existentes
-      away_team_player_stats: match.away_team_player_stats || [], // Inicializar com dados existentes
+      stadium_id: match.stadium?.id ?? null, // Atribuir null se não houver estádio
+      home_team_player_stats: match.home_team_player_stats || [],
+      away_team_player_stats: match.away_team_player_stats || [],
     } as MatchFormData;
     
     setFormData(newFormData);
@@ -1907,7 +1907,7 @@ export default function MatchesManager() {
                           setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
                         } else {
                           // Se desmarcado, reseta leg e tie_id
-                          setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: '' }));
+                          setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null })); // Definir como null
                         }
                       }}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
@@ -1970,12 +1970,12 @@ export default function MatchesManager() {
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Estádio</label>
                     <select
-                      value={(formData.stadium_id ?? '') as string}
+                      value={(formData.stadium_id ?? '') as string} // Manter conversão para string para o select
                       onChange={(e) => {
                         const value = e.target.value;
                         setFormData({
                           ...formData,
-                          stadium_id: value === '' ? null : parseInt(value),
+                          stadium_id: value === '' ? null : parseInt(value), // Converter para number ou null
                         });
                       }}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"

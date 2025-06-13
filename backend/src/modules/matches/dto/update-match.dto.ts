@@ -40,7 +40,7 @@ export class UpdateMatchDto {
 
   @IsOptional()
   @IsNumber()
-  stadium_id?: number;
+  stadium_id?: number | null;
 
   @IsOptional()
   @IsString()
