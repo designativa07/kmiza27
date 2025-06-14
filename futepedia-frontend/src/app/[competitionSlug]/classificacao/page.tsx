@@ -25,6 +25,11 @@ interface Standing {
   goal_difference: number;
 }
 
+// Definir um tipo para as props da página
+type Props = {
+  params: { competitionSlug: string };
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // Função de busca de dados no servidor
@@ -43,8 +48,8 @@ async function getCompetitionData(slug: string): Promise<{ competition: Competit
 }
 
 
-// O componente da página agora é 'async'
-export default async function ClassificationPage({ params }: { params: { competitionSlug: string } }) {
+// O componente da página agora é 'async' e usa o tipo 'Props'
+export default async function ClassificationPage({ params }: Props) {
   const { competitionSlug } = params;
   const { competition, standings } = await getCompetitionData(competitionSlug);
 
