@@ -30,6 +30,11 @@ interface Match {
   } | null;
 }
 
+// Definir um tipo para as props da página
+type Props = {
+  params: { competitionSlug: string };
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // Função para buscar os dados no servidor
@@ -59,8 +64,8 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Componente de página assíncrono
-export default async function MatchesPage({ params }: { params: { competitionSlug: string } }) {
+// Componente de página assíncrono e usa o tipo 'Props'
+export default async function MatchesPage({ params }: Props) {
   const { competitionSlug } = params;
   const { competition, matches } = await getMatchesData(competitionSlug);
 
