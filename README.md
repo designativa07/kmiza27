@@ -1,276 +1,110 @@
-# 🤖⚽ Kmiza27 ChatBot - Sistema Administrativo Completo
+# Kmiza Bot
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.4.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![NestJS](https://img.shields.io/badge/NestJS-10.0.0-red?style=for-the-badge&logo=nestjs)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+Sistema de gerenciamento de apostas e competições esportivas.
 
-> **ChatBot inteligente de futebol com dashboard administrativo moderno e sistema de autenticação completo.**
-
-## 🎯 **Sobre o Projeto**
-
-O **Kmiza27** é um chatbot especializado em futebol que oferece informações em tempo real sobre jogos, estatísticas de times e jogadores. O sistema inclui um **dashboard administrativo completo** para gerenciamento de usuários e administradores.
-
-### ✨ **Principais Funcionalidades**
-
-- 🤖 **ChatBot Inteligente** - Respostas automáticas sobre futebol
-- 🔐 **Sistema de Autenticação** - Login seguro com JWT
-- 📊 **Dashboard Administrativo** - Interface moderna para gestão
-- 👥 **Gerenciamento de Usuários** - CRUD completo com filtros
-- 🛡️ **Controle de Administradores** - Criação e gestão de admins
-- 📱 **Interface Responsiva** - Design mobile-first
-- ⚡ **Tempo Real** - Estatísticas atualizadas automaticamente
-
-## 🏗️ **Arquitetura do Sistema**
+## Estrutura do Projeto
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│                 │    │                 │    │                 │
-│   Frontend      │◄──►│    Backend      │◄──►│   PostgreSQL    │
-│   (Next.js)     │    │   (NestJS)      │    │   Database      │
-│   Port: 3002    │    │   Port: 3000    │    │   Port: 5433    │
-│                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+kmiza27/
+├── admin-panel/          # Painel administrativo
+├── backend/             # API e serviços backend
+├── database/            # Scripts e arquivos relacionados ao banco de dados
+│   ├── migrations/      # Scripts de migração do banco
+│   ├── dumps/          # Backups e dumps SQL
+│   ├── scripts/        # Utilitários e scripts de importação
+│   ├── tests/          # Scripts de teste do banco
+│   ├── assets/         # Arquivos de dados (escudos, etc)
+│   └── legacy/         # Scripts antigos ou obsoletos
+├── docker/             # Configurações Docker
+├── docs/               # Documentação do projeto
+│   ├── guides/         # Tutoriais e guias de uso
+│   ├── changelogs/     # Histórico de mudanças
+│   ├── examples/       # Exemplos de uso
+│   ├── readmes/        # READMEs específicos
+│   └── legacy/         # Documentação antiga
+├── frontend/           # Interface do usuário
+├── scripts/            # Scripts de automação e utilidades
+│   ├── deploy/         # Scripts de deploy
+│   ├── config/         # Scripts de configuração
+│   ├── test/          # Scripts de teste
+│   ├── db/            # Scripts de banco de dados
+│   └── utils/         # Utilitários gerais
+└── tests/              # Testes automatizados
 ```
 
-### 🔧 **Stack Tecnológica**
+## Requisitos
 
-#### **Frontend**
-- **Next.js 15** - Framework React com SSR
-- **TypeScript** - Tipagem estática
-- **Tailwind CSS** - Framework CSS utilitário
-- **Heroicons** - Biblioteca de ícones
-- **Axios** - Cliente HTTP
+- Node.js 18+
+- PostgreSQL 14+
+- Docker e Docker Compose
+- Git
 
-#### **Backend**
-- **NestJS** - Framework Node.js escalável
-- **TypeORM** - ORM para TypeScript
-- **JWT** - Autenticação por tokens
-- **bcrypt** - Hash de senhas
-- **Class Validator** - Validação de dados
+## Instalação
 
-#### **Banco de Dados**
-- **PostgreSQL** - Banco relacional
-- **TypeORM Migrations** - Controle de versão do DB
-
-## 🚀 **Instalação e Configuração**
-
-### **Pré-requisitos**
-- Node.js 18+ 
-- PostgreSQL 15+
-- npm ou yarn
-
-### **1. Clone o Repositório**
+1. Clone o repositório:
 ```bash
-git clone https://github.com/designativa07/kmiza27.git
+git clone [URL_DO_REPOSITORIO]
 cd kmiza27
 ```
 
-### **2. Instale as Dependências**
+2. Instale as dependências:
 ```bash
-# Instalar dependências do projeto
 npm install
-
-# Instalar dependências do backend
-cd backend && npm install
-
-# Instalar dependências do frontend
-cd ../frontend && npm install
 ```
 
-### **3. Configuração do Banco de Dados**
-
-Crie um banco PostgreSQL e configure as variáveis de ambiente:
-
+3. Configure as variáveis de ambiente:
 ```bash
-# backend/.env
-DATABASE_HOST=localhost
-DATABASE_PORT=5433
-DATABASE_USERNAME=seu_usuario
-DATABASE_PASSWORD=sua_senha
-DATABASE_NAME=kmiza27_db
-
-JWT_SECRET=seu_jwt_secret_super_seguro
-JWT_EXPIRES_IN=24h
+cp .env.example .env
+# Edite o arquivo .env com suas configurações
 ```
 
-### **4. Execute as Migrações**
+4. Inicie os serviços com Docker:
 ```bash
-cd backend
-npm run migration:run
+docker-compose up -d
 ```
 
-### **5. Inicie os Serviços**
-```bash
-# No diretório raiz
-npm run dev
-```
+## Desenvolvimento
 
-Isso iniciará:
-- **Backend**: http://localhost:3000
-- **Frontend**: http://localhost:3002
+- Backend: `npm run dev` na pasta `backend/`
+- Frontend: `npm run dev` na pasta `frontend/`
+- Admin Panel: `npm run dev` na pasta `admin-panel/`
 
-## 🎛️ **Dashboard Administrativo**
+## Documentação
 
-### **Acesso ao Sistema**
-1. Acesse: `http://localhost:3002`
-2. Faça login com as credenciais:
-   - **Usuário**: `admin_kmiza27`
-   - **Senha**: `admin@kmiza27`
+Toda a documentação do projeto foi revisada e consolidada em guias claros e objetivos, localizados em `docs/guides/`.
 
-### **Funcionalidades Disponíveis**
+### Guias Principais
 
-#### 📊 **Dashboard Principal**
-- Cards de estatísticas em tempo real
-- Lista de usuários recentes
-- Ações rápidas para navegação
-- Métricas de engajamento
+- **[Guia de Deploy e CI/CD](./docs/guides/deploy/DEPLOY.md)**: Instruções completas sobre o fluxo de build, deploy e a estratégia de cache busting.
 
-#### 👥 **Gerenciamento de Usuários**
-- Listagem completa com paginação
-- Filtros por status (ativo/inativo)
-- Busca por nome, email ou telefone
-- Promoção/rebaixamento de administradores
-- Exclusão de usuários com confirmação
+- **[Guia de Configuração do EasyPanel](./docs/guides/config/EASYPANEL_GUIDE.md)**: Como configurar o ambiente de execução no EasyPanel, incluindo domínios, portas e volumes.
 
-#### 🛡️ **Administradores**
-- Visualização em grid de cards
-- Criação de novos administradores
-- Formulário com validação completa
-- Gestão de permissões
+- **[Guia do Dashboard Administrativo](./docs/guides/usage/ADMIN_DASHBOARD_GUIDE.md)**: Um manual completo para usar e desenvolver o painel administrativo.
 
-## 📱 **Interface e Design**
+- **[Guia de Autenticação](./docs/guides/auth/AUTH_GUIDE.md)**: Detalhes sobre a arquitetura de autenticação com JWT e o funcionamento do painel admin.
 
-### **Design System**
-- **Cores**: Gradientes azul/roxo e laranja/vermelho
-- **Tipografia**: Geist Sans
-- **Ícones**: Heroicons
-- **Responsividade**: Mobile-first
-- **Estados**: Loading, erro, sucesso, vazio
+- **[Guia de Testes](./docs/guides/test/TESTING_GUIDE.md)**: Procedimentos para testes funcionais (via WhatsApp) e testes de API (para desenvolvedores).
 
-### **Componentes Principais**
-- `AdminLayout` - Layout com sidebar e header
-- `StatsCard` - Cards de estatísticas coloridos
-- `ProtectedRoute` - Proteção de rotas
-- `LoadingSpinner` - Estados de carregamento
+- **[Guia do Sistema de Uploads](./docs/guides/config/UPLOADS_GUIDE.md)**: Como funciona a funcionalidade de upload e como garantir a persistência dos arquivos.
 
-## 🛡️ **Segurança**
+## Scripts Úteis
 
-### **Autenticação**
-- ✅ JWT com expiração de 24h
-- ✅ Verificação automática de tokens
-- ✅ Proteção de todas as rotas
-- ✅ Logout com limpeza de dados
+Scripts de automação estão disponíveis em `scripts/`:
 
-### **Autorização**
-- ✅ Controle de acesso por roles
-- ✅ Middleware de autenticação
-- ✅ Validação de permissões
+- Deploy: `scripts/deploy/`
+- Configuração: `scripts/config/`
+- Testes: `scripts/test/`
+- Banco de dados: `scripts/db/`
+- Utilitários: `scripts/utils/`
 
-### **Dados**
-- ✅ Hash de senhas com bcrypt
-- ✅ Validação de inputs
-- ✅ Sanitização de dados
-- ✅ Headers de segurança
+## Contribuição
 
-## 📦 **Deploy**
-
-### **Easypanel (Recomendado)**
-
-O sistema está otimizado para deploy no Easypanel com apenas **2 aplicações**:
-
-#### **1. Backend (kmiza27-backend)**
-```dockerfile
-# Usar Dockerfile existente
-PORT: 3000
-ENV: production
-```
-
-#### **2. Frontend (kmiza27-frontend)**
-```dockerfile
-# Build Next.js
-PORT: 3002
-ENV: production
-NEXT_PUBLIC_API_URL: https://api.seudominio.com
-```
-
-### **Variáveis de Ambiente**
-
-#### **Backend**
-```env
-DATABASE_HOST=seu_host_postgres
-DATABASE_PORT=5432
-DATABASE_USERNAME=usuario
-DATABASE_PASSWORD=senha
-DATABASE_NAME=kmiza27_prod
-JWT_SECRET=jwt_secret_producao
-NODE_ENV=production
-```
-
-#### **Frontend**
-```env
-NEXT_PUBLIC_API_URL=https://api.seudominio.com
-NEXT_PUBLIC_APP_NAME=Kmiza27 ChatBot
-NODE_ENV=production
-```
-
-## 🧪 **Testes**
-
-### **Executar Testes**
-```bash
-# Backend
-cd backend
-npm run test
-
-# Frontend
-cd frontend
-npm run test
-```
-
-### **Testes de Integração**
-```bash
-# Testar autenticação
-npm run test:auth
-
-# Testar API
-npm run test:api
-```
-
-## 📚 **Documentação**
-
-- 📖 [**Guia de Autenticação**](./AUTENTICACAO_ADMIN.md)
-- 🎛️ [**Dashboard Completo**](./DASHBOARD_ADMINISTRATIVO_COMPLETO.md)
-- 🔄 [**Migração Frontend**](./MIGRACAO_FRONTEND_AUTH.md)
-- 🚀 [**Deploy Easypanel**](./DEPLOY_ADMIN_EASYPANEL.md)
-
-## 🤝 **Contribuição**
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
 5. Abra um Pull Request
 
-## 📄 **Licença**
+## Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 👨‍💻 **Autor**
-
-**Designativa07**
-- GitHub: [@designativa07](https://github.com/designativa07)
-- Projeto: [Kmiza27](https://github.com/designativa07/kmiza27)
-
----
-
-## 🎉 **Status do Projeto**
-
-✅ **Sistema de Autenticação**: Completo  
-✅ **Dashboard Administrativo**: Completo  
-✅ **Gerenciamento de Usuários**: Completo  
-✅ **Interface Responsiva**: Completo  
-✅ **Deploy Ready**: Pronto para produção  
-
-**O Kmiza27 está pronto para uso em produção!** 🚀⚽ #   D e p l o y   t r i g g e r  
- 
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes. 
