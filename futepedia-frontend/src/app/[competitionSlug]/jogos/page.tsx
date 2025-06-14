@@ -41,12 +41,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 // Função para buscar os dados no servidor
 async function getMatchesData(slug: string): Promise<{ competition: Competition, matches: Match[] }> {
   // 1. Buscar detalhes da competição
-  const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { next: { revalidate: 3600 } });
+  const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { cache: 'no-store' });
   if (!competitionResponse.ok) throw new Error('Competição não encontrada');
   const competition: Competition = await competitionResponse.json();
 
   // 2. Buscar os jogos
-  const matchesResponse = await fetch(`${API_URL}/competitions/${competition.id}/matches`, { next: { revalidate: 3600 } });
+  const matchesResponse = await fetch(`${API_URL}/competitions/${competition.id}/matches`, { cache: 'no-store' });
   if (!matchesResponse.ok) throw new Error('Não foi possível carregar os jogos');
   const matches: Match[] = await matchesResponse.json();
 
