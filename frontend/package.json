@@ -19,7 +19,6 @@
     "date-fns": "^4.1.0",
     "geist": "^1.4.2",
     "js-cookie": "^3.0.5",
-    "kmiza27-chatbot": "file:..",
     "lucide-react": "^0.511.0",
     "next": "^14.2.3",
     "react": "^18",
@@ -36,6 +35,7 @@
     "eslint": "^8",
     "eslint-config-next": "^14.2.3",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "postcss": "^8"
   }
 }
