@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { NextPage } from 'next';
 
 // Interfaces
 interface Competition {
@@ -64,8 +65,8 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Componente de página assíncrono e usa o tipo 'Props'
-export default async function MatchesPage({ params }: Props) {
+// Componente de página agora usa o tipo 'NextPage' com as nossas Props
+const MatchesPage: NextPage<Props> = async ({ params }) => {
   const { competitionSlug } = params;
   const { competition, matches } = await getMatchesData(competitionSlug);
 
@@ -112,4 +113,6 @@ export default async function MatchesPage({ params }: Props) {
       )}
     </main>
   );
-} 
+};
+
+export default MatchesPage; 

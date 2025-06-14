@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { NextPage } from 'next';
 
 // Tipos de dados
 interface Competition {
@@ -47,9 +48,8 @@ async function getCompetitionData(slug: string): Promise<{ competition: Competit
   return { competition, standings };
 }
 
-
-// O componente da página agora é 'async' e usa o tipo 'Props'
-export default async function ClassificationPage({ params }: Props) {
+// O componente da página agora usa o tipo 'NextPage' com as nossas Props
+const ClassificationPage: NextPage<Props> = async ({ params }) => {
   const { competitionSlug } = params;
   const { competition, standings } = await getCompetitionData(competitionSlug);
 
@@ -103,4 +103,6 @@ export default async function ClassificationPage({ params }: Props) {
       )}
     </main>
   );
-} 
+}
+
+export default ClassificationPage; 
