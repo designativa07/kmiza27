@@ -46,7 +46,7 @@ async function getMatchesData(slug: string): Promise<{ competition: Competition,
   const competition: Competition = await competitionResponse.json();
 
   // 2. Buscar os jogos
-  const matchesResponse = await fetch(`${API_URL}/competitions/${competition.id}/matches`, { cache: 'no-store' });
+  const matchesResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/matches`, { cache: 'no-store' });
   if (!matchesResponse.ok) throw new Error('Não foi possível carregar os jogos');
   const matches: Match[] = await matchesResponse.json();
 

@@ -41,7 +41,7 @@ async function getCompetitionData(slug: string): Promise<{ competition: Competit
   const competition: Competition = await competitionResponse.json();
 
   // 2. Buscar a tabela de classificação usando o ID
-  const standingsResponse = await fetch(`${API_URL}/competitions/${competition.id}/standings`, { cache: 'no-store' });
+  const standingsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}`, { cache: 'no-store' });
   if (!standingsResponse.ok) throw new Error('Não foi possível carregar a tabela de classificação');
   const standings: Standing[] = await standingsResponse.json();
   
