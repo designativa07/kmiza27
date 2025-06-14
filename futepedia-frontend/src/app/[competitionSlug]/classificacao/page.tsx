@@ -33,75 +33,96 @@ type Props = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-// Função de busca de dados no servidor
-async function getCompetitionData(slug: string): Promise<{ competition: Competition, standings: Standing[] }> {
-  // 1. Buscar detalhes da competição pelo slug
+async function getStandings(slug: string): Promise<Standing[]> {
+  // A busca da competição já é feita no layout, podemos otimizar isso no futuro
+  // para não buscar duas vezes, mas por enquanto vamos manter simples.
   const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { cache: 'no-store' });
-  if (!competitionResponse.ok) throw new Error('Competição não encontrada');
-  const competition: Competition = await competitionResponse.json();
+  if (!competitionResponse.ok) throw new Error('Competição não encontrada para obter a classificação');
+  const competition: { id: number } = await competitionResponse.json();
 
-  // 2. Buscar a tabela de classificação usando o ID
   const standingsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}`, { cache: 'no-store' });
   if (!standingsResponse.ok) throw new Error('Não foi possível carregar a tabela de classificação');
-  const standings: Standing[] = await standingsResponse.json();
   
-  return { competition, standings };
+  return standingsResponse.json();
 }
 
 // O componente da página agora usa o tipo 'NextPage' com as nossas Props
 const ClassificationPage: NextPage<Props> = async ({ params }) => {
-  const { competitionSlug } = params;
-  const { competition, standings } = await getCompetitionData(competitionSlug);
+  const standings = await getStandings(params.competitionSlug);
+
+  const tableHeaders = [
+    { label: '#', align: 'left' },
+    { label: 'Time', align: 'left' },
+    { label: 'P', align: 'center', tooltip: 'Pontos' },
+    { label: 'J', align: 'center', tooltip: 'Jogos' },
+    { label: 'V', align: 'center', tooltip: 'Vitórias' },
+    { label: 'E', align: 'center', tooltip: 'Empates' },
+    { label: 'D', align: 'center', tooltip: 'Derrotas' },
+    { label: 'GP', align: 'center', tooltip: 'Gols Pró' },
+    { label: 'GC', align: 'center', tooltip: 'Gols Contra' },
+    { label: 'SG', align: 'center', tooltip: 'Saldo de Gols' },
+  ];
 
   return (
-    <main className="container mx-auto p-4">
-      <header className="my-6">
-        <Link href="/" className="text-indigo-600 hover:underline">&larr; Voltar para todos os campeonatos</Link>
-        <h1 className="text-3xl font-bold mt-4">Tabela de Classificação - {competition.name}</h1>
-      </header>
-
+    <div className="bg-white rounded-lg shadow overflow-hidden">
       {standings.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border">
-            <thead className="bg-gray-800 text-white">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">#</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Time</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">P</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">J</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">V</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">E</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">D</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">GP</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">GC</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">SG</th>
+                {tableHeaders.map(header => (
+                  <th
+                    key={header.label}
+                    scope="col"
+                    className={`px-4 py-3 text-${header.align} text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    title={header.tooltip}
+                  >
+                    {header.label}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="text-gray-700">
-              {standings.map((standing) => (
-                <tr key={standing.id} className="border-b hover:bg-gray-100">
-                  <td className="text-left py-3 px-4">{standing.rank}</td>
-                  <td className="text-left py-3 px-4 flex items-center">
-                    {standing.team.logo_url && <img src={standing.team.logo_url} alt={standing.team.name} className="h-6 w-6 mr-3 object-contain" />}
-                    {standing.team.name}
+            <tbody className="bg-white divide-y divide-gray-200">
+              {standings.map((s, index) => (
+                <tr key={s.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900">{s.rank}</span>
+                      {/* Adicionar lógica de classificação (e.g., Libertadores, Sul-Americana, Rebaixamento) */}
+                    </div>
                   </td>
-                  <td className="text-center py-3 px-4 font-bold">{standing.points}</td>
-                  <td className="text-center py-3 px-4">{standing.games_played}</td>
-                  <td className="text-center py-3 px-4">{standing.wins}</td>
-                  <td className="text-center py-3 px-4">{standing.draws}</td>
-                  <td className="text-center py-3 px-4">{standing.losses}</td>
-                  <td className="text-center py-3 px-4">{standing.goals_for}</td>
-                  <td className="text-center py-3 px-4">{standing.goals_against}</td>
-                  <td className="text-center py-3 px-4">{standing.goal_difference}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <img className="h-8 w-8 rounded-full object-contain" src={s.team.logo_url} alt={`${s.team.name} logo`} />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{s.team.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-bold text-gray-800">{s.points}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.games_played}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.wins}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.draws}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.losses}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_for}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_against}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goal_difference}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className="text-center text-gray-500 mt-8">Ainda não há dados de classificação para este campeonato.</p>
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-gray-900">Tabela de Classificação Indisponível</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Ainda não há dados de classificação para este campeonato. Por favor, volte mais tarde.
+          </p>
+        </div>
       )}
-    </main>
+    </div>
   );
 }
 
