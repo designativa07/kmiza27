@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Shield, ArrowRight } from 'lucide-react';
 
 // 1. Definir a interface para o tipo Competition
 interface Competition {
@@ -12,50 +13,72 @@ interface Competition {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function getCompetitions(): Promise<Competition[]> {
-  // Usamos a fetch API do Next.js com a opção de não usar cache.
-  // Isso força a renderização dinâmica a cada requisição,
-  // resolvendo o problema de conexão com a API durante o build.
-  const res = await fetch(`${API_URL}/competitions`, { cache: 'no-store' });
-
-  if (!res.ok) {
-    // Isso será pego pelo error.tsx do Next.js
-    throw new Error('Falha ao buscar competições');
+  try {
+    const res = await fetch(`${API_URL}/competitions?active=true`, { 
+      next: { revalidate: 3600 } // Revalida a cada hora
+    });
+    if (!res.ok) {
+      console.error(`Error fetching competitions: ${res.statusText}`);
+      return [];
+    }
+    return res.json();
+  } catch (error) {
+    console.error('Failed to fetch competitions:', error);
+    return [];
   }
-  return res.json();
 }
 
 export default async function Home() {
-  // 3. Os dados são buscados diretamente no servidor e passados para o JSX
   const competitions = await getCompetitions();
 
   return (
-    <main className="container mx-auto p-4">
-      <header className="text-center my-8">
-        <h1 className="text-4xl font-bold">Futepédia Kmiza27</h1>
-        <p className="text-lg text-gray-600 mt-2">Tabelas e Jogos dos seus campeonatos favoritos</p>
-      </header>
-
-      {/* A página agora é pré-renderizada com os dados, eliminando a necessidade de estados de 'loading' ou 'error' no cliente. */}
-      {competitions.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {competitions.map((competition) => (
-            <div key={competition.id} className="border rounded-lg p-4 shadow-lg hover:shadow-xl transition-shadow flex flex-col justify-between">
-              <h2 className="text-2xl font-semibold mb-4">{competition.name}</h2>
-              <div>
-                <Link href={`/${competition.slug}/classificacao`} className="text-indigo-600 hover:underline mt-4 inline-block">
-                  Ver Classificação &rarr;
-                </Link>
-                <br />
-                <Link href={`/${competition.slug}/jogos`} className="text-indigo-600 hover:underline">
-                  Ver Jogos &rarr;
-                </Link>
-              </div>
-            </div>
-          ))}
+    <div className="bg-gray-50 min-h-screen">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl font-bold text-gray-900">Futepédia Kmiza27</h1>
+          <p className="text-md text-gray-600 mt-1">Tabelas e Jogos dos seus campeonatos favoritos</p>
         </div>
-      ) : (
-         <p className="text-center text-gray-500 mt-8">Nenhum campeonato encontrado no momento.</p>
-      )}
-    </main>
+      </header>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {competitions.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {competitions.map((competition) => (
+              <div key={competition.id} className="bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                <div className="p-5 flex-grow flex flex-col">
+                  <div className="flex items-center space-x-4 mb-4">
+                    {competition.logo_url ? (
+                      <img src={competition.logo_url} alt={`${competition.name} logo`} className="h-10 w-10 object-contain" />
+                    ) : (
+                      <div className="h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full">
+                        <Shield className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <h2 className="text-lg font-semibold text-gray-800 flex-1">{competition.name}</h2>
+                  </div>
+                  <div className="mt-auto pt-4 border-t border-gray-100 space-y-2">
+                    <Link href={`/${competition.slug}/classificacao`} className="flex items-center justify-between text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                      Ver Classificação
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link href={`/${competition.slug}/jogos`} className="flex items-center justify-between text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                      Ver Jogos
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium text-gray-900">Nenhum campeonato ativo</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Não há campeonatos ativos no momento. Por favor, volte mais tarde.
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

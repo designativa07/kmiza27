@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import type { NextPage } from 'next';
+import { ShieldCheck, ArrowDown, ArrowUp } from 'lucide-react';
 
 // Tipos de dados
 interface Competition {
@@ -24,6 +24,7 @@ interface Standing {
   goals_for: number;
   goals_against: number;
   goal_difference: number;
+  form?: string;
 }
 
 // Definir um tipo para as props da página
@@ -34,14 +35,12 @@ type Props = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function getStandings(slug: string): Promise<Standing[]> {
-  // A busca da competição já é feita no layout, podemos otimizar isso no futuro
-  // para não buscar duas vezes, mas por enquanto vamos manter simples.
-  const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { cache: 'no-store' });
-  if (!competitionResponse.ok) throw new Error('Competição não encontrada para obter a classificação');
+  const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { next: { revalidate: 3600 } });
+  if (!competitionResponse.ok) throw new Error('Competição não encontrada');
   const competition: { id: number } = await competitionResponse.json();
 
-  const standingsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}`, { cache: 'no-store' });
-  if (!standingsResponse.ok) throw new Error('Não foi possível carregar a tabela de classificação');
+  const standingsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}`, { next: { revalidate: 3600 } });
+  if (!standingsResponse.ok) throw new Error('Tabela de classificação indisponível');
   
   return standingsResponse.json();
 }
@@ -52,7 +51,7 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
 
   const tableHeaders = [
     { label: '#', align: 'left' },
-    { label: 'Time', align: 'left' },
+    { label: 'Time', align: 'left', className: 'w-2/5' },
     { label: 'P', align: 'center', tooltip: 'Pontos' },
     { label: 'J', align: 'center', tooltip: 'Jogos' },
     { label: 'V', align: 'center', tooltip: 'Vitórias' },
@@ -63,8 +62,18 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
     { label: 'SG', align: 'center', tooltip: 'Saldo de Gols' },
   ];
 
+  // Exemplo de como as regras de classificação poderiam ser usadas
+  const getRankIndicator = (rank: number) => {
+    // A lógica viria do `competition.rules` que não estamos buscando aqui ainda
+    if (rank <= 4) return 'bg-blue-100 text-blue-800'; // Libertadores
+    if (rank <= 6) return 'bg-cyan-100 text-cyan-800'; // Pré-Libertadores
+    if (rank <= 12) return 'bg-green-100 text-green-800'; // Sul-Americana
+    if (rank >= 17) return 'bg-red-100 text-red-800'; // Rebaixamento
+    return 'bg-gray-100 text-gray-800';
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
       {standings.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -74,7 +83,7 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
                   <th
                     key={header.label}
                     scope="col"
-                    className={`px-4 py-3 text-${header.align} text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    className={`px-3 py-3 text-${header.align} text-xs font-semibold text-gray-600 uppercase tracking-wider ${header.className || ''}`}
                     title={header.tooltip}
                   >
                     {header.label}
@@ -83,42 +92,47 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {standings.map((s, index) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-900">{s.rank}</span>
-                      {/* Adicionar lógica de classificação (e.g., Libertadores, Sul-Americana, Rebaixamento) */}
+              {standings.map((s) => (
+                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                       <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${getRankIndicator(s.rank)}`}>
+                         {s.rank}
+                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-8 w-8">
-                        <img className="h-8 w-8 rounded-full object-contain" src={s.team.logo_url} alt={`${s.team.name} logo`} />
+                        {s.team.logo_url ? (
+                           <img className="h-8 w-8 rounded-full object-contain" src={s.team.logo_url} alt={s.team.name} />
+                        ) : (
+                          <ShieldCheck className="h-8 w-8 text-gray-300" />
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{s.team.name}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-bold text-gray-800">{s.points}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.games_played}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.wins}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.draws}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.losses}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_for}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_against}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goal_difference}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-bold text-gray-800">{s.points}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.games_played}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.wins}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.draws}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.losses}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_for}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_against}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-700">{s.goal_difference}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900">Tabela de Classificação Indisponível</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Ainda não há dados de classificação para este campeonato. Por favor, volte mais tarde.
+        <div className="text-center py-16">
+          <h3 className="text-xl font-medium text-gray-900">Tabela Indisponível</h3>
+          <p className="mt-2 text-md text-gray-500">
+            Ainda não há dados de classificação para este campeonato.
           </p>
         </div>
       )}
