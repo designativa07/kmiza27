@@ -64,7 +64,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 # Criar script de inicialização
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "🚀 Iniciando backend..."' >> /app/start.sh && \
-    echo 'node dist/main' >> /app/start.sh && \
+    echo 'node dist/src/main.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Criar pastas necessárias com permissões corretas
