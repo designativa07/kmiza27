@@ -12,11 +12,10 @@ interface Competition {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function getCompetitions(): Promise<Competition[]> {
-  // Usamos a fetch API do Next.js com revalidação.
-  // 'revalidate: 3600' significa que os dados serão buscados novamente no máximo a cada hora (3600s),
-  // mas servirá a versão em cache (estática) para os usuários nesse meio tempo.
-  // Isso é chamado de Incremental Static Regeneration (ISR).
-  const res = await fetch(`${API_URL}/competitions`, { next: { revalidate: 3600 } });
+  // Usamos a fetch API do Next.js com a opção de não usar cache.
+  // Isso força a renderização dinâmica a cada requisição,
+  // resolvendo o problema de conexão com a API durante o build.
+  const res = await fetch(`${API_URL}/competitions`, { cache: 'no-store' });
 
   if (!res.ok) {
     // Isso será pego pelo error.tsx do Next.js
