@@ -6,13 +6,18 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
+  // Configurar prefixo global para API
+  app.setGlobalPrefix('api');
+  
   // Configurar CORS para permitir acesso do frontend e Easypanel
   app.enableCors({
     origin: [
       'http://localhost:3001', // Next.js dev server
       'http://localhost:3002', 
+      'http://localhost:3003', // Futepedia frontend
       'http://127.0.0.1:3001',
       'http://127.0.0.1:3002',
+      'http://127.0.0.1:3003',
       'http://192.168.0.43:3002',
       'https://kmizafront.h4xd66.easypanel.host',
       'https://kmizabot.h4xd66.easypanel.host',
@@ -25,7 +30,7 @@ async function bootstrap() {
   });
   
   // ✅ CORREÇÃO UTF-8: Configurar middleware JSON com charset UTF-8 para suportar acentos
-  app.use('/chatbot/webhook', (req, res, next) => {
+  app.use('/api/chatbot/webhook', (req, res, next) => {
     // Garantir que o Content-Type seja interpretado como UTF-8
     if (req.headers['content-type'] && !req.headers['content-type'].includes('charset')) {
       req.headers['content-type'] = 'application/json; charset=utf-8';
@@ -52,10 +57,12 @@ async function bootstrap() {
   console.log(`🚪 Port: ${port}`);
   console.log('🔧 CORS Fix: 2025-05-26T03:20:00Z - Frontend URL updated');
   console.log('✅ UTF-8 Fix: 2025-05-26T04:00:00Z - Chatbot webhook with charset UTF-8');
+  console.log('🔗 API Prefix: /api - All routes will be prefixed with /api');
   
   await app.listen(port, host);
   
   console.log(`✅ Application is running on: http://${host}:${port}`);
-  console.log(`🔗 Health check: http://${host}:${port}/health`);
+  console.log(`🔗 Health check: http://${host}:${port}/api/health`);
+  console.log(`📊 Standings API: http://${host}:${port}/api/standings/slug/{slug}`);
 }
 bootstrap();
