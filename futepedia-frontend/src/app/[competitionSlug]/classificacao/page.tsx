@@ -4,6 +4,7 @@ import { RoundMatches } from '@/components/RoundMatches';
 import { Match } from '@/types/match';
 import Link from 'next/link';
 import { StandingsTable } from '@/components/StandingsTable';
+import { RoundNavigator } from '@/components/RoundNavigator';
 
 // Tipos de dados
 interface Competition {
@@ -63,7 +64,7 @@ async function getClassificationPageData(slug: string) {
   if (!standingsResponse.ok) throw new Error('Tabela de classificação indisponível');
   const standings: Standing[] = await standingsResponse.json();
   
-  const rounds: Round[] = await roundsResponse.json();
+  const rounds: Round[] = roundsResponse.ok ? await roundsResponse.json() : [];
   let matches: Match[] = [];
   let currentRoundName = 'Rodada';
 
@@ -77,12 +78,12 @@ async function getClassificationPageData(slug: string) {
     }
   }
 
-  return { standings, matches, currentRoundName };
+  return { standings, matches, rounds, competitionId };
 }
 
 // O componente da página agora usa o tipo 'NextPage' com as nossas Props
 const ClassificationPage: NextPage<Props> = async ({ params }) => {
-  const { standings, matches, currentRoundName } = await getClassificationPageData(params.competitionSlug);
+  const { standings, matches, rounds, competitionId } = await getClassificationPageData(params.competitionSlug);
 
   const groupedStandings = standings.reduce((acc, s) => {
     const groupName = s.group_name || 'Classificação Geral';
@@ -120,7 +121,11 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
 
       {/* Coluna das Partidas da Rodada (1/3) */}
       <div className="lg:col-span-1">
-        <RoundMatches matches={matches} roundName={currentRoundName} />
+        <RoundNavigator 
+          initialRounds={rounds}
+          competitionId={competitionId}
+          initialMatches={matches}
+        />
       </div>
     </div>
   );

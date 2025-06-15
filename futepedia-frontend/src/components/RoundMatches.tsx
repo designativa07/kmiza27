@@ -15,7 +15,7 @@ const formatTime = (date: string) => {
   });
 };
 
-export const RoundMatches = ({ matches, roundName }: { matches: Match[], roundName: string }) => {
+export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matches: Match[], roundName: string, hideTitle?: boolean }) => {
   if (!matches || matches.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -27,7 +27,9 @@ export const RoundMatches = ({ matches, roundName }: { matches: Match[], roundNa
 
   return (
     <div className="bg-white rounded-lg shadow-lg">
-      <h3 className="text-xl font-bold text-gray-800 p-4 border-b border-gray-200">{roundName}</h3>
+      {!hideTitle && (
+        <h3 className="text-xl font-bold text-gray-800 p-4 border-b border-gray-200">{roundName}</h3>
+      )}
       <div className="divide-y divide-gray-200">
         {matches.map((match) => (
           <div key={match.id} className="p-4 grid grid-cols-3 items-center gap-4">
