@@ -1,9 +1,12 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { tmpdir } from 'os';
 
 import { CompetitionsService } from './competitions.service';
+import { UploadService } from './upload.service';
 import { TopScorer } from './competitions.service';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
@@ -12,7 +15,10 @@ import { UpdateCompetitionDto } from './dto/update-competition.dto';
 
 @Controller('competitions')
 export class CompetitionsController {
-  constructor(private readonly competitionsService: CompetitionsService) {}
+  constructor(
+    private readonly competitionsService: CompetitionsService,
+    private readonly uploadService: UploadService
+  ) {}
 
   @Post()
   // @UseGuards(JwtAuthGuard)
@@ -72,7 +78,43 @@ export class CompetitionsController {
   @Post(':id/upload-logo')
   @UseInterceptors(FileInterceptor('logo', {
     storage: diskStorage({
-      destination: './img/logo-competition',
+      destination: (req, file, cb) => {
+        try {
+          // Verificar se /img existe e tem permissão, senão usar tmpdir
+          const preferredPath = '/img/logo-competition';
+          const fallbackPath = join(tmpdir(), 'futepedia-uploads', 'logo-competition');
+          
+          let uploadPath = fallbackPath;
+          
+          // Tentar usar /img se existir
+          if (existsSync('/img')) {
+            try {
+              // Tentar criar o subdiretório logo-competition
+              if (!existsSync(preferredPath)) {
+                mkdirSync(preferredPath, { recursive: true });
+              }
+              uploadPath = preferredPath;
+              console.log('✅ Usando /img/logo-competition para upload');
+            } catch (error) {
+              console.log('⚠️ Não foi possível usar /img, usando tmpdir');
+              // Criar diretório fallback
+              if (!existsSync(fallbackPath)) {
+                mkdirSync(fallbackPath, { recursive: true });
+              }
+            }
+          } else {
+            // Criar diretório fallback
+            if (!existsSync(fallbackPath)) {
+              mkdirSync(fallbackPath, { recursive: true });
+            }
+          }
+          
+          cb(null, uploadPath);
+        } catch (error) {
+          console.error('Erro ao obter diretório de upload:', error);
+          cb(error, '');
+        }
+      },
       filename: (req, file, cb) => {
         const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
         return cb(null, `${randomName}${extname(file.originalname)}`);
@@ -86,12 +128,45 @@ export class CompetitionsController {
     },
   }))
   async uploadLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-    // O caminho salvo no banco deve ser relativo à pasta pública `img`
-    const publicFilePath = `/logo-competition/${file.filename}`;
-    await this.competitionsService.update(+id, { logo_url: publicFilePath });
-    return {
-      message: 'Logo da competição enviado com sucesso!',
-      filePath: publicFilePath,
-    };
+    if (!file) {
+      throw new Error('Nenhum arquivo foi enviado');
+    }
+    
+    try {
+      // Determinar se o arquivo foi salvo em /img ou tmpdir
+      const isUsingImgDir = file.destination?.includes('/img');
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      let publicFilePath: string;
+      
+      if (isUsingImgDir) {
+        // Se salvou em /img, usar URL real
+        publicFilePath = `/logo-competition/${file.filename}`;
+      } else if (isProduction) {
+        // Se não conseguiu usar /img em produção, usar placeholder
+        publicFilePath = 'https://via.placeholder.com/100x100/4F46E5/FFFFFF?text=LOGO';
+      } else {
+        // Desenvolvimento local
+        publicFilePath = `/logo-competition/${file.filename}`;
+      }
+      
+      await this.competitionsService.update(+id, { logo_url: publicFilePath });
+      
+      return {
+        message: 'Logo da competição processado com sucesso!',
+        filePath: publicFilePath,
+        uploadLocation: file.destination,
+        environment: isProduction ? 'production' : 'development',
+        usingImgDirectory: isUsingImgDir,
+        note: isUsingImgDir 
+          ? 'Upload realizado em /img/logo-competition' 
+          : isProduction 
+            ? 'Usando placeholder. Crie o diretório /img com permissões para uploads reais.'
+            : 'Upload local realizado com sucesso.'
+      };
+    } catch (error) {
+      console.error('Erro ao processar upload de logo:', error);
+      throw new Error('Falha ao processar upload da logo da competição');
+    }
   }
 } 
