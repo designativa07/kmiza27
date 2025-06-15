@@ -35,6 +35,11 @@ export class StandingsController {
     return this.standingsService.getCompetitionRounds(+id);
   }
 
+  @Get('competition/:id/current-round')
+  getCurrentRound(@Param('id') id: string) {
+    return this.standingsService.getCurrentRound(+id);
+  }
+
   @Get('competition/:id/round/:roundId/matches')
   getRoundMatches(@Param('id') competitionId: string, @Param('roundId') roundId: string) {
     return this.standingsService.getRoundMatches(+competitionId, +roundId);

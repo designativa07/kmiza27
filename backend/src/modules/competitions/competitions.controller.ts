@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -21,8 +21,8 @@ export class CompetitionsController {
   }
 
   @Get()
-  findAll() {
-    return this.competitionsService.findAll();
+  findAll(@Query('active') active: boolean) {
+    return this.competitionsService.findAll(active);
   }
 
   @Get('slug/:slug')
