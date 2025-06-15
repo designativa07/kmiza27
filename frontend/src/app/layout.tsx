@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Sora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const geistSans = GeistSans;
-const geistMono = GeistMono;
+const sora = Sora({ 
+  subsets: ["latin"],
+  variable: '--font-sora',
+});
 
 export const metadata: Metadata = {
   title: "Kmiza27 Chatbot - Painel Administrativo",
@@ -24,9 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
-      >
+      <body className={`${sora.variable} font-sans antialiased`}>
         <AuthProvider>
           <ProtectedRoute>
             {children}
