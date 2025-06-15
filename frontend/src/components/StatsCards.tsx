@@ -26,7 +26,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: UsersIcon,
       change: 'Online agora',
       changeType: 'neutral',
-      onClick: () => onNavigate && onNavigate('Usuários'),
+      onClick: onNavigate ? () => onNavigate('Usuários') : undefined,
     },
     {
       name: 'Com Time Favorito',
@@ -34,7 +34,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: HeartIcon,
       change: 'Configurado',
       changeType: 'neutral',
-      onClick: () => onNavigate && onNavigate('Estatísticas de Usuários'),
+      onClick: onNavigate ? () => onNavigate('Estatísticas de Usuários') : undefined,
     },
     {
       name: 'Interações Recentes (24h)',
@@ -42,7 +42,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: ClockIcon,
       change: 'Últimas 24h',
       changeType: 'neutral',
-      onClick: () => onNavigate && onNavigate('Conversas WhatsApp'),
+      onClick: onNavigate ? () => onNavigate('Conversas WhatsApp') : undefined,
     },
   ]
 
@@ -54,7 +54,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: UsersIcon,
       change: '+12%',
       changeType: 'increase',
-      onClick: () => onNavigate && onNavigate('Usuários'),
+      onClick: onNavigate ? () => onNavigate('Usuários') : undefined,
     },
     {
       name: 'Times Cadastrados',
@@ -62,7 +62,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: TrophyIcon,
       change: `${stats.totalTeams} times`,
       changeType: 'neutral',
-      onClick: () => onNavigate && onNavigate('Times'),
+      onClick: onNavigate ? () => onNavigate('Times') : undefined,
     },
     {
       name: 'Jogos Cadastrados',
@@ -70,7 +70,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: CalendarIcon,
       change: '+5 hoje',
       changeType: 'increase',
-      onClick: () => onNavigate && onNavigate('Jogos'),
+      onClick: onNavigate ? () => onNavigate('Jogos') : undefined,
     },
     {
       name: 'Conversas Ativas',
@@ -78,7 +78,7 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       icon: ChatBubbleLeftRightIcon,
       change: 'Em tempo real',
       changeType: 'neutral',
-      onClick: () => onNavigate && onNavigate('Conversas WhatsApp'),
+      onClick: onNavigate ? () => onNavigate('Conversas WhatsApp') : undefined,
     },
   ]
 
