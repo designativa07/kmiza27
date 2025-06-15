@@ -99,7 +99,7 @@ export class CompetitionsService {
   async getTopScorers(competitionId: number): Promise<TopScorer[]> {
     const qb = this.goalRepository.createQueryBuilder('goal')
       .innerJoin('goal.player', 'player')
-      .innerJoin('goal.team', 'team')
+      .leftJoin('goal.team', 'team')
       .innerJoin('goal.match', 'match')
       .where('match.competition_id = :competitionId', { competitionId })
       .andWhere("goal.type != 'own_goal'") // Não contar gols contra
