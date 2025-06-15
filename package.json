@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Sistema completo de chatbot de futebol para WhatsApp",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:futepedia\"",
     "dev:backend": "cd backend && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:futepedia": "cd futepedia-frontend && npm run dev",
