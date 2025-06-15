@@ -1,4 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
 import { CompetitionsService } from './competitions.service';
 import { TopScorer } from './competitions.service';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
@@ -63,5 +67,30 @@ export class CompetitionsController {
   // @UseGuods(JwtAuthGuard)
   remove(@Param('id') id: string) {
     return this.competitionsService.remove(+id);
+  }
+
+  @Post(':id/upload-logo')
+  @UseInterceptors(FileInterceptor('logo', {
+    storage: diskStorage({
+      destination: './uploads/logo-competition',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        return cb(null, `${randomName}${extname(file.originalname)}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|svg)$/)) {
+        return cb(new Error('Apenas arquivos de imagem (jpg, jpeg, png, gif, svg) são permitidos!'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async uploadLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    const filePath = `/uploads/logo-competition/${file.filename}`;
+    await this.competitionsService.update(+id, { logo_url: filePath });
+    return {
+      message: 'Logo da competição enviado com sucesso!',
+      filePath: filePath,
+    };
   }
 } 

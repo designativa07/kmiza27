@@ -28,14 +28,14 @@ export class Competition {
   })
   type: CompetitionType;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  logo_url: string;
+
+  @Column({ nullable: true })
   season: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   country: string;
-
-  @Column({ type: 'text', nullable: true })
-  logo_url: string;
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
