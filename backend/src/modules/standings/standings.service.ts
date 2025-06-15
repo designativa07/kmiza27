@@ -422,23 +422,83 @@ export class StandingsService {
   }
 
   async getCurrentRound(competitionId: number): Promise<any | null> {
-    const currentRound = await this.matchRepository
+    // Interface para os dados da rodada
+    interface RoundWithDate {
+      round_id: number;
+      round_name: string;
+      round_round_number: number;
+      round_phase: string;
+      min_date: string;
+      max_date: string;
+    }
+
+    // Buscar todas as rodadas com suas datas e encontrar a mais próxima
+    const roundsWithDates = await this.matchRepository
       .createQueryBuilder('match')
       .leftJoinAndSelect('match.round', 'round')
       .where('match.competition_id = :competitionId', { competitionId })
-      .andWhere('round.is_current = :isCurrent', { isCurrent: true })
+      .andWhere('match.round IS NOT NULL')
+      .andWhere('match.match_date IS NOT NULL')
+      .select([
+        'round.id as round_id', 
+        'round.name as round_name', 
+        'round.round_number as round_round_number', 
+        'round.phase as round_phase',
+        'MIN(match.match_date) as min_date',
+        'MAX(match.match_date) as max_date'
+      ])
+      .groupBy('round.id, round.name, round.round_number, round.phase')
+      .orderBy('round.round_number', 'ASC')
+      .getRawMany() as RoundWithDate[];
+
+    if (roundsWithDates && roundsWithDates.length > 0) {
+      const now = new Date();
+      let closestRound: RoundWithDate | null = null;
+      let minDiff = Infinity;
+
+      // Encontrar a rodada com data mais próxima
+      for (const round of roundsWithDates) {
+        const roundDate = new Date(round.min_date);
+        const diff = Math.abs(now.getTime() - roundDate.getTime());
+        
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestRound = round;
+        }
+      }
+
+      if (closestRound) {
+        return {
+          id: closestRound.round_id,
+          name: closestRound.round_name,
+          round_number: closestRound.round_round_number,
+          phase: closestRound.round_phase,
+        };
+      }
+    }
+    
+    // Se não encontrar nenhuma rodada com data, buscar a última rodada disponível
+    const fallbackRound = await this.matchRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.round', 'round')
+      .where('match.competition_id = :competitionId', { competitionId })
+      .andWhere('match.round IS NOT NULL')
       .select(['round.id', 'round.name', 'round.round_number', 'round.phase'])
       .groupBy('round.id, round.name, round.round_number, round.phase')
+      .orderBy('round.round_number', 'DESC')
+      .limit(1)
       .getRawOne();
 
-    if (currentRound) {
+    if (fallbackRound) {
       return {
-        id: currentRound.round_id,
-        name: currentRound.round_name,
-        round_number: currentRound.round_round_number,
-        phase: currentRound.round_phase,
+        id: fallbackRound.round_id,
+        name: fallbackRound.round_name,
+        round_number: fallbackRound.round_round_number,
+        phase: fallbackRound.round_phase,
       };
     }
+    
+    // Retornar null explicitamente em vez de undefined
     return null;
   }
 

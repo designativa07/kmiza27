@@ -52,6 +52,9 @@ async function getClassificationPageData(slug: string) {
   const API_URL = getApiUrl();
   
   try {
+    console.log('🔍 Buscando dados da classificação para:', slug);
+    console.log('🌐 URL da API:', API_URL);
+    
     // 1. Obter ID da competição
     const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { 
       next: { revalidate: 60 },
@@ -61,13 +64,17 @@ async function getClassificationPageData(slug: string) {
     });
     
     if (!competitionResponse.ok) {
+      console.error('❌ Erro ao buscar competição:', competitionResponse.status);
       throw new Error(`Competição não encontrada: ${competitionResponse.status}`);
     }
     
     const competition: { id: number; name: string } = await competitionResponse.json();
+    console.log('✅ Competição encontrada:', competition);
     const competitionId = competition.id;
 
-    // 2. Fazer chamadas em paralelo
+    // 2. Fazer chamadas em paralelo com tratamento robusto
+    console.log('🔍 Buscando classificação e rodadas para competição ID:', competitionId);
+    
     const [standingsResponse, roundsResponse, currentRoundResponse] = await Promise.all([
       fetch(`${API_URL}/standings/competition/${competitionId}`, { 
         next: { revalidate: 60 },
@@ -76,21 +83,57 @@ async function getClassificationPageData(slug: string) {
       fetch(`${API_URL}/standings/competition/${competitionId}/rounds`, { 
         next: { revalidate: 60 },
         headers: { 'Content-Type': 'application/json' }
+      }).catch(err => {
+        console.warn('⚠️ Erro ao buscar rodadas:', err);
+        return { ok: false };
       }),
       fetch(`${API_URL}/standings/competition/${competitionId}/current-round`, { 
         next: { revalidate: 60 },
         headers: { 'Content-Type': 'application/json' }
+      }).catch(err => {
+        console.warn('⚠️ Erro ao buscar rodada atual:', err);
+        return { ok: false };
       })
     ]);
 
     if (!standingsResponse.ok) {
+      console.error('❌ Erro ao buscar classificação:', standingsResponse.status);
       throw new Error(`Tabela de classificação indisponível: ${standingsResponse.status}`);
     }
     
     const standings: Standing[] = await standingsResponse.json();
-    const rounds: Round[] = roundsResponse.ok ? await roundsResponse.json() : [];
-    const currentRound: Round | null = currentRoundResponse.ok ? await currentRoundResponse.json() : null;
+    console.log('✅ Classificação carregada:', standings.length, 'times');
+    
+    // Processar rodadas com tratamento robusto
+    let rounds: Round[] = [];
+    let currentRound: Round | null = null;
+    
+    if (roundsResponse.ok && 'json' in roundsResponse) {
+      try {
+        rounds = await roundsResponse.json();
+        console.log('✅ Rodadas carregadas:', rounds.length);
+      } catch (err) {
+        console.warn('⚠️ Erro ao processar rodadas:', err);
+        rounds = [];
+      }
+    }
+    
+    if (currentRoundResponse.ok && 'text' in currentRoundResponse) {
+      try {
+        const currentRoundText = await currentRoundResponse.text();
+        if (currentRoundText && currentRoundText.trim() !== '') {
+          currentRound = JSON.parse(currentRoundText);
+          console.log('✅ Rodada atual encontrada:', currentRound);
+        } else {
+          console.log('ℹ️ Nenhuma rodada atual definida');
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao processar rodada atual:', err);
+        currentRound = null;
+      }
+    }
 
+    // Determinar rodada inicial e partidas
     let initialMatches: Match[] = [];
     let initialRoundId: number | null = null;
     let initialRoundName: string = 'Rodada';
@@ -98,30 +141,41 @@ async function getClassificationPageData(slug: string) {
     if (currentRound) {
       initialRoundId = currentRound.id;
       initialRoundName = currentRound.name;
-      const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${currentRound.id}/matches`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (matchesResponse.ok) {
-        initialMatches = await matchesResponse.json();
+      try {
+        const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${currentRound.id}/matches`, { 
+          next: { revalidate: 60 },
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (matchesResponse.ok) {
+          initialMatches = await matchesResponse.json();
+          console.log('✅ Partidas da rodada atual carregadas:', initialMatches.length);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao buscar partidas da rodada atual:', err);
       }
     } else if (rounds && rounds.length > 0) {
       // Fallback: se não houver rodada atual, pega a última rodada da lista
       const latestRound = rounds[rounds.length - 1];
       initialRoundId = latestRound.id;
       initialRoundName = latestRound.name;
-      const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${latestRound.id}/matches`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (matchesResponse.ok) {
-        initialMatches = await matchesResponse.json();
+      console.log('ℹ️ Usando última rodada como fallback:', latestRound);
+      try {
+        const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${latestRound.id}/matches`, { 
+          next: { revalidate: 60 },
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (matchesResponse.ok) {
+          initialMatches = await matchesResponse.json();
+          console.log('✅ Partidas da última rodada carregadas:', initialMatches.length);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao buscar partidas da última rodada:', err);
       }
     }
 
     return { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName };
   } catch (error) {
-    console.error('Erro ao buscar dados da classificação:', error);
+    console.error('💥 Erro ao buscar dados da classificação:', error);
     throw error;
   }
 }
@@ -129,6 +183,7 @@ async function getClassificationPageData(slug: string) {
 // O componente da página agora usa o tipo 'NextPage' com as nossas Props
 const ClassificationPage: NextPage<Props> = async ({ params }) => {
   try {
+    console.log('🚀 Iniciando página de classificação para:', params.competitionSlug);
     const { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName } = await getClassificationPageData(params.competitionSlug);
 
     const groupedStandings = standings.reduce((acc, s) => {
@@ -141,6 +196,8 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
     }, {} as Record<string, typeof standings>);
 
     const hasGroups = Object.keys(groupedStandings).length > 1;
+
+    console.log('✅ Página de classificação renderizada com sucesso');
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -189,16 +246,19 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
       </div>
     );
   } catch (error) {
-    console.error('Erro na página de classificação:', error);
+    console.error('💥 Erro na página de classificação:', error);
     return (
       <div className="bg-white rounded-lg shadow-lg text-center py-16">
         <h3 className="text-xl font-medium text-gray-900">Erro ao Carregar Classificação</h3>
         <p className="mt-2 text-md text-gray-500">
           Não foi possível carregar os dados da classificação. Tente novamente mais tarde.
         </p>
+        <p className="mt-2 text-sm text-gray-400">
+          Erro: {error instanceof Error ? error.message : 'Erro desconhecido'}
+        </p>
       </div>
     );
   }
-}
+};
 
 export default ClassificationPage; 
