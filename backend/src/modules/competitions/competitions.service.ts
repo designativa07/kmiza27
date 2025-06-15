@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Competition, CompetitionTeam, Team } from '../../entities';
+import { Competition, CompetitionTeam, Team, Player, Goal } from '../../entities';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
+
+interface TopScorer {
+  player: Player;
+  team: Team;
+  goals: number;
+}
 
 @Injectable()
 export class CompetitionsService {
@@ -11,6 +17,8 @@ export class CompetitionsService {
     private competitionRepository: Repository<Competition>,
     @InjectRepository(CompetitionTeam)
     private competitionTeamRepository: Repository<CompetitionTeam>,
+    @InjectRepository(Goal)
+    private goalRepository: Repository<Goal>,
   ) {}
 
   async findAll(): Promise<Competition[]> {
@@ -86,5 +94,44 @@ export class CompetitionsService {
 
   async remove(id: number): Promise<void> {
     await this.competitionRepository.delete(id);
+  }
+
+  async getTopScorers(competitionId: number): Promise<TopScorer[]> {
+    const qb = this.goalRepository.createQueryBuilder('goal')
+      .innerJoin('goal.player', 'player')
+      .innerJoin('goal.team', 'team')
+      .innerJoin('goal.match', 'match')
+      .where('match.competition_id = :competitionId', { competitionId })
+      .andWhere("goal.type != 'own_goal'") // Não contar gols contra
+      .select([
+        'player.id as "playerId"',
+        'player.name as "playerName"',
+        'player.position as "playerPosition"',
+        'team.id as "teamId"',
+        'team.name as "teamName"',
+        'team.logo_url as "teamLogo"',
+        'COUNT(goal.id) as "totalGoals"'
+      ])
+      .groupBy(
+        'player.id, player.name, player.position, team.id, team.name, team.logo_url'
+      )
+      .orderBy('"totalGoals"', 'DESC')
+      .limit(20);
+      
+    const rawResults = await qb.getRawMany();
+
+    return rawResults.map(res => ({
+      player: {
+        id: res.playerId,
+        name: res.playerName,
+        position: res.playerPosition
+      } as Player,
+      team: {
+        id: res.teamId,
+        name: res.teamName,
+        logo_url: res.teamLogo
+      } as Team,
+      goals: parseInt(res.totalGoals, 10),
+    }));
   }
 } 

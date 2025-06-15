@@ -14,6 +14,9 @@
 - **Clareza:** Sempre explique o *porquê* da sua sugestão, não apenas o *como*.
 - **Formato:** Use blocos de código formatados em Markdown para todo e qualquer trecho de código.
 
+## 4. Princípios de Desenvolvimento
+- **Estabilidade do Backend:** O `backend` é um serviço crítico que atende múltiplos clientes (`frontend`, `futepedia-frontend` e o chatbot do WhatsApp). Ao trabalhar em um dos frontends, a regra geral é **não modificar a API do backend**. O frontend deve ser adaptado ao contrato de dados que a API já oferece. Alterações no backend são uma exceção, devem ser cuidadosamente planejadas e validadas para garantir que não quebrem nenhum dos serviços dependentes.
+
 ---
 ---
 
