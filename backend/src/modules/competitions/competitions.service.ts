@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Competition, CompetitionTeam, Team, Player, Goal } from '../../entities';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
 
-interface TopScorer {
+export interface TopScorer {
   player: Player;
   team: Team;
   goals: number;
