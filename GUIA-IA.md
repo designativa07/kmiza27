@@ -21,10 +21,13 @@
 # INFORMAÇÕES TÉCNICAS SOBRE O PROJETO
 
 ## 1. Visão Geral do Projeto
-- **Objetivo Principal:** Desenvolver um sistema de chatbot de futebol para WhatsApp, com um painel de administração web para gerenciamento.
-- **Arquitetura:** Monolito com duas partes principais: uma API RESTful (Backend) e uma Single Page Application (Frontend). A estrutura é orquestrada por um `package.json` na raiz, gerenciando os dois componentes.
+- **Objetivo Principal:** Desenvolver um sistema de chatbot de futebol para WhatsApp, com um painel de administração web e uma interface pública para visualização de dados (Futepédia).
+- **Arquitetura:** Monorepo com três componentes principais orquestrados por um `package.json` na raiz:
+  - **`backend`**: API RESTful em NestJS que serve os dados.
+  - **`frontend`**: Painel Administrativo em Next.js para gerenciamento.
+  - **`futepedia-frontend`**: Interface Pública em Next.js para visualização de dados de campeonatos.
 
-## 2. Backend
+## 2. Backend (`/backend`)
 - **Tecnologias Principais:**
   - **Linguagem:** TypeScript
   - **Framework:** NestJS
@@ -39,11 +42,10 @@
   - **Não há evidências de integração com AWS S3.** O `UploadService` (`src/modules/upload/upload.service.ts`) gerencia o upload de arquivos para o sistema de arquivos local (`./uploads/escudos`).
 - **Testes:** Utiliza-se Jest para testes unitários e de integração. Os scripts de teste estão definidos no `package.json` do backend.
 
-## 3. Frontend
+## 3. Frontend - Painel Administrativo (`/frontend`)
+- **Finalidade:** Interface para administradores gerenciarem todos os aspectos do sistema (times, jogadores, campeonatos, notificações, etc.).
 - **Tecnologias Principais:**
   - **Framework:** Next.js (com App Router)
-  - **Linguagem:** TypeScript
-  - **UI:** React, Tailwind CSS, Headless UI, Heroicons, Lucide React
 - **Estrutura de Diretórios Crítica:**
   - `src/app`: Estrutura de roteamento principal usando o App Router do Next.js.
   - `src/components`: Componentes React reutilizáveis.
@@ -53,14 +55,25 @@
 - **Gerenciamento de Estado:** A inferência aponta para o uso de React Context API (`src/contexts`) e possivelmente hooks customizados para o gerenciamento de estado local e global.
 - **Comunicação com API:** A comunicação é feita através da biblioteca `axios`. Um serviço (`src/services/authService.ts`) encapsula as chamadas para a API do backend, e um interceptor injeta o token JWT no cabeçalho `Authorization`.
 
-## 4. Banco de Dados
+## 4. Frontend - Futepédia (`/futepedia-frontend`)
+- **Finalidade:** Interface pública para que os usuários possam visualizar informações de campeonatos, como tabelas de classificação e listas de jogos.
+- **Tecnologias Principais:**
+  - **Framework:** Next.js (com App Router)
+  - **Linguagem:** TypeScript
+  - **UI:** React, Tailwind CSS, Lucide React
+- **Estrutura de Diretórios Crítica:**
+  - `src/app`: Estrutura de roteamento principal, incluindo rotas dinâmicas como `[competitionSlug]/classificacao`.
+  - `src/app/[competitionSlug]/layout.tsx`: Layout compartilhado para páginas de uma mesma competição.
+- **Renderização:** Primarily Server-Side Rendering (SSR) para garantir que os dados mais recentes sejam sempre exibidos e para otimização de SEO.
+
+## 5. Banco de Dados
 - **Tipo:** PostgreSQL, conforme definido em `backend/src/data-source.ts`.
 - **Schema/ORM:** O schema é gerenciado pelo TypeORM. As definições das entidades estão localizadas em `backend/src/entities` e as migrações em `backend/src/migrations`.
 
-## 5. Como Executar o Projeto
-- **Geral (Backend + Frontend):**
-  - `npm run dev`
-- **Backend:**
-  - `npm run dev:backend` (na raiz) ou `npm run start:dev` (em `backend/`)
-- **Frontend:**
-  - `npm run dev:frontend` (na raiz) ou `npm run dev` (em `frontend/`) 
+## 6. Como Executar o Projeto
+- **Geral (Todos os Serviços):**
+  - `npm run dev` (executa backend, admin e futepédia simultaneamente)
+- **Serviços Individuais:**
+  - **Backend:** `npm run dev:backend` (na raiz) ou `npm run start:dev` (em `backend/`) - Porta 3000
+  - **Painel Administrativo:** `npm run dev:frontend` (na raiz) ou `npm run dev` (em `frontend/`) - Porta 3002
+  - **Futepédia:** `npm run dev:futepedia` (na raiz) ou `npm run dev` (em `futepedia-frontend/`) - Porta 3003 
