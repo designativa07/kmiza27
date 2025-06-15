@@ -5,6 +5,7 @@ import { Match } from '@/types/match';
 import Link from 'next/link';
 import { StandingsTable } from '@/components/StandingsTable';
 import { RoundNavigator } from '@/components/RoundNavigator';
+import ClientOnly from '@/components/ClientOnly';
 
 // Tipos de dados
 interface Competition {
@@ -133,13 +134,24 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
 
       {/* Coluna das Partidas da Rodada (1/3) */}
       <div className="lg:col-span-1">
-        <RoundNavigator 
-          initialRounds={rounds}
-          competitionId={competitionId}
-          initialMatches={initialMatches}
-          initialRoundId={initialRoundId}
-          initialRoundName={initialRoundName}
-        />
+        <ClientOnly fallback={
+          <div className="bg-white rounded-lg shadow-lg p-4">
+            <div className="h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        }>
+          <RoundNavigator 
+            initialRounds={rounds}
+            competitionId={competitionId}
+            initialMatches={initialMatches}
+            initialRoundId={initialRoundId}
+            initialRoundName={initialRoundName}
+          />
+        </ClientOnly>
       </div>
     </div>
   );

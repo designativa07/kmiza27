@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Match } from '@/types/match';
 import { RoundMatches } from './RoundMatches'; // Reutilizaremos o componente existente
+import { apiRequest } from '@/lib/config';
 
 interface Round {
   id: number;
@@ -19,7 +20,7 @@ interface RoundNavigatorProps {
   initialRoundName: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Removido: agora usamos apiRequest da configuração centralizada
 
 export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName }: RoundNavigatorProps) {
   const [rounds, setRounds] = useState(initialRounds);
@@ -55,13 +56,9 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
       setIsLoading(true);
       const roundId = rounds[currentRoundIndex].id;
       try {
-        const res = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${roundId}/matches`);
-        if (res.ok) {
-          const data = await res.json();
-          setMatches(data);
-        } else {
-          setMatches([]);
-        }
+        const res = await apiRequest(`/standings/competition/${competitionId}/round/${roundId}/matches`);
+        const data = await res.json();
+        setMatches(data);
       } catch (error) {
         console.error("Failed to fetch matches for round:", error);
         setMatches([]);
