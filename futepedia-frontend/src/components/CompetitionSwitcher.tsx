@@ -22,7 +22,7 @@ export function CompetitionSwitcher({
   React.useEffect(() => {
     async function fetchCompetitions() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/competitions?active=true`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/competitions?active=true`);
         if (res.ok) {
           const data = await res.json();
           setCompetitions(data);

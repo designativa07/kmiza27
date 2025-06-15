@@ -46,7 +46,7 @@ type Props = {
   params: { competitionSlug: string };
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 async function getClassificationPageData(slug: string) {
   // 1. Obter ID da competição

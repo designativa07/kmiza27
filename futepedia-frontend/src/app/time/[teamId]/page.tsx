@@ -27,7 +27,7 @@ type Props = {
   params: { teamId: string };
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 async function getTeamData(teamId: string) {
   const [teamRes, playersRes] = await Promise.all([

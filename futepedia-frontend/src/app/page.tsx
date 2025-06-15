@@ -10,7 +10,7 @@ interface Competition {
 }
 
 // 2. Definir a URL da API (idealmente viria de variáveis de ambiente)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 async function getCompetitions(): Promise<Competition[]> {
   try {

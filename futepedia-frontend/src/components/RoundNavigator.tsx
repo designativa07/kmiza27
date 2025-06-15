@@ -19,11 +19,14 @@ interface RoundNavigatorProps {
   initialRoundName: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName }: RoundNavigatorProps) {
   const [rounds, setRounds] = useState(initialRounds);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(() => {
+    if (!initialRounds || initialRounds.length === 0) {
+      return 0;
+    }
     if (initialRoundId) {
       const index = initialRounds.findIndex(round => round.id === initialRoundId);
       return index !== -1 ? index : initialRounds.length - 1; // Fallback para a última se não encontrar
@@ -32,6 +35,15 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
   });
   const [matches, setMatches] = useState<Match[]>(initialMatches);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Verificação de segurança
+  if (!rounds || rounds.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+        <p className="text-gray-500">Nenhuma rodada encontrada para esta competição.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Se o índice mudar, buscar novas partidas
