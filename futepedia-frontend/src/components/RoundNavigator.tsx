@@ -15,13 +15,21 @@ interface RoundNavigatorProps {
   initialRounds: Round[];
   competitionId: number;
   initialMatches: Match[];
+  initialRoundId: number | null;
+  initialRoundName: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-export function RoundNavigator({ initialRounds, competitionId, initialMatches }: RoundNavigatorProps) {
+export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName }: RoundNavigatorProps) {
   const [rounds, setRounds] = useState(initialRounds);
-  const [currentRoundIndex, setCurrentRoundIndex] = useState(rounds.length - 1);
+  const [currentRoundIndex, setCurrentRoundIndex] = useState(() => {
+    if (initialRoundId) {
+      const index = initialRounds.findIndex(round => round.id === initialRoundId);
+      return index !== -1 ? index : initialRounds.length - 1; // Fallback para a última se não encontrar
+    }
+    return initialRounds.length - 1; // Padrão para a última rodada se não houver ID inicial
+  });
   const [matches, setMatches] = useState<Match[]>(initialMatches);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -50,11 +58,11 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches }:
       }
     };
     
-    // Não busca novamente para a rodada inicial, pois já temos os dados
-    if (currentRoundIndex !== rounds.length - 1) {
+    // Só busca novamente se a rodada atual for diferente da rodada inicial
+    if (currentRoundIndex !== initialRounds.findIndex(round => round.id === initialRoundId)) {
        fetchMatches();
     }
-  }, [currentRoundIndex, rounds, competitionId]);
+  }, [currentRoundIndex, rounds, competitionId, initialRoundId, initialRounds]);
 
   const handlePrevRound = () => {
     if (currentRoundIndex > 0) {
