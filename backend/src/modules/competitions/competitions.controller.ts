@@ -72,7 +72,7 @@ export class CompetitionsController {
   @Post(':id/upload-logo')
   @UseInterceptors(FileInterceptor('logo', {
     storage: diskStorage({
-      destination: './uploads/logo-competition',
+      destination: './img/logo-competition',
       filename: (req, file, cb) => {
         const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
         return cb(null, `${randomName}${extname(file.originalname)}`);
@@ -86,11 +86,12 @@ export class CompetitionsController {
     },
   }))
   async uploadLogo(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-    const filePath = `/uploads/logo-competition/${file.filename}`;
-    await this.competitionsService.update(+id, { logo_url: filePath });
+    // O caminho salvo no banco deve ser relativo à pasta pública `img`
+    const publicFilePath = `/logo-competition/${file.filename}`;
+    await this.competitionsService.update(+id, { logo_url: publicFilePath });
     return {
       message: 'Logo da competição enviado com sucesso!',
-      filePath: filePath,
+      filePath: publicFilePath,
     };
   }
 } 

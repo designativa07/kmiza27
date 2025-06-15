@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
   competitions: {
     list: () => apiUrl('competitions'),
     byId: (id: number) => apiUrl(`competitions/${id}`),
+    uploadLogo: (id: number) => apiUrl(`competitions/${id}/upload-logo`),
     teams: (id: number) => apiUrl(`competitions/${id}/teams`),
     teamById: (competitionId: number, teamId: number) => apiUrl(`competitions/${competitionId}/teams/${teamId}`),
   },
