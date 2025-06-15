@@ -49,8 +49,9 @@ export class StandingsController {
   }
 
   @Get('competition/:id/current-round')
-  getCurrentRound(@Param('id') id: string) {
-    return this.standingsService.getCurrentRound(+id);
+  async getCurrentRound(@Param('id') id: string) {
+    const result = await this.standingsService.getCurrentRound(+id);
+    return result || null;
   }
 
   @Get('competition/:id/round/:roundId/matches')

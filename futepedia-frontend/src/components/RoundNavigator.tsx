@@ -40,7 +40,7 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
   // Verificação de segurança
   if (!rounds || rounds.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+      <div className="bg-white rounded-lg p-8 text-center">
         <p className="text-gray-500">Nenhuma rodada encontrada para esta competição.</p>
       </div>
     );
@@ -86,7 +86,7 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
   const currentRoundName = rounds[currentRoundIndex]?.name || 'Rodada';
 
   return (
-    <div className="bg-white rounded-lg shadow-lg">
+    <div className="bg-white rounded-lg">
        <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <button 
             onClick={handlePrevRound} 
