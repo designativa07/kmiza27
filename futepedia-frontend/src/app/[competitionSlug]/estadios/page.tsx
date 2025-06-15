@@ -1,16 +1,6 @@
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
-
-interface Stadium {
-  id: number;
-  name: string;
-  city: string;
-  state: string;
-  country: string;
-  capacity: number;
-  latitude?: number;
-  longitude?: number;
-}
+import { Stadium } from '@/types/stadium';
 
 type Props = {
   params: { competitionSlug: string };
@@ -40,7 +30,10 @@ const Map = dynamic(() => import('@/components/Map'), {
 export default async function StadiumsPage({ params }: Props) {
   const stadiums = await getStadiums(params.competitionSlug);
 
-  const stadiumsWithCoords = stadiums.filter(s => s.latitude && s.longitude);
+  const stadiumsWithCoords = stadiums.filter(
+    (s): s is Stadium & { latitude: number; longitude: number } =>
+      s.latitude != null && s.longitude != null,
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden p-4 sm:p-6">
