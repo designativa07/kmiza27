@@ -1,13 +1,26 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { StandingsService } from './standings.service';
+import { CompetitionsService } from '../competitions/competitions.service';
 
 @Controller('standings')
 export class StandingsController {
-  constructor(private readonly standingsService: StandingsService) {}
+  constructor(
+    private readonly standingsService: StandingsService,
+    private readonly competitionsService: CompetitionsService,
+  ) {}
 
   @Get('competition/:id')
   getCompetitionStandings(@Param('id') id: string, @Query('group') group?: string) {
     return this.standingsService.getCompetitionStandings(+id, group);
+  }
+
+  @Get('slug/:slug')
+  async getCompetitionStandingsBySlug(@Param('slug') slug: string, @Query('group') group?: string) {
+    const competition = await this.competitionsService.findBySlug(slug);
+    if (!competition) {
+      throw new Error('Competição não encontrada');
+    }
+    return this.standingsService.getCompetitionStandings(competition.id, group);
   }
 
   @Get('competition/:id/groups')
