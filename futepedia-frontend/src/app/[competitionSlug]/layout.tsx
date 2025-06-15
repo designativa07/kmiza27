@@ -13,7 +13,7 @@ interface Competition {
 
 async function getCompetition(slug: string): Promise<Competition | null> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/competitions/slug/${slug}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/competitions/slug/${slug}`, {
       next: { revalidate: 3600 } // Revalida a cada hora
     });
     if (!res.ok) {
