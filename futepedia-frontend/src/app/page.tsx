@@ -15,7 +15,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 async function getCompetitions(): Promise<Competition[]> {
   try {
     const res = await fetch(`${API_URL}/competitions?active=true`, { 
-      next: { revalidate: 3600 } // Revalida a cada hora
+      cache: 'no-store' // Força a busca de dados a cada requisição
     });
     if (!res.ok) {
       console.error(`Error fetching competitions: ${res.statusText}`);
