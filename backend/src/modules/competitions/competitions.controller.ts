@@ -1,37 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { CompetitionsService } from './competitions.service';
-import { Competition } from '../../entities';
 import { AddTeamsToCompetitionDto } from './dto/add-teams.dto';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
 import { UpdateCompetitionDto } from './dto/update-competition.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('competitions')
 export class CompetitionsController {
   constructor(private readonly competitionsService: CompetitionsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@Body() createCompetitionDto: CreateCompetitionDto) {
     return this.competitionsService.create(createCompetitionDto);
   }
 
   @Get()
-  async findAll(@Res() res: Response) {
-    const competitions = await this.competitionsService.findAll();
-    
-    // Adicionar headers para evitar cache
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-    
-    return res.json(competitions);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.competitionsService.findOne(+id);
+  findAll() {
+    return this.competitionsService.findAll();
   }
 
   @Get('slug/:slug')
@@ -39,26 +25,24 @@ export class CompetitionsController {
     return this.competitionsService.findBySlug(slug);
   }
 
+  @Get(':id/top-scorers')
+  getTopScorers(@Param('id') id: string) {
+    return this.competitionsService.getTopScorers(+id);
+  }
+  
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.competitionsService.findOne(+id);
+  }
+
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateCompetitionDto: UpdateCompetitionDto, @Res() res: Response) {
-    console.log('🔍 PATCH /competitions/:id - Dados recebidos:', {
-      id,
-      updateCompetitionDto
-    });
-    
-    const updatedCompetition = await this.competitionsService.update(+id, updateCompetitionDto);
-    
-    // Adicionar headers para evitar cache
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-    
-    return res.json(updatedCompetition);
+  @UseGuards(JwtAuthGuard)
+  update(@Param('id') id: string, @Body() updateCompetitionDto: UpdateCompetitionDto) {
+    return this.competitionsService.update(+id, updateCompetitionDto);
   }
 
   @Post(':id/teams')
+  @UseGuards(JwtAuthGuard)
   addTeams(@Param('id') id: string, @Body() addTeamsDto: AddTeamsToCompetitionDto) {
     return this.competitionsService.addTeams(+id, addTeamsDto);
   }
@@ -69,11 +53,13 @@ export class CompetitionsController {
   }
 
   @Delete(':id/teams/:teamId')
+  @UseGuards(JwtAuthGuard)
   removeTeam(@Param('id') id: string, @Param('teamId') teamId: string) {
     return this.competitionsService.removeTeam(+id, +teamId);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string) {
     return this.competitionsService.remove(+id);
   }
