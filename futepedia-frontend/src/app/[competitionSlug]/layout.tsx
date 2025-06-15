@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound, usePathname } from 'next/navigation';
 import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
 import { NavLinks } from '@/components/NavLinks';
+import ClientOnly from '@/components/ClientOnly';
 
 interface Competition {
   id: number;
@@ -13,7 +14,8 @@ interface Competition {
 
 async function getCompetition(slug: string): Promise<Competition | null> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/competitions/slug/${slug}`, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+    const res = await fetch(`${apiUrl}/competitions/slug/${slug}`, {
       next: { revalidate: 3600 } // Revalida a cada hora
     });
     if (!res.ok) {
@@ -58,7 +60,9 @@ export default async function CompetitionLayout({
                 <img src={competition.logo_url} alt={`${competition.name} logo`} className="h-12 w-12 object-contain" />
               )}
               <div>
-                <CompetitionSwitcher currentCompetitionName={competition.name} />
+                <ClientOnly fallback={<div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>}>
+                  <CompetitionSwitcher currentCompetitionName={competition.name} />
+                </ClientOnly>
                 <h1 className="text-2xl font-bold text-gray-900 mt-1">{competition.name}</h1>
               </div>
             </div>

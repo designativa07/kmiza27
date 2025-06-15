@@ -4,6 +4,7 @@ import * as React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
+import { apiRequest } from '@/lib/config';
 
 interface Competition {
   id: number;
@@ -22,15 +23,13 @@ export function CompetitionSwitcher({
   React.useEffect(() => {
     async function fetchCompetitions() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/competitions?active=true`);
-        if (res.ok) {
-          const data = await res.json();
-          setCompetitions(data);
-        } else {
-          console.error('Failed to fetch competitions:', res.statusText);
-        }
+        const res = await apiRequest('/competitions?active=true');
+        const data = await res.json();
+        setCompetitions(data);
       } catch (error) {
         console.error('Failed to fetch competitions for switcher:', error);
+        // Em caso de erro, definir array vazio para evitar erros de renderização
+        setCompetitions([]);
       }
     }
     fetchCompetitions();
