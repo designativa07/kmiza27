@@ -35,7 +35,7 @@ export default async function Home() {
     <div className="bg-gray-50 min-h-screen">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Futepédia Kmiza27</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Futepédia Kmiza27 - Versão ATUALIZADA</h1>
           <p className="text-md text-gray-600 mt-1">Tabelas e Jogos dos seus campeonatos favoritos</p>
         </div>
       </header>
