@@ -58,11 +58,9 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
       }
     };
     
-    // Só busca novamente se a rodada atual for diferente da rodada inicial
-    if (currentRoundIndex !== initialRounds.findIndex(round => round.id === initialRoundId)) {
-       fetchMatches();
-    }
-  }, [currentRoundIndex, rounds, competitionId, initialRoundId, initialRounds]);
+    // Buscar partidas sempre que o índice da rodada mudar
+    fetchMatches();
+  }, [currentRoundIndex, rounds, competitionId]);
 
   const handlePrevRound = () => {
     if (currentRoundIndex > 0) {

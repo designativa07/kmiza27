@@ -22,10 +22,12 @@ export function CompetitionSwitcher({
   React.useEffect(() => {
     async function fetchCompetitions() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/competitions`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/competitions?active=true`);
         if (res.ok) {
           const data = await res.json();
           setCompetitions(data);
+        } else {
+          console.error('Failed to fetch competitions:', res.statusText);
         }
       } catch (error) {
         console.error('Failed to fetch competitions for switcher:', error);
