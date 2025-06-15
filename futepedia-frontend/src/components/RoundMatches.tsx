@@ -26,7 +26,7 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg">
+    <div className="bg-white">
       {!hideTitle && (
         <h3 className="text-xl font-bold text-gray-800 p-4 border-b border-gray-200">{roundName}</h3>
       )}
@@ -48,9 +48,9 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   <span>{match.away_score}</span>
                 </div>
               ) : (
-                <div className="text-sm font-bold text-gray-500">
+                <div className="text-xs font-bold text-gray-500">
                   <span>{formatDate(match.match_date)}</span>
-                  <span className="mx-2">-</span>
+                  <span className="mx-1.5">-</span>
                   <span>{formatTime(match.match_date)}</span>
                 </div>
               )}
@@ -58,6 +58,25 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                 <div className="flex items-center justify-center text-xs text-gray-400 mt-1">
                   <MapPin size={12} className="mr-1" />
                   <span>{match.stadium.name}</span>
+                  {match.stadium.city && <span className="ml-1">({match.stadium.city})</span>}
+                </div>
+              )}
+              {match.broadcast_channels && match.broadcast_channels.length > 0 && (
+                <div className="flex items-center justify-center text-xs text-gray-500 mt-1">
+                  <Tv size={12} className="mr-1" />
+                  <span>{match.broadcast_channels.join(', ')}</span>
+                </div>
+              )}
+              {match.streaming_links && Object.keys(match.streaming_links).length > 0 && (
+                <div className="flex items-center justify-center text-xs mt-1">
+                  <a
+                    href={Object.values(match.streaming_links)[0]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Assistir Online
+                  </a>
                 </div>
               )}
             </div>

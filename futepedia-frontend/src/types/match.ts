@@ -7,6 +7,7 @@ interface Team {
 interface Stadium {
   id: number;
   name: string;
+  city?: string;
 }
 
 export interface Match {
@@ -18,4 +19,6 @@ export interface Match {
   home_score?: number;
   away_score?: number;
   stadium?: Stadium;
+  streaming_links?: { [key: string]: string };
+  broadcast_channels?: string[];
 } 

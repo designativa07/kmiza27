@@ -407,8 +407,8 @@ export class StandingsService {
       .leftJoinAndSelect('match.round', 'round')
       .where('match.competition_id = :competitionId', { competitionId })
       .andWhere('match.round IS NOT NULL')
-      .select(['round.id', 'round.name', 'round.round_number', 'round.phase'])
-      .groupBy('round.id, round.name, round.round_number, round.phase')
+      .select(['round.id', 'round.name', 'round.round_number', 'round.phase', 'round.is_current'])
+      .groupBy('round.id, round.name, round.round_number, round.phase, round.is_current')
       .orderBy('round.round_number', 'ASC')
       .getRawMany();
 
@@ -416,8 +416,30 @@ export class StandingsService {
       id: round.round_id,
       name: round.round_name,
       round_number: round.round_round_number,
-      phase: round.round_phase
+      phase: round.round_phase,
+      is_current: round.round_is_current,
     }));
+  }
+
+  async getCurrentRound(competitionId: number): Promise<any | null> {
+    const currentRound = await this.matchRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.round', 'round')
+      .where('match.competition_id = :competitionId', { competitionId })
+      .andWhere('round.is_current = :isCurrent', { isCurrent: true })
+      .select(['round.id', 'round.name', 'round.round_number', 'round.phase'])
+      .groupBy('round.id, round.name, round.round_number, round.phase')
+      .getRawOne();
+
+    if (currentRound) {
+      return {
+        id: currentRound.round_id,
+        name: currentRound.round_name,
+        round_number: currentRound.round_round_number,
+        phase: currentRound.round_phase,
+      };
+    }
+    return null;
   }
 
   async getRoundMatches(competitionId: number, roundId: number): Promise<Match[]> {

@@ -76,7 +76,7 @@ export const StandingsTable = ({ standings }: StandingsTableProps) => {
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-8 w-8">
                         {s.team.logo_url ? (
-                           <img className="h-8 w-8 rounded-full object-contain" src={s.team.logo_url} alt={s.team.name} />
+                           <img className="h-8 w-8 object-contain" src={s.team.logo_url} alt={s.team.name} />
                         ) : (
                           <ShieldCheck className="h-8 w-8 text-gray-300" />
                         )}

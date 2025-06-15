@@ -253,62 +253,121 @@ export default function CompetitionsManager() {
               {editingCompetition ? 'Editar Competição' : 'Adicionar Nova Competição'}
             </h3>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="sm:col-span-6">
-                <label className="block text-sm font-medium text-gray-700">Logo</label>
-                <div className="mt-1 flex items-center">
-                  <span className="inline-block h-12 w-12 overflow-hidden rounded-md bg-gray-100">
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Preview" className="h-full w-full object-contain" />
-                    ) : (
-                      <PhotoIcon className="h-full w-full text-gray-300" />
-                    )}
-                  </span>
-                  <label htmlFor="logo-upload" className="ml-5 cursor-pointer rounded-md border border-gray-300 bg-white py-2 px-3 text-sm font-medium leading-4 text-gray-700 shadow-sm hover:bg-gray-50">
-                    <span>Alterar</span>
-                    <input id="logo-upload" name="logo" type="file" className="sr-only" 
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          const file = e.target.files[0]
-                          setLogoFile(file)
-                          setLogoPreview(URL.createObjectURL(file))
-                        }
-                      }}
-                    />
-                  </label>
+              <div className="sm:col-span-3">
+                <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
+                  Nome
+                </label>
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) })}
+                    required
+                  />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium">Nome</label>
-                <input
-                  type="text" required value={formData.name}
-                  onChange={(e) => {
-                    const name = e.target.value
-                    setFormData({ ...formData, name, slug: generateSlug(name) })
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                />
+
+              <div className="sm:col-span-3">
+                <label htmlFor="slug" className="block text-sm font-medium leading-6 text-gray-900">
+                  Slug
+                </label>
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    name="slug"
+                    id="slug"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.slug}
+                    onChange={e => setFormData({ ...formData, slug: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium">Slug</label>
-                <input type="text" required value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50" readOnly />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium">Tipo</label>
-                  <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+
+              <div className="sm:col-span-3">
+                <label htmlFor="type" className="block text-sm font-medium leading-6 text-gray-900">
+                  Tipo
+                </label>
+                <div className="mt-2">
+                  <select
+                    id="type"
+                    name="type"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.type}
+                    onChange={e => setFormData({ ...formData, type: e.target.value })}
+                  >
                     <option value="pontos_corridos">Pontos Corridos</option>
                     <option value="grupos_e_mata_mata">Copa com Grupos</option>
                     <option value="copa">Copa</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium">Temporada</label>
-                  <input type="text" required value={formData.season} onChange={(e) => setFormData({ ...formData, season: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label htmlFor="season" className="block text-sm font-medium leading-6 text-gray-900">
+                  Temporada
+                </label>
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    name="season"
+                    id="season"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.season}
+                    onChange={e => setFormData({ ...formData, season: e.target.value })}
+                  />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium">País</label>
-                <input type="text" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+
+              {/* Campo para Logo da Competição */}
+              <div className="sm:col-span-6">
+                <label htmlFor="logo" className="block text-sm font-medium leading-6 text-gray-900">
+                  Logo da Competição
+                </label>
+                <div className="mt-2 flex items-center space-x-4">
+                  <input
+                    type="file"
+                    name="logo"
+                    id="logo"
+                    accept="image/*"
+                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLogoFile(file);
+                        setLogoPreview(URL.createObjectURL(file));
+                      } else {
+                        setLogoFile(null);
+                        setLogoPreview(null);
+                      }
+                    }}
+                  />
+                  {logoPreview && (
+                    <img src={logoPreview} alt="Pré-visualização da Logo" className="h-16 w-16 object-contain rounded-md" />
+                  )}
+                  {!logoPreview && editingCompetition?.logo_url && (
+                    <img src={imageUrl(editingCompetition.logo_url)} alt="Logo Atual" className="h-16 w-16 object-contain rounded-md" />
+                  )}
+                </div>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label htmlFor="country" className="block text-sm font-medium leading-6 text-gray-900">
+                  País
+                </label>
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    name="country"
+                    id="country"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.country}
+                    onChange={e => setFormData({ ...formData, country: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="flex items-center">
                 <input id="is_active" type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="h-4 w-4 text-indigo-600 rounded border-gray-300" />

@@ -56,34 +56,46 @@ async function getClassificationPageData(slug: string) {
   const competitionId = competition.id;
 
   // 2. Fazer chamadas em paralelo
-  const [standingsResponse, roundsResponse] = await Promise.all([
+  const [standingsResponse, roundsResponse, currentRoundResponse] = await Promise.all([
     fetch(`${API_URL}/standings/competition/${competitionId}`, { next: { revalidate: 60 } }),
-    fetch(`${API_URL}/standings/competition/${competitionId}/rounds`, { next: { revalidate: 60 } })
+    fetch(`${API_URL}/standings/competition/${competitionId}/rounds`, { next: { revalidate: 60 } }),
+    fetch(`${API_URL}/standings/competition/${competitionId}/current-round`, { next: { revalidate: 60 } })
   ]);
 
   if (!standingsResponse.ok) throw new Error('Tabela de classificação indisponível');
   const standings: Standing[] = await standingsResponse.json();
   
   const rounds: Round[] = roundsResponse.ok ? await roundsResponse.json() : [];
-  let matches: Match[] = [];
-  let currentRoundName = 'Rodada';
+  const currentRound: Round | null = currentRoundResponse.ok ? await currentRoundResponse.json() : null;
 
-  if (rounds && rounds.length > 0) {
-    // Assumindo que a última rodada na lista é a atual/mais recente
+  let initialMatches: Match[] = [];
+  let initialRoundId: number | null = null;
+  let initialRoundName: string = 'Rodada';
+
+  if (currentRound) {
+    initialRoundId = currentRound.id;
+    initialRoundName = currentRound.name;
+    const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${currentRound.id}/matches`, { next: { revalidate: 60 } });
+    if (matchesResponse.ok) {
+      initialMatches = await matchesResponse.json();
+    }
+  } else if (rounds && rounds.length > 0) {
+    // Fallback: se não houver rodada atual, pega a última rodada da lista
     const latestRound = rounds[rounds.length - 1];
-    currentRoundName = latestRound.name;
+    initialRoundId = latestRound.id;
+    initialRoundName = latestRound.name;
     const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${latestRound.id}/matches`, { next: { revalidate: 60 } });
     if (matchesResponse.ok) {
-      matches = await matchesResponse.json();
+      initialMatches = await matchesResponse.json();
     }
   }
 
-  return { standings, matches, rounds, competitionId };
+  return { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName };
 }
 
 // O componente da página agora usa o tipo 'NextPage' com as nossas Props
 const ClassificationPage: NextPage<Props> = async ({ params }) => {
-  const { standings, matches, rounds, competitionId } = await getClassificationPageData(params.competitionSlug);
+  const { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName } = await getClassificationPageData(params.competitionSlug);
 
   const groupedStandings = standings.reduce((acc, s) => {
     const groupName = s.group_name || 'Classificação Geral';
@@ -124,7 +136,9 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
         <RoundNavigator 
           initialRounds={rounds}
           competitionId={competitionId}
-          initialMatches={matches}
+          initialMatches={initialMatches}
+          initialRoundId={initialRoundId}
+          initialRoundName={initialRoundName}
         />
       </div>
     </div>
