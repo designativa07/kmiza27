@@ -119,7 +119,7 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
 
                   {/* Canais de TV */}
                   {match.broadcast_channels && (
-                    <div className="flex items-center">
+                    <div className="flex items-center text-center">
                       <Tv size={12} className="mr-1" />
                       <span>
                         {Array.isArray(match.broadcast_channels) 
@@ -131,41 +131,55 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   )}
                 </div>
 
-                {/* Link para assistir - SEPARADO para evitar conflitos */}
+                {/* Links para assistir */}
                 {match.streaming_links && (
-                  <div className="flex justify-center mt-3">
+                  <div className="flex justify-center flex-wrap gap-2 mt-3">
                     {(() => {
-                      console.log('🔍 match.streaming_links original:', match.streaming_links);
-                      let url = '';
-                      if (typeof match.streaming_links === 'string') {
-                        // Tenta extrair a URL da string, procurando por http ou https
-                        const urlMatch = match.streaming_links.match(/(https?:\/\/[^\s]+)/);
-                        console.log('🔍 urlMatch (string):', urlMatch);
-                        if (urlMatch && urlMatch[0]) {
-                          url = urlMatch[0];
+                      const links: { url: string; name: string }[] = [];
+                      const processPart = (part: string) => {
+                        // Trata "Nome: URL"
+                        const namedLinkMatch = part.match(/^(.*?):\s*(https?:\/\/[^\s]+)$/);
+                        if (namedLinkMatch) {
+                          links.push({ name: namedLinkMatch[1].trim(), url: namedLinkMatch[2] });
+                          return;
                         }
+                        // Trata apenas URL
+                        const urlMatch = part.match(/^(https?:\/\/[^\s]+)$/);
+                        if (urlMatch) {
+                          links.push({ name: 'ASSISTIR', url: urlMatch[0] });
+                        }
+                      };
+
+                      if (typeof match.streaming_links === 'string') {
+                        match.streaming_links.split(',').forEach(p => processPart(p.trim()));
                       } else if (typeof match.streaming_links === 'object' && match.streaming_links !== null) {
-                        const values = Object.values(match.streaming_links);
-                        console.log('🔍 values (object):', values);
-                        if (values.length > 0) {
-                          url = values[0] as string;
+                        for (const [name, url] of Object.entries(match.streaming_links)) {
+                          if (typeof url === 'string') {
+                            links.push({ name, url });
+                          }
                         }
                       }
-                      
-                      console.log('🔍 URL extraída para o link:', url);
-                      if (url) {
-                        return (
+
+                      if (links.length > 0) {
+                        return links.map((link, index) => (
                           <a
-                            href={url}
+                            key={index}
+                            href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full hover:bg-blue-600 transition-colors cursor-pointer"
                           >
                             <ExternalLink size={12} className="mr-1" />
-                            ASSISTIR
+                            {link.name}
                           </a>
-                        );
+                        ));
                       }
+                      
+                      // Fallback para exibir o conteúdo como texto se não for possível extrair links
+                      if (typeof match.streaming_links === 'string') {
+                        return <p className="text-xs text-gray-600">{match.streaming_links}</p>;
+                      }
+
                       return null;
                     })()}
                   </div>
