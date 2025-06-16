@@ -3,9 +3,9 @@
 const getApiUrl = (): string => {
   // Para desenvolvimento local, usar a API da VPS diretamente
   // Comentando a verificação de localhost para sempre usar a API da VPS
-  // if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-  //   return 'http://localhost:3000';
-  // }
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000';
+  }
   
   // Usar sempre a URL de produção (VPS)
   return 'https://kmizabot.h4xd66.easypanel.host';
