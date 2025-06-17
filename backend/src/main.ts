@@ -23,7 +23,9 @@ async function bootstrap() {
       'https://kmizabot.h4xd66.easypanel.host',
       'https://kmiza27-evolution.h4xd66.easypanel.host',
       'https://kmiza27-futepedia.h4xd66.easypanel.host',
-      'https://futepedia.kmiza27.com'
+      'https://admin.kmiza27.com',
+      'https://futepedia.kmiza27.com',
+      'https://api.kmiza27.com'
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
