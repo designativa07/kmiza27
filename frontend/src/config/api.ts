@@ -8,7 +8,7 @@ const getApiUrl = (): string => {
   // }
   
   // Usar sempre a URL de produção (VPS)
-  return 'https://kmizabot.h4xd66.easypanel.host';
+  return 'https://api.kmiza27.com/api';
 };
 
 export const API_BASE_URL = getApiUrl();
