@@ -48,6 +48,11 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
+
+  // Servir arquivos estáticos da pasta img (para logos de competição)
+  app.useStaticAssets(join(__dirname, '..', 'img'), {
+    prefix: '/img/',
+  });
   
   // Configurar porta e host para produção
   const port = process.env.PORT || 3000;

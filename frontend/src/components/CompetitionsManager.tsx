@@ -18,6 +18,17 @@ interface Competition {
   updated_at: string
 }
 
+// Definir o tipo para o estado do formulário
+interface CompetitionFormData {
+  name: string;
+  slug: string;
+  type: string;
+  season: string;
+  country: string;
+  is_active: boolean;
+  logo_url?: string; // Incluir logo_url aqui
+}
+
 export default function CompetitionsManager() {
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,16 +36,16 @@ export default function CompetitionsManager() {
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null)
   const [showTeamsManager, setShowTeamsManager] = useState<number | null>(null)
   
-  const [formData, setFormData] = useState({
+  // Usar a nova interface para o formData
+  const [formData, setFormData] = useState<CompetitionFormData>({
     name: '',
     slug: '',
     type: 'pontos_corridos',
     season: new Date().getFullYear().toString(),
     country: 'Brasil',
-    is_active: true
+    is_active: true,
+    logo_url: '' // Inicializar com string vazia
   })
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -73,19 +84,6 @@ export default function CompetitionsManager() {
       if (!response.ok) {
         throw new Error('Falha ao salvar dados da competição')
       }
-      const savedCompetition = await response.json()
-
-      if (logoFile) {
-        const logoFormData = new FormData()
-        logoFormData.append('logo', logoFile)
-        const uploadResponse = await fetch(
-          API_ENDPOINTS.competitions.uploadLogo(savedCompetition.id),
-          { method: 'POST', body: logoFormData }
-        )
-        if (!uploadResponse.ok) {
-          throw new Error('Falha ao fazer upload da logo')
-        }
-      }
 
       fetchData()
       handleCloseModal()
@@ -98,8 +96,6 @@ export default function CompetitionsManager() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingCompetition(null)
-    setLogoFile(null)
-    setLogoPreview(null)
     resetForm()
   }
 
@@ -110,7 +106,8 @@ export default function CompetitionsManager() {
       type: 'pontos_corridos',
       season: new Date().getFullYear().toString(),
       country: 'Brasil',
-      is_active: true
+      is_active: true,
+      logo_url: ''
     })
   }
 
@@ -122,9 +119,9 @@ export default function CompetitionsManager() {
       type: competition.type,
       season: competition.season,
       country: competition.country || 'Brasil',
-      is_active: competition.is_active
+      is_active: competition.is_active,
+      logo_url: competition.logo_url || ''
     })
-    setLogoPreview(competition.logo_url ? imageUrl(competition.logo_url) : null)
     setShowModal(true)
   }
 
@@ -248,134 +245,118 @@ export default function CompetitionsManager() {
 
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">
-              {editingCompetition ? 'Editar Competição' : 'Adicionar Nova Competição'}
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+              {editingCompetition ? 'Editar Competição' : 'Adicionar Competição'}
             </h3>
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="sm:col-span-3">
-                <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-                  Nome
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) })}
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
+                <input
+                  type="text"
+                  name="name"
+                  id="name"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value, slug: generateSlug(e.target.value) })}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="slug" className="block text-sm font-medium text-gray-700">Slug</label>
+                <input
+                  type="text"
+                  name="slug"
+                  id="slug"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100"
+                  value={formData.slug}
+                  readOnly
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipo</label>
+                <select
+                  name="type"
+                  id="type"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.type}
+                  onChange={e => setFormData({ ...formData, type: e.target.value })}
+                  required
+                >
+                  <option value="pontos_corridos">Pontos Corridos</option>
+                  <option value="grupos_e_mata_mata">Copa com Grupos</option>
+                  <option value="copa">Copa</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="season" className="block text-sm font-medium text-gray-700">Temporada</label>
+                <input
+                  type="text"
+                  name="season"
+                  id="season"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.season}
+                  onChange={e => setFormData({ ...formData, season: e.target.value })}
+                  required
+                />
               </div>
 
-              <div className="sm:col-span-3">
-                <label htmlFor="slug" className="block text-sm font-medium leading-6 text-gray-900">
-                  Slug
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="slug"
-                    id="slug"
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    value={formData.slug}
-                    onChange={e => setFormData({ ...formData, slug: e.target.value })}
-                    required
-                  />
-                </div>
+              {/* Novo campo para URL da Logo */}
+              <div className="mb-4">
+                <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700">URL da Logo</label>
+                <input
+                  type="url"
+                  name="logo_url"
+                  id="logo_url"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.logo_url || ''}
+                  onChange={e => setFormData({ ...formData, logo_url: e.target.value })}
+                />
+                {/* Exibição da pré-visualização da logo (se houver) */}
+                {formData.logo_url && (
+                  <div className="mt-2">
+                    <img src={formData.logo_url} alt="Pré-visualização da Logo" className="h-20 w-20 object-contain rounded-md" />
+                  </div>
+                )}
               </div>
 
-              <div className="sm:col-span-3">
-                <label htmlFor="type" className="block text-sm font-medium leading-6 text-gray-900">
-                  Tipo
-                </label>
-                <div className="mt-2">
-                  <select
-                    id="type"
-                    name="type"
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    value={formData.type}
-                    onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  >
-                    <option value="pontos_corridos">Pontos Corridos</option>
-                    <option value="grupos_e_mata_mata">Copa com Grupos</option>
-                    <option value="copa">Copa</option>
-                  </select>
-                </div>
+              <div className="mb-4">
+                <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
+                <input
+                  type="text"
+                  name="country"
+                  id="country"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.country}
+                  onChange={e => setFormData({ ...formData, country: e.target.value })}
+                  required
+                />
               </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="season" className="block text-sm font-medium leading-6 text-gray-900">
-                  Temporada
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="season"
-                    id="season"
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    value={formData.season}
-                    onChange={e => setFormData({ ...formData, season: e.target.value })}
-                  />
-                </div>
+              <div className="mb-4 flex items-center">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  id="is_active"
+                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                  checked={formData.is_active}
+                  onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                />
+                <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">Competição ativa</label>
               </div>
-
-              {/* Campo para Logo da Competição */}
-              <div className="sm:col-span-6">
-                <label htmlFor="logo" className="block text-sm font-medium leading-6 text-gray-900">
-                  Logo da Competição
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <input
-                    type="file"
-                    name="logo"
-                    id="logo"
-                    accept="image/*"
-                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setLogoFile(file);
-                        setLogoPreview(URL.createObjectURL(file));
-                      } else {
-                        setLogoFile(null);
-                        setLogoPreview(null);
-                      }
-                    }}
-                  />
-                  {logoPreview && (
-                    <img src={logoPreview} alt="Pré-visualização da Logo" className="h-16 w-16 object-contain rounded-md" />
-                  )}
-                  {!logoPreview && editingCompetition?.logo_url && (
-                    <img src={imageUrl(editingCompetition.logo_url)} alt="Logo Atual" className="h-16 w-16 object-contain rounded-md" />
-                  )}
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="country" className="block text-sm font-medium leading-6 text-gray-900">
-                  País
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="country"
-                    id="country"
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    value={formData.country}
-                    onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center">
-                <input id="is_active" type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="h-4 w-4 text-indigo-600 rounded border-gray-300" />
-                <label htmlFor="is_active" className="ml-2 block text-sm">Competição ativa</label>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={handleCloseModal} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cancelar</button>
-                <button type="submit" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">{editingCompetition ? 'Atualizar' : 'Criar'}</button>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="mr-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                >
+                  Salvar
+                </button>
               </div>
             </form>
           </div>
