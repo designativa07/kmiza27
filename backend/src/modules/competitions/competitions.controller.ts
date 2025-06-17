@@ -3,7 +3,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
-import { tmpdir } from 'os';
 
 import { CompetitionsService } from './competitions.service';
 import { UploadService } from './upload.service';
@@ -79,41 +78,13 @@ export class CompetitionsController {
   @UseInterceptors(FileInterceptor('logo', {
     storage: diskStorage({
       destination: (req, file, cb) => {
-        try {
-          // Verificar se /img existe e tem permissão, senão usar tmpdir
-          const preferredPath = '/img/logo-competition';
-          const fallbackPath = join(tmpdir(), 'futepedia-uploads', 'logo-competition');
-          
-          let uploadPath = fallbackPath;
-          
-          // Tentar usar /img se existir
-          if (existsSync('/img')) {
-            try {
-              // Tentar criar o subdiretório logo-competition
-              if (!existsSync(preferredPath)) {
-                mkdirSync(preferredPath, { recursive: true });
-              }
-              uploadPath = preferredPath;
-              console.log('✅ Usando /img/logo-competition para upload');
-            } catch (error) {
-              console.log('⚠️ Não foi possível usar /img, usando tmpdir');
-              // Criar diretório fallback
-              if (!existsSync(fallbackPath)) {
-                mkdirSync(fallbackPath, { recursive: true });
-              }
+        // Caminho de upload desejado: img/logo-competition na raiz do backend
+        const uploadPath = join(process.cwd(), 'img', 'logo-competition');
+
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
             }
-          } else {
-            // Criar diretório fallback
-            if (!existsSync(fallbackPath)) {
-              mkdirSync(fallbackPath, { recursive: true });
-            }
-          }
-          
           cb(null, uploadPath);
-        } catch (error) {
-          console.error('Erro ao obter diretório de upload:', error);
-          cb(error, '');
-        }
       },
       filename: (req, file, cb) => {
         const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
@@ -133,36 +104,17 @@ export class CompetitionsController {
     }
     
     try {
-      // Determinar se o arquivo foi salvo em /img ou tmpdir
-      const isUsingImgDir = file.destination?.includes('/img');
-      const isProduction = process.env.NODE_ENV === 'production';
-      
-      let publicFilePath: string;
-      
-      if (isUsingImgDir) {
-        // Se salvou em /img, usar URL real
-        publicFilePath = `/logo-competition/${file.filename}`;
-      } else if (isProduction) {
-        // Se não conseguiu usar /img em produção, usar placeholder
-        publicFilePath = 'https://via.placeholder.com/100x100/4F46E5/FFFFFF?text=LOGO';
-      } else {
-        // Desenvolvimento local
-        publicFilePath = `/logo-competition/${file.filename}`;
-      }
+      // O caminho público deve corresponder à forma como o diretório 'img' é servido estaticamente
+      // Ex: /img/logo-competition/nome-do-arquivo.png
+      const publicFilePath = `/img/logo-competition/${file.filename}`;
       
       await this.competitionsService.update(+id, { logo_url: publicFilePath });
       
       return {
-        message: 'Logo da competição processado com sucesso!',
+        message: 'Logo da competição processada com sucesso!',
         filePath: publicFilePath,
         uploadLocation: file.destination,
-        environment: isProduction ? 'production' : 'development',
-        usingImgDirectory: isUsingImgDir,
-        note: isUsingImgDir 
-          ? 'Upload realizado em /img/logo-competition' 
-          : isProduction 
-            ? 'Usando placeholder. Crie o diretório /img com permissões para uploads reais.'
-            : 'Upload local realizado com sucesso.'
+        note: 'Upload realizado na pasta img/logo-competition.',
       };
     } catch (error) {
       console.error('Erro ao processar upload de logo:', error);
