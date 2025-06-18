@@ -1,15 +1,16 @@
-# Build simples e eficiente para Next.js standalone
+# Base stage
 FROM node:18-alpine AS base
-
-# Dependências e ferramentas
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Instalar dependências
+# Dependencies stage
+FROM base AS deps
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copiar código fonte
+# Builder stage
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Variables de build
@@ -27,12 +28,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build da aplicação
 RUN npm run build
 
+# Runner stage
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Configurar permissões
-RUN chown -R nextjs:nodejs .next
+# Copiar arquivos do build
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
@@ -41,4 +51,7 @@ EXPOSE 3003
 ENV PORT=3003
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", ".next/standalone/server.js"] 
+# Debug temporário - pode ser removido depois
+RUN node debug-standalone.js || true
+
+CMD ["node", "server.js"] 
