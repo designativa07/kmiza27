@@ -1,22 +1,15 @@
-# Multi-stage build para otimização
+# Build simples e eficiente para Next.js standalone
 FROM node:18-alpine AS base
 
-# Instalação de dependências apenas
-FROM base AS deps
+# Dependências e ferramentas
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copiar arquivos de dependências
-COPY package*.json ./
-RUN npm ci --ignore-scripts --only=production
-
-# Build da aplicação
-FROM base AS builder
-WORKDIR /app
-
-# Copiar dependências e código fonte
+# Instalar dependências
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
+# Copiar código fonte
 COPY . .
 
 # Variables de build
@@ -29,25 +22,17 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NODE_ENV=${NODE_ENV}
 ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
 ENV GIT_SHA=${GIT_SHA}
-
-# Build da aplicação Next.js
-RUN npm run build
-
-# Imagem de produção
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build da aplicação
+RUN npm run build
 
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copiar arquivos necessários
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Configurar permissões
+RUN chown -R nextjs:nodejs .next
 
 USER nextjs
 
@@ -56,4 +41,4 @@ EXPOSE 3003
 ENV PORT=3003
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"] 
+CMD ["node", ".next/standalone/server.js"] 
