@@ -1,0 +1,22 @@
+[phases.setup]
+cmds = [
+  'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -',
+  'apt-get install -y nodejs'
+]
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = ['npm run build']
+
+[start]
+cmd = 'npm run start'
+
+[variables]
+NODE_ENV = 'production'
+PORT = '3003'
+HOSTNAME = '0.0.0.0'
+
+[buildArgs]
+NEXT_PUBLIC_API_URL = 'https://api.kmiza27.com' 

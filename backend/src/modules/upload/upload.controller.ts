@@ -26,15 +26,15 @@ export class UploadController {
     return {
       minioUrl: this.uploadCloudService.getBaseUrl(),
       bucketName: this.uploadCloudService.getBucketName(),
-      escudosUrl: `${this.uploadCloudService.getBaseUrl()}/escudos/`,
-      logosUrl: `${this.uploadCloudService.getBaseUrl()}/logo-competition/`,
+      escudosUrl: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/escudos/`,
+      logosUrl: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/`,
       instructions: {
         escudos: 'Para escudos de times, faça upload para a pasta "escudos" no bucket img',
         logos: 'Para logos de competições, faça upload para a pasta "logo-competition" no bucket img',
-        access: 'As imagens devem ser públicas para serem acessadas via cdn.kmiza27.com',
+        access: 'As imagens devem ser públicas para serem acessadas via MinIO',
         example: {
-          escudo: 'https://cdn.kmiza27.com/escudos/flamengo.png',
-          logo: 'https://cdn.kmiza27.com/logo-competition/copa-brasil.png'
+          escudo: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/escudos/botafogo.svg`,
+          logo: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/copa-brasil.png`
         }
       }
     };
