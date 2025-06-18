@@ -7,8 +7,8 @@ const getApiUrl = (): string => {
     return 'http://localhost:3000';
   }
   
-  // Usar sempre a URL de produção (VPS)
-  return 'https://api.kmiza27.com/api';
+  // Usar sempre a URL de produção (VPS) - SEM /api prefix
+  return 'https://api.kmiza27.com';
 };
 
 export const API_BASE_URL = getApiUrl();
