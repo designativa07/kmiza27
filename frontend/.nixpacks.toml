@@ -8,4 +8,4 @@ cmds = ["npm ci --legacy-peer-deps"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm run start" 
+cmd = "npm start" 
