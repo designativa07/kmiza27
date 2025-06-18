@@ -122,15 +122,8 @@ export const API_ENDPOINTS = {
   },
 };
 
-// Helper para URLs de imagens
-export const imageUrl = (path: string): string => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  
-  // Garantir que o path comece com uma barra
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${API_BASE_URL}${cleanPath}`;
-};
+// Helper para URLs de imagens - agora usa CDN
+export { imageUrl } from '../lib/cdn';
 
 console.log('🔧 API Configuration HARDCODED:', {
   baseUrl: API_BASE_URL,

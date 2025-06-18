@@ -47,26 +47,27 @@ export class UploadCloudService {
 // Configuração para MinIO (S3-compatible) do EasyPanel
 @Injectable()
 export class UploadCloudService {
-  private readonly baseUrl: string;
+  private readonly cdnUrl: string;
+  private readonly minioUrl: string;
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
     // URLs baseadas na sua configuração do EasyPanel
-    // Temporariamente usando URL direta enquanto configura CDN
-    this.baseUrl = 'https://console-kmiza27-minio.h4xd66.easypanel.host';
+    this.cdnUrl = 'https://cdn.kmiza27.com';
+    this.minioUrl = 'https://console-kmiza27-minio.h4xd66.easypanel.host';
     this.bucketName = 'img';
   }
 
   async uploadEscudo(file: Express.Multer.File): Promise<string> {
     // Para usar com MinIO, você precisará das credenciais S3
-    // Por enquanto, retornando a URL padrão do MinIO
+    // Por enquanto, retornando a URL do CDN
     const filename = `escudo-${Date.now()}-${file.originalname}`;
-    return `${this.baseUrl}/${this.bucketName}/escudos/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/escudos/${filename}`;
   }
 
   async uploadLogo(file: Express.Multer.File): Promise<string> {
     const filename = `logo-${Date.now()}-${file.originalname}`;
-    return `${this.baseUrl}/${this.bucketName}/logo-competition/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/logo-competition/${filename}`;
   }
 
   async deleteEscudo(filename: string): Promise<boolean> {
@@ -74,18 +75,31 @@ export class UploadCloudService {
     return true;
   }
 
-  // URLs para acessar as imagens
+  // URLs para acessar as imagens via CDN
   getEscudoUrl(filename: string): string {
-    return `${this.baseUrl}/${this.bucketName}/escudos/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/escudos/${filename}`;
   }
 
   getLogoUrl(filename: string): string {
-    return `${this.baseUrl}/${this.bucketName}/logo-competition/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/logo-competition/${filename}`;
+  }
+
+  // URLs para acesso direto ao MinIO (uso interno)
+  getMinioEscudoUrl(filename: string): string {
+    return `${this.minioUrl}/${this.bucketName}/escudos/${filename}`;
+  }
+
+  getMinioLogoUrl(filename: string): string {
+    return `${this.minioUrl}/${this.bucketName}/logo-competition/${filename}`;
   }
 
   // Métodos utilitários
-  getBaseUrl(): string {
-    return this.baseUrl;
+  getCdnUrl(): string {
+    return this.cdnUrl;
+  }
+
+  getMinioUrl(): string {
+    return this.minioUrl;
   }
 
   getBucketName(): string {
