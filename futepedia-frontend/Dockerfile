@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Copiar arquivos de dependências
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --ignore-scripts --only=production
 
 # Build da aplicação
 FROM base AS builder
@@ -15,7 +15,7 @@ WORKDIR /app
 
 # Copiar dependências e código fonte
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
 
