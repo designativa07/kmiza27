@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { NextPage } from 'next';
+import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
 
 // Interfaces
 interface Competition {
@@ -88,7 +89,12 @@ const MatchesPage: NextPage<Props> = async ({ params }) => {
                 {/* Time da Casa */}
                 <div className="flex items-center justify-end gap-4">
                   <span className="hidden md:inline font-semibold">{match.home_team.name}</span>
-                  <img src={match.home_team.logo_url} alt={match.home_team.name} className="h-10 w-10 object-contain" />
+                  <img 
+                    src={getTeamLogoUrl(match.home_team.logo_url)} 
+                    alt={match.home_team.name} 
+                    className="h-10 w-10 object-contain"
+                    onError={(e) => handleImageError(e, '/default-team-logo.svg')}
+                  />
                 </div>
                 {/* Placar */}
                 <div className="text-2xl font-bold">
@@ -100,7 +106,12 @@ const MatchesPage: NextPage<Props> = async ({ params }) => {
                 </div>
                 {/* Time Visitante */}
                 <div className="flex items-center justify-start gap-4">
-                  <img src={match.away_team.logo_url} alt={match.away_team.name} className="h-10 w-10 object-contain" />
+                  <img 
+                    src={getTeamLogoUrl(match.away_team.logo_url)} 
+                    alt={match.away_team.name} 
+                    className="h-10 w-10 object-contain"
+                    onError={(e) => handleImageError(e, '/default-team-logo.svg')}
+                  />
                   <span className="hidden md:inline font-semibold">{match.away_team.name}</span>
                 </div>
               </div>

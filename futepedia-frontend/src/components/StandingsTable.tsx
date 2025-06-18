@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
+import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
 
 // Reutilizando a interface 'Standing' que já existe na página de classificação
 interface Standing {
@@ -76,7 +77,12 @@ export const StandingsTable = ({ standings }: StandingsTableProps) => {
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-8 w-8">
                         {s.team.logo_url ? (
-                           <img className="h-8 w-8 object-contain" src={s.team.logo_url} alt={s.team.name} />
+                           <img 
+                             className="h-8 w-8 object-contain" 
+                             src={getTeamLogoUrl(s.team.logo_url)} 
+                             alt={s.team.name}
+                             onError={(e) => handleImageError(e, '/default-team-logo.svg')}
+                           />
                         ) : (
                           <ShieldCheck className="h-8 w-8 text-gray-300" />
                         )}

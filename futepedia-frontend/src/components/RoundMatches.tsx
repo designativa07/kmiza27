@@ -1,5 +1,6 @@
 import { Calendar, Clock, MapPin, Shield, Tv, ExternalLink } from 'lucide-react';
 import { Match } from '@/types/match';
+import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('pt-BR', {
@@ -62,13 +63,10 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   <div className="flex items-center justify-end space-x-2">
                     <span className="text-sm font-semibold text-gray-700 text-right">{match.home_team.name}</span>
                     <img 
-                      src={match.home_team.logo_url || '/default-team-logo.png'} 
+                      src={getTeamLogoUrl(match.home_team.logo_url)} 
                       alt={match.home_team.name} 
                       className="h-8 w-8 object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/default-team-logo.png';
-                      }}
+                      onError={(e) => handleImageError(e, '/default-team-logo.svg')}
                     />
                   </div>
 
@@ -94,13 +92,10 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   {/* Time Visitante */}
                   <div className="flex items-center space-x-2">
                     <img 
-                      src={match.away_team.logo_url || '/default-team-logo.png'} 
+                      src={getTeamLogoUrl(match.away_team.logo_url)} 
                       alt={match.away_team.name} 
                       className="h-8 w-8 object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/default-team-logo.png';
-                      }}
+                      onError={(e) => handleImageError(e, '/default-team-logo.svg')}
                     />
                     <span className="text-sm font-semibold text-gray-700">{match.away_team.name}</span>
                   </div>

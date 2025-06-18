@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Shield, ArrowRight } from 'lucide-react';
+import { getCompetitionLogoUrl, handleImageError } from '@/lib/cdn';
 
 // 1. Definir a interface para o tipo Competition
 interface Competition {
@@ -48,7 +49,12 @@ export default async function Home() {
                 <div className="p-5 flex-grow flex flex-col">
                   <div className="flex items-center space-x-4 mb-4">
                     {competition.logo_url ? (
-                      <img src={competition.logo_url} alt={`${competition.name} logo`} className="h-10 w-10 object-contain" />
+                      <img 
+                        src={getCompetitionLogoUrl(competition.logo_url)} 
+                        alt={`${competition.name} logo`} 
+                        className="h-10 w-10 object-contain" 
+                        onError={(e) => handleImageError(e, '/default-competition-logo.svg')}
+                      />
                     ) : (
                       <div className="h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full">
                         <Shield className="h-6 w-6 text-gray-400" />
