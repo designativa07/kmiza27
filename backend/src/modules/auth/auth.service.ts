@@ -15,77 +15,54 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
-    console.log('🔐 AuthService.validateUser chamado com:', { username, password });
-    
     // Limpar espaços em branco e normalizar
     const cleanUsername = username?.toString().trim();
     const cleanPassword = password?.toString().trim();
     
-    console.log('🧹 Credenciais limpas:', { cleanUsername, cleanPassword });
+    console.log('🔍 Tentativa de login:', { cleanUsername, cleanPassword });
     
-    // Para o usuário administrativo padrão - múltiplas variações
-    const validUsernames = ['admin_kmiza27', 'admin', 'administrator'];
-    const validPasswords = ['admin@kmiza27', 'admin', 'kmiza27'];
-    
-    if (validUsernames.includes(cleanUsername) && validPasswords.includes(cleanPassword)) {
-      console.log('✅ Usuário admin hardcoded validado com sucesso');
-      return {
-        id: 0,
-        username: 'admin_kmiza27',
-        is_admin: true,
-        name: 'Administrador Kmiza27'
-      };
-    }
-
-    // Verificação específica para as credenciais originais
-    if (cleanUsername === 'admin_kmiza27' && cleanPassword === 'admin@kmiza27') {
-      console.log('✅ Usuário admin hardcoded validado com sucesso (verificação específica)');
-      return {
-        id: 0,
-        username: 'admin_kmiza27',
-        is_admin: true,
-        name: 'Administrador Kmiza27'
-      };
-    }
-
-    console.log('❌ Credenciais hardcoded não conferiram:', { 
-      usernameMatch: cleanUsername === 'admin_kmiza27',
-      passwordMatch: cleanPassword === 'admin@kmiza27',
-      receivedUsername: cleanUsername,
-      receivedPassword: cleanPassword,
-      expectedUsername: 'admin_kmiza27',
-      expectedPassword: 'admin@kmiza27'
-    });
-
     // Buscar usuário no banco de dados
     const user = await this.userRepository.findOne({
       where: [
         { email: cleanUsername },
-        { phone_number: cleanUsername }
+        { phone_number: cleanUsername },
+        { name: cleanUsername }
       ]
+    });
+
+    console.log('👤 Usuário encontrado:', { 
+      found: !!user, 
+      id: user?.id,
+      name: user?.name,
+      email: user?.email,
+      phone: user?.phone_number,
+      isAdmin: user?.is_admin,
+      isActive: user?.is_active,
+      hasPassword: !!user?.password_hash 
     });
 
     if (user && user.is_admin && user.password_hash) {
       const isPasswordValid = await bcrypt.compare(cleanPassword, user.password_hash);
+      console.log('🔐 Resultado validação senha:', { isPasswordValid });
+      
       if (isPasswordValid) {
         const { password_hash, ...result } = user;
+        console.log('✅ Login bem-sucedido!');
         return result;
       }
     }
 
+    console.log('❌ Login falhou');
     return null;
   }
 
   async login(loginDto: { username: string; password: string }) {
-    console.log('🚪 AuthService.login chamado com:', loginDto);
     const user = await this.validateUser(loginDto.username, loginDto.password);
     
     if (!user) {
-      console.log('❌ Usuário não validado, retornando UnauthorizedException');
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    console.log('✅ Usuário validado:', user);
     const payload = { 
       username: user.username || user.email || user.phone_number, 
       sub: user.id,
