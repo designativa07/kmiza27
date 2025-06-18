@@ -52,7 +52,8 @@ export class UploadCloudService {
 
   constructor(private configService: ConfigService) {
     // URLs baseadas na sua configuração do EasyPanel
-    this.baseUrl = 'https://cdn.kmiza27.com';
+    // Temporariamente usando URL direta enquanto configura CDN
+    this.baseUrl = 'https://console-kmiza27-minio.h4xd66.easypanel.host';
     this.bucketName = 'img';
   }
 
@@ -60,12 +61,12 @@ export class UploadCloudService {
     // Para usar com MinIO, você precisará das credenciais S3
     // Por enquanto, retornando a URL padrão do MinIO
     const filename = `escudo-${Date.now()}-${file.originalname}`;
-    return `${this.baseUrl}/escudos/${filename}`;
+    return `${this.baseUrl}/${this.bucketName}/escudos/${filename}`;
   }
 
   async uploadLogo(file: Express.Multer.File): Promise<string> {
     const filename = `logo-${Date.now()}-${file.originalname}`;
-    return `${this.baseUrl}/logo-competition/${filename}`;
+    return `${this.baseUrl}/${this.bucketName}/logo-competition/${filename}`;
   }
 
   async deleteEscudo(filename: string): Promise<boolean> {
@@ -75,11 +76,11 @@ export class UploadCloudService {
 
   // URLs para acessar as imagens
   getEscudoUrl(filename: string): string {
-    return `${this.baseUrl}/escudos/${filename}`;
+    return `${this.baseUrl}/${this.bucketName}/escudos/${filename}`;
   }
 
   getLogoUrl(filename: string): string {
-    return `${this.baseUrl}/logo-competition/${filename}`;
+    return `${this.baseUrl}/${this.bucketName}/logo-competition/${filename}`;
   }
 
   // Métodos utilitários
