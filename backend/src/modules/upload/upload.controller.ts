@@ -24,17 +24,18 @@ export class UploadController {
   @Get('config')
   getUploadConfig() {
     return {
-      minioUrl: this.uploadCloudService.getBaseUrl(),
+      cdnUrl: this.uploadCloudService.getCdnUrl(),
+      minioUrl: this.uploadCloudService.getMinioUrl(),
       bucketName: this.uploadCloudService.getBucketName(),
-      escudosUrl: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/escudos/`,
-      logosUrl: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/`,
+      escudosUrl: `${this.uploadCloudService.getCdnUrl()}/${this.uploadCloudService.getBucketName()}/escudos/`,
+      logosUrl: `${this.uploadCloudService.getCdnUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/`,
       instructions: {
-        escudos: 'Para escudos de times, faça upload para a pasta "escudos" no bucket img',
-        logos: 'Para logos de competições, faça upload para a pasta "logo-competition" no bucket img',
-        access: 'As imagens devem ser públicas para serem acessadas via MinIO',
+        escudos: 'Para escudos de times, faça upload para a pasta "escudos" no bucket img via MinIO',
+        logos: 'Para logos de competições, faça upload para a pasta "logo-competition" no bucket img via MinIO',
+        access: 'As imagens são servidas automaticamente via CDN cdn.kmiza27.com',
         example: {
-          escudo: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/escudos/botafogo.svg`,
-          logo: `${this.uploadCloudService.getBaseUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/copa-brasil.png`
+          escudo: `${this.uploadCloudService.getCdnUrl()}/${this.uploadCloudService.getBucketName()}/escudos/botafogo.svg`,
+          logo: `${this.uploadCloudService.getCdnUrl()}/${this.uploadCloudService.getBucketName()}/logo-competition/copa-brasil.png`
         }
       }
     };

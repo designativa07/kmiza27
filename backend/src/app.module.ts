@@ -47,6 +47,8 @@ import { StadiumsModule } from './modules/stadiums/stadiums.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PlayersModule } from './modules/players/players.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { CdnTransformInterceptor } from './interceptors/cdn-transform.interceptor';
 
 @Module({
   imports: [
@@ -78,6 +80,12 @@ import { PlayersModule } from './modules/players/players.module';
     CompetitionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CdnTransformInterceptor,
+    },
+  ],
 })
 export class AppModule {}
