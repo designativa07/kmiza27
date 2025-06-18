@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt } from 'lucide-react';
-import { getTeamLogoUrl, getPlayerImageUrl, handleImageError } from '@/lib/cdn';
+import { getTeamLogoUrl, getPlayerImageUrl } from '@/lib/cdn';
 
 // Tipos (poderiam ser movidos para @/types)
 interface Player {
@@ -58,7 +58,6 @@ const PlayerCard = ({ item }: { item: PlayerHistory }) => {
             src={getPlayerImageUrl(player.image_url)} 
             alt={player.name} 
             className="h-full w-full object-cover"
-            onError={(e) => handleImageError(e, '/default-player-photo.svg')}
           />
         ) : (
           <User className="h-16 w-16 text-gray-400" />
@@ -92,7 +91,6 @@ export default async function TeamPage({ params }: Props) {
             src={getTeamLogoUrl(team.logo_url)} 
             alt={`${team.name} logo`} 
             className="h-24 w-24 object-contain"
-            onError={(e) => handleImageError(e, '/default-team-logo.svg')}
           />
         ) : (
           <Shield className="h-24 w-24 text-gray-300" />

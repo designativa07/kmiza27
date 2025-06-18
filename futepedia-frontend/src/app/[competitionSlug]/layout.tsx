@@ -1,9 +1,10 @@
 import { ChevronLeft, Home } from 'lucide-react';
 import Link from 'next/link';
-import { notFound, usePathname } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
 import { NavLinks } from '@/components/NavLinks';
 import ClientOnly from '@/components/ClientOnly';
+import { getCdnImageUrl } from '@/lib/cdn-simple';
 
 interface Competition {
   id: number;
@@ -57,10 +58,18 @@ export default async function CompetitionLayout({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {competition.logo_url && (
-                <img src={competition.logo_url} alt={`${competition.name} logo`} className="h-12 w-12 object-contain" />
+                <img 
+                  src={getCdnImageUrl(competition.logo_url, 'competition')}
+                  alt={`${competition.name} logo`}
+                  className="h-12 w-12 object-contain"
+                />
               )}
               <div>
-                <ClientOnly fallback={<div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>}>
+                <ClientOnly fallback={
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span>Todos os Campeonatos</span>
+                  </div>
+                }>
                   <CompetitionSwitcher currentCompetitionName={competition.name} />
                 </ClientOnly>
                 <h1 className="text-2xl font-bold text-gray-900 mt-1">{competition.name}</h1>
