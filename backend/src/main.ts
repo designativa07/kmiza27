@@ -6,8 +6,8 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
-  // Configurar prefixo global para API
-  app.setGlobalPrefix('api');
+  // Prefixo global removido - usando domínio api.kmiza27.com
+  // app.setGlobalPrefix('api');
   
   // Configurar CORS para permitir acesso do frontend e Easypanel
   app.enableCors({
@@ -32,7 +32,7 @@ async function bootstrap() {
   });
   
   // ✅ CORREÇÃO UTF-8: Configurar middleware JSON com charset UTF-8 para suportar acentos
-  app.use('/api/chatbot/webhook', (req, res, next) => {
+  app.use('/chatbot/webhook', (req, res, next) => {
     // Garantir que o Content-Type seja interpretado como UTF-8
     if (req.headers['content-type'] && !req.headers['content-type'].includes('charset')) {
       req.headers['content-type'] = 'application/json; charset=utf-8';
@@ -64,12 +64,12 @@ async function bootstrap() {
   console.log(`🚪 Port: ${port}`);
   console.log('🔧 CORS Fix: 2025-05-26T03:20:00Z - Frontend URL updated');
   console.log('✅ UTF-8 Fix: 2025-05-26T04:00:00Z - Chatbot webhook with charset UTF-8');
-  console.log('🔗 API Prefix: /api - All routes will be prefixed with /api');
+  console.log('🔗 API Prefix: REMOVED - Using api.kmiza27.com domain instead');
   
   await app.listen(port, host);
   
   console.log(`✅ Application is running on: http://${host}:${port}`);
-  console.log(`🔗 Health check: http://${host}:${port}/api/health`);
-  console.log(`📊 Standings API: http://${host}:${port}/api/standings/slug/{slug}`);
+  console.log(`🔗 Health check: http://${host}:${port}/health`);
+  console.log(`📊 Standings API: http://${host}:${port}/standings/slug/{slug}`);
 }
 bootstrap();
