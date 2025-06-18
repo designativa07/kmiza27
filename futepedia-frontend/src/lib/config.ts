@@ -1,15 +1,15 @@
 // Configuração centralizada da API
 export const API_CONFIG = {
   // URL base da API
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   
   // Timeout para requisições (em ms)
   timeout: 10000,
   
   // URLs de fallback para desenvolvimento
   fallbackURLs: [
-    'http://localhost:3000/api',
-    'http://127.0.0.1:3000/api',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
   ],
   
   // Verificar se estamos em produção
@@ -23,7 +23,7 @@ export const API_CONFIG = {
 export function getApiUrl(): string {
   // Se estivermos no servidor durante o build, usar localhost
   if (!API_CONFIG.isClient && !API_CONFIG.isProduction) {
-    return 'http://localhost:3000/api';
+    return 'http://localhost:3000';
   }
   
   return API_CONFIG.baseURL;
