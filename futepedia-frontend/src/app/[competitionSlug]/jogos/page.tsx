@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { NextPage } from 'next';
-import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn';
 
 // Interfaces
 interface Competition {
@@ -93,7 +93,6 @@ const MatchesPage: NextPage<Props> = async ({ params }) => {
                     src={getTeamLogoUrl(match.home_team.logo_url)} 
                     alt={match.home_team.name} 
                     className="h-10 w-10 object-contain"
-                    onError={(e) => handleImageError(e, '/default-team-logo.svg')}
                   />
                 </div>
                 {/* Placar */}
@@ -110,7 +109,6 @@ const MatchesPage: NextPage<Props> = async ({ params }) => {
                     src={getTeamLogoUrl(match.away_team.logo_url)} 
                     alt={match.away_team.name} 
                     className="h-10 w-10 object-contain"
-                    onError={(e) => handleImageError(e, '/default-team-logo.svg')}
                   />
                   <span className="hidden md:inline font-semibold">{match.away_team.name}</span>
                 </div>

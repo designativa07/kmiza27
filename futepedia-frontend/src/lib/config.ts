@@ -21,11 +21,17 @@ export const API_CONFIG = {
 
 // Função para obter a URL da API com fallback
 export function getApiUrl(): string {
-  // Se estivermos no servidor durante o build, usar localhost
-  if (!API_CONFIG.isClient && !API_CONFIG.isProduction) {
+  // Em produção, sempre usar a URL pública
+  if (API_CONFIG.isProduction) {
+    return process.env.NEXT_PUBLIC_API_URL || 'https://api.kmiza27.com';
+  }
+  
+  // Em desenvolvimento no servidor (SSR), usar localhost
+  if (!API_CONFIG.isClient) {
     return 'http://localhost:3000';
   }
   
+  // No cliente, usar a URL configurada
   return API_CONFIG.baseURL;
 }
 
