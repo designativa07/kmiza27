@@ -5,7 +5,7 @@ async function debugTeamVariations() {
     console.log('🔍 Debugando variações de nomes de times...');
     
     // Buscar todos os times
-    const teamsResponse = await fetch('https://kmizabot.h4xd66.easypanel.host/teams');
+    const teamsResponse = await fetch('https://api.kmiza27.com/api/teams');
     const teams = await teamsResponse.json();
     
     console.log('📊 Total de times:', teams.length);

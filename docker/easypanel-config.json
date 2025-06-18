@@ -6,13 +6,13 @@
       "backend": {
         "name": "kmizabot",
         "dockerfile": "Dockerfile.backend",
-        "url": "https://kmizabot.h4xd66.easypanel.host",
+        "url": "https://api.kmiza27.com",
         "health_endpoint": "/health"
       },
       "frontend": {
         "name": "kmizafrontend",
         "dockerfile": "Dockerfile.frontend",
-        "url": "https://kmizafrontend.h4xd66.easypanel.host",
+        "url": "https://admin.kmiza27.com",
         "health_endpoint": "/api/health"
       }
     }

@@ -29,7 +29,7 @@ export default function StatusCard({ onNavigate }: StatusCardProps) {
   const [services, setServices] = useState<ServiceStatus[]>([
     {
       name: 'Backend API',
-      url: 'https://kmizabot.h4xd66.easypanel.host/health',
+      url: 'https://api.kmiza27.com/api/health',
       status: 'loading'
     },
     {
