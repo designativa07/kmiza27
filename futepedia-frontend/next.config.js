@@ -3,6 +3,9 @@ const nextConfig = {
   // Habilita standalone output para Docker
   output: 'standalone',
   
+  // Configurações para servir assets estáticos corretamente
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  
   // Otimizações de produção
   experimental: {
     serverComponentsExternalPackages: [],
@@ -12,6 +15,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  
+  // Configurações adicionais para produção
+  poweredByHeader: false,
+  compress: true,
 };
 
 module.exports = nextConfig; 
