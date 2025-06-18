@@ -29,7 +29,7 @@ export default function StatusCard({ onNavigate }: StatusCardProps) {
   const [services, setServices] = useState<ServiceStatus[]>([
     {
       name: 'Backend API',
-      url: 'https://api.kmiza27.com/api/health',
+      url: 'https://api.kmiza27.com/health',
       status: 'loading'
     },
     {
@@ -48,9 +48,8 @@ export default function StatusCard({ onNavigate }: StatusCardProps) {
       const response = await fetch(service.url, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       
       const responseTime = Date.now() - startTime;

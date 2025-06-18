@@ -5,7 +5,7 @@ async function debugExtractTeam() {
     console.log('🔍 Debugando extractTeamName...');
     
     // Buscar todos os times para simular o teamNames
-    const teamsResponse = await fetch('https://api.kmiza27.com/api/teams');
+    const teamsResponse = await fetch('https://api.kmiza27.com/teams');
     const teams = await teamsResponse.json();
     
     // Simular a lógica do loadTeamNames()

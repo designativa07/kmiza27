@@ -17,7 +17,7 @@ async function testPlayerSearch() {
       
       // Simular a busca como no ChatbotService
       const encodedQuery = encodeURIComponent(query);
-      const url = `https://api.kmiza27.com/api/players?search=${encodedQuery}`;
+      const url = `https://api.kmiza27.com/players?search=${encodedQuery}`;
       
       console.log(`📡 URL: ${url}`);
       

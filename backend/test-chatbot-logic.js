@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-const baseUrl = 'https://api.kmiza27.com/api';
+const baseUrl = 'https://api.kmiza27.com';
 
 async function testMessage(message) {
   console.log(`\n🔍 Testando: "${message}"`);
