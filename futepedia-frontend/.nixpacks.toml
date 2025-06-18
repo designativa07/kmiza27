@@ -1,16 +1,18 @@
-[phases.install]
-cmds = ['npm ci']
+# Configuração específica para Nixpacks
+[providers]
+nodejs = "18"
 
-[phases.build]
-cmds = ['npm run build']
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build] 
+cmds = ["npm run build"]
 
 [start]
-cmd = 'npm run start'
+cmd = "npm run start"
 
 [variables]
-NODE_ENV = 'production'
-PORT = '3003'
-HOSTNAME = '0.0.0.0'
-
-[buildArgs]
-NEXT_PUBLIC_API_URL = 'https://api.kmiza27.com' 
+NODE_ENV = "production"
+PORT = "3003"
+HOSTNAME = "0.0.0.0"
+NEXT_TELEMETRY_DISABLED = "1" 
