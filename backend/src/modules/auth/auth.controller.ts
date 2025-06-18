@@ -78,34 +78,4 @@ export class AuthController {
       };
     }
   }
-
-  @Post('create-emergency-admin')
-  async createEmergencyAdmin() {
-    try {
-      // Criar um usuário admin de emergência
-      const adminData = {
-        name: 'Admin Emergency',
-        email: 'admin@kmiza27.com',
-        password: 'kmiza27admin'
-      };
-      
-      const user = await this.authService.createAdminUser(adminData);
-      const { password_hash, ...userWithoutPassword } = user;
-      
-      return {
-        success: true,
-        message: 'Usuário admin de emergência criado com sucesso',
-        user: userWithoutPassword,
-        credentials: {
-          username: 'admin@kmiza27.com',
-          password: 'kmiza27admin'
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Erro ao criar usuário de emergência: ' + error.message
-      };
-    }
-  }
 } 

@@ -44,19 +44,50 @@ export class UploadCloudService {
 }
 */
 
-// Implementação simples para desenvolvimento local
+// Configuração para MinIO (S3-compatible) do EasyPanel
 @Injectable()
 export class UploadCloudService {
-  constructor(private configService: ConfigService) {}
+  private readonly baseUrl: string;
+  private readonly bucketName: string;
+
+  constructor(private configService: ConfigService) {
+    // URLs baseadas na sua configuração do EasyPanel
+    this.baseUrl = 'https://cdn.kmiza27.com';
+    this.bucketName = 'img';
+  }
 
   async uploadEscudo(file: Express.Multer.File): Promise<string> {
-    // Por enquanto, retorna o caminho local
-    // Substitua por implementação de nuvem quando necessário
-    return `/uploads/escudos/${file.filename}`;
+    // Para usar com MinIO, você precisará das credenciais S3
+    // Por enquanto, retornando a URL padrão do MinIO
+    const filename = `escudo-${Date.now()}-${file.originalname}`;
+    return `${this.baseUrl}/escudos/${filename}`;
+  }
+
+  async uploadLogo(file: Express.Multer.File): Promise<string> {
+    const filename = `logo-${Date.now()}-${file.originalname}`;
+    return `${this.baseUrl}/logo-competition/${filename}`;
   }
 
   async deleteEscudo(filename: string): Promise<boolean> {
-    // Implementar lógica de deleção em nuvem
+    // Implementar lógica de deleção via API S3
     return true;
+  }
+
+  // URLs para acessar as imagens
+  getEscudoUrl(filename: string): string {
+    return `${this.baseUrl}/escudos/${filename}`;
+  }
+
+  getLogoUrl(filename: string): string {
+    return `${this.baseUrl}/logo-competition/${filename}`;
+  }
+
+  // Métodos utilitários
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  getBucketName(): string {
+    return this.bucketName;
   }
 } 

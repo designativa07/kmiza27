@@ -19,8 +19,6 @@ export class AuthService {
     const cleanUsername = username?.toString().trim();
     const cleanPassword = password?.toString().trim();
     
-    console.log('🔍 Tentativa de login:', { cleanUsername, cleanPassword });
-    
     // Buscar usuário no banco de dados
     const user = await this.userRepository.findOne({
       where: [
@@ -30,29 +28,15 @@ export class AuthService {
       ]
     });
 
-    console.log('👤 Usuário encontrado:', { 
-      found: !!user, 
-      id: user?.id,
-      name: user?.name,
-      email: user?.email,
-      phone: user?.phone_number,
-      isAdmin: user?.is_admin,
-      isActive: user?.is_active,
-      hasPassword: !!user?.password_hash 
-    });
-
     if (user && user.is_admin && user.password_hash) {
       const isPasswordValid = await bcrypt.compare(cleanPassword, user.password_hash);
-      console.log('🔐 Resultado validação senha:', { isPasswordValid });
       
       if (isPasswordValid) {
         const { password_hash, ...result } = user;
-        console.log('✅ Login bem-sucedido!');
         return result;
       }
     }
 
-    console.log('❌ Login falhou');
     return null;
   }
 

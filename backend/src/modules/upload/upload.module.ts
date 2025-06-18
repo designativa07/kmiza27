@@ -4,6 +4,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
+import { UploadCloudService } from './upload-cloud.service';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { UploadService } from './upload.service';
     }),
   ],
   controllers: [UploadController],
-  providers: [UploadService],
-  exports: [UploadService],
+  providers: [UploadService, UploadCloudService],
+  exports: [UploadService, UploadCloudService],
 })
 export class UploadModule {} 
