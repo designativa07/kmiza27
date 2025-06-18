@@ -48,7 +48,7 @@ jobs:
         
         # Verificar backend
         echo "🔧 Testando backend..."
-        BACKEND_RESPONSE=$(curl -s -f https://kmizabot.h4xd66.easypanel.host/health || echo '{"commit":"error","status":"offline"}')
+        BACKEND_RESPONSE=$(curl -s -f https://api.kmiza27.com/api/health || echo '{"commit":"error","status":"offline"}')
         echo "Backend response: $BACKEND_RESPONSE"
         
         # Verificar se é JSON válido antes de usar jq
@@ -62,7 +62,7 @@ jobs:
         
         # Verificar frontend (URL corrigida)
         echo "🎨 Testando frontend..."
-        FRONTEND_RESPONSE=$(curl -s -f https://kmizafront.h4xd66.easypanel.host/api/health || echo '{"commit":"error","status":"offline"}')
+        FRONTEND_RESPONSE=$(curl -s -f https://admin.kmiza27.com/api/health || echo '{"commit":"error","status":"offline"}')
         echo "Frontend response: $FRONTEND_RESPONSE"
         
         # Verificar se é JSON válido antes de usar jq
@@ -95,6 +95,6 @@ jobs:
         echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit:** ${{ steps.commit.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Timestamp:** ${{ steps.commit.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Backend URL:** https://kmizabot.h4xd66.easypanel.host/health" >> $GITHUB_STEP_SUMMARY
-        echo "- **Frontend URL:** https://kmizafront.h4xd66.easypanel.host/api/health" >> $GITHUB_STEP_SUMMARY
-        echo "- **Status Dashboard:** https://kmizafront.h4xd66.easypanel.host" >> $GITHUB_STEP_SUMMARY 
+        echo "- **Backend URL:** https://api.kmiza27.com/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Frontend URL:** https://admin.kmiza27.com/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status Dashboard:** https://admin.kmiza27.com" >> $GITHUB_STEP_SUMMARY 

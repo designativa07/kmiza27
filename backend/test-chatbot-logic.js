@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-const baseUrl = 'https://kmizabot.h4xd66.easypanel.host';
+const baseUrl = 'https://api.kmiza27.com/api';
 
 async function testMessage(message) {
   console.log(`\n🔍 Testando: "${message}"`);
