@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
+import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
 
 interface Player {
   id: number;
@@ -65,7 +66,12 @@ export const TopScorersTable = ({ topScorers }: TopScorersTableProps) => {
               <td className="px-4 py-3 whitespace-nowrap">
                 <div className="flex items-center">
                   {scorer.team.logo_url ? (
-                    <img className="h-6 w-6 rounded-full object-contain mr-3" src={scorer.team.logo_url} alt={scorer.team.name} />
+                    <img 
+                      className="h-6 w-6 rounded-full object-contain mr-3" 
+                      src={getTeamLogoUrl(scorer.team.logo_url)} 
+                      alt={scorer.team.name}
+                      onError={(e) => handleImageError(e, '/default-team-logo.svg')}
+                    />
                   ) : (
                     <ShieldCheck className="h-6 w-6 text-gray-300 mr-3" />
                   )}

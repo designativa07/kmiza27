@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt } from 'lucide-react';
+import { getTeamLogoUrl, getPlayerImageUrl, handleImageError } from '@/lib/cdn';
 
 // Tipos (poderiam ser movidos para @/types)
 interface Player {
@@ -53,7 +54,12 @@ const PlayerCard = ({ item }: { item: PlayerHistory }) => {
     <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col">
       <div className="bg-gray-100 h-32 flex items-center justify-center relative">
         {player.image_url ? (
-          <img src={player.image_url} alt={player.name} className="h-full w-full object-cover" />
+          <img 
+            src={getPlayerImageUrl(player.image_url)} 
+            alt={player.name} 
+            className="h-full w-full object-cover"
+            onError={(e) => handleImageError(e, '/default-player-photo.svg')}
+          />
         ) : (
           <User className="h-16 w-16 text-gray-400" />
         )}
@@ -82,7 +88,12 @@ export default async function TeamPage({ params }: Props) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-white p-6 rounded-lg shadow-lg mb-8">
         {team.logo_url ? (
-          <img src={team.logo_url} alt={`${team.name} logo`} className="h-24 w-24 object-contain" />
+          <img 
+            src={getTeamLogoUrl(team.logo_url)} 
+            alt={`${team.name} logo`} 
+            className="h-24 w-24 object-contain"
+            onError={(e) => handleImageError(e, '/default-team-logo.svg')}
+          />
         ) : (
           <Shield className="h-24 w-24 text-gray-300" />
         )}
