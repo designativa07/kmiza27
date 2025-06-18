@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import { getTeamLogoUrl, handleImageError } from '@/lib/cdn';
+import { getCdnImageUrl } from '@/lib/cdn-simple';
 
 interface Player {
   id: number;
@@ -68,9 +68,8 @@ export const TopScorersTable = ({ topScorers }: TopScorersTableProps) => {
                   {scorer.team.logo_url ? (
                     <img 
                       className="h-6 w-6 rounded-full object-contain mr-3" 
-                      src={getTeamLogoUrl(scorer.team.logo_url)} 
+                      src={getCdnImageUrl(scorer.team.logo_url, 'team')} 
                       alt={scorer.team.name}
-                      onError={(e) => handleImageError(e, '/default-team-logo.svg')}
                     />
                   ) : (
                     <ShieldCheck className="h-6 w-6 text-gray-300 mr-3" />
