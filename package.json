@@ -26,7 +26,7 @@
     "format": "cd backend && prettier --write \"src/**/*.ts\"",
     "status": "node scripts/utils/check-system-status.js",
     "status:watch": "node scripts/utils/check-system-status.js --watch",
-    "status:backend": "curl -s https://api.kmiza27.com/api/health | jq .",
+    "status:backend": "curl -s https://api.kmiza27.com/health | jq .",
     "status:frontend": "curl -s https://admin.kmiza27.com/api/health | jq .",
     "deploy": "bash scripts/deploy/deploy.sh",
     "deploy:win": "cmd.exe /c scripts\\deploy\\deploy.bat",

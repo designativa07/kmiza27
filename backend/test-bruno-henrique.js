@@ -5,7 +5,7 @@ async function testBrunoHenrique() {
     console.log('🔍 Testando busca por Bruno Henrique...');
     
     // Buscar todos os jogadores
-    const playersResponse = await fetch('https://api.kmiza27.com/api/players');
+    const playersResponse = await fetch('https://api.kmiza27.com/players');
     const players = await playersResponse.json();
     
     console.log('📊 Total de jogadores na base:', players.length);

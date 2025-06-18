@@ -48,7 +48,7 @@ jobs:
         
         # Verificar backend
         echo "🔧 Testando backend..."
-        BACKEND_RESPONSE=$(curl -s -f https://api.kmiza27.com/api/health || echo '{"commit":"error","status":"offline"}')
+        BACKEND_RESPONSE=$(curl -s -f https://api.kmiza27.com/health || echo '{"commit":"error","status":"offline"}')
         echo "Backend response: $BACKEND_RESPONSE"
         
         # Verificar se é JSON válido antes de usar jq
@@ -95,6 +95,6 @@ jobs:
         echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit:** ${{ steps.commit.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Timestamp:** ${{ steps.commit.outputs.timestamp }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Backend URL:** https://api.kmiza27.com/api/health" >> $GITHUB_STEP_SUMMARY
+        echo "- **Backend URL:** https://api.kmiza27.com/health" >> $GITHUB_STEP_SUMMARY
         echo "- **Frontend URL:** https://admin.kmiza27.com/api/health" >> $GITHUB_STEP_SUMMARY
         echo "- **Status Dashboard:** https://admin.kmiza27.com" >> $GITHUB_STEP_SUMMARY 

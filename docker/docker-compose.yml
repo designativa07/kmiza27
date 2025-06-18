@@ -48,7 +48,7 @@ services:
       - NODE_ENV=production
       - PORT=3002
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_URL=https://api.kmiza27.com/api
+      - NEXT_PUBLIC_API_URL=https://api.kmiza27.com
       - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
       - GIT_COMMIT=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
     depends_on:
