@@ -195,54 +195,187 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
       return acc;
     }, {} as Record<string, typeof standings>);
 
+    // Agrupar partidas por grupo também
+    const groupedMatches = initialMatches.reduce((acc, match) => {
+      const groupName = match.group_name || 'Geral';
+      if (!acc[groupName]) {
+        acc[groupName] = [];
+      }
+      acc[groupName].push(match);
+      return acc;
+    }, {} as Record<string, Match[]>);
+
     const hasGroups = Object.keys(groupedStandings).length > 1;
 
     console.log('✅ Página de classificação renderizada com sucesso');
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna da Tabela de Classificação (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
-          {standings.length > 0 ? (
-            Object.entries(groupedStandings).map(([groupName, groupStandings]) => (
-              <div key={groupName}>
-                {hasGroups && (
-                  <h2 className="text-xl font-bold text-gray-800 mb-3">{groupName}</h2>
-                )}
-                <StandingsTable standings={groupStandings} />
-              </div>
-            ))
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg text-center py-16">
-              <h3 className="text-xl font-medium text-gray-900">Tabela Indisponível</h3>
-              <p className="mt-2 text-md text-gray-500">
-                Ainda não há dados de classificação para este campeonato.
-              </p>
-            </div>
-          )}
-        </div>
+      <div className="space-y-6">
+        {standings.length > 0 ? (
+          hasGroups ? (
+            // Layout para competições com grupos: cada grupo com sua classificação e jogos lado a lado
+            <div className="space-y-8">
+              {Object.entries(groupedStandings).map(([groupName, groupStandings]) => {
+                const groupMatches = groupedMatches[groupName === 'Classificação Geral' ? 'Geral' : groupName] || [];
+                
+                return (
+                  <div key={groupName} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                    {/* Cabeçalho do Grupo */}
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4">
+                      <h2 className="text-xl font-bold">{groupName}</h2>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
+                      {/* Classificação do Grupo (2/3) */}
+                      <div className="xl:col-span-2">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Classificação</h3>
+                        <StandingsTable standings={groupStandings} />
+                      </div>
+                      
+                      {/* Jogos do Grupo (1/3) */}
+                      <div className="xl:col-span-1">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                          {initialRoundName} - {groupName === 'Classificação Geral' ? 'Partidas' : groupName}
+                        </h3>
+                        {groupMatches.length > 0 ? (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="space-y-4">
+                              {groupMatches.map((match) => (
+                                <div key={match.id} className="bg-white rounded-lg p-3 shadow-sm">
+                                  {/* Linha principal: Times e Placar/Horário */}
+                                  <div className="grid grid-cols-3 items-center gap-2 mb-2">
+                                    {/* Time da Casa */}
+                                    <div className="flex items-center justify-end space-x-2">
+                                      <span className="text-xs font-semibold text-gray-700 text-right truncate">{match.home_team.name}</span>
+                                      <img 
+                                        src={`https://cdn.kmiza27.com/img/escudos/${match.home_team.logo_url || 'default.svg'}`}
+                                        alt={match.home_team.name} 
+                                        className="h-6 w-6 object-contain flex-shrink-0"
+                                      />
+                                    </div>
 
-        {/* Coluna das Partidas da Rodada (1/3) */}
-        <div className="lg:col-span-1">
-          <ClientOnly fallback={
-            <div className="bg-white rounded-lg shadow-lg p-4">
-              <div className="h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
-                ))}
+                                    {/* Placar/Horário e X */}
+                                    <div className="text-center">
+                                      {(match.status === 'FINISHED' || match.status === 'finished') ? (
+                                        <div>
+                                          <div className="text-lg font-bold text-gray-900 mb-1">
+                                            <span>{match.home_score}</span>
+                                            <span className="mx-1 text-gray-400">×</span>
+                                            <span>{match.away_score}</span>
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            <div>{match.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                                            <div>{match.match_date ? new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <div className="text-lg font-bold text-gray-400 mb-1">×</div>
+                                          <div className="text-xs text-gray-500">
+                                            <div>{match.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                                            <div>{match.match_date ? new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Time Visitante */}
+                                    <div className="flex items-center space-x-2">
+                                      <img 
+                                        src={`https://cdn.kmiza27.com/img/escudos/${match.away_team.logo_url || 'default.svg'}`}
+                                        alt={match.away_team.name} 
+                                        className="h-6 w-6 object-contain flex-shrink-0"
+                                      />
+                                      <span className="text-xs font-semibold text-gray-700 truncate">{match.away_team.name}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Informações adicionais compactas */}
+                                  {(match.stadium || match.broadcast_channels) && (
+                                    <div className="text-xs text-gray-500 text-center space-y-1">
+                                      {match.stadium && (
+                                        <div className="truncate">{match.stadium.name}</div>
+                                      )}
+                                      {match.broadcast_channels && (
+                                        <div className="truncate">
+                                          {Array.isArray(match.broadcast_channels) 
+                                            ? match.broadcast_channels.join(', ')
+                                            : match.broadcast_channels
+                                          }
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                            Nenhuma partida nesta rodada
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Navegador de rodadas para este grupo */}
+                    <div className="border-t border-gray-200 px-6 py-4">
+                      <ClientOnly fallback={
+                        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                      }>
+                        <RoundNavigator 
+                          initialRounds={rounds}
+                          competitionId={competitionId}
+                          initialMatches={groupMatches}
+                          initialRoundId={initialRoundId}
+                          initialRoundName={initialRoundName}
+                          groupFilter={groupName === 'Classificação Geral' ? undefined : groupName}
+                        />
+                      </ClientOnly>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            // Layout para competições sem grupos: layout tradicional
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Coluna da Tabela de Classificação (2/3) */}
+              <div className="lg:col-span-2 space-y-6">
+                <StandingsTable standings={standings} />
+              </div>
+
+              {/* Coluna das Partidas da Rodada (1/3) */}
+              <div className="lg:col-span-1">
+                <ClientOnly fallback={
+                  <div className="bg-white rounded-lg shadow-lg p-4">
+                    <div className="h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+                      ))}
+                    </div>
+                  </div>
+                }>
+                  <RoundNavigator 
+                    initialRounds={rounds}
+                    competitionId={competitionId}
+                    initialMatches={initialMatches}
+                    initialRoundId={initialRoundId}
+                    initialRoundName={initialRoundName}
+                  />
+                </ClientOnly>
               </div>
             </div>
-          }>
-            <RoundNavigator 
-              initialRounds={rounds}
-              competitionId={competitionId}
-              initialMatches={initialMatches}
-              initialRoundId={initialRoundId}
-              initialRoundName={initialRoundName}
-            />
-          </ClientOnly>
-        </div>
+          )
+        ) : (
+          <div className="bg-white rounded-lg shadow-lg text-center py-16">
+            <h3 className="text-xl font-medium text-gray-900">Tabela Indisponível</h3>
+            <p className="mt-2 text-md text-gray-500">
+              Ainda não há dados de classificação para este campeonato.
+            </p>
+          </div>
+        )}
       </div>
     );
   } catch (error) {

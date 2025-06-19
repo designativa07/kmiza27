@@ -18,11 +18,12 @@ interface RoundNavigatorProps {
   initialMatches: Match[];
   initialRoundId: number | null;
   initialRoundName: string;
+  groupFilter?: string; // Novo parâmetro para filtrar por grupo
 }
 
 // Removido: agora usamos apiRequest da configuração centralizada
 
-export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName }: RoundNavigatorProps) {
+export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName, groupFilter }: RoundNavigatorProps) {
   const [rounds, setRounds] = useState(initialRounds);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(() => {
     if (!initialRounds || initialRounds.length === 0) {
@@ -58,7 +59,17 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
       try {
         const res = await apiRequest(`/standings/competition/${competitionId}/round/${roundId}/matches`);
         const data = await res.json();
-        setMatches(data);
+        
+        // Filtrar partidas por grupo se especificado
+        const filteredMatches = groupFilter 
+          ? data.filter((match: Match) => {
+              const matchGroup = match.group_name || 'Geral';
+              const targetGroup = groupFilter === 'Classificação Geral' ? 'Geral' : groupFilter;
+              return matchGroup === targetGroup;
+            })
+          : data;
+        
+        setMatches(filteredMatches);
       } catch (error) {
         console.error("Failed to fetch matches for round:", error);
         setMatches([]);
@@ -69,7 +80,7 @@ export function RoundNavigator({ initialRounds, competitionId, initialMatches, i
     
     // Buscar partidas sempre que o índice da rodada mudar
     fetchMatches();
-  }, [currentRoundIndex, rounds, competitionId]);
+  }, [currentRoundIndex, rounds, competitionId, groupFilter]);
 
   const handlePrevRound = () => {
     if (currentRoundIndex > 0) {
