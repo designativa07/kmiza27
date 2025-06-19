@@ -1,7 +1,7 @@
 const https = require('https');
 
 const data = JSON.stringify({
-  url: "http://localhost:3000/chatbot/webhook",
+  url: "https://api.kmiza27.com/chatbot/webhook",
   enabled: true,
   events: ["MESSAGES_UPSERT"]
 });

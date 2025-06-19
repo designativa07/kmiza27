@@ -3,9 +3,9 @@ const https = require('https');
 // Detectar ambiente automaticamente
 const isProduction = process.env.NODE_ENV === 'production';
 
-// URLs do projeto kmiza27-chatbot
+// URLs do projeto kmiza27-chatbot - ATUALIZADAS PARA O NOVO DOMÍNIO
 const WEBHOOK_URL = isProduction 
-  ? process.env.PRODUCTION_URL || "https://kmiza27-backend.hostinger.com"
+  ? process.env.PRODUCTION_URL || "https://api.kmiza27.com"
   : "https://9d24-189-85-172-62.ngrok-free.app"; // URL atual do ngrok para desenvolvimento
 
 const data = JSON.stringify({
