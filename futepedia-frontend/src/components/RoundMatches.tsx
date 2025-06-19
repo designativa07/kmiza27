@@ -6,107 +6,139 @@ import Link from 'next/link';
 import { parseISO, format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateInput: any) => {
   try {
-    if (!dateString) {
-      console.warn('formatDate: dateString vazio ou null:', dateString);
+    if (!dateInput) {
       return 'Data não informada';
     }
     
-    console.log('formatDate: Formatando data:', dateString, 'Tipo:', typeof dateString);
+    let dateString: string;
+    
+    // Se é um objeto Date JavaScript, usar diretamente
+    if (dateInput instanceof Date) {
+      const result = format(dateInput, 'dd/MM', { locale: ptBR });
+      return result;
+    }
+    
+    // Se é um objeto, tentar extrair a data
+    if (typeof dateInput === 'object' && dateInput !== null) {
+      // Verificar se tem propriedades de data comuns
+      if (dateInput.date) {
+        dateString = dateInput.date;
+      } else if (dateInput.datetime) {
+        dateString = dateInput.datetime;
+      } else if (dateInput.timestamp) {
+        dateString = dateInput.timestamp;
+      } else if (dateInput.value) {
+        dateString = dateInput.value;
+      } else {
+        console.error('formatDate: Objeto sem propriedades de data conhecidas:', Object.keys(dateInput));
+        return 'Data não informada';
+      }
+    } else if (typeof dateInput === 'string') {
+      dateString = dateInput;
+    } else {
+      console.error('formatDate: Tipo de input não suportado:', typeof dateInput, dateInput);
+      return 'Data não informada';
+    }
+    
+    if (!dateString || typeof dateString !== 'string') {
+      return 'Data não informada';
+    }
     
     // Tentar diferentes formatos de data
     let date;
     
-    // Primeiro tentar parseISO (formato ISO padrão)
     try {
       date = parseISO(dateString);
       if (!isValid(date)) {
         throw new Error('Data inválida com parseISO');
       }
-      console.log('formatDate: Sucesso com parseISO:', date);
     } catch (parseISOError) {
-      console.log('formatDate: parseISO falhou:', parseISOError);
-      // Se falhar, tentar como Date normal
       try {
         date = new Date(dateString);
         if (!isValid(date)) {
           throw new Error('Data inválida com new Date');
         }
-        console.log('formatDate: Sucesso com new Date:', date);
       } catch (newDateError) {
-        console.log('formatDate: new Date falhou:', newDateError);
         throw newDateError;
       }
     }
     
-    const result = format(date, 'dd/MM', { locale: ptBR });
-    console.log('formatDate: Resultado final:', result);
-    return result;
+    return format(date, 'dd/MM', { locale: ptBR });
   } catch (error) {
-    console.error('formatDate: Erro final ao formatar data:', error, 'String original:', dateString);
+    console.error('Erro ao formatar data:', error, 'Input:', dateInput);
     return 'Data não informada';
   }
 };
 
-const formatTime = (dateString: string) => {
+const formatTime = (dateInput: any) => {
   try {
-    if (!dateString) {
-      console.warn('formatTime: dateString vazio ou null:', dateString);
+    if (!dateInput) {
       return 'Hora não informada';
     }
     
-    console.log('formatTime: Formatando hora:', dateString, 'Tipo:', typeof dateString);
+    let dateString: string;
+    
+    // Se é um objeto Date JavaScript, usar diretamente
+    if (dateInput instanceof Date) {
+      const result = format(dateInput, 'HH:mm', { locale: ptBR });
+      return result;
+    }
+    
+    // Se é um objeto, tentar extrair a data
+    if (typeof dateInput === 'object' && dateInput !== null) {
+      // Verificar se tem propriedades de data comuns
+      if (dateInput.date) {
+        dateString = dateInput.date;
+      } else if (dateInput.datetime) {
+        dateString = dateInput.datetime;
+      } else if (dateInput.timestamp) {
+        dateString = dateInput.timestamp;
+      } else if (dateInput.value) {
+        dateString = dateInput.value;
+      } else {
+        console.error('formatTime: Objeto sem propriedades de data conhecidas:', Object.keys(dateInput));
+        return 'Hora não informada';
+      }
+    } else if (typeof dateInput === 'string') {
+      dateString = dateInput;
+    } else {
+      console.error('formatTime: Tipo de input não suportado:', typeof dateInput, dateInput);
+      return 'Hora não informada';
+    }
+    
+    if (!dateString || typeof dateString !== 'string') {
+      return 'Hora não informada';
+    }
     
     // Tentar diferentes formatos de data
     let date;
     
-    // Primeiro tentar parseISO (formato ISO padrão)
     try {
       date = parseISO(dateString);
       if (!isValid(date)) {
         throw new Error('Data inválida com parseISO');
       }
-      console.log('formatTime: Sucesso com parseISO:', date);
     } catch (parseISOError) {
-      console.log('formatTime: parseISO falhou:', parseISOError);
-      // Se falhar, tentar como Date normal
       try {
         date = new Date(dateString);
         if (!isValid(date)) {
           throw new Error('Data inválida com new Date');
         }
-        console.log('formatTime: Sucesso com new Date:', date);
       } catch (newDateError) {
-        console.log('formatTime: new Date falhou:', newDateError);
         throw newDateError;
       }
     }
     
-    const result = format(date, 'HH:mm', { locale: ptBR });
-    console.log('formatTime: Resultado final:', result);
-    return result;
+    return format(date, 'HH:mm', { locale: ptBR });
   } catch (error) {
-    console.error('formatTime: Erro final ao formatar hora:', error, 'String original:', dateString);
+    console.error('Erro ao formatar hora:', error, 'Input:', dateInput);
     return 'Hora não informada';
   }
 };
 
 export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matches: Match[], roundName: string, hideTitle?: boolean }) => {
-  // Debug: Log dos dados recebidos
-  console.log('RoundMatches: Dados recebidos:', {
-    roundName,
-    matchesCount: matches?.length || 0,
-    firstMatch: matches?.[0] ? {
-      id: matches[0].id,
-      match_date: matches[0].match_date,
-      match_date_type: typeof matches[0].match_date,
-      home_team: matches[0].home_team?.name,
-      away_team: matches[0].away_team?.name,
-      status: matches[0].status
-    } : null
-  });
-
   if (!matches || matches.length === 0) {
     return (
       <div className="bg-white rounded-lg p-6">

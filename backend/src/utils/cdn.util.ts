@@ -91,6 +91,11 @@ export function transformImageUrlsInResponse(data: any): any {
   }
 
   if (typeof data === 'object') {
+    // Se é uma instância de Date, retornar como está
+    if (data instanceof Date) {
+      return data;
+    }
+
     const transformed = { ...data };
 
     // Converter logo_url de times
