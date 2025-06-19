@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Shield, ArrowRight } from 'lucide-react';
-import { getCdnImageUrl } from '@/lib/cdn-simple';
+import { getCdnImageUrl, getCompetitionLogoUrl } from '@/lib/cdn-simple';
+import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
 
 // 1. Definir a interface para o tipo Competition
 interface Competition {
@@ -50,7 +51,7 @@ export default async function Home() {
                   <div className="flex items-center space-x-4 mb-4">
                     {competition.logo_url ? (
                       <img 
-                        src={getCdnImageUrl(competition.logo_url, 'competition')}
+                        src={getCompetitionLogoUrl(competition.logo_url)}
                         alt={`${competition.name} logo`}
                         className="h-10 w-10 object-contain"
                       />
