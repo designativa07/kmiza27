@@ -374,30 +374,28 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         <div className="mb-4">
           {/* Navegação mesmo sem partidas - adapta ao tipo de competição */}
           {isPointsCompetition ? (
-            <div className="mb-4 bg-gray-50 rounded-lg p-4">
+            <div className="mb-4 bg-gray-50 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <button 
                   onClick={goToPreviousGroupRound}
                   disabled={groupRound <= 1}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center justify-center w-8 h-8 bg-gray-500 text-white rounded-full hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  <span>Rodada Anterior</span>
                 </button>
                 
                 <div className="text-center">
-                  <h2 className="text-xl font-bold text-gray-800">{getCurrentRoundName()}</h2>
-                  <p className="text-sm text-gray-500">Rodada {groupRound} de {totalRounds}</p>
+                  <h2 className="text-lg font-bold text-gray-800">{getCurrentRoundName()}</h2>
+                  <p className="text-xs text-gray-500">Rodada {groupRound} de {totalRounds}</p>
                 </div>
                 
                 <button 
                   onClick={goToNextGroupRound}
                   disabled={groupRound >= totalRounds}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center justify-center w-8 h-8 bg-gray-500 text-white rounded-full hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <span>Próxima Rodada</span>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -409,7 +407,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
               <button 
                 onClick={goToPreviousGroupRound}
                 disabled={groupRound <= 1}
-                className="flex items-center space-x-1 px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-6 h-6 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -425,7 +423,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
               <button 
                 onClick={goToNextGroupRound}
                 disabled={groupRound >= totalRounds}
-                className="flex items-center space-x-1 px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-6 h-6 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -445,30 +443,28 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
       <div className="mb-4">
         {/* Navegação maior para pontos corridos, pequena para grupos */}
         {isPointsCompetition ? (
-          <div className="mb-4 bg-gray-50 rounded-lg p-4">
+          <div className="mb-4 bg-gray-50 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <button 
                 onClick={goToPreviousGroupRound}
                 disabled={groupRound <= 1}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>Rodada Anterior</span>
               </button>
               
               <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-800">{getCurrentRoundName()}</h2>
-                <p className="text-sm text-gray-500">Rodada {groupRound} de {totalRounds}</p>
+                <h2 className="text-lg font-bold text-gray-800">{getCurrentRoundName()}</h2>
+                <p className="text-xs text-gray-500">Rodada {groupRound} de {totalRounds}</p>
               </div>
               
               <button 
                 onClick={goToNextGroupRound}
                 disabled={groupRound >= totalRounds}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <span>Próxima Rodada</span>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -480,7 +476,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             <button 
               onClick={goToPreviousGroupRound}
               disabled={groupRound <= 1}
-              className="flex items-center space-x-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center w-6 h-6 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -496,7 +492,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             <button 
               onClick={goToNextGroupRound}
               disabled={groupRound >= totalRounds}
-              className="flex items-center space-x-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center w-6 h-6 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
