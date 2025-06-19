@@ -40,23 +40,33 @@
   - `src/entities`: Contém as definições de entidades do TypeORM, que mapeiam para as tabelas do banco de dados.
   - `src/config`: Armazena configurações da aplicação.
   - `src/main.ts`: Ponto de entrada da aplicação NestJS.
+  - `src/utils/cdn.util.ts`: Utilitários para conversão automática de URLs para CDN.
+  - `src/interceptors/cdn-transform.interceptor.ts`: Interceptador global que converte URLs de imagem nas respostas da API.
 - **Autenticação e Autorização:** A autenticação é baseada em JSON Web Tokens (JWT). O serviço `AuthService` (`src/modules/auth/auth.service.ts`) gerencia a validação de usuários e a geração de tokens. A autorização é implementada através de guards do NestJS em rotas protegidas.
-- **Integrações de Terceiros:**
-  - **Não há evidências de integração com AWS S3.** O `UploadService` (`src/modules/upload/upload.service.ts`) gerencia o upload de arquivos para o sistema de arquivos local (`./uploads/escudos`).
+- **CDN e Upload de Arquivos:**
+  - **CDN Oficial:** `https://cdn.kmiza27.com` - Todas as URLs de imagem são automaticamente convertidas para CDN via interceptador global.
+  - **MinIO Storage:** Integração com MinIO (S3-compatible) hospedado no EasyPanel para armazenamento de arquivos.
+  - **Upload Service:** `src/modules/upload/upload-cloud.service.ts` gerencia URLs do CDN e MinIO.
+  - **Conversão Automática:** Interceptador global converte URLs antigas (`/uploads/escudos/`) para CDN (`https://cdn.kmiza27.com/img/escudos/`).
 - **Testes:** Utiliza-se Jest para testes unitários e de integração. Os scripts de teste estão definidos no `package.json` do backend.
 
 ## 3. Frontend - Painel Administrativo (`/frontend`)
 - **Finalidade:** Interface para administradores gerenciarem todos os aspectos do sistema (times, jogadores, campeonatos, notificações, etc.).
 - **Tecnologias Principais:**
   - **Framework:** Next.js (com App Router)
+  - **Linguagem:** TypeScript
+  - **UI:** React, Tailwind CSS
 - **Estrutura de Diretórios Crítica:**
   - `src/app`: Estrutura de roteamento principal usando o App Router do Next.js.
   - `src/components`: Componentes React reutilizáveis.
   - `src/services`: Contém a lógica de comunicação com a API do backend (e.g., `authService.ts`).
   - `src/hooks`: Hooks customizados do React.
   - `src/contexts`: Provedores de Contexto React para gerenciamento de estado.
+  - `src/lib/cdn.ts`: Utilitários para gerenciar URLs do CDN de imagens no painel admin.
+  - `src/config/api.ts`: Configuração da API com helper para URLs de imagens via CDN.
 - **Gerenciamento de Estado:** A inferência aponta para o uso de React Context API (`src/contexts`) e possivelmente hooks customizados para o gerenciamento de estado local e global.
 - **Comunicação com API:** A comunicação é feita através da biblioteca `axios`. Um serviço (`src/services/authService.ts`) encapsula as chamadas para a API do backend, e um interceptor injeta o token JWT no cabeçalho `Authorization`.
+- **CDN Integration:** Integração completa com CDN `https://cdn.kmiza27.com` para otimização de imagens. Inclui funções utilitárias para conversão automática de URLs e fallbacks para imagens não encontradas.
 
 ## 4. Frontend - Futepédia (`/futepedia-frontend`)
 - **Finalidade:** Interface pública para que os usuários possam visualizar informações de campeonatos, como tabelas de classificação e listas de jogos.
@@ -67,13 +77,33 @@
 - **Estrutura de Diretórios Crítica:**
   - `src/app`: Estrutura de roteamento principal, incluindo rotas dinâmicas como `[competitionSlug]/classificacao`.
   - `src/app/[competitionSlug]/layout.tsx`: Layout compartilhado para páginas de uma mesma competição.
+  - `src/lib/cdn-simple.ts`: Biblioteca simplificada para gerenciar URLs do CDN, compatível com SSR.
+  - `src/lib/cdn.ts`: Utilitários completos do CDN com funções específicas para diferentes tipos de imagem.
 - **Renderização:** Primarily Server-Side Rendering (SSR) para garantir que os dados mais recentes sejam sempre exibidos e para otimização de SEO.
+- **CDN Integration:** Integração completa com CDN `https://cdn.kmiza27.com`. Inclui conversão automática de URLs antigas, fallbacks para imagens não encontradas, e compatibilidade total com SSR.
 
 ## 5. Banco de Dados
 - **Tipo:** PostgreSQL, conforme definido em `backend/src/data-source.ts`.
 - **Schema/ORM:** O schema é gerenciado pelo TypeORM. As definições das entidades estão localizadas em `backend/src/entities` e as migrações em `backend/src/migrations`.
 
-## 6. Como Executar o Projeto
+## 6. CDN e Gerenciamento de Arquivos
+- **CDN Oficial:** `https://cdn.kmiza27.com`
+- **Storage Backend:** MinIO (S3-compatible) hospedado no EasyPanel
+- **Estrutura de Diretórios no CDN:**
+  ```
+  cdn.kmiza27.com/
+  ├── img/
+  │   ├── escudos/           # Escudos dos times
+  │   ├── logo-competition/  # Logos das competições
+  │   └── players/           # Fotos dos jogadores (futuro)
+  ```
+- **Conversão Automática de URLs:**
+  - `/uploads/escudos/botafogo.svg` → `https://cdn.kmiza27.com/img/escudos/botafogo.svg`
+  - `/img/escudos/flamengo.png` → `https://cdn.kmiza27.com/img/escudos/flamengo.png`
+- **Fallbacks:** Sistema automático de fallback para imagens não encontradas
+- **Compatibilidade SSR:** Todas as funções CDN são compatíveis com Server-Side Rendering
+
+## 7. Como Executar o Projeto
 - **Geral (Todos os Serviços):**
   - `npm run dev` (executa backend, admin e futepédia simultaneamente)
 - **Serviços Individuais:**

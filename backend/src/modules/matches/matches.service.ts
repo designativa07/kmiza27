@@ -452,89 +452,168 @@ export class MatchesService {
     // Carregar a competição completa para verificar o tipo
     const competition = await this.competitionRepository.findOne({ where: { id: match.competition.id } });
     if (!competition || (competition.type !== 'mata_mata' && competition.type !== 'grupos_e_mata_mata' && competition.type !== 'copa')) {
-        console.log('Não é uma competição de mata-mata, ignorando cálculo de placar agregado.');
+        console.log('ℹ️ Não é uma competição de mata-mata ou copa, ignorando cálculo de placar agregado/classificado.');
         return;
     }
 
-    let qualifiedTeamId: number | null = null; // Declarar aqui para abranger todos os casos
+    let qualifiedTeamId: number | null = null;
 
     // Se for um jogo único, o time classificado é o vencedor do jogo
     if (match.leg === MatchLeg.SINGLE_MATCH) {
+        console.log('🔍 _handleMatchOutcome - Tipo de jogo: Único.');
         if (match.home_score !== null && match.away_score !== null) {
+            console.log(`🔍 _handleMatchOutcome - Placar do jogo único: ${match.home_score}x${match.away_score}`);
             if (match.home_score > match.away_score) {
-                qualifiedTeamId = match.home_team.id as number | null;
+                qualifiedTeamId = match.home_team?.id || null;
             } else if (match.away_score > match.home_score) {
-                qualifiedTeamId = match.away_team.id as number | null;
+                qualifiedTeamId = match.away_team?.id || null;
             }
             // Se houver empate em jogo único, mas tiver pênaltis, verifica os pênaltis
             else if (match.home_score_penalties !== null && match.away_score_penalties !== null) {
+                console.log(`🔍 _handleMatchOutcome - Placar pênaltis: ${match.home_score_penalties}x${match.away_score_penalties}`);
                 if (match.home_score_penalties > match.away_score_penalties) {
-                    qualifiedTeamId = match.home_team.id as number | null;
+                    qualifiedTeamId = match.home_team?.id || null;
                 } else if (match.away_score_penalties > match.home_score_penalties) {
-                    qualifiedTeamId = match.away_team.id as number | null;
+                    qualifiedTeamId = match.away_team?.id || null;
                 }
             }
         }
         if (qualifiedTeamId !== null) {
             match.qualified_team_id = qualifiedTeamId;
             await this.matchRepository.save(match);
-            console.log(`Time classificado para jogo único ${match.id}: ${qualifiedTeamId}`);
+            console.log(`✅ Time classificado para jogo único ${match.id}: ${qualifiedTeamId}`);
+        } else {
+            console.log(`⚠️ Jogo único ${match.id} empatado sem vencedor definido (sem pênaltis ou placar nulo).`);
+            // Se for um empate e não houver pênaltis, qualifiedTeamId permanece null
+            match.qualified_team_id = null; // Garante que é null se não houver vencedor
+            await this.matchRepository.save(match);
         }
         return;
     }
 
-    // Para jogos de ida e volta
+    // Para jogos de ida e volta (FIRST_LEG ou SECOND_LEG)
+    console.log('🔍 _handleMatchOutcome - Tipo de jogo: Ida/Volta.');
     if (!match.tie_id) {
-        console.log('Partida de ida/volta sem tie_id. Não é possível calcular o placar agregado.');
+        console.log('⚠️ Partida de ida/volta sem tie_id. Não é possível calcular o placar agregado.');
         return;
     }
 
-    // Buscar todas as partidas que fazem parte deste confronto
+    console.log(`🔍 _handleMatchOutcome - Buscando partidas para o confronto (tie_id: ${match.tie_id})...`);
     const tieMatches = await this.matchRepository.find({
         where: { tie_id: match.tie_id },
-        relations: ['home_team', 'away_team'],
+        relations: ['home_team', 'away_team'], // Certificar que times são carregados
         order: { match_date: 'ASC' }
     });
+    console.log(`🔍 _handleMatchOutcome - Partidas do confronto encontradas (${tieMatches.length}):`, tieMatches.map(m => ({ id: m.id, leg: m.leg, status: m.status, home_score: m.home_score, away_score: m.away_score, home_team_id: m.home_team?.id, away_team_id: m.away_team?.id })));
+
 
     if (tieMatches.length !== 2) {
-        console.log(`Confronto ${match.tie_id} não possui 2 partidas. Não é possível calcular o placar agregado.`);
+        console.log(`⚠️ Confronto ${match.tie_id} não possui 2 partidas (encontrado ${tieMatches.length}). Não é possível calcular o placar agregado.`);
         return;
     }
 
     const firstLeg = tieMatches.find(m => m.leg === MatchLeg.FIRST_LEG);
     const secondLeg = tieMatches.find(m => m.leg === MatchLeg.SECOND_LEG);
 
-    if (!firstLeg || !secondLeg || firstLeg.status !== MatchStatus.FINISHED || secondLeg.status !== MatchStatus.FINISHED) {
-        console.log(`Ambas as partidas do confronto ${match.tie_id} precisam estar finalizadas para calcular o placar agregado.`);
+    if (!firstLeg || !secondLeg) {
+        console.log(`⚠️ Uma ou ambas as partidas de ida/volta do confronto ${match.tie_id} não foram encontradas. Não é possível calcular o placar agregado.`);
+        return;
+    }
+
+    console.log('🔍 _handleMatchOutcome - Detalhes First Leg:', firstLeg ? { id: firstLeg.id, status: firstLeg.status, home_score: firstLeg.home_score, away_score: firstLeg.away_score, home_team: firstLeg.home_team?.name, away_team: firstLeg.away_team?.name } : 'Nulo');
+    console.log('🔍 _handleMatchOutcome - Detalhes Second Leg:', secondLeg ? { id: secondLeg.id, status: secondLeg.status, home_score: secondLeg.home_score, away_score: secondLeg.away_score, home_team: secondLeg.home_team?.name, away_team: secondLeg.away_team?.name } : 'Nulo');
+
+
+    if (firstLeg.status !== MatchStatus.FINISHED || secondLeg.status !== MatchStatus.FINISHED) {
+        console.log(`⚠️ Ambas as partidas do confronto ${match.tie_id} precisam estar FINALIZADAS para calcular o placar agregado. Status da Ida: ${firstLeg.status}, Status da Volta: ${secondLeg.status}`);
         return;
     }
 
     // Calcular placar agregado
-    const homeAggregate = (firstLeg.home_score || 0) + (secondLeg.home_score || 0);
-    const awayAggregate = (firstLeg.away_score || 0) + (secondLeg.away_score || 0);
-    
-    if (homeAggregate > awayAggregate) {
-        qualifiedTeamId = match.home_team.id as number | null; // Assume que home_team é o mesmo em ambos os jogos do confronto
-    } else if (awayAggregate > homeAggregate) {
-        qualifiedTeamId = match.away_team.id as number | null; // Assume que away_team é o mesmo em ambos os jogos do confronto
+    // Precisamos identificar qual time é qual no confronto. Usamos o time da casa da primeira partida como 'Time A'
+    // e o time visitante da primeira partida como 'Time B'.
+
+    const teamAId = firstLeg.home_team?.id;
+    const teamBId = firstLeg.away_team?.id;
+
+    let teamAScore = 0;
+    let teamBScore = 0;
+    let teamAAwayGoals = 0; // Gols do Time A quando jogou fora de casa
+    let teamBAwayGoals = 0; // Gols do Time B quando jogou fora de casa
+
+    // Adicionar placares do primeiro jogo
+    if (firstLeg.home_team?.id === teamAId) { // Time A foi mandante na ida
+        teamAScore += firstLeg.home_score || 0;
+        teamBScore += firstLeg.away_score || 0;
+        teamBAwayGoals += firstLeg.away_score || 0; // Gols do Time B fora de casa (na ida)
+    } else { // Time B foi mandante na ida (cenário improvável se firstLeg.home_team é o time A)
+        // Isso não deve acontecer se firstLeg é o jogo de ida e o home_team do firstLeg é o teamAId
+        console.error("Lógica inconsistente: firstLeg.home_team.id não corresponde ao teamAId.");
+        return;
+    }
+
+    // Adicionar placares do segundo jogo
+    if (secondLeg.home_team?.id === teamAId) { // Time A foi mandante na volta
+        teamAScore += secondLeg.home_score || 0;
+        teamBScore += secondLeg.away_score || 0;
+        teamBAwayGoals += secondLeg.away_score || 0; // Gols do Time B fora de casa (na volta)
+    } else if (secondLeg.home_team?.id === teamBId) { // Time B foi mandante na volta
+        teamBScore += secondLeg.home_score || 0;
+        teamAScore += secondLeg.away_score || 0;
+        teamAAwayGoals += secondLeg.away_score || 0; // Gols do Time A fora de casa (na volta)
     } else {
-        // Caso de empate no placar agregado, verificar pênaltis se aplicável no segundo jogo
-        if (secondLeg.home_score_penalties !== null && secondLeg.away_score_penalties !== null) {
-            if (secondLeg.home_score_penalties > secondLeg.away_score_penalties) {
-                qualifiedTeamId = match.home_team.id as number | null;
-            } else if (secondLeg.away_score_penalties > secondLeg.home_score_penalties) {
-                qualifiedTeamId = match.away_team.id as number | null;
-            }
+        console.error("Erro na identificação dos times na segunda partida.");
+        return;
+    }
+
+    console.log(`🔍 _handleMatchOutcome - Placar Agregado (${firstLeg.home_team?.name} vs ${firstLeg.away_team?.name}):`);
+    console.log(`   ${firstLeg.home_team?.name} (Total): ${teamAScore}`);
+    console.log(`   ${firstLeg.away_team?.name} (Total): ${teamBScore}`);
+    console.log(`   ${firstLeg.home_team?.name} (Gols Fora): ${teamAAwayGoals}`);
+    console.log(`   ${firstLeg.away_team?.name} (Gols Fora): ${teamBAwayGoals}`);
+
+    if (teamAScore > teamBScore) {
+        qualifiedTeamId = teamAId;
+    } else if (teamBScore > teamAScore) {
+        qualifiedTeamId = teamBId;
+    } else {
+        // Empate no placar agregado, aplica regra de gol fora
+        if (teamAAwayGoals > teamBAwayGoals) {
+            qualifiedTeamId = teamAId;
+        } else if (teamBAwayGoals > teamAAwayGoals) {
+            qualifiedTeamId = teamBId;
         } else {
-          console.log(`Confronto ${match.tie_id} empatado sem informação de pênaltis. Não é possível determinar o classificado.`);
-          return;
+            // Empate no placar agregado e gols fora, verifica pênaltis no segundo jogo
+            if (secondLeg.home_score_penalties !== null && secondLeg.away_score_penalties !== null) {
+                console.log(`🔍 _handleMatchOutcome - Placar pênaltis agregado: ${secondLeg.home_score_penalties}x${secondLeg.away_score_penalties}`);
+                // Determinar qual time venceu nos pênaltis baseado no segundo jogo
+                if (secondLeg.home_team?.id === teamAId) { // Time A foi mandante na volta
+                    if (secondLeg.home_score_penalties > secondLeg.away_score_penalties) {
+                        qualifiedTeamId = teamAId;
+                    } else if (secondLeg.away_score_penalties > secondLeg.home_score_penalties) {
+                        qualifiedTeamId = teamBId;
+                    }
+                } else if (secondLeg.home_team?.id === teamBId) { // Time B foi mandante na volta
+                    if (secondLeg.home_score_penalties > secondLeg.away_score_penalties) {
+                        qualifiedTeamId = teamBId;
+                    } else if (secondLeg.away_score_penalties > secondLeg.home_score_penalties) {
+                        qualifiedTeamId = teamAId;
+                    }
+                }
+            } else {
+              console.log(`⚠️ Confronto ${match.tie_id} empatado sem informação de pênaltis. Não é possível determinar o classificado.`);
+              // qualifiedTeamId permanece null se não houver desempate
+            }
         }
     }
 
     // Atualizar ambas as partidas do confronto
     for (const tm of tieMatches) {
-        tm.home_aggregate_score = homeAggregate;
-        tm.away_aggregate_score = awayAggregate;
+        // Atualizar placares agregados e classificado para ambas as partidas
+        // O placar agregado deve ser o mesmo para ambos os jogos do confronto
+        tm.home_aggregate_score = teamAScore; // Score do time A (home no primeiro jogo)
+        tm.away_aggregate_score = teamBScore; // Score do time B (away no primeiro jogo)
+        
         if (qualifiedTeamId !== null) {
           tm.qualified_team_id = qualifiedTeamId;
         } else {
@@ -542,7 +621,7 @@ export class MatchesService {
         }
     }
     await this.matchRepository.save(tieMatches);
-    console.log(`Placar agregado e classificado atualizados para o confronto ${match.tie_id}. Classificado: ${qualifiedTeamId}`);
+    console.log(`✅ Placar agregado e classificado atualizados para o confronto ${match.tie_id}. Classificado: ${qualifiedTeamId}`);
   }
 
   async getTopScorers(): Promise<any[]> {

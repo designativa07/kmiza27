@@ -1,6 +1,6 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
-import { imageUrl } from '../config/api';
+import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn';
 
 interface Team {
   id: number;
@@ -96,9 +96,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ player, onClose }) =>
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           <div className="flex-shrink-0">
             <img
-              src={player.image_url ? imageUrl(player.image_url) : '/placeholder-player.png'}
+              src={player.image_url ? getPlayerImageUrl(player.image_url) : '/placeholder-player.png'}
               alt={player.name}
-              className="w-32 h-32 rounded-full object-cover border-2 border-gray-300"
+              className="h-20 w-20 rounded-full object-cover"
+              onError={handleImageError}
             />
           </div>
 
@@ -130,9 +131,12 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ player, onClose }) =>
                   .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
                   .map((history) => (
                     <li key={history.id} className="flex items-center space-x-2 bg-gray-100 p-3 rounded-lg">
-                      {history.team.logo_url && (
-                        <img src={imageUrl(history.team.logo_url)} alt={`${history.team.name} logo`} className="h-6 w-6 object-contain" />
-                      )}
+                      <img
+                        src={getTeamLogoUrl(history.team.logo_url)}
+                        alt={`${history.team.name} logo`}
+                        className="h-6 w-6 object-contain"
+                        onError={handleImageError}
+                      />
                       {!history.team.logo_url && (
                         <div className="h-6 w-6 flex items-center justify-center bg-gray-200 rounded text-xs font-semibold text-gray-600">
                           {history.team.short_name?.substring(0, 3) || ''}

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { API_ENDPOINTS } from '../config/api'
+import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { Combobox } from '@headlessui/react'
 import { format, isToday, parseISO, isPast } from 'date-fns'
 
@@ -996,13 +997,9 @@ export default function MatchesManager() {
     return (
       <img 
         className="h-6 w-6 rounded-md object-cover" 
-        src={imageUrl(team.logo_url)} 
+        src={getTeamLogoUrl(team.logo_url)} 
         alt={`Escudo ${team.name || 'Time'}`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          target.nextElementSibling?.classList.remove('hidden')
-        }}
+        onError={handleImageError}
       />
     )
   }

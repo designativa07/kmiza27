@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react'
-import { TrophyIcon } from '@heroicons/react/24/outline'
-import { imageUrl } from '../config/api'
+import { TrophyIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
+import { getPlayerImageUrl, handleImageError } from '../lib/cdn'
 
 interface Player {
   id: number
@@ -88,13 +89,9 @@ export default function TopScorersChart({ playerStats, maxPlayers = 10 }: TopSco
                     {stat.player.image_url ? (
                       <img 
                         className="h-8 w-8 rounded-full object-cover" 
-                        src={imageUrl(stat.player.image_url)} 
-                        alt={`Foto de ${stat.player.name}`}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          target.nextElementSibling?.classList.remove('hidden')
-                        }}
+                        src={getPlayerImageUrl(stat.player.image_url)}
+                        alt={stat.player.name}
+                        onError={handleImageError}
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
