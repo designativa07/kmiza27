@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { Combobox } from '@headlessui/react'
@@ -299,7 +299,8 @@ export default function MatchesManager() {
     round: '',
     group: '',
     phase: '',
-    status: ''
+    status: '',
+    searchTerm: '' // Adicionado searchTerm ao estado dos filtros
   })
 
   // Estados para rodadas e grupos dinâmicos baseados na competição
@@ -598,54 +599,38 @@ export default function MatchesManager() {
   }
 
   const applyFilters = () => {
-    console.log('🔍 Debug - Aplicando filtros:', filters)
-    console.log('🔍 Debug - Total de matches antes do filtro:', matches.length)
-    
     let filtered = [...matches]
 
     if (filters.competition) {
-      const beforeCount = filtered.length
       filtered = filtered.filter(match => match.competition?.id?.toString() === filters.competition)
-      console.log(`🔍 Debug - Filtro competição: ${beforeCount} -> ${filtered.length}`)
     }
 
     if (filters.round) {
-      const beforeCount = filtered.length
-      console.log('🔍 Debug - Filtro rodada aplicado:', filters.round)
-      
-      filtered = filtered.filter(match => 
-        match.round?.name === filters.round
-      )
-      console.log(`🔍 Debug - Filtro rodada: ${beforeCount} -> ${filtered.length}`)
+      filtered = filtered.filter(match => match.round?.id?.toString() === filters.round)
     }
 
     if (filters.group) {
-      const beforeCount = filtered.length
-      console.log('🔍 Debug - Filtro grupo aplicado:', filters.group)
-      
-      filtered = filtered.filter(match => 
-        match.group_name === filters.group
-      )
-      console.log(`🔍 Debug - Filtro grupo: ${beforeCount} -> ${filtered.length}`)
+      filtered = filtered.filter(match => match.group_name?.toLowerCase().includes(filters.group.toLowerCase()))
     }
 
     if (filters.phase) {
-      const beforeCount = filtered.length
-      filtered = filtered.filter(match => 
-        match.phase?.toLowerCase().includes(filters.phase.toLowerCase())
-      )
-      console.log(`🔍 Debug - Filtro fase: ${beforeCount} -> ${filtered.length}`)
+      filtered = filtered.filter(match => match.phase?.toLowerCase().includes(filters.phase.toLowerCase()))
     }
 
     if (filters.status) {
-      const beforeCount = filtered.length
-      filtered = filtered.filter(match => match.status === filters.status)
-      console.log(`🔍 Debug - Filtro status: ${beforeCount} -> ${filtered.length}`)
+      filtered = filtered.filter(match => match.status?.toLowerCase().includes(filters.status.toLowerCase()))
     }
 
-    console.log('🔍 Debug - Total de matches após todos os filtros:', filtered.length)
+    if (filters.searchTerm) {
+      filtered = filtered.filter(match => 
+        match.home_team?.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        match.away_team?.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        match.competition?.name.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      )
+    }
+
     setFilteredMatches(filtered)
-    setCurrentPage(1) // Reset para primeira página quando filtrar
+    // setCurrentPage(1) // REMOVIDO: A página só deve resetar quando um filtro é alterado diretamente
   }
 
   const applyPagination = () => {
@@ -668,11 +653,10 @@ export default function MatchesManager() {
       round: '',
       group: '',
       phase: '',
-      status: ''
-    })
-    setAvailableRoundsForFilter([])
-    setAvailableGroupsForFilter([])
-    isInitialLoad.current = true; // Resetar para que a auto-seleção ocorra no próximo carregamento
+      status: '',
+      searchTerm: ''
+    });
+    setCurrentPage(1); // Mantido: Ao limpar filtros, volta para a página 1
   }
 
   const getUniqueRounds = () => {

@@ -150,7 +150,6 @@ export default function TeamsManager() {
     }
 
     setFilteredTeams(filtered)
-    setCurrentPage(1)
   }
 
   const applyPagination = () => {
@@ -170,6 +169,7 @@ export default function TeamsManager() {
   const clearFilters = () => {
     setSearchTerm('')
     setStateFilter('')
+    setCurrentPage(1)
   }
 
   const getUniqueStates = () => {
@@ -603,13 +603,19 @@ export default function TeamsManager() {
             className="block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
             placeholder="Buscar times..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         <div>
           <select
             value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
+            onChange={(e) => {
+              setStateFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
           >
             <option value="">Todos os Estados</option>
