@@ -7,6 +7,66 @@ import { StandingsTable } from '@/components/StandingsTable';
 import { RoundNavigator } from '@/components/RoundNavigator';
 import ClientOnly from '@/components/ClientOnly';
 import { getApiUrl } from '@/lib/config';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
+import { parseISO, format, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+// Funções auxiliares para formatação
+const formatDate = (dateInput: any) => {
+  try {
+    if (!dateInput) return '';
+    
+    if (dateInput instanceof Date) {
+      return format(dateInput, 'dd/MM', { locale: ptBR });
+    }
+    
+    if (typeof dateInput === 'string') {
+      try {
+        const date = parseISO(dateInput);
+        if (isValid(date)) {
+          return format(date, 'dd/MM', { locale: ptBR });
+        }
+      } catch {
+        const date = new Date(dateInput);
+        if (isValid(date)) {
+          return format(date, 'dd/MM', { locale: ptBR });
+        }
+      }
+    }
+    
+    return '';
+  } catch {
+    return '';
+  }
+};
+
+const formatTime = (dateInput: any) => {
+  try {
+    if (!dateInput) return '';
+    
+    if (dateInput instanceof Date) {
+      return format(dateInput, 'HH:mm', { locale: ptBR });
+    }
+    
+    if (typeof dateInput === 'string') {
+      try {
+        const date = parseISO(dateInput);
+        if (isValid(date)) {
+          return format(date, 'HH:mm', { locale: ptBR });
+        }
+      } catch {
+        const date = new Date(dateInput);
+        if (isValid(date)) {
+          return format(date, 'HH:mm', { locale: ptBR });
+        }
+      }
+    }
+    
+    return '';
+  } catch {
+    return '';
+  }
+};
 
 // Tipos de dados
 interface Competition {
@@ -234,81 +294,107 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
                       
                       {/* Jogos do Grupo (1/3) */}
                       <div className="xl:col-span-1">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                          {initialRoundName} - {groupName === 'Classificação Geral' ? 'Partidas' : groupName}
-                        </h3>
+                        {/* Cabeçalho com navegação de rodadas */}
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {groupName === 'Classificação Geral' ? 'Partidas' : groupName}
+                          </h3>
+                        </div>
+                        
+                        {/* Navegação de rodadas compacta */}
+                        <div className="bg-gray-100 rounded-lg p-2 mb-4 flex items-center justify-between">
+                          <button 
+                            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={true}
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          <span className="text-sm font-medium text-gray-700">
+                            {initialRoundName}
+                          </span>
+                          <button 
+                            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={true}
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        {/* Jogos do grupo sem título adicional */}
                         {groupMatches.length > 0 ? (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="space-y-4">
-                              {groupMatches.map((match) => (
-                                <div key={match.id} className="bg-white rounded-lg p-3 shadow-sm">
-                                  {/* Linha principal: Times e Placar/Horário */}
-                                  <div className="grid grid-cols-3 items-center gap-2 mb-2">
-                                    {/* Time da Casa */}
-                                    <div className="flex items-center justify-end space-x-2">
-                                      <span className="text-xs font-semibold text-gray-700 text-right truncate">{match.home_team.name}</span>
-                                      <img 
-                                        src={`https://cdn.kmiza27.com/img/escudos/${match.home_team.logo_url || 'default.svg'}`}
-                                        alt={match.home_team.name} 
-                                        className="h-6 w-6 object-contain flex-shrink-0"
-                                      />
-                                    </div>
-
-                                    {/* Placar/Horário e X */}
-                                    <div className="text-center">
-                                      {(match.status === 'FINISHED' || match.status === 'finished') ? (
-                                        <div>
-                                          <div className="text-lg font-bold text-gray-900 mb-1">
-                                            <span>{match.home_score}</span>
-                                            <span className="mx-1 text-gray-400">×</span>
-                                            <span>{match.away_score}</span>
-                                          </div>
-                                          <div className="text-xs text-gray-500">
-                                            <div>{match.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}</div>
-                                            <div>{match.match_date ? new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div>
-                                          <div className="text-lg font-bold text-gray-400 mb-1">×</div>
-                                          <div className="text-xs text-gray-500">
-                                            <div>{match.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}</div>
-                                            <div>{match.match_date ? new Date(match.match_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Time Visitante */}
-                                    <div className="flex items-center space-x-2">
-                                      <img 
-                                        src={`https://cdn.kmiza27.com/img/escudos/${match.away_team.logo_url || 'default.svg'}`}
-                                        alt={match.away_team.name} 
-                                        className="h-6 w-6 object-contain flex-shrink-0"
-                                      />
-                                      <span className="text-xs font-semibold text-gray-700 truncate">{match.away_team.name}</span>
-                                    </div>
+                          <div className="space-y-3">
+                            {groupMatches.map((match) => (
+                              <div key={match.id} className="bg-white rounded-lg p-3 shadow-sm border">
+                                {/* Linha principal: Times e Placar/Horário */}
+                                <div className="grid grid-cols-3 items-center gap-2 mb-2">
+                                  {/* Time da Casa */}
+                                  <div className="flex items-center justify-end space-x-2">
+                                    <span className="text-xs font-semibold text-gray-700 text-right truncate">{match.home_team.name}</span>
+                                    <img 
+                                      src={getTeamLogoUrl(match.home_team.logo_url)}
+                                      alt={match.home_team.name} 
+                                      className="h-6 w-6 object-contain flex-shrink-0"
+                                    />
                                   </div>
 
-                                  {/* Informações adicionais compactas */}
-                                  {(match.stadium || match.broadcast_channels) && (
-                                    <div className="text-xs text-gray-500 text-center space-y-1">
-                                      {match.stadium && (
-                                        <div className="truncate">{match.stadium.name}</div>
-                                      )}
-                                      {match.broadcast_channels && (
-                                        <div className="truncate">
-                                          {Array.isArray(match.broadcast_channels) 
-                                            ? match.broadcast_channels.join(', ')
-                                            : match.broadcast_channels
-                                          }
+                                  {/* Placar/Horário e X */}
+                                  <div className="text-center">
+                                    {(match.status === 'FINISHED' || match.status === 'finished') ? (
+                                      <div>
+                                        <div className="text-lg font-bold text-gray-900 mb-1">
+                                          <span>{match.home_score}</span>
+                                          <span className="mx-1 text-gray-400">×</span>
+                                          <span>{match.away_score}</span>
                                         </div>
-                                      )}
-                                    </div>
-                                  )}
+                                        <div className="text-xs text-gray-500">
+                                          <div>{formatDate(match.match_date)}</div>
+                                          <div>{formatTime(match.match_date)}</div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <div className="text-lg font-bold text-gray-400 mb-1">×</div>
+                                        <div className="text-xs text-gray-500">
+                                          <div>{formatDate(match.match_date)}</div>
+                                          <div>{formatTime(match.match_date)}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Time Visitante */}
+                                  <div className="flex items-center space-x-2">
+                                    <img 
+                                      src={getTeamLogoUrl(match.away_team.logo_url)}
+                                      alt={match.away_team.name} 
+                                      className="h-6 w-6 object-contain flex-shrink-0"
+                                    />
+                                    <span className="text-xs font-semibold text-gray-700 truncate">{match.away_team.name}</span>
+                                  </div>
                                 </div>
-                              ))}
-                            </div>
+
+                                {/* Informações adicionais compactas */}
+                                {(match.stadium || match.broadcast_channels) && (
+                                  <div className="text-xs text-gray-500 text-center space-y-1">
+                                    {match.stadium && (
+                                      <div className="truncate">{match.stadium.name}</div>
+                                    )}
+                                    {match.broadcast_channels && (
+                                      <div className="truncate">
+                                        {Array.isArray(match.broadcast_channels) 
+                                          ? match.broadcast_channels.join(', ')
+                                          : match.broadcast_channels
+                                        }
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
@@ -316,22 +402,6 @@ const ClassificationPage: NextPage<Props> = async ({ params }) => {
                           </div>
                         )}
                       </div>
-                    </div>
-                    
-                    {/* Navegador de rodadas para este grupo */}
-                    <div className="border-t border-gray-200 px-6 py-4">
-                      <ClientOnly fallback={
-                        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-                      }>
-                        <RoundNavigator 
-                          initialRounds={rounds}
-                          competitionId={competitionId}
-                          initialMatches={groupMatches}
-                          initialRoundId={initialRoundId}
-                          initialRoundName={initialRoundName}
-                          groupFilter={groupName === 'Classificação Geral' ? undefined : groupName}
-                        />
-                      </ClientOnly>
                     </div>
                   </div>
                 );
