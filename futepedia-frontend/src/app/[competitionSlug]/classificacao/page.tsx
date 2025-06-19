@@ -111,9 +111,6 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
   const [rounds, setRounds] = useState<Round[]>([]);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number>(0);
-  
-  // Novo estado para controlar navegação de jogos por grupo
-  const [currentMatchIndexByGroup, setCurrentMatchIndexByGroup] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function loadData() {
@@ -268,7 +265,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     return round ? round.name : `${currentRound}ª Rodada`;
   };
 
-  // Funções para navegação de jogos por grupo
+  // Função para obter partidas do grupo na rodada atual
   const getGroupMatches = (groupName: string) => {
     return currentRoundMatches.filter(match => {
       if (groupName === 'Classificação Geral') {
@@ -282,84 +279,26 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     });
   };
 
-  const getCurrentMatchIndex = (groupName: string) => {
-    return currentMatchIndexByGroup[groupName] || 0;
-  };
-
-  const navigateGroupMatch = (groupName: string, direction: 'prev' | 'next') => {
+  // Componente simples de título para a seção de jogos
+  const GroupMatchHeader = ({ groupName }: { groupName: string }) => {
     const groupMatches = getGroupMatches(groupName);
-    const currentIndex = getCurrentMatchIndex(groupName);
-    
-    let newIndex = currentIndex;
-    if (direction === 'prev' && currentIndex > 0) {
-      newIndex = currentIndex - 1;
-    } else if (direction === 'next' && currentIndex < groupMatches.length - 1) {
-      newIndex = currentIndex + 1;
-    }
-    
-    setCurrentMatchIndexByGroup(prev => ({
-      ...prev,
-      [groupName]: newIndex
-    }));
-  };
-
-  // Componente de navegação para jogos do grupo
-  const GroupMatchNavigator = ({ groupName }: { groupName: string }) => {
-    const groupMatches = getGroupMatches(groupName);
-    const currentIndex = getCurrentMatchIndex(groupName);
-    const currentMatch = groupMatches[currentIndex];
     
     if (groupMatches.length === 0) {
       return (
-        <div className="text-center text-gray-500 text-sm">
+        <div className="text-center text-gray-500 text-sm mb-4">
           Nenhuma partida nesta rodada
         </div>
       );
     }
 
-    if (groupMatches.length === 1) {
-      // Se há apenas 1 jogo, mostrar apenas o título da rodada sem navegação
-      return (
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            RODADA {currentRound}
-          </h3>
-        </div>
-      );
-    }
-
     return (
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={() => navigateGroupMatch(groupName, 'prev')}
-            disabled={currentIndex <= 0}
-            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Anterior</span>
-          </button>
-          
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-800">
-              RODADA {currentRound}
-            </h3>
-            <p className="text-xs text-gray-500">Jogo {currentIndex + 1} de {groupMatches.length}</p>
-          </div>
-          
-          <button 
-            onClick={() => navigateGroupMatch(groupName, 'next')}
-            disabled={currentIndex >= groupMatches.length - 1}
-            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            <span>Próximo</span>
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">
+          RODADA {currentRound}
+        </h3>
+        <p className="text-xs text-gray-500">
+          {groupMatches.length} partida{groupMatches.length !== 1 ? 's' : ''}
+        </p>
       </div>
     );
   };
@@ -495,14 +434,9 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
                   
                   {/* Jogos do grupo (1/3 do espaço em XL) */}
                   <div className="xl:col-span-1">
-                    <GroupMatchNavigator groupName={groupName} />
+                    <GroupMatchHeader groupName={groupName} />
                     <RoundMatches 
-                      matches={(() => {
-                        const groupMatches = getGroupMatches(groupName);
-                        const currentIndex = getCurrentMatchIndex(groupName);
-                        const currentMatch = groupMatches[currentIndex];
-                        return currentMatch ? [currentMatch] : [];
-                      })()}
+                      matches={getGroupMatches(groupName)}
                       roundName={getCurrentRoundName()}
                       hideTitle={true}
                     />
@@ -525,14 +459,9 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             {/* Jogos da rodada atual */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <GroupMatchNavigator groupName="Classificação Geral" />
+                <GroupMatchHeader groupName="Classificação Geral" />
                 <RoundMatches 
-                  matches={(() => {
-                    const groupMatches = getGroupMatches('Classificação Geral');
-                    const currentIndex = getCurrentMatchIndex('Classificação Geral');
-                    const currentMatch = groupMatches[currentIndex];
-                    return currentMatch ? [currentMatch] : [];
-                  })()}
+                  matches={getGroupMatches('Classificação Geral')}
                   roundName={getCurrentRoundName()}
                   hideTitle={true}
                 />
