@@ -1,0 +1,124 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { TournamentBracket } from '@/components/TournamentBracket';
+import { Match } from '@/types/match';
+import { getApiUrl } from '@/lib/config';
+
+interface Competition {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  season: string;
+}
+
+export default function ChaveamentoPage({ params }: { params: { competitionSlug: string } }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [competition, setCompetition] = useState<Competition | null>(null);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const API_URL = getApiUrl();
+
+        // 1. Buscar informações da competição
+        const competitionResponse = await fetch(`${API_URL}/competitions/slug/${params.competitionSlug}`);
+        if (!competitionResponse.ok) {
+          throw new Error('Competição não encontrada');
+        }
+        const competitionData: Competition = await competitionResponse.json();
+        setCompetition(competitionData);
+
+        // 2. Buscar todas as partidas
+        try {
+          const matchesResponse = await fetch(`${API_URL}/matches/competition/${competitionData.id}`);
+          if (matchesResponse.ok) {
+            const matchesData: Match[] = await matchesResponse.json();
+            setAllMatches(matchesData);
+          }
+        } catch (err) {
+          console.warn('Erro ao carregar partidas:', err);
+        }
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [params.competitionSlug]);
+
+  // Detectar se é fase de mata-mata
+  const isKnockoutPhase = (phase: string) => {
+    const knockoutPhases = [
+      'Oitavas de Final', 'Oitavas', 
+      'Quartas de Final', 'Quartas',
+      'Semifinal', 'Semifinais',
+      'Final', 'Disputa do 3º lugar'
+    ];
+    return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
+  };
+
+  // Filtrar partidas de mata-mata
+  const knockoutMatches = allMatches.filter(match => 
+    match.phase && isKnockoutPhase(match.phase)
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600 text-center">
+          <h2 className="text-2xl font-bold mb-2">Erro ao carregar dados</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (knockoutMatches.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Chaveamento não disponível</h2>
+          <p className="text-gray-600">Esta competição ainda não possui fase de mata-mata ou o chaveamento ainda não foi definido.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Cabeçalho */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Chaveamento
+          </h1>
+          <p className="text-xl text-gray-600">
+            {competition?.name} - {competition?.season}
+          </p>
+        </div>
+
+        {/* Chaveamento */}
+        <TournamentBracket 
+          matches={knockoutMatches} 
+          competitionName={competition?.name}
+        />
+      </div>
+    </div>
+  );
+} 

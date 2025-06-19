@@ -1,11 +1,10 @@
-import type { NextPage } from 'next';
-import { ShieldCheck, ArrowDown, ArrowUp } from 'lucide-react';
-import { RoundMatches } from '@/components/RoundMatches';
-import { Match } from '@/types/match';
-import Link from 'next/link';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { StandingsTable } from '@/components/StandingsTable';
-import { RoundNavigator } from '@/components/RoundNavigator';
-import ClientOnly from '@/components/ClientOnly';
+import { RoundMatches } from '@/components/RoundMatches';
+import { TournamentBracket } from '@/components/TournamentBracket';
+import { Match } from '@/types/match';
 import { getApiUrl } from '@/lib/config';
 import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import { parseISO, format, isValid } from 'date-fns';
@@ -68,14 +67,14 @@ const formatTime = (dateInput: any) => {
   }
 };
 
-// Tipos de dados
+// Tipos
 interface Competition {
   id: number;
   name: string;
   slug: string;
-  goal_difference: number;
-  form?: string;
-  group_name?: string;
+  type: string;
+  season: string;
+  has_groups?: boolean;
 }
 
 interface Standing {
@@ -103,365 +102,229 @@ interface Round {
   round_number: number;
 }
 
-// Definir um tipo para as props da página
-type Props = {
-  params: { competitionSlug: string };
-};
+export default function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [competition, setCompetition] = useState<Competition | null>(null);
+  const [standings, setStandings] = useState<Standing[]>([]);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(1);
 
-async function getClassificationPageData(slug: string) {
-  const API_URL = getApiUrl();
-  
-  try {
-    console.log('🔍 Buscando dados da classificação para:', slug);
-    console.log('🌐 URL da API:', API_URL);
-    
-    // 1. Obter ID da competição
-    const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { 
-      next: { revalidate: 60 },
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-    
-    if (!competitionResponse.ok) {
-      console.error('❌ Erro ao buscar competição:', competitionResponse.status);
-      throw new Error(`Competição não encontrada: ${competitionResponse.status}`);
-    }
-    
-    const competition: { id: number; name: string } = await competitionResponse.json();
-    console.log('✅ Competição encontrada:', competition);
-    const competitionId = competition.id;
-
-    // 2. Fazer chamadas em paralelo com tratamento robusto
-    console.log('🔍 Buscando classificação e rodadas para competição ID:', competitionId);
-    
-    const [standingsResponse, roundsResponse, currentRoundResponse] = await Promise.all([
-      fetch(`${API_URL}/standings/competition/${competitionId}`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      }),
-      fetch(`${API_URL}/standings/competition/${competitionId}/rounds`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(err => {
-        console.warn('⚠️ Erro ao buscar rodadas:', err);
-        return { ok: false };
-      }),
-      fetch(`${API_URL}/standings/competition/${competitionId}/current-round`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(err => {
-        console.warn('⚠️ Erro ao buscar rodada atual:', err);
-        return { ok: false };
-      })
-    ]);
-
-    if (!standingsResponse.ok) {
-      console.error('❌ Erro ao buscar classificação:', standingsResponse.status);
-      throw new Error(`Tabela de classificação indisponível: ${standingsResponse.status}`);
-    }
-    
-    const standings: Standing[] = await standingsResponse.json();
-    console.log('✅ Classificação carregada:', standings.length, 'times');
-    
-    // Processar rodadas com tratamento robusto
-    let rounds: Round[] = [];
-    let currentRound: Round | null = null;
-    
-    if (roundsResponse.ok && 'json' in roundsResponse) {
+  useEffect(() => {
+    async function loadData() {
       try {
-        rounds = await roundsResponse.json();
-        console.log('✅ Rodadas carregadas:', rounds.length);
-      } catch (err) {
-        console.warn('⚠️ Erro ao processar rodadas:', err);
-        rounds = [];
-      }
-    }
-    
-    if (currentRoundResponse.ok && 'text' in currentRoundResponse) {
-      try {
-        const currentRoundText = await currentRoundResponse.text();
-        if (currentRoundText && currentRoundText.trim() !== '') {
-          currentRound = JSON.parse(currentRoundText);
-          console.log('✅ Rodada atual encontrada:', currentRound);
-        } else {
-          console.log('ℹ️ Nenhuma rodada atual definida');
+        setLoading(true);
+        const API_URL = getApiUrl();
+
+        // 1. Buscar informações da competição
+        const competitionResponse = await fetch(`${API_URL}/competitions/slug/${params.competitionSlug}`);
+        if (!competitionResponse.ok) {
+          throw new Error('Competição não encontrada');
         }
+        const competitionData: Competition = await competitionResponse.json();
+        setCompetition(competitionData);
+
+        // 2. Buscar classificação
+        const standingsResponse = await fetch(`${API_URL}/standings/competition/${competitionData.id}`);
+        if (!standingsResponse.ok) {
+          throw new Error('Classificação não encontrada');
+        }
+        const standingsData: Standing[] = await standingsResponse.json();
+        setStandings(standingsData);
+
+        // 3. Buscar rodadas
+        try {
+          const roundsResponse = await fetch(`${API_URL}/standings/competition/${competitionData.id}/rounds`);
+          if (roundsResponse.ok) {
+            const roundsData: Round[] = await roundsResponse.json();
+            setRounds(roundsData);
+            setTotalRounds(roundsData.length);
+          }
+        } catch (err) {
+          console.warn('Erro ao carregar rodadas:', err);
+        }
+
+        // 4. Buscar todas as partidas
+        try {
+          const matchesResponse = await fetch(`${API_URL}/matches/competition/${competitionData.id}`);
+          if (matchesResponse.ok) {
+            const matchesData: Match[] = await matchesResponse.json();
+            setAllMatches(matchesData);
+          }
+        } catch (err) {
+          console.warn('Erro ao carregar partidas:', err);
+        }
+
       } catch (err) {
-        console.warn('⚠️ Erro ao processar rodada atual:', err);
-        currentRound = null;
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
       }
     }
 
-    // Determinar rodada inicial e partidas
-    let initialMatches: Match[] = [];
-    let initialRoundId: number | null = null;
-    let initialRoundName: string = 'Rodada';
+    loadData();
+  }, [params.competitionSlug]);
 
-    if (currentRound) {
-      initialRoundId = currentRound.id;
-      initialRoundName = currentRound.name;
-      try {
-        const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${currentRound.id}/matches`, { 
-          next: { revalidate: 60 },
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (matchesResponse.ok) {
-          initialMatches = await matchesResponse.json();
-          console.log('✅ Partidas da rodada atual carregadas:', initialMatches.length);
-        }
-      } catch (err) {
-        console.warn('⚠️ Erro ao buscar partidas da rodada atual:', err);
-      }
-    } else if (rounds && rounds.length > 0) {
-      // Fallback: se não houver rodada atual, pega a última rodada da lista
-      const latestRound = rounds[rounds.length - 1];
-      initialRoundId = latestRound.id;
-      initialRoundName = latestRound.name;
-      console.log('ℹ️ Usando última rodada como fallback:', latestRound);
-      try {
-        const matchesResponse = await fetch(`${API_URL}/standings/competition/${competitionId}/round/${latestRound.id}/matches`, { 
-          next: { revalidate: 60 },
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (matchesResponse.ok) {
-          initialMatches = await matchesResponse.json();
-          console.log('✅ Partidas da última rodada carregadas:', initialMatches.length);
-        }
-      } catch (err) {
-        console.warn('⚠️ Erro ao buscar partidas da última rodada:', err);
-      }
+  // Agrupar classificação por grupos
+  const standingsByGroup = standings.reduce((acc, standing) => {
+    const groupName = standing.group_name || 'Classificação Geral';
+    if (!acc[groupName]) {
+      acc[groupName] = [];
     }
+    acc[groupName].push(standing);
+    return acc;
+  }, {} as Record<string, Standing[]>);
 
-    return { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName };
-  } catch (error) {
-    console.error('💥 Erro ao buscar dados da classificação:', error);
-    throw error;
-  }
-}
+  // Filtrar partidas da rodada atual
+  const currentRoundMatches = allMatches.filter(match => 
+    match.round_number === currentRound
+  );
 
-// O componente da página agora usa o tipo 'NextPage' com as nossas Props
-const ClassificationPage: NextPage<Props> = async ({ params }) => {
-  try {
-    console.log('🚀 Iniciando página de classificação para:', params.competitionSlug);
-    const { standings, initialMatches, rounds, competitionId, initialRoundId, initialRoundName } = await getClassificationPageData(params.competitionSlug);
+  // Detectar se é fase de mata-mata
+  const isKnockoutPhase = (phase: string) => {
+    const knockoutPhases = [
+      'Oitavas de Final', 'Oitavas', 
+      'Quartas de Final', 'Quartas',
+      'Semifinal', 'Semifinais',
+      'Final', 'Disputa do 3º lugar'
+    ];
+    return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
+  };
 
-    const groupedStandings = standings.reduce((acc, s) => {
-      const groupName = s.group_name || 'Classificação Geral';
-      if (!acc[groupName]) {
-        acc[groupName] = [];
-      }
-      acc[groupName].push(s);
-      return acc;
-    }, {} as Record<string, typeof standings>);
+  // Filtrar partidas de mata-mata
+  const knockoutMatches = allMatches.filter(match => 
+    match.phase && isKnockoutPhase(match.phase)
+  );
 
-    // Agrupar partidas por grupo também
-    const groupedMatches = initialMatches.reduce((acc, match) => {
-      const groupName = match.group_name || 'Geral';
-      if (!acc[groupName]) {
-        acc[groupName] = [];
-      }
-      acc[groupName].push(match);
-      return acc;
-    }, {} as Record<string, Match[]>);
+  // Verificar se deve mostrar chaveamento
+  const shouldShowBracket = knockoutMatches.length > 0;
 
-    const hasGroups = Object.keys(groupedStandings).length > 1;
-
-    console.log('✅ Página de classificação renderizada com sucesso');
-
+  if (loading) {
     return (
-      <div className="space-y-6">
-        {standings.length > 0 ? (
-          hasGroups ? (
-            // Layout para competições com grupos: cada grupo com sua classificação e jogos lado a lado
-            <div className="space-y-8">
-              {Object.entries(groupedStandings).map(([groupName, groupStandings]) => {
-                const groupMatches = groupedMatches[groupName === 'Classificação Geral' ? 'Geral' : groupName] || [];
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600 text-center">
+          <h2 className="text-2xl font-bold mb-2">Erro ao carregar dados</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Cabeçalho */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {competition?.name} - Classificação
+          </h1>
+          <p className="text-gray-600">
+            {competition?.season} • {competition?.type}
+          </p>
+        </div>
+
+        {/* Mostrar chaveamento se for mata-mata */}
+        {shouldShowBracket && (
+          <div className="mb-8">
+            <TournamentBracket 
+              matches={knockoutMatches} 
+              competitionName={competition?.name}
+            />
+          </div>
+        )}
+
+        {/* Conteúdo baseado no tipo de competição */}
+        {competition?.has_groups ? (
+          // Layout para competições com grupos
+          <div className="space-y-8">
+            {Object.entries(standingsByGroup).map(([groupName, groupStandings]) => (
+              <div key={groupName} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                {/* Cabeçalho do grupo */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
+                  <h2 className="text-xl font-bold">{groupName}</h2>
+                </div>
                 
-                return (
-                  <div key={groupName} className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    {/* Cabeçalho do Grupo */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4">
-                      <h2 className="text-xl font-bold">{groupName}</h2>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
-                      {/* Classificação do Grupo (2/3) */}
-                      <div className="xl:col-span-2">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Classificação</h3>
-                        <StandingsTable standings={groupStandings} />
-                      </div>
-                      
-                      {/* Jogos do Grupo (1/3) */}
-                      <div className="xl:col-span-1">
-                        {/* Cabeçalho com navegação de rodadas */}
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold text-gray-800">
-                            {groupName === 'Classificação Geral' ? 'Partidas' : groupName}
-                          </h3>
-                        </div>
-                        
-                        {/* Navegação de rodadas compacta */}
-                        <div className="bg-gray-100 rounded-lg p-2 mb-4 flex items-center justify-between">
-                          <button 
-                            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={true}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </button>
-                          <span className="text-sm font-medium text-gray-700">
-                            {initialRoundName}
-                          </span>
-                          <button 
-                            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={true}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        </div>
-                        
-                        {/* Jogos do grupo sem título adicional */}
-                        {groupMatches.length > 0 ? (
-                          <div className="space-y-3">
-                            {groupMatches.map((match) => (
-                              <div key={match.id} className="bg-white rounded-lg p-3 shadow-sm border">
-                                {/* Linha principal: Times e Placar/Horário */}
-                                <div className="grid grid-cols-3 items-center gap-2 mb-2">
-                                  {/* Time da Casa */}
-                                  <div className="flex items-center justify-end space-x-2">
-                                    <span className="text-xs font-semibold text-gray-700 text-right truncate">{match.home_team.name}</span>
-                                    <img 
-                                      src={getTeamLogoUrl(match.home_team.logo_url)}
-                                      alt={match.home_team.name} 
-                                      className="h-6 w-6 object-contain flex-shrink-0"
-                                    />
-                                  </div>
-
-                                  {/* Placar/Horário e X */}
-                                  <div className="text-center">
-                                    {(match.status === 'FINISHED' || match.status === 'finished') ? (
-                                      <div>
-                                        <div className="text-lg font-bold text-gray-900 mb-1">
-                                          <span>{match.home_score}</span>
-                                          <span className="mx-1 text-gray-400">×</span>
-                                          <span>{match.away_score}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          <div>{formatDate(match.match_date)}</div>
-                                          <div>{formatTime(match.match_date)}</div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div>
-                                        <div className="text-lg font-bold text-gray-400 mb-1">×</div>
-                                        <div className="text-xs text-gray-500">
-                                          <div>{formatDate(match.match_date)}</div>
-                                          <div>{formatTime(match.match_date)}</div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Time Visitante */}
-                                  <div className="flex items-center space-x-2">
-                                    <img 
-                                      src={getTeamLogoUrl(match.away_team.logo_url)}
-                                      alt={match.away_team.name} 
-                                      className="h-6 w-6 object-contain flex-shrink-0"
-                                    />
-                                    <span className="text-xs font-semibold text-gray-700 truncate">{match.away_team.name}</span>
-                                  </div>
-                                </div>
-
-                                {/* Informações adicionais compactas */}
-                                {(match.stadium || match.broadcast_channels) && (
-                                  <div className="text-xs text-gray-500 text-center space-y-1">
-                                    {match.stadium && (
-                                      <div className="truncate">{match.stadium.name}</div>
-                                    )}
-                                    {match.broadcast_channels && (
-                                      <div className="truncate">
-                                        {Array.isArray(match.broadcast_channels) 
-                                          ? match.broadcast_channels.join(', ')
-                                          : match.broadcast_channels
-                                        }
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
-                            Nenhuma partida nesta rodada
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
+                  {/* Classificação do grupo (2/3 do espaço em XL) */}
+                  <div className="xl:col-span-2">
+                    <StandingsTable standings={groupStandings} />
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            // Layout para competições sem grupos: layout tradicional
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Coluna da Tabela de Classificação (2/3) */}
-              <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* Jogos do grupo (1/3 do espaço em XL) */}
+                  <div className="xl:col-span-1">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                      Jogos da {currentRound}ª Rodada
+                    </h3>
+                    <RoundMatches 
+                      matches={currentRoundMatches.filter(match => 
+                        match.group_name === groupName || 
+                        (groupName === 'Classificação Geral' && !match.group_name)
+                      )}
+                      roundName={`${currentRound}ª Rodada`}
+                      hideTitle={true}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Layout tradicional para competições sem grupos
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Classificação */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Classificação</h2>
                 <StandingsTable standings={standings} />
               </div>
-
-              {/* Coluna das Partidas da Rodada (1/3) */}
-              <div className="lg:col-span-1">
-                <ClientOnly fallback={
-                  <div className="bg-white rounded-lg shadow-lg p-4">
-                    <div className="h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
-                    <div className="space-y-3">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
-                      ))}
-                    </div>
-                  </div>
-                }>
-                  <RoundNavigator 
-                    initialRounds={rounds}
-                    competitionId={competitionId}
-                    initialMatches={initialMatches}
-                    initialRoundId={initialRoundId}
-                    initialRoundName={initialRoundName}
-                  />
-                </ClientOnly>
+            </div>
+            
+            {/* Jogos da rodada atual */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  {currentRound}ª Rodada
+                </h2>
+                <RoundMatches 
+                  matches={currentRoundMatches}
+                  roundName={`${currentRound}ª Rodada`}
+                />
               </div>
             </div>
-          )
-        ) : (
-          <div className="bg-white rounded-lg shadow-lg text-center py-16">
-            <h3 className="text-xl font-medium text-gray-900">Tabela Indisponível</h3>
-            <p className="mt-2 text-md text-gray-500">
-              Ainda não há dados de classificação para este campeonato.
-            </p>
+          </div>
+        )}
+
+        {/* Seção adicional para estatísticas se não for mata-mata */}
+        {!shouldShowBracket && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Estatísticas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
+                <div className="text-sm text-gray-600">Times</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{totalRounds}</div>
+                <div className="text-sm text-gray-600">Rodadas</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{allMatches.length}</div>
+                <div className="text-sm text-gray-600">Partidas</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
-    );
-  } catch (error) {
-    console.error('💥 Erro na página de classificação:', error);
-    return (
-      <div className="bg-white rounded-lg shadow-lg text-center py-16">
-        <h3 className="text-xl font-medium text-gray-900">Erro ao Carregar Classificação</h3>
-        <p className="mt-2 text-md text-gray-500">
-          Não foi possível carregar os dados da classificação. Tente novamente mais tarde.
-        </p>
-        <p className="mt-2 text-sm text-gray-400">
-          Erro: {error instanceof Error ? error.message : 'Erro desconhecido'}
-        </p>
-      </div>
-    );
-  }
-};
-
-export default ClassificationPage; 
+    </div>
+  );
+} 
