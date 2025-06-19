@@ -533,15 +533,6 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Cabeçalho */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {competition?.name} - Classificação
-          </h1>
-          <p className="text-gray-600">
-            {competition?.season} • {competition?.type}
-          </p>
-        </div>
 
         {/* Mostrar chaveamento se for mata-mata */}
         {shouldShowBracket && (
@@ -555,30 +546,28 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
 
         {/* Navegação Global de Rodadas (apenas para competições com grupos ou mata-mata) */}
         {rounds.length > 0 && Object.keys(standingsByGroup).length > 1 && (
-          <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+          <div className="mb-6 bg-white rounded-lg shadow-sm p-3">
             <div className="flex items-center justify-between">
               <button 
                 onClick={goToPreviousRound}
                 disabled={currentRound <= 1}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>Rodada Anterior</span>
               </button>
               
               <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-800">{getCurrentRoundName()}</h2>
-                <p className="text-sm text-gray-500">Rodada {currentRound} de {totalRounds}</p>
+                <h2 className="text-lg font-bold text-gray-800">{getCurrentRoundName()}</h2>
+                <p className="text-xs text-gray-500">Rodada {currentRound} de {totalRounds}</p>
               </div>
               
               <button 
                 onClick={goToNextRound}
                 disabled={currentRound >= totalRounds}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <span>Próxima Rodada</span>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
