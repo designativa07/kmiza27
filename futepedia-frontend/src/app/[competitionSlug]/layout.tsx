@@ -5,6 +5,7 @@ import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
 import { NavLinks } from '@/components/NavLinks';
 import ClientOnly from '@/components/ClientOnly';
 import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
+import { getApiUrl } from '@/lib/config';
 
 interface Competition {
   id: number;
@@ -15,7 +16,7 @@ interface Competition {
 
 async function getCompetition(slug: string): Promise<Competition | null> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+    const apiUrl = getApiUrl();
     const res = await fetch(`${apiUrl}/competitions/slug/${slug}`, {
       next: { revalidate: 3600 } // Revalida a cada hora
     });
