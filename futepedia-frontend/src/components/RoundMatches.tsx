@@ -3,26 +3,66 @@ import { Calendar, Clock, MapPin, Shield, Tv, ExternalLink } from 'lucide-react'
 import { Match } from '@/types/match';
 import { getCdnImageUrl, getTeamLogoUrl } from '@/lib/cdn-simple';
 import Link from 'next/link';
-import { parseISO, format } from 'date-fns';
+import { parseISO, format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const formatDate = (dateString: string) => {
   try {
-    const date = parseISO(dateString);
+    if (!dateString) {
+      return 'Data não informada';
+    }
+    
+    // Tentar diferentes formatos de data
+    let date;
+    
+    // Primeiro tentar parseISO (formato ISO padrão)
+    try {
+      date = parseISO(dateString);
+      if (!isValid(date)) {
+        throw new Error('Data inválida');
+      }
+    } catch {
+      // Se falhar, tentar como Date normal
+      date = new Date(dateString);
+      if (!isValid(date)) {
+        throw new Error('Data inválida');
+      }
+    }
+    
     return format(date, 'dd/MM', { locale: ptBR });
   } catch (error) {
     console.error('Erro ao formatar data (dd/MM):', error, 'String original:', dateString);
-    return 'Data Inválida';
+    return 'Data não informada';
   }
 };
 
 const formatTime = (dateString: string) => {
   try {
-    const date = parseISO(dateString);
+    if (!dateString) {
+      return 'Hora não informada';
+    }
+    
+    // Tentar diferentes formatos de data
+    let date;
+    
+    // Primeiro tentar parseISO (formato ISO padrão)
+    try {
+      date = parseISO(dateString);
+      if (!isValid(date)) {
+        throw new Error('Data inválida');
+      }
+    } catch {
+      // Se falhar, tentar como Date normal
+      date = new Date(dateString);
+      if (!isValid(date)) {
+        throw new Error('Data inválida');
+      }
+    }
+    
     return format(date, 'HH:mm', { locale: ptBR });
   } catch (error) {
     console.error('Erro ao formatar hora (HH:mm):', error, 'String original:', dateString);
-    return 'Hora Inválida';
+    return 'Hora não informada';
   }
 };
 
@@ -82,10 +122,16 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   {/* Placar/Horário e X */}
                   <div className="text-center">
                     {(match.status === 'FINISHED' || match.status === 'finished') ? (
-                      <div className="text-2xl font-bold text-gray-900">
-                        <span>{match.home_score}</span>
-                        <span className="mx-2 text-gray-400">×</span>
-                        <span>{match.away_score}</span>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900 mb-1">
+                          <span>{match.home_score}</span>
+                          <span className="mx-2 text-gray-400">×</span>
+                          <span>{match.away_score}</span>
+                        </div>
+                        <div className="text-xs font-bold text-gray-500">
+                          <div>{formatDate(match.match_date)}</div>
+                          <div>{formatTime(match.match_date)}</div>
+                        </div>
                       </div>
                     ) : (
                       <div>
