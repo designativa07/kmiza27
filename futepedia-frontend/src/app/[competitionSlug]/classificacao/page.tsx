@@ -182,10 +182,32 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     return acc;
   }, {} as Record<string, Standing[]>);
 
+  // Agrupar partidas por grupo também
+  const matchesByGroup = allMatches.reduce((acc, match) => {
+    const groupName = match.group_name || 'Geral';
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(match);
+    return acc;
+  }, {} as Record<string, Match[]>);
+
   // Filtrar partidas da rodada atual
-  const currentRoundMatches = allMatches.filter(match => 
-    match.round_number === currentRound
-  );
+  const currentRoundMatches = allMatches.filter(match => {
+    // Se existe round_number, usa ele; senão tenta usar outros critérios
+    if (match.round_number !== undefined) {
+      return match.round_number === currentRound;
+    }
+    // Fallback: se não tem round_number, mostrar todas as partidas (pode ajustar conforme necessário)
+    return true;
+  });
+
+  // Log para debug
+  console.log('Debug - Rodada atual:', currentRound);
+  console.log('Debug - Total de partidas:', allMatches.length);
+  console.log('Debug - Partidas da rodada atual:', currentRoundMatches.length);
+  console.log('Debug - Grupos na classificação:', Object.keys(standingsByGroup));
+  console.log('Debug - Grupos nas partidas:', Object.keys(matchesByGroup));
 
   // Detectar se é fase de mata-mata
   const isKnockoutPhase = (phase: string) => {
@@ -301,8 +323,46 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           </div>
         )}
 
+        {/* Seção de Debug (temporária) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <h3 className="text-lg font-bold text-yellow-800 mb-2">Debug Info</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-semibold text-yellow-700">Classificação:</h4>
+                <ul className="text-yellow-600">
+                  {Object.entries(standingsByGroup).map(([group, standings]) => (
+                    <li key={group}>{group}: {standings.length} times</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-yellow-700">Partidas:</h4>
+                <ul className="text-yellow-600">
+                  <li>Total: {allMatches.length}</li>
+                  <li>Rodada {currentRound}: {currentRoundMatches.length}</li>
+                  {Object.entries(matchesByGroup).map(([group, matches]) => (
+                    <li key={group}>{group}: {matches.length} partidas</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-semibold text-yellow-700">Exemplo de partidas da rodada atual:</h4>
+              <div className="text-yellow-600 text-xs">
+                {currentRoundMatches.slice(0, 3).map(match => (
+                  <div key={match.id}>
+                    {match.home_team?.name} vs {match.away_team?.name} 
+                    (Grupo: {match.group_name || 'Nenhum'}, Rodada: {match.round_number || 'N/A'})
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Conteúdo baseado no tipo de competição */}
-        {competition?.has_groups ? (
+        {Object.keys(standingsByGroup).length > 1 ? (
           // Layout para competições com grupos
           <div className="space-y-8">
             {Object.entries(standingsByGroup).map(([groupName, groupStandings]) => (
@@ -322,10 +382,24 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
                       {groupName === 'Classificação Geral' ? 'Partidas' : `Grupo ${groupName}`}
                     </h3>
                     <RoundMatches 
-                      matches={currentRoundMatches.filter(match => 
-                        match.group_name === groupName || 
-                        (groupName === 'Classificação Geral' && !match.group_name)
-                      )}
+                      matches={currentRoundMatches.filter(match => {
+                        // Log para debug
+                        console.log(`Debug - Filtrando para grupo ${groupName}:`, {
+                          matchGroup: match.group_name,
+                          match: match.home_team?.name + ' vs ' + match.away_team?.name
+                        });
+                        
+                        // Lógica de correspondência melhorada
+                        if (groupName === 'Classificação Geral') {
+                          return !match.group_name || match.group_name === '' || match.group_name === 'Geral';
+                        }
+                        
+                        // Para grupos específicos, verificar correspondência exata ou variações
+                        return match.group_name === groupName || 
+                               match.group_name === `Grupo ${groupName}` ||
+                               match.group_name === groupName.replace('Grupo ', '') ||
+                               (groupName.startsWith('Grupo ') && match.group_name === groupName.substring(6));
+                      })}
                       roundName={getCurrentRoundName()}
                       hideTitle={true}
                     />
