@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
 import { NavLinks } from '@/components/NavLinks';
 import ClientOnly from '@/components/ClientOnly';
-import { getCdnImageUrl } from '@/lib/cdn-simple';
+import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
 
 interface Competition {
   id: number;
@@ -59,7 +59,7 @@ export default async function CompetitionLayout({
             <div className="flex items-center space-x-4">
               {competition.logo_url && (
                 <img 
-                  src={getCdnImageUrl(competition.logo_url, 'competition')}
+                  src={getCompetitionLogoUrl(competition.logo_url)}
                   alt={`${competition.name} logo`}
                   className="h-12 w-12 object-contain"
                 />
