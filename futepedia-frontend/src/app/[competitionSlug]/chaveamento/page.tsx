@@ -60,15 +60,28 @@ export default function ChaveamentoPage({ params }: { params: { competitionSlug:
       'Oitavas de Final', 'Oitavas', 
       'Quartas de Final', 'Quartas',
       'Semifinal', 'Semifinais',
-      'Final', 'Disputa do 3º lugar'
+      'Final', 'Disputa do 3º lugar',
+      'Terceira Fase', 'Primeira Fase'
     ];
     return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
   };
 
+  // Detectar competições mata-mata pelo tipo da competição
+  const isKnockoutCompetition = (competitionType: string) => {
+    return competitionType === 'mata_mata' || 
+           competitionType === 'grupos_e_mata_mata' || 
+           competitionType === 'copa';
+  };
+
   // Filtrar partidas de mata-mata
-  const knockoutMatches = allMatches.filter(match => 
-    match.phase && isKnockoutPhase(match.phase)
-  );
+  const knockoutMatches = allMatches.filter(match => {
+    // Para competições mata-mata puras, mostrar todas as partidas
+    if (competition && isKnockoutCompetition(competition.type)) {
+      return match.phase && isKnockoutPhase(match.phase);
+    }
+    // Para outras competições, filtrar apenas por fase específica
+    return match.phase && isKnockoutPhase(match.phase);
+  });
 
   if (loading) {
     return (

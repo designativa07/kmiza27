@@ -5,6 +5,7 @@ import { Match } from '@/types/match';
 import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import { parseISO, format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { phaseOrder, getOrderedPhases } from '@/lib/competition-utils';
 
 interface TournamentBracketProps {
   matches: Match[];
@@ -69,16 +70,7 @@ const formatMatchTime = (dateInput: any) => {
   }
 };
 
-// Mapeamento das fases
-const phaseOrder = {
-  'Oitavas de Final': 1,
-  'Quartas de Final': 2,
-  'Quartas': 2,
-  'Semifinal': 3,
-  'Semifinais': 3,
-  'Final': 4,
-  'Disputa do 3º lugar': 4
-};
+// Mapeamento das fases agora vem dos utilitários
 
 // Função para determinar o vencedor baseado no placar
 const getWinner = (match: Match) => {
@@ -191,12 +183,8 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, c
     return acc;
   }, {} as Record<string, Match[]>);
   
-  // Ordenar fases pela ordem lógica
-  const orderedPhases = Object.keys(matchesByPhase).sort((a, b) => {
-    const orderA = phaseOrder[a as keyof typeof phaseOrder] || 99;
-    const orderB = phaseOrder[b as keyof typeof phaseOrder] || 99;
-    return orderA - orderB;
-  });
+  // Ordenar fases pela ordem lógica usando utilitários
+  const orderedPhases = getOrderedPhases(Object.keys(matchesByPhase));
   
   if (orderedPhases.length === 0) {
     return (
