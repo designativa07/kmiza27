@@ -135,10 +135,11 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         setStandings(standingsData);
 
         // 3. Buscar rodadas
+        let roundsData: Round[] = [];
         try {
           const roundsResponse = await fetch(`${API_URL}/standings/competition/${competitionData.id}/rounds`);
           if (roundsResponse.ok) {
-            const roundsData: Round[] = await roundsResponse.json();
+            roundsData = await roundsResponse.json();
             setRounds(roundsData);
             setTotalRounds(roundsData.length);
             
@@ -151,16 +152,26 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           console.warn('Erro ao carregar rodadas:', err);
         }
 
-        // 4. Buscar todas as partidas
-        try {
-          const matchesResponse = await fetch(`${API_URL}/matches/competition/${competitionData.id}`);
-          if (matchesResponse.ok) {
-            const matchesData: Match[] = await matchesResponse.json();
-            setAllMatches(matchesData);
+        // 4. Buscar partidas de todas as rodadas
+        let allMatchesData: Match[] = [];
+        if (roundsData.length > 0) {
+          for (const round of roundsData) {
+            try {
+              const roundMatchesResponse = await fetch(`${API_URL}/standings/competition/${competitionData.id}/round/${round.id}/matches`);
+              if (roundMatchesResponse.ok) {
+                const roundMatches: Match[] = await roundMatchesResponse.json();
+                // Adicionar o round_number nas partidas
+                roundMatches.forEach(match => {
+                  match.round_number = round.round_number;
+                });
+                allMatchesData.push(...roundMatches);
+              }
+            } catch (err) {
+              console.warn(`Erro ao carregar partidas da rodada ${round.round_number}:`, err);
+            }
           }
-        } catch (err) {
-          console.warn('Erro ao carregar partidas:', err);
         }
+        setAllMatches(allMatchesData);
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
