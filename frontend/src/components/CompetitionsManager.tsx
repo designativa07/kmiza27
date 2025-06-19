@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, UsersIcon, PhotoIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { API_ENDPOINTS } from '../config/api'
+import { getCompetitionLogoUrl, handleImageError } from '../lib/cdn'
 import CompetitionTeamsManager from './CompetitionTeamsManager'
 
 interface Competition {
@@ -207,7 +208,7 @@ export default function CompetitionsManager() {
                           <div className="h-10 w-10 flex-shrink-0">
                             <img
                               className="h-10 w-10 rounded-md object-contain"
-                              src={competition.logo_url ? imageUrl(competition.logo_url) : `https://ui-avatars.com/api/?name=${competition.name.replace(/\s/g, "+")}&background=random`}
+                              src={competition.logo_url ? getCompetitionLogoUrl(competition.logo_url) : `https://ui-avatars.com/api/?name=${competition.name.replace(/\s/g, "+")}&background=random`}
                               alt={competition.name}
                             />
                           </div>

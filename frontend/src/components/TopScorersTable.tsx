@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { FunnelIcon, TrophyIcon, UserIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { FunnelIcon, TrophyIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
 import TopScorersChart from './TopScorersChart'
+import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
 
 interface Player {
   id: number
@@ -282,13 +283,9 @@ export default function TopScorersTable() {
     return (
       <img 
         className="h-12 w-12 rounded-full object-cover" 
-        src={imageUrl(player.image_url)} 
-        alt={`Foto de ${player.name}`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          target.nextElementSibling?.classList.remove('hidden')
-        }}
+        src={getPlayerImageUrl(player.image_url)}
+        alt={player.name}
+        onError={handleImageError}
       />
     )
   }
@@ -306,14 +303,10 @@ export default function TopScorersTable() {
 
     return (
       <img 
-        className="h-8 w-8 rounded-md object-cover" 
-        src={imageUrl(team.logo_url)} 
-        alt={`Escudo ${team.name}`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          target.nextElementSibling?.classList.remove('hidden')
-        }}
+        className="h-6 w-6 rounded-md object-contain" 
+        src={getTeamLogoUrl(team.logo_url)}
+        alt={team.name}
+        onError={handleImageError}
       />
     )
   }

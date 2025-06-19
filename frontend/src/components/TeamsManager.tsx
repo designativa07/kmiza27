@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { API_ENDPOINTS } from '../config/api'
+import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 
 interface Stadium {
   id: number;
@@ -336,7 +337,7 @@ export default function TeamsManager() {
       stadium_id: team.stadium_id?.toString() || ''
     })
     if (team.logo_url) {
-      setPreviewUrl(imageUrl(team.logo_url))
+      setPreviewUrl(getTeamLogoUrl(team.logo_url))
       setLogoInputType('url')
     } else {
       setPreviewUrl('')
@@ -652,7 +653,7 @@ export default function TeamsManager() {
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
                   <div className="flex items-center">
                     {team.logo_url && (
-                      <img src={imageUrl(team.logo_url)} alt={`${team.name} logo`} className="h-8 w-8 mr-2 object-contain" />
+                      <img src={getTeamLogoUrl(team.logo_url)} alt={`${team.name} logo`} className="h-8 w-8 mr-2 object-contain" />
                     )}
                     {!team.logo_url && (
                       <div className="h-8 w-8 mr-2 flex items-center justify-center bg-gray-200 rounded-full text-xs font-semibold text-gray-600">

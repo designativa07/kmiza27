@@ -1,55 +1,56 @@
 /**
- * Versão simplificada e robusta para CDN
- * Focada em estabilidade máxima para SSR
+ * Configuração CDN - CDN Oficial funcionando!
+ * Última atualização: 2025-06-19T00:31:40.752Z
+ * URL CDN: https://cdn.kmiza27.com
  */
 
 const CDN_BASE = 'https://cdn.kmiza27.com';
 
-export function getCdnImageUrl(originalUrl: string | null | undefined, type: 'team' | 'competition' | 'player' = 'team'): string {
-  // Fallbacks por tipo
-  const fallbacks = {
-    team: '/default-team-logo.svg',
-    competition: '/default-competition-logo.svg',
-    player: '/default-player-photo.svg'
-  };
-
-  // Se não há URL, retornar fallback
-  if (!originalUrl || originalUrl.trim() === '') {
-    return fallbacks[type];
-  }
-
+/**
+ * Gera URL completa para imagem no CDN
+ */
+export function getCdnImageUrl(imagePath: string): string {
   try {
-    // Se já é CDN, usar diretamente
-    if (originalUrl.includes('cdn.kmiza27.com')) {
-      return originalUrl;
+    // Se já é uma URL completa, retorna como está
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
-
-    // Se é URL externa (http/https), manter
-    if (originalUrl.startsWith('http')) {
-      return originalUrl;
+    
+    // Remove barra inicial se existir
+    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    
+    // Converte caminhos antigos para novos
+    let finalPath = cleanPath;
+    
+    // /uploads/escudos/ -> /img/escudos/
+    if (finalPath.startsWith('uploads/escudos/')) {
+      finalPath = finalPath.replace('uploads/escudos/', 'img/escudos/');
     }
-
-    // Conversões específicas
-    if (originalUrl.startsWith('/uploads/escudos/')) {
-      const filename = originalUrl.split('/').pop();
-      return `${CDN_BASE}/img/escudos/${filename}`;
+    
+    // /img/ já está correto
+    if (!finalPath.startsWith('img/')) {
+      finalPath = `img/${finalPath}`;
     }
-
-    if (originalUrl.startsWith('/img/')) {
-      return `${CDN_BASE}${originalUrl}`;
-    }
-
-    // Se é só nome de arquivo
-    if (!originalUrl.includes('/') && originalUrl.match(/\.(svg|png|jpg|jpeg)$/i)) {
-      const folder = type === 'competition' ? 'logo-competition' : 
-                     type === 'player' ? 'players' : 'escudos';
-      return `${CDN_BASE}/img/${folder}/${originalUrl}`;
-    }
-
-    // Fallback: retornar original
-    return originalUrl;
-  } catch {
-    // Em caso de qualquer erro, retornar fallback
-    return fallbacks[type];
+    
+    return `${CDN_BASE}/${finalPath}`;
+  } catch (error) {
+    console.error('Erro ao gerar URL CDN:', error);
+    return imagePath; // Fallback para URL original
   }
-} 
+}
+
+// Funções específicas para compatibilidade
+export function getTeamLogoUrl(logoPath: string): string {
+  if (!logoPath) return `${CDN_BASE}/img/escudos/default-team-logo.svg`;
+  return getCdnImageUrl(logoPath);
+}
+
+export function getCompetitionLogoUrl(logoPath: string): string {
+  if (!logoPath) return `${CDN_BASE}/img/logo-competition/default-competition-logo.svg`;
+  return getCdnImageUrl(logoPath);
+}
+
+export function getPlayerImageUrl(imagePath: string): string {
+  if (!imagePath) return `${CDN_BASE}/img/players/default-player-photo.svg`;
+  return getCdnImageUrl(imagePath);
+}

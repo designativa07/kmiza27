@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { TrophyIcon, ChartBarIcon, UsersIcon, CalendarIcon, EyeIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { TrophyIcon, ChartBarIcon, UsersIcon, CalendarIcon, EyeIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS } from '../config/api'
+import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 
 interface Team {
   id: number
@@ -347,14 +348,10 @@ export default function StandingsManager() {
 
     return (
       <img 
-        className="h-6 w-6 object-cover" 
-        src={imageUrl(team.logo_url)} 
-        alt={`Escudo ${team.name}`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          target.nextElementSibling?.classList.remove('hidden')
-        }}
+        className="h-8 w-8 rounded-md object-contain" 
+        src={getTeamLogoUrl(team.logo_url)}
+        alt={team.name}
+        onError={handleImageError}
       />
     )
   }

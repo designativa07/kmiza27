@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, ChangeEvent } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, LinkIcon, ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS, imageUrl } from '../config/api'
+import { API_ENDPOINTS } from '../config/api'
+import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { format, parseISO } from 'date-fns'
 import PlayerStatsCard from './PlayerStatsCard'
 
@@ -290,13 +291,9 @@ export default function PlayersManager() {
     return (
       <img 
         className="h-5 w-5 rounded-md object-cover" 
-        src={imageUrl(team.logo_url)} 
+        src={getTeamLogoUrl(team.logo_url)} 
         alt={`Escudo ${team.name || 'Time'}`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          target.nextElementSibling?.classList.remove('hidden')
-        }}
+        onError={handleImageError}
       />
     );
   };
@@ -386,7 +383,7 @@ export default function PlayersManager() {
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                         <div className="flex items-center">
                           {player.image_url && (
-                            <img src={imageUrl(player.image_url)} alt={`${player.name} foto`} className="h-8 w-8 rounded-full object-cover mr-2" />
+                            <img src={getPlayerImageUrl(player.image_url)} alt={`${player.name} foto`} className="h-8 w-8 rounded-full object-cover mr-2" />
                           )}
                           {!player.image_url && (
                             <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 mr-2">
