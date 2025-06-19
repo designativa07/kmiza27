@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Shield, ArrowRight } from 'lucide-react';
 import { getCdnImageUrl, getCompetitionLogoUrl } from '@/lib/cdn-simple';
 import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
+import { getApiUrl } from '@/lib/config';
 
 // 1. Definir a interface para o tipo Competition
 interface Competition {
@@ -11,13 +12,11 @@ interface Competition {
   logo_url: string | null;
 }
 
-// 2. Definir a URL da API (idealmente viria de variáveis de ambiente)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-
 async function getCompetitions(): Promise<Competition[]> {
   try {
-    const res = await fetch(`${API_URL}/competitions?active=true`, { 
-      cache: 'no-store' // Força a busca de dados a cada requisição
+    const API_URL = getApiUrl();
+    const res = await fetch(`${API_URL}/competitions`, { 
+      next: { revalidate: 60 } // Revalida a cada 60 segundos
     });
     if (!res.ok) {
       console.error(`Error fetching competitions: ${res.statusText}`);

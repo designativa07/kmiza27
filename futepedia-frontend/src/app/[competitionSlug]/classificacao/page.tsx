@@ -117,7 +117,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
       try {
         setLoading(true);
         const API_URL = getApiUrl();
-
+  
         // 1. Buscar informações da competição
         const competitionResponse = await fetch(`${API_URL}/competitions/slug/${params.competitionSlug}`);
         if (!competitionResponse.ok) {
@@ -133,7 +133,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         }
         const standingsData: Standing[] = await standingsResponse.json();
         setStandings(standingsData);
-
+    
         // 3. Buscar rodadas
         let roundsData: Round[] = [];
         try {
@@ -212,13 +212,6 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     // Fallback: se não tem round_number, mostrar todas as partidas (pode ajustar conforme necessário)
     return true;
   });
-
-  // Log para debug
-  console.log('Debug - Rodada atual:', currentRound);
-  console.log('Debug - Total de partidas:', allMatches.length);
-  console.log('Debug - Partidas da rodada atual:', currentRoundMatches.length);
-  console.log('Debug - Grupos na classificação:', Object.keys(standingsByGroup));
-  console.log('Debug - Grupos nas partidas:', Object.keys(matchesByGroup));
 
   // Detectar se é fase de mata-mata
   const isKnockoutPhase = (phase: string) => {
@@ -394,12 +387,6 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
                     </h3>
                     <RoundMatches 
                       matches={currentRoundMatches.filter(match => {
-                        // Log para debug
-                        console.log(`Debug - Filtrando para grupo ${groupName}:`, {
-                          matchGroup: match.group_name,
-                          match: match.home_team?.name + ' vs ' + match.away_team?.name
-                        });
-                        
                         // Lógica de correspondência melhorada
                         if (groupName === 'Classificação Geral') {
                           return !match.group_name || match.group_name === '' || match.group_name === 'Geral';
@@ -469,4 +456,4 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
       </div>
     </div>
   );
-} 
+}
