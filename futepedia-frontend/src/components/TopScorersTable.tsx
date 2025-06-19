@@ -1,10 +1,14 @@
+import React from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { getCdnImageUrl } from '@/lib/cdn-simple';
+import { getCdnImageUrl, getTeamLogoUrl, getPlayerImageUrl } from '@/lib/cdn-simple';
+import Link from 'next/link';
+import { TrophyIcon, UserIcon } from 'lucide-react';
 
 interface Player {
   id: number;
   name: string;
   position: string;
+  image_url: string;
 }
 
 interface Team {
@@ -67,9 +71,9 @@ export const TopScorersTable = ({ topScorers }: TopScorersTableProps) => {
                 <div className="flex items-center">
                   {scorer.team.logo_url ? (
                     <img 
-                      className="h-6 w-6 rounded-full object-contain mr-3" 
-                      src={getCdnImageUrl(scorer.team.logo_url, 'team')} 
-                      alt={scorer.team.name}
+                      src={getTeamLogoUrl(scorer.team.logo_url)}
+                      alt={scorer.team.name} 
+                      className="h-6 w-6 object-contain"
                     />
                   ) : (
                     <ShieldCheck className="h-6 w-6 text-gray-300 mr-3" />
