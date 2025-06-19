@@ -141,6 +141,11 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             const roundsData: Round[] = await roundsResponse.json();
             setRounds(roundsData);
             setTotalRounds(roundsData.length);
+            
+            // Definir rodada atual como a última
+            if (roundsData.length > 0) {
+              setCurrentRound(roundsData[roundsData.length - 1].round_number);
+            }
           }
         } catch (err) {
           console.warn('Erro ao carregar rodadas:', err);
@@ -201,6 +206,25 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
   // Verificar se deve mostrar chaveamento
   const shouldShowBracket = knockoutMatches.length > 0;
 
+  // Funções de navegação
+  const goToPreviousRound = () => {
+    if (currentRound > 1) {
+      setCurrentRound(currentRound - 1);
+    }
+  };
+
+  const goToNextRound = () => {
+    if (currentRound < totalRounds) {
+      setCurrentRound(currentRound + 1);
+    }
+  };
+
+  // Obter nome da rodada atual
+  const getCurrentRoundName = () => {
+    const round = rounds.find(r => r.round_number === currentRound);
+    return round ? round.name : `${currentRound}ª Rodada`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -243,34 +267,66 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           </div>
         )}
 
+        {/* Navegação Global de Rodadas (se houver rodadas) */}
+        {rounds.length > 0 && (
+          <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={goToPreviousRound}
+                disabled={currentRound <= 1}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Rodada Anterior</span>
+              </button>
+              
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-gray-800">{getCurrentRoundName()}</h2>
+                <p className="text-sm text-gray-500">Rodada {currentRound} de {totalRounds}</p>
+              </div>
+              
+              <button 
+                onClick={goToNextRound}
+                disabled={currentRound >= totalRounds}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <span>Próxima Rodada</span>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Conteúdo baseado no tipo de competição */}
         {competition?.has_groups ? (
           // Layout para competições com grupos
           <div className="space-y-8">
             {Object.entries(standingsByGroup).map(([groupName, groupStandings]) => (
               <div key={groupName} className="bg-white rounded-lg shadow-lg overflow-hidden">
-                {/* Cabeçalho do grupo */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-                  <h2 className="text-xl font-bold">{groupName}</h2>
-                </div>
-                
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
                   {/* Classificação do grupo (2/3 do espaço em XL) */}
                   <div className="xl:col-span-2">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">
+                      {groupName === 'Classificação Geral' ? 'Classificação' : `Grupo ${groupName}`}
+                    </h2>
                     <StandingsTable standings={groupStandings} />
                   </div>
                   
                   {/* Jogos do grupo (1/3 do espaço em XL) */}
                   <div className="xl:col-span-1">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Jogos da {currentRound}ª Rodada
+                      {groupName === 'Classificação Geral' ? 'Partidas' : `Grupo ${groupName}`}
                     </h3>
                     <RoundMatches 
                       matches={currentRoundMatches.filter(match => 
                         match.group_name === groupName || 
                         (groupName === 'Classificação Geral' && !match.group_name)
                       )}
-                      roundName={`${currentRound}ª Rodada`}
+                      roundName={getCurrentRoundName()}
                       hideTitle={true}
                     />
                   </div>
@@ -293,11 +349,12 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  {currentRound}ª Rodada
+                  Partidas
                 </h2>
                 <RoundMatches 
                   matches={currentRoundMatches}
-                  roundName={`${currentRound}ª Rodada`}
+                  roundName={getCurrentRoundName()}
+                  hideTitle={true}
                 />
               </div>
             </div>
