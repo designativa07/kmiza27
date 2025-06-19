@@ -3,19 +3,27 @@ import { Calendar, Clock, MapPin, Shield, Tv, ExternalLink } from 'lucide-react'
 import { Match } from '@/types/match';
 import { getCdnImageUrl, getTeamLogoUrl } from '@/lib/cdn-simple';
 import Link from 'next/link';
+import { parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
+const formatDate = (dateString: string) => {
+  try {
+    const date = parseISO(dateString);
+    return format(date, 'dd/MM', { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data (dd/MM):', error, 'String original:', dateString);
+    return 'Data Inválida';
+  }
 };
 
-const formatTime = (date: string) => {
-  return new Date(date).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const formatTime = (dateString: string) => {
+  try {
+    const date = parseISO(dateString);
+    return format(date, 'HH:mm', { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar hora (HH:mm):', error, 'String original:', dateString);
+    return 'Hora Inválida';
+  }
 };
 
 export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matches: Match[], roundName: string, hideTitle?: boolean }) => {
