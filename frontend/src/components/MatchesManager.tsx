@@ -420,14 +420,36 @@ export default function MatchesManager() {
 
         // Atualiza os filtros e força o fetch das rodadas para a competição selecionada
         if (initialCompetitionId || initialRoundName) {
-          setFilters(prev => ({
-            ...prev,
-            competition: initialCompetitionId,
-            round: initialRoundName.match(/^\d+$|rodada/i) ? initialRoundName : '',
-            group: !initialRoundName.match(/^\d+$|rodada/i) && initialRoundName ? initialRoundName : ''
-          }));
+          setFilters(prev => {
+            let newRoundFilter = '';
+            let newGroupFilter = '';
+
+            // Se tiver um initialRoundName, tente mapeá-lo para ID da rodada ou nome do grupo
+            if (initialRoundName) {
+              // Tenta encontrar uma rodada pelo nome e ID
+              const foundRound = matches.find(match => 
+                match.competition?.id?.toString() === initialCompetitionId && 
+                match.round?.name === initialRoundName
+              )?.round?.id?.toString();
+
+              // Se encontrou um ID de rodada, usa como filtro de rodada
+              if (foundRound) {
+                newRoundFilter = foundRound;
+              } else {
+                // Caso contrário, assume que é um grupo ou fase e usa como filtro de grupo
+                newGroupFilter = initialRoundName;
+              }
+            }
+
+            return {
+              ...prev,
+              competition: initialCompetitionId,
+              round: newRoundFilter,
+              group: newGroupFilter
+            };
+          });
           if (initialCompetitionId) {
-            fetchRoundsByCompetition(initialCompetitionId);
+            fetchRoundsAndGroupsForFilter(initialCompetitionId);
           }
         }
         isInitialLoad.current = false; // Marca que a carga inicial foi feita
@@ -450,15 +472,11 @@ export default function MatchesManager() {
   // Buscar rodadas e grupos quando a competição do filtro mudar
   useEffect(() => {
     if (filters.competition && matches.length > 0) {
-      fetchRoundsAndGroupsForFilter(filters.competition)
-      // Limpar filtros de rodada e grupo quando mudar a competição
-      setFilters(prev => ({
-        ...prev,
-        round: '',
-        group: ''
-      }))
+      fetchRoundsAndGroupsForFilter(filters.competition);
+      // A remoção da linha abaixo evita que os filtros de rodada e grupo sejam limpos
+      // setFilters(prev => ({ ...prev, round: '', group: '' }));
     }
-  }, [filters.competition, matches])
+  }, [filters.competition, matches]);
 
   // Buscar rodadas quando a competição for selecionada no formulário
   useEffect(() => {
@@ -659,65 +677,52 @@ export default function MatchesManager() {
     setCurrentPage(1); // Mantido: Ao limpar filtros, volta para a página 1
   }
 
-  const getUniqueRounds = () => {
-    const rounds = new Set<string>()
+  const getUniqueRoundsByCompetition = (competitionId: string) => {
+    const roundsMap = new Map<number, { id: number; name: string }>();
     matches.forEach(match => {
-      // Apenas adicionar rodadas que são números ou começam com "Rodada"
-      if (match.round?.name) {
-        const roundName = match.round.name
-        // Verificar se é uma rodada numérica ou contém "Rodada" (case insensitive)
-        if (/^\d+$/.test(roundName) || /rodada/i.test(roundName)) {
-          rounds.add(roundName)
-        }
+      if (match.competition?.id?.toString() === competitionId && match.round?.id && match.round?.name) {
+        roundsMap.set(match.round.id, { id: match.round.id, name: match.round.name });
       }
-      // Adicionar group_name apenas se não for uma fase
-      if (match.group_name) {
-        const groupName = match.group_name
-        // Verificar se não é uma fase (não contém palavras como "final", "semi", "oitavas", etc.)
-        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória', 'playoff']
-        const isPhase = phaseKeywords.some(keyword => 
-          groupName.toLowerCase().includes(keyword)
-        )
-        if (!isPhase) {
-          rounds.add(groupName)
-        }
-      }
-    })
-    
-    const sortedRounds = Array.from(rounds).sort((a, b) => {
-      // Ordenar numericamente se ambos forem números
-      const numA = parseInt(a.replace(/\D/g, ''))
-      const numB = parseInt(b.replace(/\D/g, ''))
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB
-      }
-      // Caso contrário, ordenar alfabeticamente
-      return a.localeCompare(b)
-    })
-    
-    return sortedRounds
+    });
+    return Array.from(roundsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  const getUniquePhases = () => {
-    const phases = new Set<string>()
+  const getUniqueGroupsByCompetition = (competitionId: string) => {
+    const groups = new Set<string>();
     matches.forEach(match => {
-      // Adicionar phase se existir
-      if (match.phase) {
-        phases.add(match.phase)
+      if (match.competition?.id?.toString() === competitionId && match.group_name) {
+        groups.add(match.group_name);
       }
-      // Adicionar group_name se for uma fase (contém palavras-chave de fase)
-      if (match.group_name) {
-        const groupName = match.group_name
-        const phaseKeywords = ['final', 'semi', 'oitavas', 'quartas', 'fase', 'eliminatória', 'playoff']
-        const isPhase = phaseKeywords.some(keyword => 
-          groupName.toLowerCase().includes(keyword)
-        )
-        if (isPhase) {
-          phases.add(groupName)
-        }
+    });
+    return Array.from(groups).sort();
+  }
+
+  const getUniquePhasesByCompetition = (competitionId: string) => {
+    const phases = new Set<string>();
+    matches.forEach(match => {
+      if (match.competition?.id?.toString() === competitionId && match.phase) {
+        phases.add(match.phase);
       }
-    })
-    return Array.from(phases).sort()
+    });
+    return Array.from(phases).sort();
+  }
+
+  const fetchTeams = async () => {
+    try {
+      const [teamsRes, competitionsRes] = await Promise.all([
+        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.competitions.list())
+      ]);
+
+      if (teamsRes.ok && competitionsRes.ok) {
+        const teamsData = await teamsRes.json();
+        const competitionsData = await competitionsRes.json();
+        setTeams(teamsData);
+        setCompetitions(competitionsData);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar times e competições:', error);
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1322,7 +1327,7 @@ export default function MatchesManager() {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
             >
               <option value="">Todas</option>
-              {getUniquePhases().map((phase) => (
+              {getUniquePhasesByCompetition(filters.competition).map((phase) => (
                 <option key={phase} value={phase}>{phase}</option>
               ))}
             </select>
