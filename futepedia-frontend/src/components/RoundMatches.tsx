@@ -1,6 +1,8 @@
+import React from 'react';
 import { Calendar, Clock, MapPin, Shield, Tv, ExternalLink } from 'lucide-react';
 import { Match } from '@/types/match';
-import { getCdnImageUrl } from '@/lib/cdn-simple';
+import { getCdnImageUrl, getTeamLogoUrl } from '@/lib/cdn-simple';
+import Link from 'next/link';
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('pt-BR', {
@@ -63,7 +65,7 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   <div className="flex items-center justify-end space-x-2">
                     <span className="text-sm font-semibold text-gray-700 text-right">{match.home_team.name}</span>
                     <img 
-                      src={getCdnImageUrl(match.home_team.logo_url, 'team')} 
+                      src={getTeamLogoUrl(match.home_team.logo_url)}
                       alt={match.home_team.name} 
                       className="h-8 w-8 object-contain"
                     />
@@ -91,7 +93,7 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   {/* Time Visitante */}
                   <div className="flex items-center space-x-2">
                     <img 
-                      src={getCdnImageUrl(match.away_team.logo_url, 'team')} 
+                      src={getTeamLogoUrl(match.away_team.logo_url)}
                       alt={match.away_team.name} 
                       className="h-8 w-8 object-contain"
                     />
