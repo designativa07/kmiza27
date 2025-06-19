@@ -1,8 +1,7 @@
 const https = require('https');
 
-// Para teste, vamos usar uma URL pública temporária
-// Em produção, você deve usar ngrok ou um domínio real
-const PUBLIC_URL = "https://webhook.site/unique-id"; // Substitua por sua URL
+// URL de produção atualizada para o novo domínio
+const PUBLIC_URL = "https://api.kmiza27.com";
 
 console.log('🌐 Configurando webhook com URL pública...');
 console.log(`📍 URL do webhook: ${PUBLIC_URL}/chatbot/webhook`);
