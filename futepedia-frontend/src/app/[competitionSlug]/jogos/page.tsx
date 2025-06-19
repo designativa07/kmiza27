@@ -71,49 +71,82 @@ const MatchesPage: NextPage<Props> = async ({ params }) => {
   const { competitionSlug } = params;
   const { competition, matches } = await getMatchesData(competitionSlug);
 
+  // Agrupar jogos por rodada
+  const matchesByRound = matches.reduce((acc, match) => {
+    const roundName = match.round || 'Sem rodada';
+    if (!acc[roundName]) {
+      acc[roundName] = [];
+    }
+    acc[roundName].push(match);
+    return acc;
+  }, {} as Record<string, Match[]>);
+
+  // Ordenar as rodadas (assumindo que o nome da rodada contém um número)
+  const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
+    // Tentar extrair números das rodadas para ordenação
+    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+    return numA - numB;
+  });
+
   return (
-    <main className="container mx-auto p-4">
-      <header className="my-6">
+    <main className="container mx-auto pt-0 p-4">
+      <header className="mb-4">
         <Link href="/" className="text-indigo-600 hover:underline">&larr; Voltar para todos os campeonatos</Link>
-        <h1 className="text-3xl font-bold mt-4">Jogos - {competition.name}</h1>
+        <h1 className="text-3xl font-bold mt-2">Jogos - {competition.name}</h1>
       </header>
 
       {matches.length > 0 ? (
-        <div className="space-y-6">
-          {matches.map((match) => (
-            <div key={match.id} className="bg-white p-4 rounded-lg shadow-md border hover:border-indigo-500 transition-all">
-              <div className="text-center text-sm text-gray-600 mb-2">
-                <span>{match.round}</span> - <span>{formatDate(match.match_date)}</span>
+        <div className="space-y-8">
+          {sortedRounds.map((roundName) => (
+            <div key={roundName} className="bg-white rounded-lg p-6">
+              {/* Cabeçalho da Rodada */}
+              <div className="border-b border-gray-200 pb-4 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">{roundName}</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {matchesByRound[roundName].length} partida{matchesByRound[roundName].length !== 1 ? 's' : ''}
+                </p>
               </div>
-              <div className="grid grid-cols-3 items-center text-center">
-                {/* Time da Casa */}
-                <div className="flex items-center justify-end gap-4">
-                  <span className="hidden md:inline font-semibold">{match.home_team.name}</span>
-                  <img 
-                    src={getTeamLogoUrl(match.home_team.logo_url)} 
-                    alt={match.home_team.name} 
-                    className="h-10 w-10 object-contain"
-                  />
-                </div>
-                {/* Placar */}
-                <div className="text-2xl font-bold">
-                  {match.status === 'COMPLETED' ? (
-                    <span>{match.home_team_score} x {match.away_team_score}</span>
-                  ) : (
-                    <span className="text-gray-400">vs</span>
-                  )}
-                </div>
-                {/* Time Visitante */}
-                <div className="flex items-center justify-start gap-4">
-                  <img 
-                    src={getTeamLogoUrl(match.away_team.logo_url)} 
-                    alt={match.away_team.name} 
-                    className="h-10 w-10 object-contain"
-                  />
-                  <span className="hidden md:inline font-semibold">{match.away_team.name}</span>
-                </div>
+
+              {/* Lista de Jogos da Rodada */}
+              <div className="space-y-4">
+                {matchesByRound[roundName].map((match) => (
+                  <div key={match.id} className="bg-gray-50 p-4 rounded-lg border hover:border-indigo-500 transition-all">
+                    <div className="text-center text-sm text-gray-600 mb-3">
+                      <span>{formatDate(match.match_date)}</span>
+                      {match.stadium && <span className="ml-2">• {match.stadium.name}</span>}
+                    </div>
+                    <div className="grid grid-cols-3 items-center text-center">
+                      {/* Time da Casa */}
+                      <div className="flex items-center justify-end gap-4">
+                        <span className="hidden md:inline font-semibold text-gray-800">{match.home_team.name}</span>
+                        <img 
+                          src={getTeamLogoUrl(match.home_team.logo_url)} 
+                          alt={match.home_team.name} 
+                          className="h-10 w-10 object-contain"
+                        />
+                      </div>
+                      {/* Placar */}
+                      <div className="text-2xl font-bold">
+                        {match.status === 'COMPLETED' ? (
+                          <span className="text-gray-800">{match.home_team_score} × {match.away_team_score}</span>
+                        ) : (
+                          <span className="text-gray-400">×</span>
+                        )}
+                      </div>
+                      {/* Time Visitante */}
+                      <div className="flex items-center justify-start gap-4">
+                        <img 
+                          src={getTeamLogoUrl(match.away_team.logo_url)} 
+                          alt={match.away_team.name} 
+                          className="h-10 w-10 object-contain"
+                        />
+                        <span className="hidden md:inline font-semibold text-gray-800">{match.away_team.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {match.stadium && <div className="text-center text-xs text-gray-500 mt-2">{match.stadium.name}</div>}
             </div>
           ))}
         </div>
