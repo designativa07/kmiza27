@@ -266,39 +266,37 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           // Layout para competições com grupos
           <div className="space-y-8">
             {Object.entries(standingsByGroup).map(([groupName, groupStandings]) => (
-              <div key={groupName} className="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
-                  {/* Classificação do grupo (2/3 do espaço em XL) */}
-                  <div className="xl:col-span-2">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">
-                      {groupName === 'Classificação Geral' ? 'Classificação' : `Grupo ${groupName}`}
-                    </h2>
-                    <StandingsTable standings={groupStandings} />
-                  </div>
-                  
-                  {/* Jogos do grupo (1/3 do espaço em XL) */}
-                  <div className="xl:col-span-1">
-                    <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-                      {/* Navegação de Rodadas para este grupo */}
-                      {currentRoundId && currentRoundNumber && rounds.length > 1 && (
-                        <RoundNavigator
-                          competitionType={competition?.type || ''}
-                          rounds={rounds.filter(round => typeof round.round_number === 'number')}
-                          currentRoundId={currentRoundId}
-                          currentRoundNumber={currentRoundNumber}
-                          onRoundChange={handleRoundChange}
-                        />
-                      )}
+              <div key={groupName} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Classificação do grupo (2/3 do espaço em XL) */}
+                <div className="xl:col-span-2">
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">
+                    {groupName === 'Classificação Geral' ? 'Classificação' : `Grupo ${groupName}`}
+                  </h2>
+                  <StandingsTable standings={groupStandings} />
+                </div>
+                
+                {/* Jogos do grupo (1/3 do espaço em XL) */}
+                <div className="xl:col-span-1">
+                  <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+                    {/* Navegação de Rodadas para este grupo */}
+                    {currentRoundId && currentRoundNumber && rounds.length > 1 && (
+                      <RoundNavigator
+                        competitionType={competition?.type || ''}
+                        rounds={rounds.filter(round => typeof round.round_number === 'number')}
+                        currentRoundId={currentRoundId}
+                        currentRoundNumber={currentRoundNumber}
+                        onRoundChange={handleRoundChange}
+                      />
+                    )}
 
-                      {/* Jogos do grupo */}
-                      <div className="p-6">
-                        <div className="space-y-4">
-                          {matchesForSelectedRound
-                            .filter(match => (match.group_name || 'Geral') === groupName)
-                            .map((match) => (
-                              <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
-                            ))}
-                        </div>
+                    {/* Jogos do grupo */}
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        {matchesForSelectedRound
+                          .filter(match => (match.group_name || 'Geral') === groupName)
+                          .map((match) => (
+                            <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
+                          ))}
                       </div>
                     </div>
                   </div>
