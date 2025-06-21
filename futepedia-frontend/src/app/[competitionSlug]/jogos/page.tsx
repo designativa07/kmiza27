@@ -307,11 +307,6 @@ const MatchesPage = ({ params }: Props) => {
 
   return (
     <main className="container mx-auto pt-0 p-4">
-      <header className="mb-4">
-        <Link href="/" className="text-indigo-600 hover:underline">&larr; Voltar para todos os campeonatos</Link>
-        <h1 className="text-3xl font-bold mt-2">Jogos - {competition.name}</h1>
-      </header>
-
       {/* Container unificado: Navegação + Jogos */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
         {/* Navegação de Rodadas */}
@@ -327,7 +322,7 @@ const MatchesPage = ({ params }: Props) => {
 
         {/* Conteúdo dos Jogos */}
         {selectedRoundEntry && Object.keys(selectedRoundEntry.groups).length > 0 ? (
-          <div key={selectedRoundEntry.roundData.id} className="p-6 space-y-4">
+          <div key={selectedRoundEntry.roundData.id} className="p-4 space-y-4">
             {competition && (competition.type === 'groups' || competition.type === 'grupos_e_mata_mata') ? (
               // Renderizar por grupos para competições tipo 'groups' ou 'grupos_e_mata_mata'
               Object.entries(selectedRoundEntry.groups)
@@ -370,7 +365,7 @@ interface MatchCardProps {
 
 const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl }) => {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg border hover:border-indigo-500 transition-all">
+    <div className="py-4 border-b border-gray-200 last:border-b-0">
       <div className="text-center text-sm text-gray-600 mb-3">
         <span>{formatDate(match.match_date)}</span>
         {match.stadium && (
@@ -379,17 +374,17 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             {match.stadium.city && ` (${match.stadium.city})`}
           </span>
         )}
-      </div>
-      <div className="flex items-center justify-center">
+              </div>
+      <div className="flex items-center justify-center mb-3">
         {/* Lado esquerdo: mandante + escudo */}
         <div className="flex items-center justify-end flex-1 pr-1">
           <span className="font-semibold text-gray-800 mr-1">{match.home_team.name}</span>
-          <img 
-            src={getTeamLogoUrl(match.home_team.logo_url)} 
-            alt={match.home_team.name} 
+                  <img 
+                    src={getTeamLogoUrl(match.home_team.logo_url)} 
+                    alt={match.home_team.name} 
             className="h-8 w-8 object-contain"
-          />
-        </div>
+                  />
+                </div>
 
         {/* Centro: placar fixo */}
         <div className="flex items-center justify-center min-w-[60px]">
@@ -401,22 +396,23 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             </>
           ) : (
             <span className="text-xl font-bold text-gray-400">×</span>
-          )}
-        </div>
+                  )}
+                </div>
 
         {/* Lado direito: escudo + visitante */}
         <div className="flex items-center justify-start flex-1 pl-1">
-          <img 
-            src={getTeamLogoUrl(match.away_team.logo_url)} 
-            alt={match.away_team.name} 
+                  <img 
+                    src={getTeamLogoUrl(match.away_team.logo_url)} 
+                    alt={match.away_team.name} 
             className="h-8 w-8 object-contain"
-          />
+                  />
           <span className="font-semibold text-gray-800 ml-1">{match.away_team.name}</span>
         </div>
-      </div>
-      {/* Canais de Transmissão e Links Adicionais Consolidados */}
+                </div>
+      
+      {/* Canais de Transmissão e Links */}
       {( (match.broadcasts && match.broadcasts.length > 0) || (match.broadcast_channels)) && (
-        <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-center">
+        <div className="flex flex-wrap gap-2 justify-center">
           {/* Canais de Transmissão (apenas nome clicável) */}
           {match.broadcasts && match.broadcasts.length > 0 && (
             match.broadcasts.map((broadcast) => (
@@ -440,42 +436,42 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
               </div>
             ))
           )}
-            {/* Botões 'ASSISTIR' da coluna broadcast_channels */}
-            {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
-                match.broadcast_channels.split(',').map((link, index) => {
-                    const url = link.startsWith('http') ? link : `https://${link}`;
-                    return (
-                        <a 
-                            key={index} 
-                            href={url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
-                        >
-                            ASSISTIR
-                        </a>
-                    );
-                })
-            )}
-            {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
-              match.broadcast_channels.map((link, index) => {
-                  const url = link.startsWith('http') ? link : `https://${link}`;
-                  return (
-                      <a 
-                          key={index} 
-                          href={url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
-                      >
-                          ASSISTIR
-                      </a>
-                  );
-              })
+          {/* Botões 'ASSISTIR' da coluna broadcast_channels */}
+          {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
+            match.broadcast_channels.split(',').map((link, index) => {
+              const url = link.startsWith('http') ? link : `https://${link}`;
+              return (
+                <a 
+                  key={index} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
+                >
+                  ASSISTIR
+                </a>
+              );
+            })
           )}
-          </div>
-        )}
-      </div>
+          {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
+            match.broadcast_channels.map((link, index) => {
+              const url = link.startsWith('http') ? link : `https://${link}`;
+              return (
+                <a 
+                  key={index} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
+                >
+                  ASSISTIR
+                </a>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

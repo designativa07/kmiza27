@@ -249,7 +249,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4">
 
         {/* Mostrar chaveamento se for mata-mata */}
         {shouldShowBracket && (
@@ -266,18 +266,18 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           // Layout para competições com grupos
           <div className="space-y-8">
             {Object.entries(standingsByGroup).map(([groupName, groupStandings]) => (
-              <div key={groupName} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Classificação do grupo (2/3 do espaço em XL) */}
-                <div className="xl:col-span-2">
+              <div key={groupName} className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+                {/* Classificação do grupo (3/5 do espaço em XL) */}
+                <div className="xl:col-span-3">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">
-                    {groupName === 'Classificação Geral' ? 'Classificação' : `Grupo ${groupName}`}
+                    {groupName === 'Classificação Geral' ? '' : `Grupo ${groupName}`}
                   </h2>
                   <StandingsTable standings={groupStandings} />
                 </div>
                 
-                {/* Jogos do grupo (1/3 do espaço em XL) */}
-                <div className="xl:col-span-1">
-                  <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+                {/* Jogos do grupo (2/5 do espaço em XL) */}
+                <div className="xl:col-span-2">
+                  <div className="bg-white rounded-lg overflow-hidden">
                     {/* Navegação de Rodadas para este grupo */}
                     {currentRoundId && currentRoundNumber && rounds.length > 1 && (
                       <RoundNavigator
@@ -290,14 +290,12 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
                     )}
 
                     {/* Jogos do grupo */}
-                    <div className="p-6">
-                      <div className="space-y-4">
-                        {matchesForSelectedRound
-                          .filter(match => (match.group_name || 'Geral') === groupName)
-                          .map((match) => (
-                            <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
-                          ))}
-                      </div>
+                    <div className="px-4">
+                      {matchesForSelectedRound
+                        .filter(match => (match.group_name || 'Geral') === groupName)
+                        .map((match) => (
+                          <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
+                        ))}
                     </div>
                   </div>
                 </div>
@@ -305,17 +303,16 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             ))}
           </div>
         ) : (
-          // Layout tradicional para competições sem grupos
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Classificação */}
-            <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Classificação</h2>
+          // Sem grupos - Layout lado a lado
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+            {/* Classificação (3/5 do espaço em XL) */}
+            <div className="xl:col-span-3">
               <StandingsTable standings={standings} />
             </div>
             
             {/* Jogos da rodada atual */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+            <div className="xl:col-span-2">
+              <div className="bg-white rounded-lg overflow-hidden">
                 {/* Navegação de Rodadas */}
                 {currentRoundId && currentRoundNumber && rounds.length > 1 && (
                   <RoundNavigator
@@ -328,12 +325,10 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
                 )}
 
                 {/* Jogos */}
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {matchesForSelectedRound.map((match) => (
-                      <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
-                    ))}
-                  </div>
+                <div className="px-4">
+                  {matchesForSelectedRound.map((match) => (
+                    <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -374,8 +369,9 @@ interface MatchCardProps {
 
 const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl }) => {
   return (
-    <div className="bg-gray-50 p-3 rounded-lg border hover:border-indigo-500 transition-all">
-      <div className="text-center text-xs text-gray-600 mb-2">
+    <div className="py-4 border-b border-gray-200 last:border-b-0">
+      {/* Data, hora e estádio */}
+      <div className="text-center text-xs text-gray-600 mb-3">
         <span>{formatDate(match.match_date)}</span>
         {match.stadium && (
           <span className="ml-2">
@@ -384,23 +380,25 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           </span>
         )}
       </div>
-      <div className="flex items-center justify-center">
+      
+      {/* Confronto */}
+      <div className="flex items-center justify-center mb-3">
         {/* Lado esquerdo: mandante + escudo */}
-        <div className="flex items-center justify-end flex-1 pr-1">
-          <span className="font-semibold text-gray-800 mr-1 text-sm">{match.home_team.name}</span>
+        <div className="flex items-center justify-end flex-1 pr-3">
+          <span className="font-semibold text-gray-800 mr-2 text-base">{match.home_team.name}</span>
           <img 
             src={getTeamLogoUrl(match.home_team.logo_url)} 
             alt={match.home_team.name} 
-            className="h-6 w-6 object-contain"
+            className="h-8 w-8 object-contain"
           />
         </div>
 
         {/* Centro: placar fixo */}
-        <div className="flex items-center justify-center min-w-[50px]">
+        <div className="flex items-center justify-center min-w-[60px]">
           {(match.status === 'finished' || match.status === 'FINISHED' || (match.home_score !== null && match.away_score !== null)) ? (
             <>
               <span className="text-lg font-bold text-gray-800">{match.home_score}</span>
-              <span className="text-lg font-bold text-gray-800 mx-0.5">×</span>
+              <span className="text-lg font-bold text-gray-800 mx-1">×</span>
               <span className="text-lg font-bold text-gray-800">{match.away_score}</span>
             </>
           ) : (
@@ -409,15 +407,77 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
         </div>
 
         {/* Lado direito: escudo + visitante */}
-        <div className="flex items-center justify-start flex-1 pl-1">
+        <div className="flex items-center justify-start flex-1 pl-3">
           <img 
             src={getTeamLogoUrl(match.away_team.logo_url)} 
             alt={match.away_team.name} 
-            className="h-6 w-6 object-contain"
+            className="h-8 w-8 object-contain"
           />
-          <span className="font-semibold text-gray-800 ml-1 text-sm">{match.away_team.name}</span>
+          <span className="font-semibold text-gray-800 ml-2 text-base">{match.away_team.name}</span>
         </div>
       </div>
+
+      {/* Canais de Transmissão e Links */}
+      {( (match.broadcasts && match.broadcasts.length > 0) || (match.broadcast_channels)) && (
+        <div className="flex flex-wrap gap-1 justify-center mt-2">
+          {/* Canais de Transmissão (apenas nome clicável) */}
+          {match.broadcasts && match.broadcasts.length > 0 && (
+            match.broadcasts.map((broadcast) => (
+              <div key={broadcast.channel.id} className="flex items-center gap-1">
+                {broadcast.channel.channel_link ? (
+                  <a 
+                    href={broadcast.channel.channel_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded hover:bg-indigo-200 transition-colors"
+                  >
+                    {broadcast.channel.name}
+                  </a>
+                ) : (
+                  <span 
+                    className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded"
+                  >
+                    {broadcast.channel.name}
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+          {/* Botões 'ASSISTIR' da coluna broadcast_channels */}
+          {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
+            match.broadcast_channels.split(',').map((link, index) => {
+              const url = link.startsWith('http') ? link : `https://${link}`;
+              return (
+                <a 
+                  key={index} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors"
+                >
+                  ASSISTIR
+                </a>
+              );
+            })
+          )}
+          {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
+            match.broadcast_channels.map((link, index) => {
+              const url = link.startsWith('http') ? link : `https://${link}`;
+              return (
+                <a 
+                  key={index} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors"
+                >
+                  ASSISTIR
+                </a>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 };
