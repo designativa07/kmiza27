@@ -399,7 +399,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
 
         {/* Centro: placar fixo */}
         <div className="flex items-center justify-center min-w-[50px]">
-          {(match.status === 'COMPLETED' || match.status === 'finished' || match.status === 'FINISHED' || (match.home_score !== null && match.away_score !== null)) ? (
+          {(match.status === 'finished' || match.status === 'FINISHED' || (match.home_score !== null && match.away_score !== null)) ? (
             <>
               <span className="text-lg font-bold text-gray-800">{match.home_score}</span>
               <span className="text-lg font-bold text-gray-800 mx-0.5">×</span>
