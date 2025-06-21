@@ -26,4 +26,9 @@ export interface Match {
   group_name?: string;
   round_number?: number;
   phase?: string;
+  round?: {
+    id: number;
+    name: string;
+    round_number: number;
+  };
 } 
