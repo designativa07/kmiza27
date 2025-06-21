@@ -56,70 +56,67 @@ export function RoundNavigator({
     : `Rodada ${currentRound.round_number} de ${rounds.length}`;
 
   return (
-    <div className="w-full">
-      {/* Header compacto com título */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2">
-        <h3 className="text-lg font-semibold text-white text-center">
+    <div className="bg-white overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2">
+        <h3 className="text-lg font-semibold text-gray-800 text-center">
           {displayName}
         </h3>
       </div>
-      
-      {/* Navegação compacta */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <button 
-          onClick={handlePrevRound} 
-          disabled={currentIndex <= 0}
-          className={`
-            flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
-            ${currentIndex <= 0 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-md transform hover:scale-105'
-            }
-          `}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        
-        {/* Indicadores de rodada */}
-        <div className="flex-1 flex items-center justify-center mx-4">
-          <div className="flex items-center space-x-1.5">
+
+      {/* Navegação */}
+      <div className="px-4 py-3 bg-white">
+        <div className="flex items-center justify-between">
+          {/* Botão Anterior */}
+          <button
+            onClick={handlePrevRound} 
+            disabled={currentIndex <= 0}
+            className={`
+                flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+                ${currentIndex <= 0 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
+                }
+              `}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {/* Indicadores de Rodada */}
+          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs">
             {rounds.map((round, index) => (
               <button
                 key={round.id}
                 onClick={() => onRoundChange(round.id, round.round_number)}
                 className={`
-                  w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125
-                  ${index === currentIndex 
-                    ? 'bg-blue-600 shadow-sm ring-1 ring-blue-200' 
-                    : index < currentIndex 
-                      ? 'bg-green-500 hover:bg-green-600' 
+                    w-2 h-2 rounded-full transition-all duration-200 flex-shrink-0
+                    ${index === currentIndex 
+                      ? 'bg-green-600 ring-2 ring-green-300' 
+                      : index < currentIndex 
+                      ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-gray-300 hover:bg-gray-400'
-                  }
-                `}
+                    }
+                  `}
                 title={isMataMata ? (round.phase || round.name) : `Rodada ${round.round_number}`}
               />
             ))}
           </div>
-          
-          {/* Contador de rodadas */}
-          <div className="ml-4 text-xs text-gray-600 font-medium">
-            {currentIndex + 1}/{rounds.length}
-          </div>
+
+          {/* Botão Próximo */}
+          <button
+            onClick={handleNextRound} 
+            disabled={currentIndex >= rounds.length - 1}
+            className={`
+                flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+                ${currentIndex >= rounds.length - 1 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
+                }
+              `}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
-        
-        <button 
-          onClick={handleNextRound} 
-          disabled={currentIndex >= rounds.length - 1}
-          className={`
-            flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
-            ${currentIndex >= rounds.length - 1 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-md transform hover:scale-105'
-            }
-          `}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
       </div>
     </div>
   );

@@ -22,6 +22,13 @@ export interface Match {
   away_score_penalties?: number;
   stadium?: Stadium;
 
+  broadcasts?: {
+    channel: {
+      id: number;
+      name: string;
+      channel_link: string;
+    };
+  }[];
   broadcast_channels?: string[] | string;
   group_name?: string;
   round_number?: number;

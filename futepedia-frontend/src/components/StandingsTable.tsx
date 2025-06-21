@@ -31,6 +31,12 @@ const getRankIndicator = (rank: number) => {
     return 'bg-gray-100 text-gray-800';
 };
 
+const getGoalDifferenceColor = (goalDifference: number) => {
+    if (goalDifference > 0) return 'text-green-600 font-medium';
+    if (goalDifference < 0) return 'text-red-600 font-medium';
+    return 'text-gray-700 font-medium';
+};
+
 const tableHeaders = [
     { label: '#', align: 'left' },
     { label: 'Time', align: 'left', className: 'w-2/5' },
@@ -46,7 +52,7 @@ const tableHeaders = [
 
 export const StandingsTable = ({ standings }: StandingsTableProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -100,7 +106,7 @@ export const StandingsTable = ({ standings }: StandingsTableProps) => {
                   <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.lost}</td>
                   <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_for}</td>
                   <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_against}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-700">{s.goal_difference}</td>
+                  <td className={`px-3 py-3 whitespace-nowrap text-center text-sm ${getGoalDifferenceColor(s.goal_difference)}`}>{s.goal_difference}</td>
                 </tr>
               ))}
             </tbody>
