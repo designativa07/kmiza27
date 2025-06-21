@@ -243,18 +243,7 @@ export class ChatbotService {
              }
            }
 
-          // Processar links de streaming adicionais
-          if (todayMatch.streaming_links) {
-            if (Array.isArray(todayMatch.streaming_links)) {
-              streamingLinks = todayMatch.streaming_links.join('\n🔗 ');
-            } else if (typeof todayMatch.streaming_links === 'string') {
-              streamingLinks = todayMatch.streaming_links;
-            } else if (typeof todayMatch.streaming_links === 'object') {
-              // Se for um objeto, tentar extrair os valores
-              const links = Object.values(todayMatch.streaming_links).filter(link => typeof link === 'string');
-              streamingLinks = links.join('\n🔗 ');
-            }
-          }
+
 
           let response = `🔴 POSSIVELMENTE AO VIVO - ${team.name.toUpperCase()}
 ⚽ *${todayMatch.home_team.name} x ${todayMatch.away_team.name}*
@@ -362,18 +351,7 @@ export class ChatbotService {
         transmissionText = allChannels.join(', ');
       }
 
-      // Processar links de streaming adicionais
-      if (nextMatch.streaming_links) {
-        if (Array.isArray(nextMatch.streaming_links)) {
-          streamingLinks = nextMatch.streaming_links.join('\n🔗 ');
-        } else if (typeof nextMatch.streaming_links === 'string') {
-          streamingLinks = nextMatch.streaming_links;
-        } else if (typeof nextMatch.streaming_links === 'object') {
-          // Se for um objeto, tentar extrair os valores
-          const links = Object.values(nextMatch.streaming_links).filter(link => typeof link === 'string');
-          streamingLinks = links.join('\n🔗 ');
-        }
-      }
+
 
       let response = `PRÓXIMO JOGO DO ${team.name.toUpperCase()}
 ⚽ *${nextMatch.home_team.name} x ${nextMatch.away_team.name}*
@@ -876,23 +854,7 @@ ${result}`;
           response += `📺 Transmissão a confirmar\n`;
         }
 
-        // Adicionar links de streaming adicionais
-        if (match.streaming_links) {
-          let streamingLinks = '';
-          if (Array.isArray(match.streaming_links)) {
-            streamingLinks = match.streaming_links.join('\n🔗 ');
-          } else if (typeof match.streaming_links === 'string') {
-            streamingLinks = match.streaming_links;
-          } else if (typeof match.streaming_links === 'object') {
-            // Se for um objeto, tentar extrair os valores
-            const links = Object.values(match.streaming_links).filter(link => typeof link === 'string');
-            streamingLinks = links.join('\n🔗 ');
-          }
-          
-          if (streamingLinks) {
-            response += `🔗 ${streamingLinks}\n`;
-          }
-        }
+
 
         response += `\n`;
       }
@@ -1471,18 +1433,7 @@ Para mais informações acesse Kmiza27.com`;
         transmissionText = allChannels.join(', ');
       }
 
-      // Processar links de streaming adicionais
-      if (currentMatch.streaming_links) {
-        if (Array.isArray(currentMatch.streaming_links)) {
-          streamingLinks = currentMatch.streaming_links.join('\n🔗 ');
-        } else if (typeof currentMatch.streaming_links === 'string') {
-          streamingLinks = currentMatch.streaming_links;
-        } else if (typeof currentMatch.streaming_links === 'object') {
-          // Se for um objeto, tentar extrair os valores
-          const links = Object.values(currentMatch.streaming_links).filter(link => typeof link === 'string');
-          streamingLinks = links.join('\n🔗 ');
-        }
-      }
+
 
       let response = `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
 ⚽ *${currentMatch.home_team.name} ${homeScore} x ${awayScore} ${currentMatch.away_team.name}*

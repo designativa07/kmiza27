@@ -21,7 +21,7 @@ export interface Match {
   home_score_penalties?: number;
   away_score_penalties?: number;
   stadium?: Stadium;
-  streaming_links?: { [key: string]: string } | string;
+
   broadcast_channels?: string[] | string;
   group_name?: string;
   round_number?: number;

@@ -5,7 +5,7 @@ INSERT INTO rounds (competition_id, name, round_number, is_current) VALUES
 (1, 'Rodada 35', 35, true);
 
 -- Inserir algumas partidas futuras
-INSERT INTO matches (competition_id, round_id, home_team_id, away_team_id, match_date, status, broadcast_channels, streaming_links) VALUES
+INSERT INTO matches (competition_id, round_id, home_team_id, away_team_id, match_date, status, broadcast_channels) VALUES
 (1, 1, 1, 2, '2024-12-15 16:00:00', 'scheduled', 
  '["Globo", "SporTV", "Premiere"]', 
  '[{"name": "Globoplay", "url": "https://globoplay.globo.com"}, {"name": "Premiere Play", "url": "https://premiere.globo.com"}]'),

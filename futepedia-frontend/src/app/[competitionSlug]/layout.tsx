@@ -45,10 +45,10 @@ export default async function CompetitionLayout({
 
   const navLinks = [
     { name: 'Classificação', href: `/${competition.slug}/classificacao` },
+    { name: 'Jogos', href: `/${competition.slug}/jogos` },
     { name: 'Artilharia', href: `/${competition.slug}/artilharia` },
     { name: 'Estádios', href: `/${competition.slug}/estadios` },
     // Descomente quando as páginas estiverem prontas
-    // { name: 'Partidas', href: `/${competition.slug}/partidas` },
     // { name: 'Estatísticas', href: `/${competition.slug}/estatisticas` },
   ];
 

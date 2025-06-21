@@ -47,61 +47,56 @@ BEGIN
     -- Flamengo x Palmeiras (amanhã)
     INSERT INTO matches (
         home_team_id, away_team_id, competition_id, stadium_id, round_id,
-        match_date, status, broadcast_channels, streaming_links
+        match_date, status, broadcast_channels
     ) VALUES (
         flamengo_id, palmeiras_id, brasileirao_id, maracana_id, round_id,
         CURRENT_DATE + INTERVAL '1 day' + TIME '16:00:00',
         'scheduled',
-        '["Globo", "SporTV", "Premiere"]'::jsonb,
-        '["Globoplay", "Premiere Play"]'::jsonb
+        '["Globo", "SporTV", "Premiere"]'::jsonb
     );
     
     -- Palmeiras x Corinthians (em 3 dias)
     INSERT INTO matches (
         home_team_id, away_team_id, competition_id, stadium_id, round_id,
-        match_date, status, broadcast_channels, streaming_links
+        match_date, status, broadcast_channels
     ) VALUES (
         palmeiras_id, corinthians_id, brasileirao_id, allianz_id, round_id,
         CURRENT_DATE + INTERVAL '3 days' + TIME '18:30:00',
         'scheduled',
-        '["SporTV", "Premiere"]'::jsonb,
-        '["Premiere Play"]'::jsonb
+        '["SporTV", "Premiere"]'::jsonb
     );
     
     -- Flamengo x Fluminense (em 7 dias)
     INSERT INTO matches (
         home_team_id, away_team_id, competition_id, stadium_id, round_id,
-        match_date, status, broadcast_channels, streaming_links
+        match_date, status, broadcast_channels
     ) VALUES (
         flamengo_id, fluminense_id, brasileirao_id, maracana_id, round_id,
         CURRENT_DATE + INTERVAL '7 days' + TIME '20:00:00',
         'scheduled',
-        '["Globo", "SporTV"]'::jsonb,
-        '["Globoplay"]'::jsonb
+        '["Globo", "SporTV"]'::jsonb
     );
     
     -- São Paulo x Santos (em 10 dias)
     INSERT INTO matches (
         home_team_id, away_team_id, competition_id, stadium_id, round_id,
-        match_date, status, broadcast_channels, streaming_links
+        match_date, status, broadcast_channels
     ) VALUES (
         sao_paulo_id, santos_id, brasileirao_id, NULL, round_id,
         CURRENT_DATE + INTERVAL '10 days' + TIME '16:00:00',
         'scheduled',
-        '["Premiere"]'::jsonb,
-        '["Premiere Play"]'::jsonb
+        '["Premiere"]'::jsonb
     );
     
     -- Vasco x Botafogo (em 14 dias)
     INSERT INTO matches (
         home_team_id, away_team_id, competition_id, stadium_id, round_id,
-        match_date, status, broadcast_channels, streaming_links
+        match_date, status, broadcast_channels
     ) VALUES (
         vasco_id, botafogo_id, brasileirao_id, NULL, round_id,
         CURRENT_DATE + INTERVAL '14 days' + TIME '19:00:00',
         'scheduled',
-        '["SporTV"]'::jsonb,
-        '["Globoplay"]'::jsonb
+        '["SporTV"]'::jsonb
     );
     
     RAISE NOTICE 'Jogos futuros inseridos com sucesso!';

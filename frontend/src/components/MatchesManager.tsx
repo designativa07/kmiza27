@@ -52,7 +52,7 @@ interface Match {
   away_score?: number
   broadcast_channels?: any
   channel_ids?: number[]
-  streaming_links?: any
+
   round?: { id: number; name: string }
   group_name?: string
   phase?: string

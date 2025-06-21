@@ -384,21 +384,22 @@ export class StandingsService {
   }
 
   async getCompetitionMatches(competitionId: number, group?: string): Promise<Match[]> {
-    const queryBuilder = this.matchRepository
-      .createQueryBuilder('match')
+    const query = this.matchRepository.createQueryBuilder('match')
       .leftJoinAndSelect('match.home_team', 'home_team')
       .leftJoinAndSelect('match.away_team', 'away_team')
-      .leftJoinAndSelect('match.competition', 'competition')
       .leftJoinAndSelect('match.stadium', 'stadium')
-      .where('match.competition_id = :competitionId', { competitionId });
+      .leftJoinAndSelect('match.competition', 'competition')
+      .leftJoinAndSelect('match.round', 'round')
+      .leftJoinAndSelect('match.broadcasts', 'broadcasts') // Adicionado para carregar transmissões
+      .leftJoinAndSelect('broadcasts.channel', 'channel') // Adicionado para carregar detalhes do canal
+      .where('match.competition.id = :competitionId', { competitionId })
+      .orderBy('match.match_date', 'ASC');
 
     if (group) {
-      queryBuilder.andWhere('match.group_name = :group', { group });
+      query.andWhere('match.group_name = :group', { group });
     }
 
-    return queryBuilder
-      .orderBy('match.match_date', 'DESC')
-      .getMany();
+    return query.getMany();
   }
 
   async getCompetitionRounds(competitionId: number): Promise<any[]> {
@@ -515,6 +516,8 @@ export class StandingsService {
         'round',
         'competition',
         'qualified_team',
+        'broadcasts', // Adicionado para carregar transmissões
+        'broadcasts.channel', // Adicionado para carregar detalhes do canal
       ],
       order: {
         match_date: 'ASC',
