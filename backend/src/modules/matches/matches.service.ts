@@ -79,7 +79,6 @@ export class MatchesService {
       attendance: createMatchDto.attendance,
       referee: createMatchDto.referee,
       broadcast_channels: createMatchDto.broadcast_channels,
-      streaming_links: createMatchDto.streaming_links,
       highlights_url: createMatchDto.highlights_url,
       match_stats: createMatchDto.match_stats,
       leg: createMatchDto.leg || MatchLeg.SINGLE_MATCH,
@@ -313,9 +312,7 @@ export class MatchesService {
       if (updateMatchDto.broadcast_channels !== undefined) {
         updateData.broadcast_channels = updateMatchDto.broadcast_channels;
       }
-      if (updateMatchDto.streaming_links !== undefined) {
-        updateData.streaming_links = updateMatchDto.streaming_links;
-      }
+      
       if (updateMatchDto.highlights_url !== undefined) {
         updateData.highlights_url = updateMatchDto.highlights_url;
       }

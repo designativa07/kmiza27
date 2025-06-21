@@ -105,7 +105,7 @@ CREATE TABLE matches (
     attendance INTEGER,
     referee VARCHAR(255),
     broadcast_channels JSONB, -- Array de canais
-    streaming_links JSONB, -- Links de transmissão
+  
     highlights_url TEXT,
     match_stats JSONB, -- Estatísticas detalhadas
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

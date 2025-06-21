@@ -252,59 +252,7 @@ export const RoundMatches = ({ matches, roundName, hideTitle = false }: { matche
                   )}
                 </div>
 
-                {/* Links para assistir */}
-                {match.streaming_links && (
-                  <div className="flex justify-center flex-wrap gap-2 mt-3">
-                    {(() => {
-                      const links: { url: string; name: string }[] = [];
-                      const processPart = (part: string) => {
-                        // Trata "Nome: URL"
-                        const namedLinkMatch = part.match(/^(.*?):\s*(https?:\/\/[^\s]+)$/);
-                        if (namedLinkMatch) {
-                          links.push({ name: namedLinkMatch[1].trim(), url: namedLinkMatch[2] });
-                          return;
-                        }
-                        // Trata apenas URL
-                        const urlMatch = part.match(/^(https?:\/\/[^\s]+)$/);
-                        if (urlMatch) {
-                          links.push({ name: 'ASSISTIR', url: urlMatch[0] });
-                        }
-                      };
 
-                      if (typeof match.streaming_links === 'string') {
-                        match.streaming_links.split(',').forEach(p => processPart(p.trim()));
-                      } else if (typeof match.streaming_links === 'object' && match.streaming_links !== null) {
-                        for (const [name, url] of Object.entries(match.streaming_links)) {
-                          if (typeof url === 'string') {
-                            links.push({ name, url });
-                          }
-                        }
-                      }
-
-                      if (links.length > 0) {
-                        return links.map((link, index) => (
-                          <a
-                            key={index}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full hover:bg-blue-600 transition-colors cursor-pointer"
-                          >
-                            <ExternalLink size={12} className="mr-1" />
-                            {link.name}
-                          </a>
-                        ));
-                      }
-                      
-                      // Fallback para exibir o conteúdo como texto se não for possível extrair links
-                      if (typeof match.streaming_links === 'string') {
-                        return <p className="text-xs text-gray-600">{match.streaming_links}</p>;
-                      }
-
-                      return null;
-                    })()}
-                  </div>
-                )}
               </div>
             ))}
           </div>

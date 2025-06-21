@@ -95,8 +95,7 @@ export class CreateMatchDto {
   @IsNumber({}, { each: true })
   channel_ids?: number[];
 
-  @IsOptional()
-  streaming_links?: any;
+
 
   @IsOptional()
   @IsString()

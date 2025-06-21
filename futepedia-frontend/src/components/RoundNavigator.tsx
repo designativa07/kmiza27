@@ -2,128 +2,125 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Match } from '@/types/match';
-import { RoundMatches } from './RoundMatches'; // Reutilizaremos o componente existente
-import { apiRequest } from '@/lib/config';
 
 interface Round {
   id: number;
   name: string;
   round_number: number;
+  phase?: string; // Pode ser útil para mata-mata
 }
 
 interface RoundNavigatorProps {
-  initialRounds: Round[];
-  competitionId: number;
-  initialMatches: Match[];
-  initialRoundId: number | null;
-  initialRoundName: string;
-  groupFilter?: string; // Novo parâmetro para filtrar por grupo
+  rounds: Round[];
+  currentRoundId: number | null;
+  currentRoundNumber: number | null;
+  competitionType: string;
+  onRoundChange: (roundId: number, roundNumber: number) => void;
 }
 
-// Removido: agora usamos apiRequest da configuração centralizada
+export function RoundNavigator({
+  rounds,
+  currentRoundId,
+  currentRoundNumber,
+  competitionType,
+  onRoundChange,
+}: RoundNavigatorProps) {
+  // Não há mais estado interno de isLoading ou matches aqui.
+  // A lógica de busca de partidas será responsabilidade do componente pai.
 
-export function RoundNavigator({ initialRounds, competitionId, initialMatches, initialRoundId, initialRoundName, groupFilter }: RoundNavigatorProps) {
-  const [rounds, setRounds] = useState(initialRounds);
-  const [currentRoundIndex, setCurrentRoundIndex] = useState(() => {
-    if (!initialRounds || initialRounds.length === 0) {
-      return 0;
-    }
-    if (initialRoundId) {
-      const index = initialRounds.findIndex(round => round.id === initialRoundId);
-      return index !== -1 ? index : initialRounds.length - 1; // Fallback para a última se não encontrar
-    }
-    return initialRounds.length - 1; // Padrão para a última rodada se não houver ID inicial
-  });
-  const [matches, setMatches] = useState<Match[]>(initialMatches);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Verificação de segurança
-  if (!rounds || rounds.length === 0) {
-    return (
-      <div className="bg-white rounded-lg p-8 text-center">
-        <p className="text-gray-500">Nenhuma rodada encontrada para esta competição.</p>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    // Se o índice mudar, buscar novas partidas
-    if (currentRoundIndex < 0 || currentRoundIndex >= rounds.length) {
-      return;
-    }
-    
-    const fetchMatches = async () => {
-      setIsLoading(true);
-      const roundId = rounds[currentRoundIndex].id;
-      try {
-        const res = await apiRequest(`/standings/competition/${competitionId}/round/${roundId}/matches`);
-        const data = await res.json();
-        
-        // Filtrar partidas por grupo se especificado
-        const filteredMatches = groupFilter 
-          ? data.filter((match: Match) => {
-              const matchGroup = match.group_name || 'Geral';
-              const targetGroup = groupFilter === 'Classificação Geral' ? 'Geral' : groupFilter;
-              return matchGroup === targetGroup;
-            })
-          : data;
-        
-        setMatches(filteredMatches);
-      } catch (error) {
-        console.error("Failed to fetch matches for round:", error);
-        setMatches([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    // Buscar partidas sempre que o índice da rodada mudar
-    fetchMatches();
-  }, [currentRoundIndex, rounds, competitionId, groupFilter]);
+  const currentIndex = rounds.findIndex(round => round.id === currentRoundId);
+  const currentRound = rounds[currentIndex];
 
   const handlePrevRound = () => {
-    if (currentRoundIndex > 0) {
-      setCurrentRoundIndex(currentRoundIndex - 1);
+    if (currentIndex > 0) {
+      const prevRound = rounds[currentIndex - 1];
+      onRoundChange(prevRound.id, prevRound.round_number);
     }
   };
 
   const handleNextRound = () => {
-    if (currentRoundIndex < rounds.length - 1) {
-      setCurrentRoundIndex(currentRoundIndex + 1);
+    if (currentIndex < rounds.length - 1) {
+      const nextRound = rounds[currentIndex + 1];
+      onRoundChange(nextRound.id, nextRound.round_number);
     }
   };
 
-  const currentRoundName = rounds[currentRoundIndex]?.name || 'Rodada';
+  // Se não houver rodada atual, ou as rodadas ainda não foram carregadas, retorne nulo.
+  if (!currentRound) {
+    return null;
+  }
+
+  const isMataMata = competitionType === 'mata-mata';
+  const displayName = isMataMata 
+    ? currentRound.phase || currentRound.name 
+    : `Rodada ${currentRound.round_number} de ${rounds.length}`;
 
   return (
-    <div className="bg-white rounded-lg">
-       <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <button 
-            onClick={handlePrevRound} 
-            disabled={currentRoundIndex <= 0 || isLoading}
-            className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h3 className="text-xl font-bold text-gray-800 text-center">
-            {currentRoundName}
-          </h3>
-          <button 
-            onClick={handleNextRound} 
-            disabled={currentRoundIndex >= rounds.length - 1 || isLoading}
-            className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-       </div>
-        {isLoading ? (
-            <div className="flex justify-center items-center h-48">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            </div>
-        ) : (
-            <RoundMatches matches={matches} roundName={currentRoundName} hideTitle={true} />
-        )}
+    <div className="w-full">
+      {/* Header compacto com título */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2">
+        <h3 className="text-lg font-semibold text-white text-center">
+          {displayName}
+        </h3>
+      </div>
+      
+      {/* Navegação compacta */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+        <button 
+          onClick={handlePrevRound} 
+          disabled={currentIndex <= 0}
+          className={`
+            flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+            ${currentIndex <= 0 
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-md transform hover:scale-105'
+            }
+          `}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        
+        {/* Indicadores de rodada */}
+        <div className="flex-1 flex items-center justify-center mx-4">
+          <div className="flex items-center space-x-1.5">
+            {rounds.map((round, index) => (
+              <button
+                key={round.id}
+                onClick={() => onRoundChange(round.id, round.round_number)}
+                className={`
+                  w-2.5 h-2.5 rounded-full transition-all duration-200 hover:scale-125
+                  ${index === currentIndex 
+                    ? 'bg-blue-600 shadow-sm ring-1 ring-blue-200' 
+                    : index < currentIndex 
+                      ? 'bg-green-500 hover:bg-green-600' 
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }
+                `}
+                title={isMataMata ? (round.phase || round.name) : `Rodada ${round.round_number}`}
+              />
+            ))}
+          </div>
+          
+          {/* Contador de rodadas */}
+          <div className="ml-4 text-xs text-gray-600 font-medium">
+            {currentIndex + 1}/{rounds.length}
+          </div>
+        </div>
+        
+        <button 
+          onClick={handleNextRound} 
+          disabled={currentIndex >= rounds.length - 1}
+          className={`
+            flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+            ${currentIndex >= rounds.length - 1 
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-md transform hover:scale-105'
+            }
+          `}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 } 

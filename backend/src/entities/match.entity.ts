@@ -84,9 +84,6 @@ export class Match {
   @Column({ type: 'jsonb', nullable: true })
   broadcast_channels: any;
 
-  @Column({ type: 'jsonb', nullable: true })
-  streaming_links: any;
-
   @Column({ type: 'text', nullable: true })
   highlights_url: string;
 
