@@ -7,6 +7,7 @@ import { TournamentBracket } from '@/components/TournamentBracket';
 import { Match } from '@/types/match';
 import { getApiUrl } from '@/lib/config';
 import { getTeamLogoUrl } from '@/lib/cdn-simple';
+import { createKnockoutTies } from '@/lib/competition-utils';
 
 // Tipos
 interface Competition {
@@ -225,7 +226,10 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     return match.phase && isKnockoutPhase(match.phase);
   });
 
-  const shouldShowBracket = knockoutMatches.length > 0 && 
+  // Criar os confrontos (ties) a partir das partidas de mata-mata
+  const knockoutTies = createKnockoutTies(knockoutMatches);
+
+  const shouldShowBracket = knockoutTies.length > 0 && 
     (competition && (isKnockoutCompetition(competition.type) || knockoutMatches.length > 0));
 
   if (loading) {
@@ -255,7 +259,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         {shouldShowBracket && (
           <div className="mb-8">
             <TournamentBracket 
-              matches={knockoutMatches} 
+              ties={knockoutTies} 
               competitionName={competition?.name}
             />
           </div>
