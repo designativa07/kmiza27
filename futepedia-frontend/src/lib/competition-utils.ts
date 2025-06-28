@@ -1,3 +1,5 @@
+import { Match, KnockoutTie } from '@/types/match';
+
 /**
  * Utilitários para competições e mata-mata
  * Padroniza a lógica de identificação de fases e tipos de competição
@@ -10,31 +12,6 @@ export interface Competition {
   type: string;
   season: string;
   has_groups?: boolean;
-}
-
-export interface Match {
-  id: number;
-  phase?: string;
-  group_name?: string;
-  home_team: {
-    id: number;
-    name: string;
-    logo_url: string;
-  };
-  away_team: {
-    id: number;
-    name: string;
-    logo_url: string;
-  };
-  home_score?: number;
-  away_score?: number;
-  status: string;
-  match_date: string;
-  round_number?: number;
-  stadium?: {
-    name: string;
-    city?: string;
-  };
 }
 
 /**
@@ -126,4 +103,85 @@ export const getOrderedPhases = (phases: string[]): string[] => {
     const orderB = phaseOrder[b] || 99;
     return orderA - orderB;
   });
+};
+
+/**
+ * Criar confrontos de mata-mata (KnockoutTies) a partir de uma lista de partidas.
+ * Agrupa partidas de ida e volta em um único confronto e calcula o placar agregado.
+ */
+export const createKnockoutTies = (matches: Match[]): KnockoutTie[] => {
+  const tiesMap = new Map<string, KnockoutTie>();
+
+  matches.forEach(match => {
+    if (!match.phase) return; // Ignora partidas sem fase definida
+
+    // Gerar um ID de confronto baseado nos times e fase, para agrupar jogos de ida e volta
+    const teamPairKey = [match.home_team.id, match.away_team.id].sort().join('-');
+    const tieId = `${match.phase}-${teamPairKey}`;
+
+    let tie = tiesMap.get(tieId);
+
+    if (!tie) {
+      let tieStatus: KnockoutTie['status'] = 'SCHEDULED'; // Default to SCHEDULED
+      const upperCaseMatchStatus = match.status.toUpperCase();
+      if (upperCaseMatchStatus === 'FINISHED' || upperCaseMatchStatus === 'IN_PROGRESS') {
+        tieStatus = upperCaseMatchStatus as KnockoutTie['status'];
+      }
+
+      tie = {
+        id: tieId,
+        phase: match.phase,
+        home_team: match.home_team,
+        away_team: match.away_team,
+        leg1: match,
+        status: tieStatus,
+      };
+      tiesMap.set(tieId, tie as KnockoutTie); // Casting here to help TypeScript
+    } else {
+      // Se já existe um confronto, esta é a partida de volta
+      tie.leg2 = match;
+
+      // Atualiza o status do confronto baseado na partida de volta
+      const upperCaseMatchStatus = match.status.toUpperCase();
+      if (upperCaseMatchStatus === 'FINISHED' || upperCaseMatchStatus === 'IN_PROGRESS') {
+          tie.status = upperCaseMatchStatus as KnockoutTie['status'];
+      }
+    }
+  });
+
+  // Calcular placares agregados e determinar o vencedor
+  tiesMap.forEach(tie => {
+    let homeAggregate = tie.leg1.home_score || 0;
+    let awayAggregate = tie.leg1.away_score || 0;
+
+    if (tie.leg2) {
+      homeAggregate += tie.leg2.home_score || 0;
+      awayAggregate += tie.leg2.away_score || 0;
+    }
+
+    tie.aggregate_home_score = homeAggregate;
+    tie.aggregate_away_score = awayAggregate;
+
+    if (tie.status === 'FINISHED') {
+      if (homeAggregate > awayAggregate) {
+        tie.winner_team = tie.home_team;
+      } else if (awayAggregate > homeAggregate) {
+        tie.winner_team = tie.away_team;
+      } else {
+        // Caso de empate no agregado, verificar regras de desempate se houver
+        // Por simplicidade, se for mata-mata e tiver penaltis, quem venceu o segundo jogo por penaltis (se for o caso)
+        if (tie.leg2 && (tie.leg2.home_score_penalties !== undefined || tie.leg2.away_score_penalties !== undefined)) {
+          const homePenalties = tie.leg2.home_score_penalties || 0;
+          const awayPenalties = tie.leg2.away_score_penalties || 0;
+          if (homePenalties > awayPenalties) {
+            tie.winner_team = tie.home_team;
+          } else if (awayPenalties > homePenalties) {
+            tie.winner_team = tie.away_team;
+          }
+        }
+      }
+    }
+  });
+
+  return Array.from(tiesMap.values());
 }; 
