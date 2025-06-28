@@ -241,39 +241,23 @@ export class MatchesService {
   }
 
   async findAll(): Promise<Match[]> {
-    console.log('🔍 MatchesService.findAll - Buscando todos os matches...');
-    
-    const matches = await this.matchRepository.find({
-      relations: [
-        'home_team', 
-        'away_team', 
-        'competition', 
-        'stadium', 
-        'round',
-        'broadcasts',
-        'broadcasts.channel'
-      ],
-      order: {
-        match_date: 'ASC', // Ordenar por data, mais próximos primeiro
-        id: 'ASC' // Em caso de empate na data, ordenar por ID
-      }
+    return this.matchRepository.find({
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
     });
-
-    // Mapear os IDs dos canais para cada partida
-    matches.forEach(match => {
-      if (match.broadcasts) {
-        match.channel_ids = match.broadcasts.map(broadcast => broadcast.channel.id);
-      }
-    });
-    
-    console.log(`✅ MatchesService.findAll - ${matches.length} matches encontrados`);
-    return matches;
   }
 
   async findOne(id: number): Promise<Match | null> {
-    return this.matchRepository.findOne({ 
+    return this.matchRepository.findOne({
       where: { id },
-      relations: ['home_team', 'away_team', 'competition', 'stadium', 'round', 'broadcasts', 'broadcasts.channel']
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
+    });
+  }
+
+  async findByCompetitionId(competitionId: number): Promise<Match[]> {
+    return this.matchRepository.find({
+      where: { competition: { id: competitionId } },
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
+      order: { match_date: 'ASC' }, // Opcional: ordenar por data da partida
     });
   }
 

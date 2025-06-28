@@ -58,6 +58,17 @@ export class ChatbotService {
       // Atualizar última interação
       await this.usersService.updateLastInteraction(phoneNumber);
 
+      // Verificar se é um ID de botão de lista (IDs começam com prefixos específicos)
+      if (this.isButtonListId(message)) {
+        return await this.processButtonListId(phoneNumber, message);
+      }
+
+      // Verificar estado da conversa para comandos que requerem entrada adicional
+      const conversationState = await this.getUserConversationState(phoneNumber);
+      if (conversationState) {
+        return await this.processConversationState(phoneNumber, message, conversationState);
+      }
+
       // Analisar intenção usando OpenAI
       const analysis = await this.openAIService.analyzeMessage(message);
       console.log(`🧠 Intenção detectada: ${analysis.intent} (${(analysis.confidence * 100).toFixed(0)}%)`);
@@ -134,7 +145,9 @@ export class ChatbotService {
           break;
 
         default:
-          response = await this.getWelcomeMessage();
+          // Enviar menu de boas-vindas como botões de lista
+          await this.sendWelcomeMenu(phoneNumber);
+          return 'Menu enviado! Selecione uma opção.';
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
@@ -616,6 +629,83 @@ export class ChatbotService {
     }
   }
 
+  private async getTomorrowMatches(): Promise<string> {
+    try {
+      console.log('🔍 Buscando jogos de amanhã...');
+
+      // Usar query SQL direta com timezone do Brasil para maior precisão
+      // Converter a data atual para o timezone de São Paulo e buscar jogos de amanhã
+      const tomorrowMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE((NOW() AT TIME ZONE 'America/Sao_Paulo') + INTERVAL '1 day')`)
+        .orderBy('match.match_date', 'ASC')
+        .getMany();
+
+      console.log(`⚽ Encontrados ${tomorrowMatches.length} jogos para amanhã`);
+
+      if (tomorrowMatches.length === 0) {
+        // Buscar próximos jogos para mostrar como alternativa
+        const nextMatches = await this.matchesRepository
+          .createQueryBuilder('match')
+          .leftJoinAndSelect('match.competition', 'competition')
+          .leftJoinAndSelect('match.home_team', 'homeTeam')
+          .leftJoinAndSelect('match.away_team', 'awayTeam')
+          .where(`match.match_date > (NOW() AT TIME ZONE 'America/Sao_Paulo') + INTERVAL '1 day'`)
+          .andWhere('match.status = :status', { status: 'scheduled' })
+          .orderBy('match.match_date', 'ASC')
+          .limit(3)
+          .getMany();
+
+        let response = `📆 JOGOS DE AMANHÃ 📆\n\n😔 Não há jogos agendados para amanhã.`;
+        
+        if (nextMatches.length > 0) {
+          response += `\n\n📅 PRÓXIMOS JOGOS:\n\n`;
+          nextMatches.forEach(match => {
+            const matchDate = new Date(match.match_date);
+            const date = matchDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const time = matchDate.toLocaleTimeString('pt-BR', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              timeZone: 'America/Sao_Paulo'
+            });
+            response += `📅 ${date} - ${time}\n`;
+            response += `🏆 ${match.competition.name}\n`;
+            response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n\n`;
+          });
+        }
+        
+        response += `\n⚽ Quer saber sobre o próximo jogo de algum time específico?\n\nPara mais informações acesse Kmiza27.com`;
+        return response;
+      }
+
+      let response = `📆 JOGOS DE AMANHÃ 📆\n\n`;
+
+      tomorrowMatches.forEach(match => {
+        const matchDate = new Date(match.match_date);
+        const time = matchDate.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo'
+        });
+        
+        response += `⏰ ${time} - ${match.competition.name}\n`;
+        response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n`;
+        response += `🏟️ ${match.stadium?.name || 'A definir'}\n\n`;
+      });
+
+      response += `\nPara mais informações acesse Kmiza27.com`;
+      return response;
+
+    } catch (error) {
+      console.error('Erro ao buscar jogos de amanhã:', error);
+      return '❌ Erro ao buscar jogos de amanhã.\n\nPara mais informações acesse Kmiza27.com';
+    }
+  }
+
   private async getCompetitionInfo(competitionName: string): Promise<string> {
     try {
       const competition = await this.competitionsRepository
@@ -903,6 +993,424 @@ ${result}`;
 💬 O que você gostaria de saber?
 
 Para mais informações acesse Kmiza27.com`;
+  }
+
+  private async sendWelcomeMenu(phoneNumber: string): Promise<boolean> {
+    try {
+      return await this.evolutionService.sendListMessage(
+        phoneNumber,
+        '👋 Olá! Sou o Kmiza27 Bot ⚽',
+        'Como posso te ajudar com informações sobre futebol? Selecione uma categoria:',
+        'Ver Opções',
+        [
+          {
+            title: '⚡ Ações Rápidas',
+            rows: [
+              {
+                id: 'MENU_TABELAS_CLASSIFICACAO',
+                title: '📊 Tabelas de Classificação',
+                description: 'Ver classificação das competições'
+              },
+              {
+                id: 'CMD_JOGOS_HOJE',
+                title: '📅 Jogos de Hoje',
+                description: 'Todos os jogos de hoje'
+              },
+              {
+                id: 'CMD_JOGOS_AMANHA',
+                title: '📆 Jogos de Amanhã',
+                description: 'Todos os jogos de amanhã'
+              },
+              {
+                id: 'CMD_JOGOS_SEMANA',
+                title: '🗓️ Jogos da Semana',
+                description: 'Jogos desta semana'
+              }
+            ]
+          },
+          {
+            title: '⚽ Informações de Partidas',
+            rows: [
+              {
+                id: 'CMD_PROXIMOS_JOGOS',
+                title: '⚽ Próximos Jogos',
+                description: 'Próximo jogo de um time'
+              },
+              {
+                id: 'CMD_JOGOS_AO_VIVO',
+                title: '🔴 Jogos ao Vivo',
+                description: 'Jogo atual de um time'
+              },
+              {
+                id: 'CMD_ULTIMO_JOGO',
+                title: '🏁 Últimos Jogos',
+                description: 'Último jogo de um time'
+              },
+              {
+                id: 'CMD_TRANSMISSAO',
+                title: '📺 Transmissão',
+                description: 'Onde passa o jogo de um time'
+              }
+            ]
+          },
+          {
+            title: '👥 Times, Jogadores e Estádios',
+            rows: [
+              {
+                id: 'CMD_INFO_TIME',
+                title: 'ℹ️ Informações do Time',
+                description: 'Dados gerais de um time'
+              },
+              {
+                id: 'CMD_ELENCO_TIME',
+                title: '👥 Elenco do Time',
+                description: 'Ver elenco de um time'
+              },
+              {
+                id: 'CMD_INFO_JOGADOR',
+                title: '👤 Informações do Jogador',
+                description: 'Dados de um jogador'
+              },
+              {
+                id: 'CMD_POSICAO_TIME',
+                title: '📍 Posição na Tabela',
+                description: 'Posição do time na competição'
+              },
+              {
+                id: 'CMD_ESTATISTICAS_TIME',
+                title: '📈 Estatísticas do Time',
+                description: 'Estatísticas detalhadas de um time'
+              },
+              {
+                id: 'CMD_ESTADIOS',
+                title: '🏟️ Estádios',
+                description: 'Informações sobre estádios'
+              }
+            ]
+          },
+          {
+            title: '🏆 Competições e Outros',
+            rows: [
+              {
+                id: 'CMD_ARTILHEIROS',
+                title: '🥇 Artilheiros',
+                description: 'Maiores goleadores de uma competição'
+              },
+              {
+                id: 'CMD_CANAIS',
+                title: '📡 Canais',
+                description: 'Canais de transmissão'
+              },
+              {
+                id: 'CMD_INFO_COMPETICOES',
+                title: '🏆 Informações de Competições',
+                description: 'Dados gerais de uma competição'
+              }
+            ]
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erro ao enviar menu de boas-vindas:', error);
+      return false;
+    }
+  }
+
+  private async sendCompetitionsMenu(phoneNumber: string): Promise<boolean> {
+    try {
+      // Buscar competições ativas do banco de dados
+      const competitions = await this.competitionsRepository
+        .createQueryBuilder('competition')
+        .where('competition.is_active = :active', { active: true })
+        .orderBy('competition.name', 'ASC')
+        .getMany();
+
+      if (competitions.length === 0) {
+        await this.evolutionService.sendMessage(
+          phoneNumber,
+          '❌ Nenhuma competição ativa encontrada no momento.\n\nPara mais informações acesse Kmiza27.com'
+        );
+        return true;
+      }
+
+      // Dividir competições em seções para melhor organização
+      const nationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('brasileiro') || 
+        c.name.toLowerCase().includes('copa do brasil') ||
+        c.name.toLowerCase().includes('série')
+      );
+
+      const internationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('libertadores') || 
+        c.name.toLowerCase().includes('sul-americana') ||
+        c.name.toLowerCase().includes('copa américa') ||
+        c.name.toLowerCase().includes('mundial')
+      );
+
+      const otherCompetitions = competitions.filter(c => 
+        !nationalCompetitions.includes(c) && !internationalCompetitions.includes(c)
+      );
+
+      const sections: {
+        title: string;
+        rows: { id: string; title: string; description: string }[];
+      }[] = [];
+
+      if (nationalCompetitions.length > 0) {
+        sections.push({
+          title: '🇧🇷 Competições Nacionais',
+          rows: nationalCompetitions.slice(0, 5).map(comp => ({
+            id: `COMP_${comp.id}`,
+            title: comp.name,
+            description: `Ver classificação - ${comp.season}`
+          }))
+        });
+      }
+
+      if (internationalCompetitions.length > 0) {
+        sections.push({
+          title: '🌎 Competições Internacionais',
+          rows: internationalCompetitions.slice(0, 5).map(comp => ({
+            id: `COMP_${comp.id}`,
+            title: comp.name,
+            description: `Ver classificação - ${comp.season}`
+          }))
+        });
+      }
+
+      if (otherCompetitions.length > 0) {
+        sections.push({
+          title: '🏆 Outras Competições',
+          rows: otherCompetitions.slice(0, 5).map(comp => ({
+            id: `COMP_${comp.id}`,
+            title: comp.name,
+            description: `Ver classificação - ${comp.season}`
+          }))
+        });
+      }
+
+      return await this.evolutionService.sendListMessage(
+        phoneNumber,
+        '📊 Tabelas de Classificação',
+        'Selecione a competição para ver a classificação:',
+        'Ver Competições',
+        sections
+      );
+    } catch (error) {
+      console.error('Erro ao enviar menu de competições:', error);
+      return false;
+    }
+  }
+
+  private async setUserConversationState(phoneNumber: string, state: string): Promise<void> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      const preferences = user.preferences || {};
+      preferences.conversationState = state;
+      await this.usersService.updateUser(user.id, { preferences });
+    } catch (error) {
+      console.error('Erro ao definir estado da conversa:', error);
+    }
+  }
+
+  private async getUserConversationState(phoneNumber: string): Promise<string | null> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      return user.preferences?.conversationState || null;
+    } catch (error) {
+      console.error('Erro ao obter estado da conversa:', error);
+      return null;
+    }
+  }
+
+  private async clearUserConversationState(phoneNumber: string): Promise<void> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      const preferences = user.preferences || {};
+      delete preferences.conversationState;
+      await this.usersService.updateUser(user.id, { preferences });
+    } catch (error) {
+      console.error('Erro ao limpar estado da conversa:', error);
+    }
+  }
+
+  private isButtonListId(message: string): boolean {
+    // Verificar se a mensagem é um ID de botão de lista
+    const buttonPrefixes = ['MENU_', 'CMD_', 'COMP_'];
+    return buttonPrefixes.some(prefix => message.startsWith(prefix));
+  }
+
+  private async processButtonListId(phoneNumber: string, buttonId: string): Promise<string> {
+    try {
+      console.log(`🔘 Processando botão de lista: ${buttonId}`);
+
+      // Limpar estado anterior da conversa
+      await this.clearUserConversationState(phoneNumber);
+
+      switch (buttonId) {
+        // Menu de Tabelas de Classificação
+        case 'MENU_TABELAS_CLASSIFICACAO':
+          await this.sendCompetitionsMenu(phoneNumber);
+          return 'Selecione a competição desejada:';
+
+        // Comandos diretos (sem necessidade de entrada adicional)
+        case 'CMD_JOGOS_HOJE':
+          return await this.getTodayMatches();
+
+        case 'CMD_JOGOS_AMANHA':
+          return await this.getTomorrowMatches();
+
+        case 'CMD_JOGOS_SEMANA':
+          return await this.getWeekMatches();
+
+        case 'CMD_CANAIS':
+          return await this.footballDataService.getChannelInfo();
+
+        // Comandos que requerem entrada adicional
+        case 'CMD_PROXIMOS_JOGOS':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_next_match');
+          return '⚽ Para qual time você gostaria de saber os próximos jogos?\n\nPor favor, digite o nome do time (ex: Flamengo, Palmeiras, Corinthians):';
+
+        case 'CMD_JOGOS_AO_VIVO':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_current_match');
+          return '🔴 Para qual time você gostaria de saber se está jogando agora?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_ULTIMO_JOGO':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_last_match');
+          return '🏁 Para qual time você gostaria de saber o último jogo?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_TRANSMISSAO':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_broadcast');
+          return '📺 Para qual time você gostaria de saber onde passa o jogo?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_INFO_TIME':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_info');
+          return 'ℹ️ Para qual time você gostaria de ver as informações?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_ELENCO_TIME':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_squad');
+          return '👥 Para qual time você gostaria de ver o elenco?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_INFO_JOGADOR':
+          await this.setUserConversationState(phoneNumber, 'waiting_player_for_info');
+          return '👤 Para qual jogador você gostaria de ver as informações?\n\nPor favor, digite o nome do jogador:';
+
+        case 'CMD_POSICAO_TIME':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_position');
+          return '📍 Para qual time você gostaria de ver a posição na tabela?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_ESTATISTICAS_TIME':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_statistics');
+          return '📈 Para qual time você gostaria de ver as estatísticas?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_ESTADIOS':
+          await this.setUserConversationState(phoneNumber, 'waiting_stadium_for_info');
+          return '🏟️ Para qual estádio você gostaria de ver as informações?\n\nPor favor, digite o nome do estádio:';
+
+        case 'CMD_ARTILHEIROS':
+          await this.setUserConversationState(phoneNumber, 'waiting_competition_for_scorers');
+          return '🥇 Para qual competição você gostaria de ver os artilheiros?\n\nPor favor, digite o nome da competição (ex: Brasileirão, Libertadores):';
+
+        case 'CMD_INFO_COMPETICOES':
+          await this.setUserConversationState(phoneNumber, 'waiting_competition_for_info');
+          return '🏆 Para qual competição você gostaria de ver as informações?\n\nPor favor, digite o nome da competição:';
+
+        default:
+          // Verificar se é um ID de competição (COMP_X)
+          if (buttonId.startsWith('COMP_')) {
+            const competitionId = parseInt(buttonId.replace('COMP_', ''));
+            return await this.getCompetitionTableById(competitionId);
+          }
+
+          return '❌ Opção não reconhecida. Tente novamente ou digite "menu" para ver as opções.';
+      }
+    } catch (error) {
+      console.error('Erro ao processar botão de lista:', error);
+      return '❌ Erro ao processar sua seleção. Tente novamente.';
+    }
+  }
+
+  private async processConversationState(phoneNumber: string, message: string, state: string): Promise<string> {
+    try {
+      console.log(`💬 Processando estado da conversa: ${state} com mensagem: ${message}`);
+
+      // Limpar estado da conversa após processar
+      await this.clearUserConversationState(phoneNumber);
+
+      switch (state) {
+        case 'waiting_team_for_next_match':
+          return await this.findNextMatch(message);
+
+        case 'waiting_team_for_current_match':
+          return await this.getCurrentMatch(message);
+
+        case 'waiting_team_for_last_match':
+          return await this.getLastMatch(message);
+
+        case 'waiting_team_for_broadcast':
+          return await this.getBroadcastInfo(message);
+
+        case 'waiting_team_for_info':
+          return await this.getTeamInfo(message);
+
+        case 'waiting_team_for_squad':
+          return await this.getTeamSquad(message);
+
+        case 'waiting_player_for_info':
+          return await this.getPlayerInfo(message);
+
+        case 'waiting_team_for_position':
+          return await this.getTeamPosition(message);
+
+        case 'waiting_team_for_statistics':
+          return await this.footballDataService.getTeamStatistics(message);
+
+        case 'waiting_stadium_for_info':
+          return await this.getStadiumInfo(message);
+
+        case 'waiting_competition_for_scorers':
+          return await this.getTopScorers(message);
+
+        case 'waiting_competition_for_info':
+          return await this.getCompetitionInfo(message);
+
+        default:
+          return '❌ Estado da conversa não reconhecido. Tente novamente.';
+      }
+    } catch (error) {
+      console.error('Erro ao processar estado da conversa:', error);
+      return '❌ Erro ao processar sua resposta. Tente novamente.';
+    }
+  }
+
+  private async getCompetitionTableById(competitionId: number): Promise<string> {
+    try {
+      const competition = await this.competitionsRepository.findOne({
+        where: { id: competitionId }
+      });
+
+      if (!competition) {
+        return '❌ Competição não encontrada.\n\nPara mais informações acesse Kmiza27.com';
+      }
+
+      // Usar o método existente getCompetitionTable com o nome da competição
+      return await this.getCompetitionTable(competition.name);
+    } catch (error) {
+      console.error('Erro ao buscar tabela da competição por ID:', error);
+      return '❌ Erro ao buscar tabela da competição.\n\nPara mais informações acesse Kmiza27.com';
+    }
+  }
+
+  private async getStadiumInfo(stadiumName: string): Promise<string> {
+    try {
+      // Precisamos injetar o repository do Stadium - por ora, vou usar uma implementação básica
+      // TODO: Adicionar @InjectRepository(Stadium) no constructor e usar o repository correto
+      
+      return `🏟️ INFORMAÇÕES DE ESTÁDIOS\n\n📍 Busca por: "${stadiumName}"\n\n⚽ Funcionalidade de estádios em desenvolvimento.\n\nPara mais informações sobre estádios e jogos, acesse Kmiza27.com`;
+    } catch (error) {
+      console.error('Erro ao buscar informações do estádio:', error);
+      return '❌ Erro ao buscar informações do estádio.\n\nPara mais informações acesse Kmiza27.com';
+    }
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {

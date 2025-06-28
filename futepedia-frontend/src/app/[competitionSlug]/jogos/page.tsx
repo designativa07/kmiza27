@@ -219,61 +219,9 @@ const MatchesPage = ({ params }: Props) => {
   };
 
   // Filtrar as partidas pela rodada selecionada (se houver)
-  const matchesForSelectedRound = currentRoundId 
+  const filteredMatches = currentRoundId 
     ? matches.filter(match => match.round?.id === currentRoundId) 
     : matches; // Se não houver rodada selecionada, mostrar todas (ou a lógica que desejar)
-
-  // Agrupar jogos por rodada e encontrar a data mais recente de cada rodada
-  const matchesByRound = matchesForSelectedRound.reduce((acc, match) => {
-    const roundId = match.round?.id || 0; // Usar ID da rodada como chave
-    const roundName = match.round?.name || 'Sem rodada';
-    const roundNumber = match.round?.round_number || 0;
-    const groupName = match.group_name || 'Geral'; // Obter o nome do grupo
-
-    if (!acc[roundId]) {
-      acc[roundId] = { 
-        roundData: { id: roundId, name: roundName, round_number: roundNumber },
-        groups: {}, // Mudar para objeto de grupos
-        latestMatchDate: null as Date | null // Adiciona campo para a data da partida mais recente
-      };
-    }
-
-    if (!acc[roundId].groups[groupName]) {
-      acc[roundId].groups[groupName] = [];
-    }
-    acc[roundId].groups[groupName].push(match);
-
-    // Atualiza a data da partida mais recente para a rodada
-    if (match.match_date) {
-      const currentMatchDate = new Date(match.match_date);
-      if (!acc[roundId].latestMatchDate || currentMatchDate > acc[roundId].latestMatchDate) {
-        acc[roundId].latestMatchDate = currentMatchDate;
-      }
-    }
-    return acc;
-  }, {} as Record<number, { roundData: Round, groups: Record<string, Match[]>, latestMatchDate: Date | null }>); // Chave por ID da rodada e agora com grupos
-
-  // Ordenar as rodadas: primeiro pela data da partida mais recente (decrescente), depois pelo número da rodada (decrescente)
-  const sortedRoundEntries = Object.values(matchesByRound).sort((a, b) => {
-    // Priorizar rodadas com datas mais recentes
-    if (a.latestMatchDate && b.latestMatchDate) {
-      if (b.latestMatchDate.getTime() !== a.latestMatchDate.getTime()) {
-        return b.latestMatchDate.getTime() - a.latestMatchDate.getTime();
-      }
-    } else if (a.latestMatchDate) { // A tem data, B não
-      return -1;
-    } else if (b.latestMatchDate) { // B tem data, A não
-      return 1;
-    }
-
-    // Fallback: ordenar pelo round_number (decrescente, para mostrar mais atual primeiro)
-    return b.roundData.round_number - a.roundData.round_number;
-  });
-
-  // Encontrar a rodada selecionada
-  const selectedRoundEntry = currentRoundId 
-    ? sortedRoundEntries.find(entry => entry.roundData.id === currentRoundId) 
-    : sortedRoundEntries[0]; // Padrão para a primeira rodada se nenhuma for selecionada
 
   if (isLoading) {
     return (
@@ -309,48 +257,34 @@ const MatchesPage = ({ params }: Props) => {
     <main className="container mx-auto pt-0 p-4">
       {/* Container unificado: Navegação + Jogos */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-        {/* Navegação de Rodadas */}
-        {currentRoundId && currentRoundNumber && (rounds.length > 1 || competition.type === 'mata-mata') && (
-          <RoundNavigator
-            competitionType={competition.type}
-            rounds={rounds.filter(round => typeof round.round_number === 'number')}
-            currentRoundId={currentRoundId}
-            currentRoundNumber={currentRoundNumber}
-            onRoundChange={handleRoundChange}
-          />
-        )}
-
-        {/* Conteúdo dos Jogos */}
-        {selectedRoundEntry && Object.keys(selectedRoundEntry.groups).length > 0 ? (
-          <div key={selectedRoundEntry.roundData.id} className="p-4 space-y-4">
-            {competition && (competition.type === 'groups' || competition.type === 'grupos_e_mata_mata') ? (
-              // Renderizar por grupos para competições tipo 'groups' ou 'grupos_e_mata_mata'
-              Object.entries(selectedRoundEntry.groups)
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .map(([groupName, groupMatches]) => (
-                  <div key={groupName} className="mb-6 last:mb-0">
-                    <h3 className="text-xl font-bold text-blue-800 mb-4 bg-blue-50 py-3 px-4 rounded-lg text-center">
-                      {groupName === 'Geral' ? 'Partidas' : `Grupo ${groupName}`}
-                    </h3>
-                    <div className="space-y-4">
-                      {groupMatches.map((match) => (
-                        <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
-                      ))}
-                    </div>
-                  </div>
-                ))
-            ) : (
-              // Renderizar sem agrupamento para outras competições ou se não houver grupos
-              Object.values(selectedRoundEntry.groups).flat().map((match) => (
-                <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
+        <div className="space-y-2">  {/* Reduzido de space-y-4 para space-y-2 */}
+          {/* Renderizar RoundNavigator sempre que houver rounds */}
+          {rounds.length > 0 && (
+            <RoundNavigator 
+              rounds={rounds} 
+              currentRoundId={currentRoundId} 
+              currentRoundNumber={currentRoundNumber} 
+              competitionType={competition?.type || ''} 
+              onRoundChange={handleRoundChange} 
+            />
+          )}
+          
+          {/* Lista de Jogos */}
+          <div className="px-4 pb-4">
+            {filteredMatches.length > 0 ? (
+              filteredMatches.map(match => (
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  formatDate={formatDate} 
+                  getTeamLogoUrl={getTeamLogoUrl} 
+                />
               ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">Nenhuma partida encontrada para esta rodada</p>
             )}
           </div>
-        ) : (
-          <div className="p-8 text-center">
-            <p className="text-gray-500">Sem partidas para a rodada selecionada.</p>
-          </div>
-        )}
+        </div>
       </div>
     </main>
   );
@@ -394,7 +328,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
               <span className="text-xl font-bold text-gray-800 mx-0.5">×</span>
               <span className="text-xl font-bold text-gray-800">{match.away_score}</span>
             </>
-          ) : (
+                  ) : (
             <span className="text-xl font-bold text-gray-400">×</span>
                   )}
                 </div>

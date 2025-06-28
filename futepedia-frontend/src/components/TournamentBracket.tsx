@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Match } from '@/types/match';
+import { Match, KnockoutTie } from '@/types/match';
 import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import { parseISO, format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { phaseOrder, getOrderedPhases } from '@/lib/competition-utils';
 
 interface TournamentBracketProps {
-  matches: Match[];
+  ties: KnockoutTie[];
   competitionName?: string;
 }
 
@@ -84,113 +84,187 @@ const getWinner = (match: Match) => {
   return null;
 };
 
-// Componente para um confronto individual
-const BracketMatch: React.FC<{ match: Match; phase: string }> = ({ match, phase }) => {
-  const winner = getWinner(match);
-  const isFinished = match.status === 'FINISHED' || match.status === 'finished';
-  
+// Componente para um confronto individual (agora exibe um Tie)
+const BracketTie: React.FC<{ tie: KnockoutTie }> = ({ tie }) => {
+  const isFinished = tie.status === 'FINISHED';
+
+  // Determina o time que venceu o confronto geral
+  const tieWinner = tie.winner_team;
+
   return (
-    <div className="bg-white rounded-lg shadow-md border-2 border-gray-200 p-3 min-w-[200px]">
-      {/* Cabeçalho da partida */}
-      <div className="text-center mb-2">
-        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-          {phase}
+    <div className="bg-white rounded-lg shadow-md border-2 border-gray-200 p-3 min-w-[200px] relative overflow-hidden">
+      {/* Indicador de vitória no confronto */}
+      {tieWinner && isFinished && (
+        <div className="absolute inset-0 bg-green-50 z-0 opacity-50"></div>
+      )}
+      
+      <div className="relative z-10">
+        {/* Cabeçalho da partida */}
+        <div className="text-center mb-2">
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            {tie.phase}
+          </div>
         </div>
-        {match.match_date && (
-          <div className="text-xs text-gray-500">
-            {formatMatchDate(match.match_date)} • {formatMatchTime(match.match_date)}
+        
+        {/* Time da Casa - Leg 1 */}
+        <div className={`flex items-center justify-between p-2 rounded ${
+          tieWinner?.id === tie.home_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
+        }`}>
+          <div className="flex items-center space-x-2 flex-1">
+            <img 
+              src={getTeamLogoUrl(tie.home_team.logo_url)}
+              alt={tie.home_team.name}
+              className="h-6 w-6 object-contain"
+            />
+            <span className={`text-sm font-medium truncate ${
+              tieWinner?.id === tie.home_team.id ? 'text-green-800' : 'text-gray-700'
+            }`}>
+              {tie.home_team.name}
+            </span>
+          </div>
+          <div className={`text-lg font-bold min-w-[24px] text-center ${
+            tieWinner?.id === tie.home_team.id ? 'text-green-800' : 'text-gray-600'
+          }`}>
+            {tie.leg1.home_score !== undefined ? tie.leg1.home_score : ''}
+          </div>
+        </div>
+        
+        {/* Divisor */}
+        <div className="border-t border-gray-200 my-1"></div>
+        
+        {/* Time Visitante - Leg 1 */}
+        <div className={`flex items-center justify-between p-2 rounded ${
+          tieWinner?.id === tie.away_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
+        }`}>
+          <div className="flex items-center space-x-2 flex-1">
+            <img 
+              src={getTeamLogoUrl(tie.away_team.logo_url)}
+              alt={tie.away_team.name}
+              className="h-6 w-6 object-contain"
+            />
+            <span className={`text-sm font-medium truncate ${
+              tieWinner?.id === tie.away_team.id ? 'text-green-800' : 'text-gray-700'
+            }`}>
+              {tie.away_team.name}
+            </span>
+          </div>
+          <div className={`text-lg font-bold min-w-[24px] text-center ${
+            tieWinner?.id === tie.away_team.id ? 'text-green-800' : 'text-gray-600'
+          }`}>
+            {tie.leg1.away_score !== undefined ? tie.leg1.away_score : ''}
+          </div>
+        </div>
+
+        {/* Informações da primeira partida */}
+        <div className="text-center mt-2 text-xs text-gray-500">
+          Jogo de Ida: {formatMatchDate(tie.leg1.match_date)} • {formatMatchTime(tie.leg1.match_date)}
+        </div>
+
+        {/* Informações da segunda partida (se existir) */}
+        {tie.leg2 && (
+          <div className="mt-4">
+            <div className={`flex items-center justify-between p-2 rounded ${
+              tieWinner?.id === tie.leg2.home_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
+            }`}>
+              <div className="flex items-center space-x-2 flex-1">
+                <img 
+                  src={getTeamLogoUrl(tie.leg2.home_team.logo_url)}
+                  alt={tie.leg2.home_team.name}
+                  className="h-6 w-6 object-contain"
+                />
+                <span className={`text-sm font-medium truncate ${
+                  tieWinner?.id === tie.leg2.home_team.id ? 'text-green-800' : 'text-gray-700'
+                }`}>
+                  {tie.leg2.home_team.name}
+                </span>
+              </div>
+              <div className={`text-lg font-bold min-w-[24px] text-center ${
+                tieWinner?.id === tie.leg2.home_team.id ? 'text-green-800' : 'text-gray-600'
+              }`}>
+                {tie.leg2.home_score !== undefined ? tie.leg2.home_score : ''}
+              </div>
+            </div>
+            
+            <div className="border-t border-gray-200 my-1"></div>
+            
+            <div className={`flex items-center justify-between p-2 rounded ${
+              tieWinner?.id === tie.leg2.away_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
+            }`}>
+              <div className="flex items-center space-x-2 flex-1">
+                <img 
+                  src={getTeamLogoUrl(tie.leg2.away_team.logo_url)}
+                  alt={tie.leg2.away_team.name}
+                  className="h-6 w-6 object-contain"
+                />
+                <span className={`text-sm font-medium truncate ${
+                  tieWinner?.id === tie.leg2.away_team.id ? 'text-green-800' : 'text-gray-700'
+                }`}>
+                  {tie.leg2.away_team.name}
+                </span>
+              </div>
+              <div className={`text-lg font-bold min-w-[24px] text-center ${
+                tieWinner?.id === tie.leg2.away_team.id ? 'text-green-800' : 'text-gray-600'
+              }`}>
+                {tie.leg2.away_score !== undefined ? tie.leg2.away_score : ''}
+              </div>
+            </div>
+            <div className="text-center mt-2 text-xs text-gray-500">
+              Jogo de Volta: {formatMatchDate(tie.leg2.match_date)} • {formatMatchTime(tie.leg2.match_date)}
+            </div>
+          </div>
+        )}
+
+        {/* Placar Agregado e Vencedor */}
+        {isFinished && (tie.aggregate_home_score !== undefined && tie.aggregate_away_score !== undefined) && (
+          <div className="text-center mt-4">
+            <div className="text-sm font-bold text-gray-700 mb-1">PLACAR AGREGADO</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {tie.aggregate_home_score} x {tie.aggregate_away_score}
+            </div>
+            {tieWinner && (
+              <div className="text-sm font-semibold text-green-700 mt-2">
+                {tieWinner.name} AVANÇOU
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Status do Confronto */}
+        {!isFinished && (
+          <div className="text-center mt-2">
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              {tie.status === 'IN_PROGRESS' ? 'EM ANDAMENTO' : 'AGENDADO'}
+            </span>
           </div>
         )}
       </div>
-      
-      {/* Time da Casa */}
-      <div className={`flex items-center justify-between p-2 rounded ${
-        winner?.id === match.home_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
-      }`}>
-        <div className="flex items-center space-x-2 flex-1">
-          <img 
-            src={getTeamLogoUrl(match.home_team.logo_url)}
-            alt={match.home_team.name}
-            className="h-6 w-6 object-contain"
-          />
-          <span className={`text-sm font-medium truncate ${
-            winner?.id === match.home_team.id ? 'text-green-800' : 'text-gray-700'
-          }`}>
-            {match.home_team.name}
-          </span>
-        </div>
-        <div className={`text-lg font-bold min-w-[24px] text-center ${
-          winner?.id === match.home_team.id ? 'text-green-800' : 'text-gray-600'
-        }`}>
-          {isFinished ? (match.home_score || 0) : ''}
-        </div>
-      </div>
-      
-      {/* Divisor */}
-      <div className="border-t border-gray-200 my-1"></div>
-      
-      {/* Time Visitante */}
-      <div className={`flex items-center justify-between p-2 rounded ${
-        winner?.id === match.away_team.id ? 'bg-green-50 border-l-4 border-green-500' : 'bg-gray-50'
-      }`}>
-        <div className="flex items-center space-x-2 flex-1">
-          <img 
-            src={getTeamLogoUrl(match.away_team.logo_url)}
-            alt={match.away_team.name}
-            className="h-6 w-6 object-contain"
-          />
-          <span className={`text-sm font-medium truncate ${
-            winner?.id === match.away_team.id ? 'text-green-800' : 'text-gray-700'
-          }`}>
-            {match.away_team.name}
-          </span>
-        </div>
-        <div className={`text-lg font-bold min-w-[24px] text-center ${
-          winner?.id === match.away_team.id ? 'text-green-800' : 'text-gray-600'
-        }`}>
-          {isFinished ? (match.away_score || 0) : ''}
-        </div>
-      </div>
-      
-      {/* Informações de pênaltis se houver */}
-      {isFinished && (match.home_score_penalties !== null && match.home_score_penalties !== undefined) && (
-        <div className="text-center mt-2 text-xs text-gray-500">
-          Pênaltis: {match.home_score_penalties} - {match.away_score_penalties}
-        </div>
-      )}
-      
-      {/* Status da partida */}
-      {!isFinished && (
-        <div className="text-center mt-2">
-          <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-            {match.status === 'IN_PROGRESS' || match.status === 'in_progress' ? 'AO VIVO' : 'AGENDADO'}
-          </span>
-        </div>
-      )}
     </div>
   );
 };
 
 // Componente principal do chaveamento
-export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, competitionName }) => {
-  // Agrupar partidas por fase
-  const matchesByPhase = matches.reduce((acc, match) => {
-    const phase = match.phase || 'Outras';
+export const TournamentBracket: React.FC<TournamentBracketProps> = ({ ties, competitionName }) => {
+  // Garante que 'ties' é um array antes de agrupá-los por fase
+  const validTies = Array.isArray(ties) ? ties : [];
+
+  // Agrupar partidas por fase (já agrupadas em ties)
+  const tiesByPhase = validTies.reduce((acc: Record<string, KnockoutTie[]>, tie) => {
+    const phase = tie.phase || 'Outras';
     if (!acc[phase]) {
       acc[phase] = [];
     }
-    acc[phase].push(match);
+    acc[phase].push(tie);
     return acc;
-  }, {} as Record<string, Match[]>);
+  }, {} as Record<string, KnockoutTie[]>);
   
   // Ordenar fases pela ordem lógica usando utilitários
-  const orderedPhases = getOrderedPhases(Object.keys(matchesByPhase));
+  const orderedPhases = getOrderedPhases(Object.keys(tiesByPhase));
   
   if (orderedPhases.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-8 text-center">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Chaveamento</h3>
-        <p className="text-gray-500">Nenhuma partida de mata-mata encontrada.</p>
+        <p className="text-gray-500">Nenhum confronto de mata-mata encontrado.</p>
       </div>
     );
   }
@@ -238,12 +312,12 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, c
                   </div>
                 </div>
                 
-                {/* Container das partidas com conexões */}
+                {/* Container dos confrontos com conexões */}
                 <div className="relative">
                   <div className="space-y-8">
-                    {matchesByPhase[phase].map((match, matchIndex) => (
-                      <div key={match.id} className="relative">
-                        <BracketMatch match={match} phase={phase} />
+                    {tiesByPhase[phase].map((tie: KnockoutTie, tieIndex: number) => (
+                      <div key={tie.id} className="relative">
+                        <BracketTie tie={tie} />
                         
                         {/* Linha conectora para próxima fase */}
                         {phaseIndex < orderedPhases.length - 1 && (
@@ -260,16 +334,17 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, c
                 </div>
                 
                 {/* Conexão vertical entre partidas da mesma fase (quando múltiplas) */}
-                {matchesByPhase[phase].length > 1 && (
+                {tiesByPhase[phase].length > 1 && (
                   <svg 
                     className="absolute inset-0 pointer-events-none" 
-                    style={{ zIndex: -1 }}
+                    width="100%" 
+                    height="100%" 
                     viewBox="0 0 100 100" 
                     preserveAspectRatio="none"
                   >
-                    {matchesByPhase[phase].map((_, index) => {
-                      if (index < matchesByPhase[phase].length - 1) {
-                        const spacing = 100 / matchesByPhase[phase].length;
+                    {tiesByPhase[phase].map((_: KnockoutTie, index: number) => {
+                      if (index < tiesByPhase[phase].length - 1) {
+                        const spacing = 100 / tiesByPhase[phase].length;
                         return (
                           <line
                             key={index}

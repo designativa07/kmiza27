@@ -121,7 +121,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+        setLoading(true);
       setError(null);
       try {
         const data = await getClassificationData(params.competitionSlug);
@@ -129,7 +129,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         setStandings(data.standings);
         setMatches(data.matches);
         setRounds(data.rounds);
-
+    
         // Encontrar a rodada com a data mais atual (igual à página de jogos)
         const filteredRounds = data.rounds.filter(round => typeof round.round_number === 'number');
         let initialRound: Round | null = null;
@@ -165,7 +165,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
         if (initialRound) {
           setCurrentRoundId(initialRound.id);
           setCurrentRoundNumber(initialRound.round_number);
-        }
+              }
 
       } catch (err: any) {
         console.error('Erro ao buscar dados da classificação:', err);
@@ -269,12 +269,12 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
               <div key={groupName} className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
                 {/* Classificação do grupo (3/5 do espaço em XL) */}
                 <div className="xl:col-span-3">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">
                     {groupName === 'Classificação Geral' ? '' : `Grupo ${groupName}`}
-                  </h2>
-                  <StandingsTable standings={groupStandings} />
-                </div>
-                
+                    </h2>
+                    <StandingsTable standings={groupStandings} />
+                  </div>
+                  
                 {/* Jogos do grupo (2/5 do espaço em XL) */}
                 <div className="xl:col-span-2">
                   <div className="bg-white rounded-lg overflow-hidden">
@@ -307,7 +307,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
             {/* Classificação (3/5 do espaço em XL) */}
             <div className="xl:col-span-3">
-              <StandingsTable standings={standings} />
+                <StandingsTable standings={standings} />
             </div>
             
             {/* Jogos da rodada atual */}

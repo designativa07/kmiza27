@@ -35,6 +35,18 @@ export class MatchesController {
     return res.json(topScorers);
   }
 
+  @Get('/competition/:competitionId')
+  async findByCompetitionId(@Param('competitionId') competitionId: string, @Res() res: Response) {
+    const matches = await this.matchesService.findByCompetitionId(+competitionId);
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    return res.json(matches);
+  }
+
   @Get()
   async findAll(@Res() res: Response) {
     const matches = await this.matchesService.findAll();

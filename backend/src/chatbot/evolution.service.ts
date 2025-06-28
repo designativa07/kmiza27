@@ -70,6 +70,79 @@ export class EvolutionService {
     }
   }
 
+  async sendListMessage(
+    phoneNumber: string,
+    title: string,
+    description: string,
+    buttonText: string,
+    sections: {
+      title: string;
+      rows: { id: string; title: string; description: string }[];
+    }[],
+  ): Promise<boolean> {
+    try {
+      this.logger.log(`🚀 ENVIANDO MENSAGEM DE LISTA VIA EVOLUTION API`);
+      this.logger.log(`📱 Para: ${phoneNumber}`);
+      this.logger.log(`📝 Título: ${title}`);
+      this.logger.log(`📝 Descrição: ${description.substring(0, 100)}...`);
+      this.logger.log(`🌐 URL: ${this.evolutionUrl}`);
+      this.logger.log(`🤖 Instância: ${this.instanceName}`);
+      this.logger.log(`🔑 API Key: ${this.apiKey ? '***SET***' : 'NOT_SET'}`);
+
+      const url = `${this.evolutionUrl}/message/sendList/${this.instanceName}`;
+      const formattedNumber = this.formatPhoneNumber(phoneNumber);
+
+      const payload = {
+        number: formattedNumber,
+        title: title,
+        description: description,
+        buttonText: buttonText,
+        sections: sections,
+      };
+
+      this.logger.log(`🌐 URL completa: ${url}`);
+      this.logger.log(`📞 Número formatado: ${formattedNumber}`);
+      this.logger.log(`📄 Payload:`, JSON.stringify(payload, null, 2));
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.apiKey,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      this.logger.log(`📡 Status da resposta: ${response.status}`);
+
+      if (response.ok) {
+        const result = await response.json();
+        this.logger.log(`✅ MENSAGEM DE LISTA ENVIADA COM SUCESSO!`);
+        this.logger.log(`📞 Para: ${formattedNumber}`);
+        this.logger.log(`📋 Resposta:`, JSON.stringify(result, null, 2));
+        return true;
+      } else {
+        const errorText = await response.text();
+        this.logger.error(`❌ ERRO AO ENVIAR MENSAGEM DE LISTA:`);
+        this.logger.error(`🔢 Status: ${response.status}`);
+        this.logger.error(`📄 Resposta: ${errorText}`);
+        this.logger.error(`🌐 URL: ${url}`);
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          this.logger.error(`🔍 Detalhes do erro:`, errorJson);
+        } catch (e) {
+          this.logger.error(`📝 Erro em texto puro: ${errorText}`);
+        }
+
+        return false;
+      }
+    } catch (error) {
+      this.logger.error('❌ Erro na Evolution API ao enviar mensagem de lista:', error);
+      return false;
+    }
+  }
+
   private formatPhoneNumber(phoneNumber: string): string {
     let cleaned = phoneNumber.replace(/\D/g, '');
     
