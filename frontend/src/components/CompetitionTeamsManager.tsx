@@ -100,7 +100,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
 
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json()
-        setAvailableTeams(teamsData)
+        setAvailableTeams(teamsData.data || [])
       }
 
       if (competitionTeamsRes.ok) {

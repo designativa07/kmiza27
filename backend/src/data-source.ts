@@ -1,5 +1,4 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 // import * as pg from 'pg'; // Não é mais necessário
@@ -9,17 +8,17 @@ dotenv.config(); // Carrega as variáveis de ambiente do .env
 const entitiesPath = path.join(__dirname, 'entities/**/*.entity{.ts,.js}');
 const migrationsPath = path.join(__dirname, 'migrations/*{.ts,.js}');
 
-const dataSourceOptions: PostgresConnectionOptions = {
+const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.DB_HOST || 'h4xd66.easypanel.host',
-  port: parseInt(process.env.DB_PORT || '5433', 10),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || '8F1DC9A7F9CE32C4D32E88A1C5FF7',
-  database: process.env.DB_DATABASE || 'kmiza27',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  username: process.env.DB_USERNAME || 'devuser',
+  password: process.env.DB_PASSWORD || 'devuser',
+  database: process.env.DB_DATABASE || 'kmiza27_dev',
   entities: [entitiesPath],
   migrations: [migrationsPath],
-  synchronize: false, // Não sincronizar automaticamente pois já temos o schema
-  logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : false,
+  synchronize: process.env.NODE_ENV === 'development' ? true : false, // Sincronizar em desenvolvimento
+  logging: process.env.NODE_ENV === 'development' ? true : false,
   ssl: false,
   extra: {
     connectionTimeoutMillis: 20000,

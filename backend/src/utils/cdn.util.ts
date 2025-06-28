@@ -7,12 +7,12 @@ const CDN_BASE_URL = 'https://cdn.kmiza27.com';
 /**
  * Converte uma URL de imagem para o CDN
  * @param imageUrl - URL original da imagem
- * @param type - Tipo da imagem (escudos, logo-competition, players)
+ * @param type - Tipo da imagem (escudos, logo-competition, players, estadios)
  * @returns URL completa do CDN
  */
 export function convertToCdnUrl(
   imageUrl: string | null | undefined,
-  type: 'escudos' | 'logo-competition' | 'players' = 'escudos'
+  type: 'escudos' | 'logo-competition' | 'players' | 'estadios' = 'escudos'
 ): string | null {
   if (!imageUrl) {
     return null;
@@ -32,6 +32,11 @@ export function convertToCdnUrl(
   if (imageUrl.startsWith('/uploads/escudos/')) {
     const filename = imageUrl.replace('/uploads/escudos/', '');
     return `${CDN_BASE_URL}/img/escudos/${filename}`;
+  }
+
+  if (imageUrl.startsWith('/uploads/estadios/')) {
+    const filename = imageUrl.replace('/uploads/estadios/', '');
+    return `${CDN_BASE_URL}/img/estadios/${filename}`;
   }
 
   if (imageUrl.startsWith('/img/')) {
@@ -80,6 +85,13 @@ export function getPlayerImageCdnUrl(imageUrl: string | null | undefined): strin
 }
 
 /**
+ * Converte URL de imagem de estádio para CDN
+ */
+export function getStadiumImageCdnUrl(imageUrl: string | null | undefined): string | null {
+  return convertToCdnUrl(imageUrl, 'estadios');
+}
+
+/**
  * Interceptador para converter URLs em responses da API
  * Converte automaticamente campos de imagem para URLs do CDN
  */
@@ -111,6 +123,11 @@ export function transformImageUrlsInResponse(data: any): any {
     // Converter image_url de jogadores
     if (transformed.image_url && transformed.position) {
       transformed.image_url = getPlayerImageCdnUrl(transformed.image_url);
+    }
+
+    // Converter image_url de estádios
+    if (transformed.image_url && (transformed.capacity || transformed.city)) {
+      transformed.image_url = getStadiumImageCdnUrl(transformed.image_url);
     }
 
     // Processar objetos aninhados

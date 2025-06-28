@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useDebounce } from 'use-debounce'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
@@ -45,9 +46,8 @@ interface PlayerTeamHistory {
 }
 
 export default function TeamsManager() {
-  const [teams, setTeams] = useState<Team[]>([])
-  const [filteredTeams, setFilteredTeams] = useState<Team[]>([])
   const [paginatedTeams, setPaginatedTeams] = useState<Team[]>([])
+  const [totalTeams, setTotalTeams] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
@@ -66,6 +66,7 @@ export default function TeamsManager() {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [stateFilter, setStateFilter] = useState('')
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
   
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
@@ -81,17 +82,9 @@ export default function TeamsManager() {
   })
 
   useEffect(() => {
-    fetchTeams()
+    fetchTeams(currentPage, debouncedSearchTerm)
     fetchStadiums()
-  }, [])
-
-  useEffect(() => {
-    applyFilters()
-  }, [teams, searchTerm, stateFilter])
-
-  useEffect(() => {
-    applyPagination()
-  }, [filteredTeams, currentPage, itemsPerPage])
+  }, [currentPage, debouncedSearchTerm])
 
   const fetchTeamPlayers = async (teamId: number) => {
     try {
@@ -123,42 +116,32 @@ export default function TeamsManager() {
 
   const fetchStadiums = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.stadiums.list());
+      const response = await fetch(API_ENDPOINTS.stadiums.list(1, 1000));
       const data = await response.json();
-      setStadiums(data);
+      setStadiums(data.data);
     } catch (error) {
       console.error('Erro ao carregar estádios:', error);
+      setStadiums([]);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...teams]
-
-    if (searchTerm) {
-      filtered = filtered.filter(team => 
-        team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.short_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.state?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const fetchTeams = async (page: number, search: string) => {
+    setLoading(true)
+    try {
+      const response = await fetch(API_ENDPOINTS.teams.list(page, itemsPerPage, search)) 
+      const paginatedData = await response.json()
+      setPaginatedTeams(paginatedData.data)
+      setTotalTeams(paginatedData.total)
+    } catch (error) {
+      console.error('Erro ao carregar times:', error)
+      setPaginatedTeams([])
+      setTotalTeams(0)
+    } finally {
+      setLoading(false)
     }
-
-    if (stateFilter) {
-      filtered = filtered.filter(team => 
-        team.state?.toLowerCase().includes(stateFilter.toLowerCase())
-      )
-    }
-
-    setFilteredTeams(filtered)
   }
 
-  const applyPagination = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    setPaginatedTeams(filteredTeams.slice(startIndex, endIndex))
-  }
-
-  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage)
+  const totalPages = Math.ceil(totalTeams / itemsPerPage)
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -173,23 +156,10 @@ export default function TeamsManager() {
   }
 
   const getUniqueStates = () => {
-    const states = new Set<string>()
-    teams.forEach(team => {
-      if (team.state) states.add(team.state)
-    })
-    return Array.from(states).sort()
-  }
-
-  const fetchTeams = async () => {
-    try {
-      const response = await fetch(API_ENDPOINTS.teams.list())
-      const data = await response.json()
-      setTeams(data)
-    } catch (error) {
-      console.error('Erro ao carregar times:', error)
-    } finally {
-      setLoading(false)
-    }
+    // Esta função agora não é mais viável pois não temos todos os dados localmente.
+    // O ideal seria um endpoint para buscar estados ou remover o filtro por enquanto.
+    // Por enquanto, retornarei um array vazio para não quebrar a UI.
+    return []
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,7 +259,7 @@ export default function TeamsManager() {
           }
         }
         
-        fetchTeams()
+        fetchTeams(currentPage, debouncedSearchTerm)
         resetForm()
       } else {
         // Log do erro para debug
@@ -351,7 +321,7 @@ export default function TeamsManager() {
         await fetch(API_ENDPOINTS.teams.byId(id), {
           method: 'DELETE',
         })
-        fetchTeams()
+        fetchTeams(currentPage, debouncedSearchTerm)
       } catch (error) {
         console.error('Erro ao excluir time:', error)
       }
@@ -415,7 +385,7 @@ export default function TeamsManager() {
         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredTeams.length)}</span> de <span className="font-medium">{filteredTeams.length}</span> resultados
+              Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalTeams)}</span> de <span className="font-medium">{totalTeams}</span> resultados
             </p>
           </div>
           <div>

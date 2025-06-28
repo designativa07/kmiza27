@@ -1,11 +1,8 @@
-import { ChevronLeft, Home, Search } from 'lucide-react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
+import { Header } from '@/components/Header';
 import { NavLinks } from '@/components/NavLinks';
-import ClientOnly from '@/components/ClientOnly';
-import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
+import { ListOrdered, CalendarDays, Star, Building } from 'lucide-react';
 
 interface Competition {
   id: number;
@@ -44,52 +41,32 @@ export default async function CompetitionLayout({
   }
 
   const navLinks = [
-    { name: 'Classificação', href: `/${competition.slug}/classificacao` },
-    { name: 'Jogos', href: `/${competition.slug}/jogos` },
-    { name: 'Chaveamento', href: `/${competition.slug}/chaveamento` },
-    { name: 'Artilharia', href: `/${competition.slug}/artilharia` },
-    { name: 'Estádios', href: `/${competition.slug}/estadios` },
+    { name: 'Tabela', href: `/${competition.slug}/classificacao`, icon: <ListOrdered className="h-4 w-4" /> },
+    { name: 'Jogos', href: `/${competition.slug}/jogos`, icon: <CalendarDays className="h-4 w-4" /> },
+    { name: 'Artilharia', href: `/${competition.slug}/artilharia`, icon: <Star className="h-4 w-4" /> },
+    { name: 'Estádios', href: `/${competition.slug}/estadios`, icon: <Building className="h-4 w-4" /> },
     // Descomente quando as páginas estiverem prontas
     // { name: 'Estatísticas', href: `/${competition.slug}/estatisticas` },
   ];
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {competition.logo_url && (
-                <img 
-                  src={getCompetitionLogoUrl(competition.logo_url)}
-                  alt={`${competition.name} logo`}
-                  className="h-12 w-12 object-contain"
-                />
-              )}
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mt-1">{competition.name}</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <ClientOnly fallback={
-                <div className="flex items-center text-sm text-gray-500">
-                  <span>Carregando Campeonatos...</span>
-                </div>
-              }>
-                <CompetitionSwitcher currentCompetitionName={competition.name} />
-              </ClientOnly>
-              <Link 
-                href="/" 
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm"
-              >
-                <Home className="h-5 w-5" />
-              </Link>
-            </div>
-          </div>
+      <Header 
+        currentCompetition={{
+          name: competition.name,
+          slug: competition.slug
+        }}
+        showBackToHome={true}
+      />
+      
+      {/* Navegação secundária */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <NavLinks links={navLinks} />
         </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      </div>
+      
+      <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-4">
         {children}
       </main>
     </div>

@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, HttpException, HttpStatus, UsePipes, ValidationPipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, HttpException, HttpStatus, UsePipes, ValidationPipe, HttpCode, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { TeamsService } from './teams.service';
+import { TeamsService, PaginatedTeamsResult } from './teams.service';
 import { Team } from '../../entities';
 import { PlayerTeamHistory } from '../../entities/player-team-history.entity';
 
@@ -35,8 +35,14 @@ export class TeamsController {
   }
 
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @Query('search') search?: string,
+  ): Promise<PaginatedTeamsResult> {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return this.teamsService.findAll(pageNumber, limitNumber, search);
   }
 
   @Get(':id')

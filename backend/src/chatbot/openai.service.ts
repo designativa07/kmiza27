@@ -25,8 +25,8 @@ export class OpenAIService implements OnModuleInit {
 
   private async loadTeamNames() {
     this.teamNames = [];
-    const teams = await this.teamsService.findAll();
-    for (const team of teams) {
+    const teamsResult = await this.teamsService.findAll(1, 1000); // Buscar até 1000 times
+    for (const team of teamsResult.data) {
       this.teamNames.push(this.removeAccents(team.name.toLowerCase()));
       if (team.short_name) {
         this.teamNames.push(this.removeAccents(team.short_name.toLowerCase()));

@@ -185,7 +185,8 @@ export default function Dashboard() {
         whatsappData = await responses[0].value.json()
       }
       if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
-        usersData = await responses[1].value.json()
+        const res = await responses[1].value.json()
+        usersData = res.data ? res.data : res; // Lida com ambos os formatos
       }
       if (responses[2].status === 'fulfilled' && responses[2].value.ok) {
         teamsData = await responses[2].value.json()
@@ -194,10 +195,12 @@ export default function Dashboard() {
         matchesData = await responses[3].value.json()
       }
       if (responses[4].status === 'fulfilled' && responses[4].value.ok) {
-        competitionsData = await responses[4].value.json()
+        const res = await responses[4].value.json()
+        competitionsData = res.data ? res.data : res; // Lida com ambos os formatos
       }
       if (responses[5].status === 'fulfilled' && responses[5].value.ok) {
-        channelsData = await responses[5].value.json()
+        const res = await responses[5].value.json()
+        channelsData = res.data ? res.data : res; // Lida com ambos os formatos
       }
       if (responses[6].status === 'fulfilled' && responses[6].value.ok) {
         stadiumsData = await responses[6].value.json()
@@ -207,30 +210,29 @@ export default function Dashboard() {
       }
       
       // Calcular estatísticas derivadas
-      const adminsCount = usersData.filter((user: any) => user.is_admin).length
-      const usersWithTeam = usersData.filter((user: any) => user.favorite_team_id).length
+      const adminsCount = Array.isArray(usersData) ? usersData.filter((user: any) => user.is_admin).length : 0;
+      const usersWithTeam = Array.isArray(usersData) ? usersData.filter((user: any) => user.favorite_team_id).length : 0;
       
-      console.log('📊 Dashboard: Dados recebidos:', {
-        whatsapp: whatsappData,
-        users: usersData.length,
-        teams: teamsData.length,
-        matches: matchesData.length,
-        competitions: competitionsData.length,
-        channels: channelsData.length,
-        stadiums: stadiumsData.length,
-        players: playersData.length,
-        admins: adminsCount,
-        usersWithTeam: usersWithTeam
+      const totalUsers = usersData?.total ?? (Array.isArray(usersData) ? usersData.length : 0);
+      const totalTeams = teamsData?.total ?? 0;
+      const totalMatches = matchesData?.total ?? 0;
+      const totalCompetitions = competitionsData?.total ?? (Array.isArray(competitionsData) ? competitionsData.length : 0);
+      const totalChannels = channelsData?.total ?? (Array.isArray(channelsData) ? channelsData.length : 0);
+      const totalStadiums = stadiumsData?.total ?? 0;
+      const totalPlayers = playersData?.total ?? 0;
+
+      console.log('📊 Dashboard: Dados processados:', {
+        totalUsers, totalTeams, totalMatches, totalCompetitions, totalChannels, totalStadiums, totalPlayers
       })
       
       setStats({
-        totalUsers: usersData.length || 0,
-        totalTeams: teamsData.length || 0,
-        totalMatches: matchesData.length || 0,
-        totalCompetitions: competitionsData.length || 0,
-        totalChannels: channelsData.length || 0,
-        totalStadiums: stadiumsData.length || 0,
-        totalPlayers: playersData.length || 0,
+        totalUsers,
+        totalTeams,
+        totalMatches,
+        totalCompetitions,
+        totalChannels,
+        totalStadiums,
+        totalPlayers,
         activeConversations: whatsappData?.totalConversations || 0,
         totalAdmins: adminsCount || 0,
         usersWithFavoriteTeam: usersWithTeam || 0,

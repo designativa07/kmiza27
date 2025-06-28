@@ -1,7 +1,12 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, Like, FindManyOptions } from 'typeorm';
 import { Team, Match, CompetitionTeam, Player, PlayerTeamHistory } from '../../entities';
+
+export interface PaginatedTeamsResult {
+  data: Team[];
+  total: number;
+}
 
 @Injectable()
 export class TeamsService {
@@ -18,9 +23,50 @@ export class TeamsService {
     private playerTeamHistoryRepository: Repository<PlayerTeamHistory>,
   ) {}
 
-  async findAll(): Promise<Team[]> {
+  async findAll(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+  ): Promise<PaginatedTeamsResult> {
+    const queryBuilder = this.teamRepository.createQueryBuilder('team')
+      .leftJoinAndSelect('team.stadium', 'stadium')
+      .orderBy('team.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (search) {
+      const searchTerm = search.trim();
+      
+      queryBuilder.where(
+        `UNACCENT(team.name) ILIKE UNACCENT(:searchTerm) OR 
+         UNACCENT(team.short_name) ILIKE UNACCENT(:searchTerm) OR
+         UNACCENT(team.city) ILIKE UNACCENT(:searchTerm) OR
+         UNACCENT(team.state) ILIKE UNACCENT(:searchTerm)`,
+        { searchTerm: `%${searchTerm}%` }
+      );
+    }
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+    return { data, total };
+  }
+
+  async search(query: string): Promise<Team[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+    
     return this.teamRepository.find({
+      where: [
+        { name: Like(searchTerm) },
+        { short_name: Like(searchTerm) },
+      ],
       relations: ['stadium'],
+      take: 10, // Limitar a 10 resultados
+      order: {
+        name: 'ASC',
+      },
     });
   }
 

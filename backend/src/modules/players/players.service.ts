@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, IsNull, Not } from 'typeorm';
+import { Repository, In, IsNull, Not, FindManyOptions, Like } from 'typeorm';
 import { Player } from '../../entities/player.entity';
 import { PlayerTeamHistory } from '../../entities/player-team-history.entity';
 import { Team } from '../../entities/team.entity';
 import { Match } from '../../entities/match.entity';
 import { Goal } from '../../entities/goal.entity';
 import { Card } from '../../entities/card.entity';
+
+export interface PaginatedPlayersResult {
+  data: Player[];
+  total: number;
+}
 
 @Injectable()
 export class PlayersService {
@@ -30,44 +35,40 @@ export class PlayersService {
     return this.playersRepository.save(newPlayer);
   }
 
-  async findAllPlayers(): Promise<Player[]> {
-    try {
-      console.log('🔍 PlayersService: Buscando jogadores sem relações primeiro...');
-      const players = await this.playersRepository.find({
-        order: { created_at: 'DESC' }
-      });
-      console.log(`✅ PlayersService: ${players.length} jogadores encontrados`);
+  async findAll(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+  ): Promise<PaginatedPlayersResult> {
+    const queryBuilder = this.playersRepository.createQueryBuilder('player')
+      .orderBy('player.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (search) {
+      const searchTerm = search.trim();
       
-      // Se funcionou, tentar buscar com relações para jogadores que têm histórico
-      if (players.length > 0) {
-        try {
-          console.log('🔄 PlayersService: Tentando buscar com relações...');
-          const playersWithHistory = await this.playersRepository.find({
-            relations: ['team_history', 'team_history.team'],
-            order: { created_at: 'DESC' }
-          });
-          console.log(`✅ PlayersService: ${playersWithHistory.length} jogadores encontrados com relações`);
-          return playersWithHistory;
-        } catch (relationError) {
-          console.error('❌ PlayersService: Erro ao buscar relações, retornando sem relações:', relationError);
-          return players;
-        }
-      }
-      
-      return players;
-    } catch (error) {
-      console.error('❌ PlayersService: Erro ao buscar jogadores:', error);
-      return [];
+      queryBuilder.where(
+        `UNACCENT(player.name) ILIKE UNACCENT(:searchTerm) OR 
+         UNACCENT(player.position) ILIKE UNACCENT(:searchTerm) OR
+         UNACCENT(player.nationality) ILIKE UNACCENT(:searchTerm) OR
+         UNACCENT(player.state) ILIKE UNACCENT(:searchTerm)`,
+        { searchTerm: `%${searchTerm}%` }
+      );
     }
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+    return { data, total };
   }
 
   async searchPlayersByName(searchTerm: string): Promise<Player[]> {
     try {
       console.log(`🔍 PlayersService: Buscando jogadores com nome: "${searchTerm}"`);
+      const search = `%${searchTerm.trim()}%`;
       
       const players = await this.playersRepository
         .createQueryBuilder('player')
-        .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${searchTerm}%` })
+        .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:search))', { search })
         .orderBy('player.name', 'ASC')
         .getMany();
       

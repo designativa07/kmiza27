@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt } from 'lucide-react';
 import { getTeamLogoUrl, getPlayerImageUrl } from '@/lib/cdn';
+import { Header } from '@/components/Header';
 
 // Tipos (poderiam ser movidos para @/types)
 interface Player {
@@ -84,7 +85,10 @@ export default async function TeamPage({ params }: Props) {
   const { team, players } = await getTeamData(params.teamId);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="bg-gray-50 min-h-screen">
+      <Header showBackToHome={true} />
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-white p-6 rounded-lg shadow-lg mb-8">
         {team.logo_url ? (
           <img 
@@ -117,6 +121,7 @@ export default async function TeamPage({ params }: Props) {
           </p>
         </div>
       )}
+      </main>
     </div>
   );
 } 
