@@ -38,4 +38,17 @@ export interface Match {
     name: string;
     round_number: number;
   };
+}
+
+export interface KnockoutTie {
+  id: string; // Um ID único para o confronto (ex: combinação dos IDs das partidas ou slugs dos times)
+  phase: string;
+  home_team: Team;
+  away_team: Team;
+  leg1: Match;
+  leg2?: Match; // Opcional, caso seja apenas um jogo
+  aggregate_home_score?: number;
+  aggregate_away_score?: number;
+  winner_team?: Team; // Opcional, para indicar o vencedor do confronto
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED'; // Status do confronto
 } 

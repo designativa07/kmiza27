@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TournamentBracket } from '@/components/TournamentBracket';
-import { Match } from '@/types/match';
+import { Match, KnockoutTie } from '@/types/match';
 import { getApiUrl } from '@/lib/config';
 
 interface Competition {
@@ -12,6 +12,118 @@ interface Competition {
   type: string;
   season: string;
 }
+
+// Detectar se é fase de mata-mata
+const isKnockoutPhase = (phase: string) => {
+  const knockoutPhases = [
+    'Oitavas de Final', 'Oitavas', 
+    'Quartas de Final', 'Quartas',
+    'Semifinal', 'Semifinais',
+    'Final', 'Disputa do 3º lugar',
+    'Terceira Fase', 'Primeira Fase'
+  ];
+  return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
+};
+
+// Detectar competições mata-mata pelo tipo da competição
+const isKnockoutCompetition = (competitionType: string) => {
+  return competitionType === 'mata_mata' || 
+         competitionType === 'grupos_e_mata_mata' || 
+         competitionType === 'copa';
+};
+
+// Função para agrupar partidas em confrontos de ida e volta
+const groupMatchesIntoTies = (matches: Match[]): KnockoutTie[] => {
+  const tiesMap: Record<string, KnockoutTie> = {};
+
+  // Criar um mapa de partidas por fase e por combinação de times (ordenados para ser consistente)
+  const matchesByPhaseAndTeams: Record<string, Match[]> = {};
+
+  matches.forEach(match => {
+    if (!match.phase) return; // Ignorar partidas sem fase definida para agrupamento
+
+    // Crie uma chave consistente para o confronto, independente da ordem home/away
+    const team1Id = Math.min(match.home_team.id, match.away_team.id);
+    const team2Id = Math.max(match.home_team.id, match.away_team.id);
+    const tieKey = `${match.phase}-${team1Id}-${team2Id}`;
+
+    if (!matchesByPhaseAndTeams[tieKey]) {
+      matchesByPhaseAndTeams[tieKey] = [];
+    }
+    matchesByPhaseAndTeams[tieKey].push(match);
+  });
+
+  for (const tieKey in matchesByPhaseAndTeams) {
+    const tieMatches = matchesByPhaseAndTeams[tieKey].sort((a, b) => 
+      new Date(a.match_date).getTime() - new Date(b.match_date).getTime()
+    ); // Ordenar por data para garantir ida e volta
+
+    const leg1 = tieMatches[0];
+    const leg2 = tieMatches.length > 1 ? tieMatches[1] : undefined;
+
+    let aggregate_home_score = leg1.home_score || 0;
+    let aggregate_away_score = leg1.away_score || 0;
+    let status: KnockoutTie['status'] = leg1.status as KnockoutTie['status'];
+    let winner_team = undefined;
+
+    if (leg2) {
+      aggregate_home_score += leg2.home_team.id === leg1.home_team.id ? (leg2.home_score || 0) : (leg2.away_score || 0);
+      aggregate_away_score += leg2.home_team.id === leg1.away_team.id ? (leg2.home_score || 0) : (leg2.away_score || 0);
+      
+      // Considerar pênaltis apenas se ambos os jogos estiverem finalizados e os placares agregados forem iguais
+      if (leg1.status === 'FINISHED' && leg2.status === 'FINISHED' && aggregate_home_score === aggregate_away_score) {
+        // Adicionar placares de pênaltis
+        aggregate_home_score += (leg1.home_score_penalties || 0) + (leg2.home_score_penalties || 0);
+        aggregate_away_score += (leg1.away_score_penalties || 0) + (leg2.away_score_penalties || 0);
+      }
+
+      if (leg2.status === 'FINISHED') {
+        status = 'FINISHED';
+      } else if (leg1.status === 'IN_PROGRESS' || leg2.status === 'IN_PROGRESS') {
+        status = 'IN_PROGRESS';
+      }
+
+      // Determinar o vencedor do confronto
+      if (status === 'FINISHED') {
+        if (aggregate_home_score > aggregate_away_score) {
+          winner_team = leg1.home_team;
+        } else if (aggregate_away_score > aggregate_home_score) {
+          winner_team = leg1.away_team;
+        }
+      }
+
+    } else if (status === 'FINISHED' && aggregate_home_score === aggregate_away_score) {
+      // Se for apenas um jogo e estiver empatado, verificar pênaltis do primeiro jogo
+      if (leg1.home_score_penalties !== undefined && leg1.away_score_penalties !== undefined) {
+        if (leg1.home_score_penalties > leg1.away_score_penalties) {
+          winner_team = leg1.home_team;
+        } else if (leg1.away_score_penalties > leg1.home_score_penalties) {
+          winner_team = leg1.away_team;
+        }
+      }
+    }
+
+    // Definir o time mandante e visitante do confronto com base na primeira partida
+    const homeTeamForTie = leg1.home_team;
+    const awayTeamForTie = leg1.away_team;
+
+    tiesMap[tieKey] = {
+      id: tieKey,
+      phase: leg1.phase!,
+      home_team: homeTeamForTie,
+      away_team: awayTeamForTie,
+      leg1: leg1,
+      leg2: leg2,
+      aggregate_home_score: aggregate_home_score,
+      aggregate_away_score: aggregate_away_score,
+      winner_team: winner_team,
+      status: status,
+    };
+  }
+
+  // Converter o mapa de confrontos de volta para um array
+  return Object.values(tiesMap);
+};
 
 export default function ChaveamentoPage({ params }: { params: { competitionSlug: string } }) {
   const [loading, setLoading] = useState(true);
@@ -54,25 +166,6 @@ export default function ChaveamentoPage({ params }: { params: { competitionSlug:
     loadData();
   }, [params.competitionSlug]);
 
-  // Detectar se é fase de mata-mata
-  const isKnockoutPhase = (phase: string) => {
-    const knockoutPhases = [
-      'Oitavas de Final', 'Oitavas', 
-      'Quartas de Final', 'Quartas',
-      'Semifinal', 'Semifinais',
-      'Final', 'Disputa do 3º lugar',
-      'Terceira Fase', 'Primeira Fase'
-    ];
-    return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
-  };
-
-  // Detectar competições mata-mata pelo tipo da competição
-  const isKnockoutCompetition = (competitionType: string) => {
-    return competitionType === 'mata_mata' || 
-           competitionType === 'grupos_e_mata_mata' || 
-           competitionType === 'copa';
-  };
-
   // Filtrar partidas de mata-mata
   const knockoutMatches = allMatches.filter(match => {
     // Para competições mata-mata puras, mostrar todas as partidas
@@ -82,6 +175,9 @@ export default function ChaveamentoPage({ params }: { params: { competitionSlug:
     // Para outras competições, filtrar apenas por fase específica
     return match.phase && isKnockoutPhase(match.phase);
   });
+
+  // Agrupar partidas em confrontos
+  const knockoutTies = groupMatchesIntoTies(knockoutMatches);
 
   if (loading) {
     return (
@@ -128,7 +224,7 @@ export default function ChaveamentoPage({ params }: { params: { competitionSlug:
 
         {/* Chaveamento */}
         <TournamentBracket 
-          matches={knockoutMatches} 
+          ties={knockoutTies} 
           competitionName={competition?.name}
         />
       </div>

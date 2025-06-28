@@ -57,33 +57,30 @@ export function RoundNavigator({
 
   return (
     <div className="bg-white overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-2">
-        <h3 className="text-lg font-semibold text-gray-800 text-center">
-          {displayName}
-        </h3>
-      </div>
+      {/* Header e Navegação combinados */}
+      <div className="px-4 py-4 flex items-center justify-between">
+        {/* Botão Anterior */}
+        <button 
+          onClick={handlePrevRound} 
+          disabled={currentIndex <= 0}
+          className={`
+              flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200
+              ${currentIndex <= 0 
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
+              }
+            `}
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
 
-      {/* Navegação */}
-      <div className="px-4 py-3 bg-white">
-        <div className="flex items-center justify-between">
-          {/* Botão Anterior */}
-          <button
-            onClick={handlePrevRound} 
-            disabled={currentIndex <= 0}
-            className={`
-                flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
-                ${currentIndex <= 0 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
-                }
-              `}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
+        {/* Central section: Display Name and Round Indicators */}
+        <div className="flex flex-col items-center flex-grow">
+          <h3 className="text-lg font-semibold text-gray-800 text-center mb-2">
+            {displayName}
+          </h3>
           {/* Indicadores de Rodada */}
-          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs">
+          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs justify-center">
             {rounds.map((round, index) => (
               <button
                 key={round.id}
@@ -101,22 +98,22 @@ export function RoundNavigator({
               />
             ))}
           </div>
-
-          {/* Botão Próximo */}
-          <button
-            onClick={handleNextRound} 
-            disabled={currentIndex >= rounds.length - 1}
-            className={`
-                flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
-                ${currentIndex >= rounds.length - 1 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
-                }
-              `}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </div>
+
+        {/* Botão Próximo */}
+        <button 
+          onClick={handleNextRound} 
+          disabled={currentIndex >= rounds.length - 1}
+          className={`
+              flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200
+              ${currentIndex >= rounds.length - 1 
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
+              }
+            `}
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
       </div>
     </div>
   );

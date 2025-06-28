@@ -1,4 +1,4 @@
-import { ChevronLeft, Home } from 'lucide-react';
+import { ChevronLeft, Home, Search } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CompetitionSwitcher } from '@/components/CompetitionSwitcher';
@@ -46,6 +46,7 @@ export default async function CompetitionLayout({
   const navLinks = [
     { name: 'Classificação', href: `/${competition.slug}/classificacao` },
     { name: 'Jogos', href: `/${competition.slug}/jogos` },
+    { name: 'Chaveamento', href: `/${competition.slug}/chaveamento` },
     { name: 'Artilharia', href: `/${competition.slug}/artilharia` },
     { name: 'Estádios', href: `/${competition.slug}/estadios` },
     // Descomente quando as páginas estiverem prontas
@@ -55,7 +56,7 @@ export default async function CompetitionLayout({
   return (
     <div className="bg-gray-50 min-h-screen">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {competition.logo_url && (
@@ -66,23 +67,24 @@ export default async function CompetitionLayout({
                 />
               )}
               <div>
-                <ClientOnly fallback={
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span>Todos os Campeonatos</span>
-                  </div>
-                }>
-                  <CompetitionSwitcher currentCompetitionName={competition.name} />
-                </ClientOnly>
-                <h1 className="text-2xl font-bold text-gray-900 mt-1">{competition.name}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mt-1">{competition.name}</h1>
               </div>
             </div>
-            <Link 
-              href="/" 
-              className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-            >
-              <Home className="h-4 w-4" />
-              <span>Home</span>
-            </Link>
+            <div className="flex items-center space-x-2">
+              <ClientOnly fallback={
+                <div className="flex items-center text-sm text-gray-500">
+                  <span>Carregando Campeonatos...</span>
+                </div>
+              }>
+                <CompetitionSwitcher currentCompetitionName={competition.name} />
+              </ClientOnly>
+              <Link 
+                href="/" 
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm"
+              >
+                <Home className="h-5 w-5" />
+              </Link>
+            </div>
           </div>
           <NavLinks links={navLinks} />
         </div>

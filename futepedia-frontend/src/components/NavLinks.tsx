@@ -16,8 +16,8 @@ export function NavLinks({ links }: NavLinksProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="mt-4 -mb-4 border-b border-gray-200">
-      <div className="flex space-x-6">
+    <nav className="mt-4 -mb-4">
+      <div className="flex space-x-6 overflow-x-auto whitespace-nowrap pb-4">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
