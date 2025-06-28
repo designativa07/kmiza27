@@ -105,4 +105,19 @@ export class UploadCloudService {
   getBucketName(): string {
     return this.bucketName;
   }
+
+  /**
+   * Faz o "upload" de um arquivo para uma pasta específica no bucket.
+   * Por enquanto, apenas gera a URL final do CDN.
+   *
+   * @param file O arquivo a ser "enviado" (usado para obter o nome original)
+   * @param folder A pasta de destino dentro do bucket (e.g., 'escudos', 'estadios')
+   * @param fileName O nome do arquivo a ser salvo no bucket
+   * @returns A URL pública do arquivo no CDN
+   */
+  async uploadFile(file: Express.Multer.File, folder: string, fileName: string): Promise<string> {
+    // A lógica de upload real para o MinIO/S3 viria aqui.
+    // Por enquanto, apenas retornamos a URL que o arquivo TERIA no CDN.
+    return `${this.cdnUrl}/${this.bucketName}/${folder}/${fileName}`;
+  }
 } 

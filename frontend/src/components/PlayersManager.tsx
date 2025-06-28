@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, ChangeEvent } from 'react'
+import { useDebounce } from 'use-debounce'
 import { PlusIcon, PencilIcon, TrashIcon, LinkIcon, ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
@@ -79,6 +80,7 @@ interface PlayerTeamHistoryFormData {
 
 export default function PlayersManager() {
   const [players, setPlayers] = useState<Player[]>([])
+  const [totalPlayers, setTotalPlayers] = useState(0)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
@@ -101,28 +103,37 @@ export default function PlayersManager() {
     jersey_number: '',
     role: '',
   })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15;
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData(currentPage, debouncedSearchTerm)
+  }, [currentPage, debouncedSearchTerm])
 
-  const fetchData = async () => {
+  const fetchData = async (page: number, search: string) => {
+    setLoading(true);
     try {
       const [playersRes, teamsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.players.list()),
-        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.players.list(page, itemsPerPage, search)),
+        fetch(API_ENDPOINTS.teams.list(1, 1000)), // Busca todos os times para o dropdown
       ])
 
       if (playersRes.ok) {
         const playersData = await playersRes.json()
-        setPlayers(playersData)
+        setPlayers(playersData.data)
+        setTotalPlayers(playersData.total)
       }
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json()
-        setTeams(teamsData)
+        setTeams(teamsData.data) 
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
+      setPlayers([]);
+      setTeams([]);
+      setTotalPlayers(0);
     } finally {
       setLoading(false)
     }
@@ -155,7 +166,7 @@ export default function PlayersManager() {
         setShowPlayerModal(false)
         setEditingPlayer(null)
         resetPlayerForm()
-        fetchData()
+        fetchData(currentPage, debouncedSearchTerm)
       } else {
         const errorText = await response.text();
         console.error('Erro ao salvar jogador:', response.status, errorText);
@@ -191,7 +202,7 @@ export default function PlayersManager() {
       if (response.ok) {
         setShowHistoryModal(false)
         resetHistoryForm()
-        fetchData()
+        fetchData(currentPage, debouncedSearchTerm)
       } else {
         const errorText = await response.text();
         console.error('Erro ao adicionar histórico de time:', response.status, errorText);
@@ -222,7 +233,7 @@ export default function PlayersManager() {
         await fetch(`${API_ENDPOINTS.players.list()}/${id}`, {
           method: 'DELETE',
         })
-        fetchData()
+        fetchData(currentPage, debouncedSearchTerm)
       } catch (error) {
         console.error('Erro ao excluir jogador:', error)
         alert('Erro ao excluir jogador. Tente novamente.')
@@ -313,7 +324,7 @@ export default function PlayersManager() {
 
       if (response.ok) {
         console.log('Histórico removido com sucesso!');
-        fetchData(); // Recarregar os dados para atualizar a lista
+        fetchData(currentPage, debouncedSearchTerm); // Recarregar os dados para atualizar a lista
       } else {
         const errorText = await response.text();
         console.error('Erro ao remover histórico:', response.status, errorText);
@@ -324,6 +335,8 @@ export default function PlayersManager() {
       alert('Erro de conexão ao remover histórico de time.');
     }
   };
+
+  const totalPages = Math.ceil(totalPlayers / itemsPerPage);
 
   if (loading) {
     return <div className="text-center py-4">Carregando jogadores...</div>;

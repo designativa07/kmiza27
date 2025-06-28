@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, UsePipes, ValidationPipe, HttpCode, HttpStatus, Query } from '@nestjs/common';
-import { PlayersService } from './players.service';
+import { PlayersService, PaginatedPlayersResult } from './players.service';
 import { Player } from '../../entities/player.entity';
 import { PlayerTeamHistory } from '../../entities/player-team-history.entity';
 import { Goal } from '../../entities/goal.entity';
@@ -26,19 +26,15 @@ export class PlayersController {
   }
 
   @Get()
-  async findAll(@Query('search') search?: string): Promise<Player[]> {
+  async findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @Query('search') search?: string,
+  ): Promise<PaginatedPlayersResult> {
     try {
-      console.log('🔍 PlayersController: Iniciando busca de jogadores...');
-      if (search) {
-        console.log(`🔍 PlayersController: Buscando por: "${search}"`);
-        const players = await this.playersService.searchPlayersByName(search);
-        console.log(`✅ PlayersController: ${players.length} jogadores encontrados com a busca "${search}"`);
-        return players;
-      } else {
-        const players = await this.playersService.findAllPlayers();
-        console.log(`✅ PlayersController: ${players.length} jogadores encontrados (todos)`);
-        return players;
-      }
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      return await this.playersService.findAll(pageNumber, limitNumber, search);
     } catch (error) {
       console.error('❌ PlayersController: Erro ao buscar jogadores:', error);
       throw error;

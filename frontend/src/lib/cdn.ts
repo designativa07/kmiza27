@@ -106,19 +106,55 @@ export function getPlayerImageUrl(imageUrl: string | null | undefined): string {
 }
 
 /**
+ * Gera URL da imagem do estádio
+ * @param imageUrl - URL original da imagem
+ * @returns URL completa do CDN ou fallback
+ */
+export function getStadiumImageUrl(imageUrl: string | null | undefined): string {
+  if (!imageUrl) {
+    return generateFallbackUrl('stadium');
+  }
+
+  // Se já é uma URL completa do CDN, usar diretamente
+  if (imageUrl.startsWith('https://cdn.kmiza27.com')) {
+    return imageUrl;
+  }
+
+  // Se é uma URL relativa (/img/estadios/...), converter para CDN
+  if (imageUrl.startsWith('/img/estadios/')) {
+    return `${CDN_BASE_URL}${imageUrl}`;
+  }
+
+  // Se é uma URL relativa legada (/uploads/estadios/...), converter para CDN
+  if (imageUrl.startsWith('/uploads/estadios/')) {
+    const filename = imageUrl.replace('/uploads/estadios/', '');
+    return `${CDN_BASE_URL}/img/estadios/${filename}`;
+  }
+
+  // Se é uma URL externa (http/https), usar como está
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+
+  return generateFallbackUrl('stadium');
+}
+
+/**
  * Gera URLs de fallback usando UI Avatars para nomes
  */
-function generateFallbackUrl(type: 'team' | 'competition' | 'player', name?: string): string {
+function generateFallbackUrl(type: 'team' | 'competition' | 'player' | 'stadium', name?: string): string {
   const colors = {
     team: { bg: '10B981', color: 'FFFFFF' },
     competition: { bg: '6366F1', color: 'FFFFFF' }, 
-    player: { bg: 'F59E0B', color: 'FFFFFF' }
+    player: { bg: 'F59E0B', color: 'FFFFFF' },
+    stadium: { bg: '84CC16', color: 'FFFFFF' } // Verde-limão para estádios
   };
 
   const labels = {
     team: 'TIME',
     competition: 'COMP',
-    player: 'JOGADOR'
+    player: 'JOGADOR',
+    stadium: 'ESTÁDIO'
   };
 
   const color = colors[type];
@@ -153,6 +189,10 @@ export function imageUrl(path: string): string {
     return getPlayerImageUrl(path);
   }
 
+  if (path.includes('estadios') || path.includes('stadium')) {
+    return getStadiumImageUrl(path);
+  }
+  
   // Fallback: assumir que é escudo de time
   return getTeamLogoUrl(path);
 }
@@ -165,7 +205,7 @@ export function imageUrl(path: string): string {
  */
 export function handleImageError(
   event: React.SyntheticEvent<HTMLImageElement>, 
-  fallbackType: 'team' | 'competition' | 'player' = 'team',
+  fallbackType: 'team' | 'competition' | 'player' | 'stadium' = 'team',
   name?: string
 ) {
   const target = event.currentTarget;

@@ -119,6 +119,48 @@ export function getPlayerImageUrl(imageUrl: string | null | undefined): string {
 }
 
 /**
+ * Gera URL da imagem do estádio
+ * @param imageUrl - URL original da imagem
+ * @returns URL completa do CDN ou fallback
+ */
+export function getStadiumImageUrl(imageUrl: string | null | undefined): string {
+  try {
+    if (!imageUrl) {
+      return '/default-stadium-photo.svg';
+    }
+
+    // Se já é uma URL completa do CDN, usar diretamente
+    if (imageUrl.startsWith('https://cdn.kmiza27.com')) {
+      return imageUrl;
+    }
+
+    // Se é uma URL relativa (/uploads/estadios/...), converter para CDN
+    if (imageUrl.startsWith('/uploads/estadios/')) {
+      const filename = imageUrl.replace('/uploads/estadios/', '');
+      return `${CDN_BASE_URL}/img/estadios/${filename}`;
+    }
+
+    // Se é uma URL relativa (/img/estadios/...), converter para CDN
+    if (imageUrl.startsWith('/img/estadios/')) {
+      return `${CDN_BASE_URL}${imageUrl}`;
+    }
+
+    // Se é apenas o nome do arquivo, assumir que está em estadios
+    if (!imageUrl.includes('/') && (imageUrl.endsWith('.svg') || imageUrl.endsWith('.png') || imageUrl.endsWith('.jpg') || imageUrl.endsWith('.jpeg'))) {
+      return `${CDN_BASE_URL}/img/estadios/${imageUrl}`;
+    }
+
+    return imageUrl;
+  } catch (error) {
+    // Em caso de erro, retornar fallback
+    if (isServer) {
+      console.warn('Erro na função getStadiumImageUrl:', error);
+    }
+    return '/default-stadium-photo.svg';
+  }
+}
+
+/**
  * Manipulador de erro para imagens - compatível com SSR
  * @param event - Evento de erro da imagem
  * @param fallbackSrc - URL de fallback

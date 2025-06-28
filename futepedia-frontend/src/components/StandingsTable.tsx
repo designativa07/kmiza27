@@ -52,7 +52,7 @@ const tableHeaders = [
 
 export const StandingsTable = ({ standings }: StandingsTableProps) => {
   return (
-    <div className="bg-white rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden shadow-sm -mx-2 sm:mx-0">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -61,7 +61,7 @@ export const StandingsTable = ({ standings }: StandingsTableProps) => {
                   <th
                     key={header.label}
                     scope="col"
-                    className={`px-3 py-3 text-${header.align} text-xs font-semibold text-gray-600 uppercase tracking-wider ${header.className || ''}`}
+                    className={`px-2 sm:px-4 py-1.5 sm:py-2 text-${header.align} text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider ${header.className || ''}`}
                     title={header.tooltip}
                   >
                     {header.label}
@@ -72,41 +72,41 @@ export const StandingsTable = ({ standings }: StandingsTableProps) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {standings.map((s) => (
                 <tr key={s.team.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                       <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${getRankIndicator(s.position)}`}>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                       <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${getRankIndicator(s.position)}`}>
                          {s.position}
                        </span>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8">
+                      <div className="flex-shrink-0 h-5 w-5 sm:h-6 sm:w-6">
                         {s.team.logo_url ? (
                            <img 
                              src={getTeamLogoUrl(s.team.logo_url)}
                              alt={s.team.name} 
-                             className="h-8 w-8 object-contain"
+                             className="h-5 w-5 sm:h-6 sm:w-6 object-contain"
                            />
                         ) : (
-                          <ShieldCheck className="h-8 w-8 text-gray-300" />
+                          <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-gray-300" />
                         )}
                       </div>
-                      <div className="ml-4">
-                        <Link href={`/time/${s.team.id}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600">
+                      <div className="ml-2 sm:ml-4">
+                        <Link href={`/time/${s.team.id}`} className="text-xs sm:text-sm font-medium text-gray-900 hover:text-indigo-600 leading-tight">
                           {s.team.name}
                         </Link>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-bold text-gray-800">{s.points}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.played}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.won}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.drawn}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.lost}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_for}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-500">{s.goals_against}</td>
-                  <td className={`px-3 py-3 whitespace-nowrap text-center text-sm ${getGoalDifferenceColor(s.goal_difference)}`}>{s.goal_difference}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm font-bold text-gray-800">{s.points}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.played}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.won}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.drawn}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.lost}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.goals_for}</td>
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm text-gray-500">{s.goals_against}</td>
+                  <td className={`px-2 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap text-center text-xs sm:text-sm ${getGoalDifferenceColor(s.goal_difference)}`}>{s.goal_difference}</td>
                 </tr>
               ))}
             </tbody>

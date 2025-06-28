@@ -21,18 +21,18 @@ export const API_CONFIG = {
 
 // Função para obter a URL da API com fallback
 export function getApiUrl(): string {
-  // Em produção, sempre usar a URL pública
+  // Sempre usar a variável de ambiente se disponível
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Em produção, usar a URL pública
   if (API_CONFIG.isProduction) {
-    return process.env.NEXT_PUBLIC_API_URL || 'https://api.kmiza27.com';
+    return 'https://api.kmiza27.com';
   }
   
-  // Em desenvolvimento no servidor (SSR), usar localhost
-  if (!API_CONFIG.isClient) {
-    return 'http://localhost:3000';
-  }
-  
-  // No cliente, usar a URL configurada
-  return API_CONFIG.baseURL;
+  // Em desenvolvimento, sempre usar localhost:3000
+  return 'http://localhost:3000';
 }
 
 // Função para fazer fetch com tratamento de erro robusto

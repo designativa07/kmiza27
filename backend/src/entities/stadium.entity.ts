@@ -26,6 +26,18 @@ export class Stadium {
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
   longitude: number;
 
+  @Column({ type: 'int', nullable: true })
+  opened_year: number;
+
+  @Column({ type: 'text', nullable: true })
+  history: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image_url: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  url: string;
+
   @CreateDateColumn()
   created_at: Date;
 } 
