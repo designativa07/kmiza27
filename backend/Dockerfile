@@ -61,10 +61,12 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 
-# Criar script de inicialização
+# Criar script de inicialização mais robusto
 RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
     echo 'echo "⏳ Executando migrações do banco de dados..."' >> /app/start.sh && \
     echo 'npm run migration:run' >> /app/start.sh && \
+    echo 'echo "✅ Migrações concluídas com sucesso."' >> /app/start.sh && \
     echo 'echo "🚀 Iniciando backend..."' >> /app/start.sh && \
     echo 'node dist/src/main.js' >> /app/start.sh && \
     chmod +x /app/start.sh
