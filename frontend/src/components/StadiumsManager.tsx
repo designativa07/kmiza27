@@ -140,16 +140,45 @@ export default function StadiumsManager() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // 1. Fazer upload da imagem primeiro, se houver uma.
-    let updatedStadiumData = {};
-    if (editingStadium && imageFile) {
+    e.preventDefault();
+
+    let stadiumIdToUpdate = editingStadium?.id;
+
+    // Se estiver criando um estádio, primeiro crie-o para obter um ID
+    if (!editingStadium) {
+      try {
+        const response = await fetch(API_ENDPOINTS.stadiums.list(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            capacity: formData.capacity ? parseInt(formData.capacity) : null,
+            latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+            longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert(`Erro ao criar estádio: ${errorData.message}`);
+          return;
+        }
+        const newStadium = await response.json();
+        stadiumIdToUpdate = newStadium.id;
+      } catch (error) {
+        console.error('Erro ao criar estádio:', error);
+        alert('Erro ao criar estádio. Verifique o console para mais detalhes.');
+        return;
+      }
+    }
+
+    // Se há um arquivo de imagem, faça o upload agora que temos um ID
+    if (stadiumIdToUpdate && imageFile) {
       const imageFormData = new FormData();
       imageFormData.append('image', imageFile);
 
       try {
-        const uploadResponse = await fetch(API_ENDPOINTS.stadiums.uploadImage(editingStadium.id), {
+        const uploadResponse = await fetch(API_ENDPOINTS.stadiums.uploadImage(stadiumIdToUpdate), {
           method: 'POST',
           body: imageFormData,
         });
@@ -158,51 +187,46 @@ export default function StadiumsManager() {
           throw new Error('Falha no upload da imagem');
         }
         const uploadedImageStadium = await uploadResponse.json();
-        updatedStadiumData = uploadedImageStadium;
-        // Atualiza o formData com a URL da imagem, se o campo URL for para exibir a URL da imagem
+        // Atualiza o formData com a URL da imagem
         setFormData(prev => ({
           ...prev,
-          url: uploadedImageStadium.image_url || prev.url, // Usa a URL da imagem se disponível, caso contrário mantém a URL existente
+          url: uploadedImageStadium.image_url || prev.url,
         }));
+        
+        // Atualiza o estádio com a URL da imagem
+        if (stadiumIdToUpdate) {
+            await fetch(API_ENDPOINTS.stadiums.byId(stadiumIdToUpdate), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_url: uploadedImageStadium.image_url, url: uploadedImageStadium.image_url }),
+            });
+        }
+
       } catch (error) {
-        console.error('Erro ao fazer upload da imagem:', error)
-        alert('Erro ao fazer upload da imagem.')
-        return; // Interrompe se o upload falhar
+        console.error('Erro ao fazer upload da imagem:', error);
+        alert('Erro ao fazer upload da imagem.');
+        // Não retorna aqui, pois o estádio já foi criado/atualizado
       }
+    } else if (editingStadium && stadiumIdToUpdate) { // Se estiver editando, mas sem nova imagem, apenas atualize os dados
+        try {
+            await fetch(API_ENDPOINTS.stadiums.byId(stadiumIdToUpdate), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...formData,
+                  capacity: formData.capacity ? parseInt(formData.capacity) : null,
+                  latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                  longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+                }),
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar estádio:', error);
+            alert('Erro ao atualizar estádio.');
+        }
     }
 
-    // 2. Enviar o restante dos dados do formulário
-    try {
-      const url = editingStadium 
-        ? API_ENDPOINTS.stadiums.byId(editingStadium.id)
-        : API_ENDPOINTS.stadiums.list()
-      
-      const method = editingStadium ? 'PATCH' : 'POST'
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          capacity: formData.capacity ? parseInt(formData.capacity) : null,
-          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        }),
-      })
-
-      if (response.ok) {
-        fetchStadiums(currentPage, debouncedSearchTerm) // Atualiza a lista
-        resetForm()
-      } else {
-        const errorData = await response.json()
-        alert(`Erro: ${errorData.message}`)
-      }
-    } catch (error) {
-      console.error('Erro ao salvar estádio:', error)
-      alert('Erro ao salvar estádio. Verifique o console para mais detalhes.')
-    }
+    fetchStadiums(currentPage, debouncedSearchTerm);
+    resetForm();
   }
 
   const resetForm = () => {
@@ -251,6 +275,12 @@ export default function StadiumsManager() {
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setFormData(prev => ({ ...prev, url: '', image_url: '' }))
   }
 
   const handleDelete = async (id: number) => {
@@ -537,57 +567,54 @@ export default function StadiumsManager() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                {editingStadium ? 'Editar Estádio' : 'Adicionar Estádio'}
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <h2 className="text-lg font-medium text-gray-900">{editingStadium ? 'Editar Estádio' : 'Adicionar Estádio'}</h2>
+
+              <form onSubmit={handleSubmit} className="mt-4 space-y-6">
                 
-                {/* Seção de Upload de Imagem */}
-                {editingStadium && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Imagem do Estádio</label>
-                    <div className="mt-2 flex items-center space-x-4">
-                      <div className="w-32 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
-                        {imagePreview ? (
-                          <img src={imagePreview} alt="Preview do estádio" className="h-full w-full object-cover" />
-                        ) : (
-                          <PhotoIcon className="h-8 w-8 text-gray-400" />
-                        )}
+                {/* Seção de Imagem e URL */}
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Imagem do Estádio</label>
+                  <div className="flex items-center space-x-4">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview do estádio" className="h-20 w-20 rounded-md object-cover" />
+                    ) : (
+                      <div className="h-20 w-20 rounded-md bg-gray-100 flex items-center justify-center">
+                        <PhotoIcon className="h-10 w-10 text-gray-400" />
                       </div>
-                      <div className="flex-1">
-                        <input
-                          type="file"
-                          id="stadium-image-upload"
-                          accept="image/png, image/jpeg, image/webp"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="stadium-image-upload"
-                          className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                          Trocar Imagem
+                    )}
+                    <div className="flex flex-col space-y-2">
+                      <div>
+                        <label htmlFor="image-upload" className="cursor-pointer bg-white text-indigo-600 hover:text-indigo-500 font-medium py-2 px-3 border border-gray-300 rounded-md text-sm">
+                          {imagePreview ? 'Trocar Imagem' : 'Adicionar Imagem'}
                         </label>
-                        {imagePreview && (
-                           <button
-                             type="button"
-                             onClick={() => {
-                               setImageFile(null);
-                               setImagePreview(editingStadium.image_url ? getStadiumImageUrl(editingStadium.image_url) : null);
-                             }}
-                             className="ml-2 text-sm text-red-600 hover:text-red-800"
-                           >
-                             Remover
-                           </button>
-                         )}
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, WEBP até 2MB.</p>
+                        <input id="image-upload" name="image-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp" />
                       </div>
+                      {imagePreview && (
+                        <button type="button" onClick={handleRemoveImage} className="text-red-600 hover:text-red-500 text-sm font-medium">
+                          Remover
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
+                  <p className="text-xs text-gray-500 mt-2">PNG, JPG, WEBP até 2MB.</p>
+                  
+                  <div className="mt-4">
+                    <label htmlFor="url" className="block text-sm font-medium text-gray-700">URL da Imagem</label>
+                    <input
+                      type="text"
+                      name="url"
+                      id="url"
+                      value={formData.url}
+                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      placeholder="URL da imagem do estádio"
+                    />
+                  </div>
+                </div>
 
+                {/* Campos de Texto */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Nome</label>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
                   <input
                     type="text"
                     required
@@ -597,7 +624,7 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Cidade</label>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
                   <input
                     type="text"
                     value={formData.city}
@@ -606,7 +633,7 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Estado</label>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
                   <input
                     type="text"
                     value={formData.state}
@@ -615,7 +642,7 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">País</label>
+                  <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
                   <input
                     type="text"
                     value={formData.country}
@@ -624,7 +651,7 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Capacidade</label>
+                  <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">Capacidade</label>
                   <input
                     type="number"
                     value={formData.capacity}
@@ -633,7 +660,7 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Latitude</label>
+                  <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">Latitude</label>
                   <input
                     type="text"
                     value={formData.latitude}
@@ -642,26 +669,17 @@ export default function StadiumsManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Longitude</label>
+                  <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">Longitude</label>
                   <input
                     type="text"
+                    name="longitude"
+                    id="longitude"
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="url" className="block text-sm font-medium text-gray-700">URL</label>
-                  <input
-                    type="text"
-                    name="url"
-                    id="url"
-                    value={formData.url}
-                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
-
+                
                 <div className="pt-4 flex justify-end space-x-2">
                   <button
                     type="button"
