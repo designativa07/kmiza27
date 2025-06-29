@@ -19,6 +19,14 @@ services:
       - EVOLUTION_API_GLOBAL_KEY=your-global-key
       - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
       - GIT_COMMIT=${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}
+      # MinIO Configuration
+      - MINIO_ENDPOINT=kmiza27-minio.h4xd66.easypanel.host
+      - MINIO_PORT=443
+      - MINIO_USE_SSL=true
+      - MINIO_ACCESS_KEY=minio
+      - MINIO_SECRET_KEY=azNgJM29YKVS2Wb
+      - MINIO_BUCKET_NAME=img
+      - CDN_URL=https://cdn.kmiza27.com
     depends_on:
       - postgres
     volumes:

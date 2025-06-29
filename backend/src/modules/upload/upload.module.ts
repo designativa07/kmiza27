@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UploadController } from './upload.controller';
 import { UploadCloudService } from './upload-cloud.service';
 import { ConfigModule } from '@nestjs/config';
 
+@Global()
 @Module({
   imports: [
     ConfigModule,

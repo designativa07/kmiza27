@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Exemplo de implementação para Cloudinary
 // Descomente e configure se quiser usar armazenamento em nuvem
@@ -54,29 +56,82 @@ export class UploadCloudService {
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
-    this.cdnUrl = this.configService.get<string>('CDN_URL', 'https://cdn.kmiza27.com');
-    this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'img');
+    this.logger.log('--- Inicializando UploadCloudService ---');
+    this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 
-    const endpoint = this.configService.get<string>('MINIO_ENDPOINT');
-    const port = this.configService.get<number>('MINIO_PORT');
-    const useSSL = this.configService.get<string>('MINIO_USE_SSL') === 'true';
+    // Carregar variáveis de ambiente manualmente se necessário
+    this.loadEnvironmentVariables();
+
+    // Debug: verificar variáveis de ambiente diretamente
+    this.logger.log(`MINIO_ENDPOINT (process.env): ${process.env.MINIO_ENDPOINT}`);
+    this.logger.log(`MINIO_ACCESS_KEY (process.env): ${process.env.MINIO_ACCESS_KEY ? 'Encontrado' : 'NÃO ENCONTRADO'}`);
+
+    // Usar process.env diretamente em vez do ConfigService
+    this.cdnUrl = process.env.CDN_URL || 'https://cdn.kmiza27.com';
+    this.bucketName = process.env.MINIO_BUCKET_NAME || 'img';
+
+    const endpoint = process.env.MINIO_ENDPOINT;
+    const accessKey = process.env.MINIO_ACCESS_KEY;
+
+    this.logger.log(`Valor de MINIO_ENDPOINT: ${endpoint}`);
+    this.logger.log(`Valor de MINIO_ACCESS_KEY: ${accessKey ? 'Encontrado' : 'NÃO ENCONTRADO'}`);
 
     if (!endpoint) {
       this.logger.warn('MINIO_ENDPOINT não está configurado. O upload de arquivos estará desabilitado.');
       return;
     }
     
+    const port = parseInt(process.env.MINIO_PORT || '443', 10);
+    const useSSL = process.env.MINIO_USE_SSL === 'true';
+    const secretKey = process.env.MINIO_SECRET_KEY;
+
+    if (!accessKey || !secretKey) {
+      this.logger.error('MINIO_ACCESS_KEY ou MINIO_SECRET_KEY não encontrados');
+      return;
+    }
+
     this.s3Client = new S3Client({
       endpoint: `${useSSL ? 'https' : 'http'}://${endpoint}:${port}`,
       region: 'us-east-1', // Região padrão para MinIO
       credentials: {
-        accessKeyId: this.configService.getOrThrow('MINIO_ACCESS_KEY'),
-        secretAccessKey: this.configService.getOrThrow('MINIO_SECRET_KEY'),
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
       },
       forcePathStyle: true, // Necessário para MinIO
     });
 
     this.logger.log(`Serviço de Upload inicializado. Endpoint: ${endpoint}, Bucket: ${this.bucketName}`);
+  }
+
+  private loadEnvironmentVariables(): void {
+    const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+    const envPath = path.join(__dirname, '..', '..', '..', envFile);
+
+    this.logger.log(`Tentando carregar variáveis de: ${envPath}`);
+
+    if (fs.existsSync(envPath)) {
+      try {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        const envVars = envContent.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+        
+        envVars.forEach(line => {
+          const [key, ...valueParts] = line.split('=');
+          if (key && valueParts.length > 0) {
+            const value = valueParts.join('=').trim();
+            if (!process.env[key]) {
+              process.env[key] = value;
+              this.logger.log(`Carregada variável: ${key}`);
+            }
+          }
+        });
+        
+        this.logger.log(`✅ Variáveis carregadas de: ${envFile}`);
+      } catch (error) {
+        this.logger.error(`Erro ao carregar ${envFile}: ${error.message}`);
+      }
+    } else {
+      this.logger.warn(`⚠️  Arquivo ${envFile} não encontrado em ${envPath}`);
+    }
   }
 
   async uploadEscudo(file: Express.Multer.File): Promise<string> {
