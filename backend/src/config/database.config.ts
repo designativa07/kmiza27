@@ -1,10 +1,35 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { LogLevel } from 'typeorm';
 
-export const databaseConfig = (): TypeOrmModuleOptions => ({
-  type: 'postgres',
-  url: process.env.DATABASE_URL || 'postgres://devuser:devuser@localhost:5432/kmiza27_dev',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development', // Sincronizar em desenvolvimento
-  logging: process.env.NODE_ENV === 'development',
-  ssl: false,
-}); 
+export const databaseConfig = (): TypeOrmModuleOptions => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  const loggingLevels: LogLevel[] = isDevelopment ? ['query', 'error'] : ['error'];
+
+  const baseConfig = {
+    type: 'postgres' as const,
+    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+    synchronize: false,
+    logging: loggingLevels,
+    extra: {
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    },
+  };
+
+  if (process.env.DATABASE_URL && !isDevelopment) {
+    return {
+      ...baseConfig,
+      url: process.env.DATABASE_URL,
+    };
+  }
+
+  return {
+    ...baseConfig,
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    username: process.env.DB_USERNAME || 'devuser',
+    password: process.env.DB_PASSWORD || 'devuser',
+    database: process.env.DB_DATABASE || 'kmiza27_dev',
+  };
+}; 

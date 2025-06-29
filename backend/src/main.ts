@@ -2,6 +2,32 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as fs from 'fs';
+
+// Carregar variáveis de ambiente manualmente
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+const envPath = join(__dirname, '..', envFile);
+
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  const envVars = envContent.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+  
+  envVars.forEach(line => {
+    const [key, ...valueParts] = line.split('=');
+    if (key && valueParts.length > 0) {
+      const value = valueParts.join('=').trim();
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  });
+  
+  console.log(`📄 Carregadas variáveis de ambiente de: ${envFile}`);
+  console.log(`🔧 MINIO_ENDPOINT: ${process.env.MINIO_ENDPOINT || 'NÃO ENCONTRADO'}`);
+  console.log(`🔧 MINIO_ACCESS_KEY: ${process.env.MINIO_ACCESS_KEY ? 'Configurado' : 'NÃO ENCONTRADO'}`);
+} else {
+  console.log(`⚠️  Arquivo ${envFile} não encontrado`);
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
