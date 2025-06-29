@@ -33,7 +33,7 @@ export default function StadiumsManager() {
   
   // Estados do filtro
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
   const [cityFilter, setCityFilter] = useState('')
   const [stateFilter, setStateFilter] = useState('')
   
@@ -53,33 +53,59 @@ export default function StadiumsManager() {
   })
 
   useEffect(() => {
-    fetchStadiums(currentPage, debouncedSearchTerm)
-  }, [currentPage, debouncedSearchTerm])
+    fetchAllStadiums()
+  }, [])
+
+  useEffect(() => {
+    applyFilters()
+  }, [stadiums, debouncedSearchTerm, cityFilter, stateFilter])
+
+  useEffect(() => {
+    applyPagination()
+  }, [filteredStadiums, currentPage])
+
+  const fetchAllStadiums = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.stadiums.list(1, 1000)) // Buscar todos os estádios
+      const paginatedData = await response.json()
+      setStadiums(paginatedData.data)
+      setTotalStadiums(paginatedData.total)
+    } catch (error) {
+      console.error('Erro ao carregar estádios:', error)
+      setStadiums([])
+      setTotalStadiums(0)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const applyFilters = () => {
+    if (!stadiums.length) return;
+    
     let filtered = [...stadiums]
 
     // Filtro por termo de busca
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       filtered = filtered.filter(stadium => 
-        stadium.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stadium.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stadium.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stadium.country?.toLowerCase().includes(searchTerm.toLowerCase())
+        stadium.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        stadium.city?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        stadium.state?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        stadium.country?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       )
     }
 
     // Filtro por cidade
     if (cityFilter) {
       filtered = filtered.filter(stadium => 
-        stadium.city?.toLowerCase().includes(cityFilter.toLowerCase())
+        stadium.city?.toLowerCase() === cityFilter.toLowerCase()
       )
     }
 
     // Filtro por estado
     if (stateFilter) {
       filtered = filtered.filter(stadium => 
-        stadium.state?.toLowerCase().includes(stateFilter.toLowerCase())
+        stadium.state?.toLowerCase() === stateFilter.toLowerCase()
       )
     }
 
@@ -93,7 +119,7 @@ export default function StadiumsManager() {
     setPaginatedStadiums(filteredStadiums.slice(startIndex, endIndex))
   }
 
-  const totalPages = Math.ceil(totalStadiums / itemsPerPage)
+  const totalPages = Math.ceil(filteredStadiums.length / itemsPerPage)
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -123,21 +149,7 @@ export default function StadiumsManager() {
     return Array.from(states).sort()
   }
 
-  const fetchStadiums = async (page: number, search: string) => {
-    setLoading(true);
-    try {
-      const response = await fetch(API_ENDPOINTS.stadiums.list(page, itemsPerPage, search))
-      const paginatedData = await response.json()
-      setPaginatedStadiums(paginatedData.data)
-      setTotalStadiums(paginatedData.total)
-    } catch (error) {
-      console.error('Erro ao carregar estádios:', error)
-      setPaginatedStadiums([])
-      setTotalStadiums(0)
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +251,7 @@ export default function StadiumsManager() {
         }
     }
 
-    fetchStadiums(currentPage, debouncedSearchTerm);
+    fetchAllStadiums();
     resetForm();
   }
 
@@ -304,7 +316,7 @@ export default function StadiumsManager() {
         })
 
         if (response.ok) {
-          fetchStadiums(currentPage, debouncedSearchTerm) // Recarregar
+          fetchAllStadiums() // Recarregar
         } else {
           const errorData = await response.json()
           alert(`Erro ao excluir estádio: ${errorData.message}`)
@@ -367,11 +379,11 @@ export default function StadiumsManager() {
         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> até{' '}
+              Mostrando <span className="font-medium">{filteredStadiums.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> até{' '}
               <span className="font-medium">
-                {Math.min(currentPage * itemsPerPage, totalStadiums)}
+                {Math.min(currentPage * itemsPerPage, filteredStadiums.length)}
               </span>{' '}
-              de <span className="font-medium">{totalStadiums}</span> resultados
+              de <span className="font-medium">{filteredStadiums.length}</span> resultados
             </p>
           </div>
           <div>
@@ -433,7 +445,7 @@ export default function StadiumsManager() {
   }
 
   return (
-    <div className="bg-white shadow-xl rounded-lg">
+    <div className="bg-white rounded-lg">
       <div className="px-4 py-5 sm:p-6">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
@@ -457,15 +469,15 @@ export default function StadiumsManager() {
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Busca */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none z-10">
+              <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
             </div>
             <input
               type="text"
               placeholder="Buscar estádios..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="pl-4 pr-10 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
@@ -504,17 +516,17 @@ export default function StadiumsManager() {
           </div>
         </div>
         
-        <div className="mt-3 flex justify-between items-center">
+        <div className="mt-2 flex justify-between items-center">
           <span className="text-sm text-gray-600">
-            {totalStadiums} estádios encontrados
+            {filteredStadiums.length} estádios encontrados
           </span>
         </div>
       </div>
 
-      <div className="mt-8 flow-root">
+      <div className="mt-0 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+            <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-white dark:bg-slate-800 border-b-2 border-gray-200 dark:border-slate-600">
                   <tr>
@@ -636,61 +648,72 @@ export default function StadiumsManager() {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                   />
                 </div>
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
+                
+                {/* Cidade e Capacidade na mesma linha - cidade maior que capacidade */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">Capacidade</label>
+                    <input
+                      type="number"
+                      value={formData.capacity}
+                      onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
+                
+                {/* Estado e País na mesma linha */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
+                    <input
+                      type="text"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">Capacidade</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">Latitude</label>
-                  <input
-                    type="text"
-                    value={formData.latitude}
-                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">Longitude</label>
-                  <input
-                    type="text"
-                    name="longitude"
-                    id="longitude"
-                    value={formData.longitude}
-                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                {/* Latitude e Longitude na mesma linha */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">Latitude</label>
+                    <input
+                      type="text"
+                      value={formData.latitude}
+                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">Longitude</label>
+                    <input
+                      type="text"
+                      name="longitude"
+                      id="longitude"
+                      value={formData.longitude}
+                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                    />
+                  </div>
                 </div>
                 
                 <div className="pt-4 flex justify-end space-x-2">

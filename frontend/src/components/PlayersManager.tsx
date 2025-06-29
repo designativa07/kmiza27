@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, ChangeEvent } from 'react'
 import { useDebounce } from 'use-debounce'
-import { PlusIcon, PencilIcon, TrashIcon, LinkIcon, ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { PlusIcon, PencilIcon, TrashIcon, LinkIcon, ArrowPathIcon, ChartBarIcon, MagnifyingGlassIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { API_ENDPOINTS, apiUrl } from '../config/api'
 import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { format, parseISO } from 'date-fns'
 import PlayerStatsCard from './PlayerStatsCard'
@@ -80,6 +80,8 @@ interface PlayerTeamHistoryFormData {
 
 export default function PlayersManager() {
   const [players, setPlayers] = useState<Player[]>([])
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([])
+  const [paginatedPlayers, setPaginatedPlayers] = useState<Player[]>([])
   const [totalPlayers, setTotalPlayers] = useState(0)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,11 +90,15 @@ export default function PlayersManager() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [selectedPlayerForHistory, setSelectedPlayerForHistory] = useState<Player | null>(null)
   const [selectedPlayerForStats, setSelectedPlayerForStats] = useState<Player | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [uploading, setUploading] = useState(false)
+  const [imageInputType, setImageInputType] = useState<'upload' | 'url'>('upload')
   const [formData, setFormData] = useState<PlayerFormData>({
     name: '',
     position: '',
     date_of_birth: '',
-    nationality: '',
+    nationality: 'Brasil',
     state: 'active',
     image_url: '',
   })
@@ -104,52 +110,148 @@ export default function PlayersManager() {
     role: '',
   })
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
+  const [positionFilter, setPositionFilter] = useState('')
+  const [nationalityFilter, setNationalityFilter] = useState('')
+  const [stateFilter, setStateFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15;
 
   useEffect(() => {
-    fetchData(currentPage, debouncedSearchTerm)
-  }, [currentPage, debouncedSearchTerm])
+    fetchAllPlayers()
+    fetchTeams()
+  }, [])
 
-  const fetchData = async (page: number, search: string) => {
+  useEffect(() => {
+    applyFilters()
+  }, [players, debouncedSearchTerm, positionFilter, nationalityFilter, stateFilter])
+
+  useEffect(() => {
+    applyPagination()
+  }, [filteredPlayers, currentPage])
+
+  const fetchAllPlayers = async () => {
     setLoading(true);
     try {
-      const [playersRes, teamsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.players.list(page, itemsPerPage, search)),
-        fetch(API_ENDPOINTS.teams.list(1, 1000)), // Busca todos os times para o dropdown
-      ])
-
-      if (playersRes.ok) {
-        const playersData = await playersRes.json()
+      const response = await fetch(API_ENDPOINTS.players.list(1, 1000)) // Buscar todos os jogadores
+      if (response.ok) {
+        const playersData = await response.json()
         setPlayers(playersData.data)
         setTotalPlayers(playersData.total)
       }
-      if (teamsRes.ok) {
-        const teamsData = await teamsRes.json()
-        setTeams(teamsData.data) 
-      }
     } catch (error) {
-      console.error('Erro ao carregar dados:', error)
+      console.error('Erro ao carregar jogadores:', error)
       setPlayers([]);
-      setTeams([]);
       setTotalPlayers(0);
     } finally {
       setLoading(false)
     }
   }
 
+  const fetchTeams = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.teams.list(1, 1000))
+      if (response.ok) {
+        const teamsData = await response.json()
+        setTeams(teamsData.data) 
+      }
+    } catch (error) {
+      console.error('Erro ao carregar times:', error)
+      setTeams([]);
+    }
+  }
+
+  const applyFilters = () => {
+    if (!players.length) return;
+    
+    let filtered = [...players]
+
+    // Filtro por termo de busca
+    if (debouncedSearchTerm) {
+      filtered = filtered.filter(player => 
+        player.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        player.position?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        player.nationality?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por posição
+    if (positionFilter) {
+      filtered = filtered.filter(player => 
+        player.position?.toLowerCase() === positionFilter.toLowerCase()
+      )
+    }
+
+    // Filtro por nacionalidade
+    if (nationalityFilter) {
+      filtered = filtered.filter(player => 
+        player.nationality?.toLowerCase() === nationalityFilter.toLowerCase()
+      )
+    }
+
+
+
+    // Filtro por estado
+    if (stateFilter) {
+      filtered = filtered.filter(player => 
+        player.state?.toLowerCase() === stateFilter.toLowerCase()
+      )
+    }
+
+    setFilteredPlayers(filtered)
+    setCurrentPage(1) // Reset para primeira página quando filtrar
+  }
+
+  const applyPagination = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    setPaginatedPlayers(filteredPlayers.slice(startIndex, endIndex))
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setPositionFilter('')
+    setNationalityFilter('')
+    setStateFilter('')
+    setCurrentPage(1)
+  }
+
+  const getUniquePositions = () => {
+    const positions = new Set<string>()
+    players.forEach(player => {
+      if (player.position) positions.add(player.position)
+    })
+    return Array.from(positions).sort()
+  }
+
+  const getUniqueNationalities = () => {
+    const nationalities = new Set<string>()
+    players.forEach(player => {
+      if (player.nationality) nationalities.add(player.nationality)
+    })
+    return Array.from(nationalities).sort()
+  }
+
+
+
+  const getUniqueStates = () => {
+    const states = ['active', 'retired', 'injured', 'inactive']
+    return states
+  }
+
   const handlePlayerSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setUploading(true)
+    
     try {
-      let url = API_ENDPOINTS.players.list();
+      let url = API_ENDPOINTS.players.base();
       let method = 'POST';
       if (editingPlayer) {
-        url = `${API_ENDPOINTS.players.list()}/${editingPlayer.id}`;
+        url = `${API_ENDPOINTS.players.base()}/${editingPlayer.id}`;
         method = 'PUT';
       }
 
-      const payload = {
+      let payload = {
         ...formData,
         date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null,
       }
@@ -163,10 +265,30 @@ export default function PlayersManager() {
       })
 
       if (response.ok) {
+        const savedPlayer = await response.json()
+        
+        // Se há arquivo selecionado, fazer upload
+        if (selectedFile) {
+          const uploadedImageUrl = await uploadPlayerImage(savedPlayer.id || editingPlayer?.id)
+          if (uploadedImageUrl) {
+            // Atualizar o jogador com a nova URL da imagem
+            await fetch(`${API_ENDPOINTS.players.base()}/${savedPlayer.id || editingPlayer?.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ...payload,
+                image_url: uploadedImageUrl
+              }),
+            })
+          }
+        }
+        
         setShowPlayerModal(false)
         setEditingPlayer(null)
         resetPlayerForm()
-        fetchData(currentPage, debouncedSearchTerm)
+        fetchAllPlayers()
       } else {
         const errorText = await response.text();
         console.error('Erro ao salvar jogador:', response.status, errorText);
@@ -175,6 +297,8 @@ export default function PlayersManager() {
     } catch (error) {
       console.error('Erro ao salvar jogador:', error)
       alert('Erro ao salvar jogador. Tente novamente.')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -191,7 +315,7 @@ export default function PlayersManager() {
         role: historyFormData.role,
       }
 
-      const response = await fetch(`${API_ENDPOINTS.players.list()}/${selectedPlayerForHistory.id}/add-to-team`, {
+      const response = await fetch(`${API_ENDPOINTS.players.base()}/${selectedPlayerForHistory.id}/add-to-team`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,7 +326,7 @@ export default function PlayersManager() {
       if (response.ok) {
         setShowHistoryModal(false)
         resetHistoryForm()
-        fetchData(currentPage, debouncedSearchTerm)
+        fetchAllPlayers()
       } else {
         const errorText = await response.text();
         console.error('Erro ao adicionar histórico de time:', response.status, errorText);
@@ -220,7 +344,7 @@ export default function PlayersManager() {
       name: player.name,
       position: player.position || '',
       date_of_birth: player.date_of_birth ? format(parseISO(player.date_of_birth), 'yyyy-MM-dd') : '',
-      nationality: player.nationality || '',
+      nationality: player.nationality || 'Brasil',
       state: player.state || 'active',
       image_url: player.image_url || '',
     })
@@ -230,10 +354,10 @@ export default function PlayersManager() {
   const handleDeletePlayer = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este jogador?')) {
       try {
-        await fetch(`${API_ENDPOINTS.players.list()}/${id}`, {
+        await fetch(`${API_ENDPOINTS.players.base()}/${id}`, {
           method: 'DELETE',
         })
-        fetchData(currentPage, debouncedSearchTerm)
+        fetchAllPlayers()
       } catch (error) {
         console.error('Erro ao excluir jogador:', error)
         alert('Erro ao excluir jogador. Tente novamente.')
@@ -248,7 +372,7 @@ export default function PlayersManager() {
 
   const openStatsCard = async (player: Player) => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.players.list()}/${player.id}`);
+      const response = await fetch(`${API_ENDPOINTS.players.base()}/${player.id}`);
       if (response.ok) {
         const fullPlayerData: Player = await response.json();
         setSelectedPlayerForStats(fullPlayerData);
@@ -270,10 +394,13 @@ export default function PlayersManager() {
       name: '',
       position: '',
       date_of_birth: '',
-      nationality: '',
+      nationality: 'Brasil',
       state: 'active',
       image_url: '',
     })
+    setSelectedFile(null)
+    setPreviewUrl('')
+    setImageInputType('upload')
   }
 
   const resetHistoryForm = () => {
@@ -324,7 +451,7 @@ export default function PlayersManager() {
 
       if (response.ok) {
         console.log('Histórico removido com sucesso!');
-        fetchData(currentPage, debouncedSearchTerm); // Recarregar os dados para atualizar a lista
+        fetchAllPlayers(); // Recarregar os dados para atualizar a lista
       } else {
         const errorText = await response.text();
         console.error('Erro ao remover histórico:', response.status, errorText);
@@ -336,7 +463,63 @@ export default function PlayersManager() {
     }
   };
 
-  const totalPages = Math.ceil(totalPlayers / itemsPerPage);
+  const totalPages = Math.ceil(filteredPlayers.length / itemsPerPage);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+      setFormData(prev => ({ ...prev, image_url: '' }))
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    
+    if (name === 'image_url' && value) {
+      setSelectedFile(null)
+      setPreviewUrl(value)
+    }
+  }
+
+  const uploadPlayerImage = async (playerId: number): Promise<string | null> => {
+    if (!selectedFile) return null
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('folder', 'jogadores')
+      formData.append('namingStrategy', 'name')
+      formData.append('entityName', `jogador-${playerId}`)
+
+      const response = await fetch(apiUrl('upload/cloud'), {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Upload da imagem bem-sucedido:', result)
+        return result.url // URL do CDN
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Erro no upload da imagem:', errorText)
+        return null
+      }
+    } catch (error) {
+      console.error('❌ Erro de conexão no upload da imagem:', error)
+      return null
+    } finally {
+      setUploading(false)
+    }
+  }
 
   if (loading) {
     return <div className="text-center py-4">Carregando jogadores...</div>;
@@ -361,6 +544,93 @@ export default function PlayersManager() {
             Adicionar Jogador
           </button>
         </div>
+      </div>
+
+      <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-6">
+        <div className="relative lg:col-span-2">
+          <input
+            type="text"
+            name="search"
+            id="search"
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            placeholder="Buscar jogadores..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          </div>
+        </div>
+        
+        <div>
+          <select
+            value={positionFilter}
+            onChange={(e) => {
+              setPositionFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          >
+            <option value="">Posição</option>
+            {getUniquePositions().map(position => (
+              <option key={position} value={position}>{position}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={nationalityFilter}
+            onChange={(e) => {
+              setNationalityFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          >
+            <option value="">Nacionalidade</option>
+            {getUniqueNationalities().map(nationality => (
+              <option key={nationality} value={nationality}>{nationality}</option>
+            ))}
+          </select>
+        </div>
+
+
+
+        <div>
+          <select
+            value={stateFilter}
+            onChange={(e) => {
+              setStateFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          >
+            <option value="">Estado</option>
+            {getUniqueStates().map(state => (
+              <option key={state} value={state}>
+                {state === 'active' ? 'Ativo' :
+                 state === 'retired' ? 'Aposentado' :
+                 state === 'injured' ? 'Lesionado' :
+                 state === 'inactive' ? 'Inativo' : state}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mb-4 flex justify-between items-center">
+        <p className="text-sm text-gray-700">
+          Mostrando {paginatedPlayers.length} de {filteredPlayers.length} jogadores
+        </p>
+        <button
+          onClick={clearFilters}
+          className="inline-flex items-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300"
+        >
+          Limpar Filtros
+        </button>
       </div>
 
       <div className="mt-8 flow-root">
@@ -391,7 +661,7 @@ export default function PlayersManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {players.map((player) => (
+                  {paginatedPlayers.map((player) => (
                     <tr key={player.id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                         <div className="flex items-center">
@@ -467,6 +737,43 @@ export default function PlayersManager() {
         </div>
       </div>
 
+      {/* Paginação */}
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-sm text-gray-700">
+          Página {currentPage} de {totalPages} (Total: {filteredPlayers.length} jogadores)
+        </p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Primeira
+          </button>
+          <button
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <button
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Próxima
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Última
+          </button>
+        </div>
+      </div>
+
       {/* Modal para Adicionar/Editar Jogador */}
       {showPlayerModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="player-modal">
@@ -486,38 +793,43 @@ export default function PlayersManager() {
                     required
                   />
                 </div>
-                <div>
-                  <label htmlFor="position" className="block text-sm font-medium text-gray-700">Posição</label>
-                  <input
-                    type="text"
-                    name="position"
-                    id="position"
-                    value={formData.position}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, position: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="position" className="block text-sm font-medium text-gray-700">Posição</label>
+                    <input
+                      type="text"
+                      name="position"
+                      id="position"
+                      value={formData.position}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">Nascimento</label>
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      id="date_of_birth"
+                      value={formData.date_of_birth}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">Data de Nascimento</label>
-                  <input
-                    type="date"
-                    name="date_of_birth"
-                    id="date_of_birth"
-                    value={formData.date_of_birth}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nacionalidade</label>
-                  <input
-                    type="text"
-                    name="nationality"
-                    id="nationality"
-                    value={formData.nationality}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, nationality: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nacionalidade</label>
+                    <input
+                      type="text"
+                      name="nationality"
+                      id="nationality"
+                      value={formData.nationality}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+
                 </div>
                 <div>
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
@@ -525,7 +837,7 @@ export default function PlayersManager() {
                     name="state"
                     id="state"
                     value={formData.state}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   >
                     <option value="active">Ativo</option>
@@ -534,17 +846,59 @@ export default function PlayersManager() {
                     <option value="inactive">Inativo</option>
                   </select>
                 </div>
+
                 <div>
-                  <label htmlFor="image_url" className="block text-sm font-medium text-gray-700">URL da Imagem</label>
-                  <input
-                    type="text"
-                    name="image_url"
-                    id="image_url"
-                    value={formData.image_url}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="https://exemplo.com/foto.png"
-                  />
+                  <label className="block text-sm font-medium text-gray-700">Foto do Jogador</label>
+                  <div className="mt-1 flex items-center space-x-4">
+                    <button
+                      type="button"
+                      onClick={() => setImageInputType('upload')}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'upload' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageInputType('url')}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'url' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      URL
+                    </button>
+                  </div>
+                  {imageInputType === 'upload' ? (
+                    <div className="mt-2 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
+                      <div className="space-y-1 text-center">
+                        <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
+                        <div className="flex text-sm text-gray-600">
+                          <label
+                            htmlFor="file-upload"
+                            className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
+                          >
+                            <span>Upload um arquivo</span>
+                            <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
+                          </label>
+                          <p className="pl-1">ou arraste e solte</p>
+                        </div>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF até 10MB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      name="image_url"
+                      id="image_url"
+                      value={formData.image_url}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="https://exemplo.com/foto.png"
+                    />
+                  )}
+                  {previewUrl && (
+                    <div className="mt-4">
+                      <p className="block text-sm font-medium text-gray-700 mb-2">Prévia da Foto:</p>
+                      <img src={previewUrl} alt="Prévia da Foto" className="h-20 w-20 rounded-full object-cover" />
+                    </div>
+                  )}
                 </div>
                 
                 <div className="mt-4 flex justify-end">
@@ -557,9 +911,10 @@ export default function PlayersManager() {
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    disabled={uploading}
+                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {editingPlayer ? 'Salvar Alterações' : 'Adicionar Jogador'}
+                    {uploading ? 'Salvando...' : (editingPlayer ? 'Salvar Alterações' : 'Adicionar Jogador')}
                   </button>
                 </div>
               </form>

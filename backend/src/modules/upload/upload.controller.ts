@@ -6,7 +6,8 @@ import {
   BadRequestException,
   Get,
   Param,
-  Res
+  Res,
+  Body
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -78,6 +79,50 @@ export class UploadController {
       size: file.size,
       instructions: 'Faça upload manual desta imagem para o MinIO em: logo-competition/' + file.filename
     };
+  }
+
+  @Post('cloud')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadToCloud(@UploadedFile() file: any, @Body() body: any) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo foi enviado');
+    }
+
+    const { folder = 'escudos', namingStrategy = 'timestamp', entityName = '' } = body;
+    
+    // Definir nome do arquivo baseado na estratégia
+    let fileName: string;
+    const fileExtension = path.extname(file.originalname);
+    
+    switch (namingStrategy) {
+      case 'name':
+        fileName = entityName ? `${entityName}${fileExtension}` : `file-${Date.now()}${fileExtension}`;
+        break;
+      case 'id':
+        fileName = entityName ? `${entityName}${fileExtension}` : `file-${Date.now()}${fileExtension}`;
+        break;
+      case 'original':
+        fileName = file.originalname;
+        break;
+      default:
+        fileName = `${folder}-${Date.now()}${fileExtension}`;
+    }
+
+    try {
+      const url = await this.uploadCloudService.uploadFile(file, folder, fileName);
+      
+      return {
+        message: 'Arquivo enviado com sucesso para o CDN',
+        url: url,
+        folder: folder,
+        fileName: fileName,
+        originalName: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype
+      };
+    } catch (error) {
+      throw new BadRequestException(`Erro no upload: ${error.message}`);
+    }
   }
 
   @Get('escudos/:filename')

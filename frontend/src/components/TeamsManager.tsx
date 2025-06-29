@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useDebounce } from 'use-debounce'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS, apiUrl } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 
 interface Stadium {
@@ -22,6 +22,7 @@ interface Team {
   founded_year?: number
   city?: string
   state?: string
+  country?: string
   stadium?: Stadium;
   stadium_id?: number;
   created_at: string
@@ -46,6 +47,8 @@ interface PlayerTeamHistory {
 }
 
 export default function TeamsManager() {
+  const [teams, setTeams] = useState<Team[]>([])
+  const [filteredTeams, setFilteredTeams] = useState<Team[]>([])
   const [paginatedTeams, setPaginatedTeams] = useState<Team[]>([])
   const [totalTeams, setTotalTeams] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -65,8 +68,9 @@ export default function TeamsManager() {
   const [playerRole, setPlayerRole] = useState<string>('')
   
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
   const [stateFilter, setStateFilter] = useState('')
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
+  const [countryFilter, setCountryFilter] = useState('')
   
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
@@ -76,15 +80,24 @@ export default function TeamsManager() {
     short_name: '',
     city: '',
     state: '',
+    country: 'Brasil',
     founded_year: '',
     logo_url: '',
     stadium_id: ''
   })
 
   useEffect(() => {
-    fetchTeams(currentPage, debouncedSearchTerm)
+    fetchAllTeams()
     fetchStadiums()
-  }, [currentPage, debouncedSearchTerm])
+  }, [])
+
+  useEffect(() => {
+    applyFilters()
+  }, [teams, debouncedSearchTerm, stateFilter, countryFilter])
+
+  useEffect(() => {
+    applyPagination()
+  }, [filteredTeams, currentPage])
 
   const fetchTeamPlayers = async (teamId: number) => {
     try {
@@ -125,23 +138,63 @@ export default function TeamsManager() {
     }
   };
 
-  const fetchTeams = async (page: number, search: string) => {
+  const fetchAllTeams = async () => {
     setLoading(true)
     try {
-      const response = await fetch(API_ENDPOINTS.teams.list(page, itemsPerPage, search)) 
+      const response = await fetch(API_ENDPOINTS.teams.list(1, 1000)) // Buscar todos os times
       const paginatedData = await response.json()
-      setPaginatedTeams(paginatedData.data)
+      setTeams(paginatedData.data)
       setTotalTeams(paginatedData.total)
     } catch (error) {
       console.error('Erro ao carregar times:', error)
-      setPaginatedTeams([])
+      setTeams([])
       setTotalTeams(0)
     } finally {
       setLoading(false)
     }
   }
 
-  const totalPages = Math.ceil(totalTeams / itemsPerPage)
+  const applyFilters = () => {
+    if (!teams.length) return;
+    
+    let filtered = [...teams]
+
+    // Filtro por termo de busca
+    if (debouncedSearchTerm) {
+      filtered = filtered.filter(team => 
+        team.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.short_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.city?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.state?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.country?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por estado
+    if (stateFilter) {
+      filtered = filtered.filter(team => 
+        team.state?.toLowerCase() === stateFilter.toLowerCase()
+      )
+    }
+
+    // Filtro por país
+    if (countryFilter) {
+      filtered = filtered.filter(team => 
+        team.country?.toLowerCase() === countryFilter.toLowerCase()
+      )
+    }
+
+    setFilteredTeams(filtered)
+    setCurrentPage(1) // Reset para primeira página quando filtrar
+  }
+
+  const applyPagination = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    setPaginatedTeams(filteredTeams.slice(startIndex, endIndex))
+  }
+
+  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage)
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -152,14 +205,24 @@ export default function TeamsManager() {
   const clearFilters = () => {
     setSearchTerm('')
     setStateFilter('')
+    setCountryFilter('')
     setCurrentPage(1)
   }
 
   const getUniqueStates = () => {
-    // Esta função agora não é mais viável pois não temos todos os dados localmente.
-    // O ideal seria um endpoint para buscar estados ou remover o filtro por enquanto.
-    // Por enquanto, retornarei um array vazio para não quebrar a UI.
-    return []
+    const states = new Set<string>()
+    teams.forEach(team => {
+      if (team.state) states.add(team.state)
+    })
+    return Array.from(states).sort()
+  }
+
+  const getUniqueCountries = () => {
+    const countries = new Set<string>()
+    teams.forEach(team => {
+      if (team.country) countries.add(team.country)
+    })
+    return Array.from(countries).sort()
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,20 +254,27 @@ export default function TeamsManager() {
     setUploading(true)
     try {
       const formData = new FormData()
-      formData.append('escudo', selectedFile)
+      formData.append('file', selectedFile)
+      formData.append('folder', 'escudos')
+      formData.append('namingStrategy', 'name')
+      formData.append('entityName', `time-${teamId}`)
 
-      const response = await fetch(API_ENDPOINTS.teams.uploadLogo(teamId), {
+      const response = await fetch(apiUrl('upload/cloud'), {
         method: 'POST',
         body: formData,
       })
 
       if (response.ok) {
         const result = await response.json()
-        return result.filePath
+        console.log('✅ Upload do escudo bem-sucedido:', result)
+        return result.url // URL do CDN
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Erro no upload do escudo:', errorText)
+        return null
       }
-      return null
     } catch (error) {
-      console.error('Erro ao fazer upload do escudo:', error)
+      console.error('❌ Erro de conexão no upload do escudo:', error)
       return null
     } finally {
       setUploading(false)
@@ -259,7 +329,7 @@ export default function TeamsManager() {
           }
         }
         
-        fetchTeams(currentPage, debouncedSearchTerm)
+        fetchAllTeams()
         resetForm()
       } else {
         // Log do erro para debug
@@ -288,6 +358,7 @@ export default function TeamsManager() {
       short_name: '',
       city: '',
       state: '',
+      country: 'Brasil',
       founded_year: '',
       logo_url: '',
       stadium_id: ''
@@ -302,6 +373,7 @@ export default function TeamsManager() {
       short_name: team.short_name,
       city: team.city || '',
       state: team.state || '',
+      country: team.country || 'Brasil',
       founded_year: team.founded_year?.toString() || '',
       logo_url: team.logo_url || '',
       stadium_id: team.stadium_id?.toString() || ''
@@ -321,7 +393,7 @@ export default function TeamsManager() {
         await fetch(API_ENDPOINTS.teams.byId(id), {
           method: 'DELETE',
         })
-        fetchTeams(currentPage, debouncedSearchTerm)
+        fetchAllTeams()
       } catch (error) {
         console.error('Erro ao excluir time:', error)
       }
@@ -561,16 +633,13 @@ export default function TeamsManager() {
         </div>
       </div>
 
-      <div className="mt-4 mb-4 flex space-x-4">
-        <div className="relative flex-grow">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-          </div>
+      <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <div className="relative lg:col-span-2">
           <input
             type="text"
             name="search"
             id="search"
-            className="block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
             placeholder="Buscar times..."
             value={searchTerm}
             onChange={(e) => {
@@ -578,7 +647,11 @@ export default function TeamsManager() {
               setCurrentPage(1);
             }}
           />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          </div>
         </div>
+        
         <div>
           <select
             value={stateFilter}
@@ -594,11 +667,33 @@ export default function TeamsManager() {
             ))}
           </select>
         </div>
+
+        <div>
+          <select
+            value={countryFilter}
+            onChange={(e) => {
+              setCountryFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          >
+            <option value="">Todos os Países</option>
+            {getUniqueCountries().map(country => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mb-4 flex justify-between items-center">
+        <p className="text-sm text-gray-700">
+          Mostrando {paginatedTeams.length} de {filteredTeams.length} times
+        </p>
         <button
           onClick={clearFilters}
           className="inline-flex items-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300"
         >
-          Limpar
+          Limpar Filtros
         </button>
       </div>
 
@@ -696,39 +791,55 @@ export default function TeamsManager() {
                     required
                   />
                 </div>
-                <div>
-                  <label htmlFor="short_name" className="block text-sm font-medium text-gray-700">Nome Curto</label>
-                  <input
-                    type="text"
-                    name="short_name"
-                    id="short_name"
-                    value={formData.short_name}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
+                    <input
+                      type="text"
+                      name="city"
+                      id="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="short_name" className="block text-sm font-medium text-gray-700">Nome Curto</label>
+                    <input
+                      type="text"
+                      name="short_name"
+                      id="short_name"
+                      value={formData.short_name}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
-                  <input
-                    type="text"
-                    name="city"
-                    id="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
-                  <input
-                    type="text"
-                    name="state"
-                    id="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
+                    <input
+                      type="text"
+                      name="state"
+                      id="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
+                    <input
+                      type="text"
+                      name="country"
+                      id="country"
+                      value={formData.country}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="founded_year" className="block text-sm font-medium text-gray-700">Ano de Fundação</label>
