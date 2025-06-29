@@ -5,6 +5,7 @@ import { Team } from '../../entities/team.entity';
 import { Player } from '../../entities/player.entity';
 import { Stadium } from '../../entities/stadium.entity';
 import { Competition } from '../../entities/competition.entity';
+import { Channel } from '../../entities/channel.entity';
 
 @Injectable()
 export class SearchService {
@@ -17,6 +18,8 @@ export class SearchService {
     private stadiumsRepository: Repository<Stadium>,
     @InjectRepository(Competition)
     private competitionsRepository: Repository<Competition>,
+    @InjectRepository(Channel)
+    private channelsRepository: Repository<Channel>,
   ) {}
 
   private async searchWithUnaccent(repository: Repository<any>, fields: string[], searchTerm: string, limit: number) {
@@ -38,18 +41,19 @@ export class SearchService {
 
   async searchAll(query: string, limit: number = 5) {
     if (!query || query.trim().length < 2) {
-      return { teams: [], players: [], stadiums: [], competitions: [] };
+      return { teams: [], players: [], stadiums: [], competitions: [], channels: [] };
     }
 
     const searchTerm = query.trim();
 
-    const [teams, players, stadiums, competitions] = await Promise.all([
+    const [teams, players, stadiums, competitions, channels] = await Promise.all([
       this.searchWithUnaccent(this.teamsRepository, ['name', 'short_name'], searchTerm, limit),
       this.searchWithUnaccent(this.playersRepository, ['name', 'position'], searchTerm, limit),
       this.searchWithUnaccent(this.stadiumsRepository, ['name', 'city', 'state'], searchTerm, limit),
       this.searchWithUnaccent(this.competitionsRepository, ['name'], searchTerm, limit),
+      this.searchWithUnaccent(this.channelsRepository, ['name', 'description'], searchTerm, limit),
     ]);
 
-    return { teams, players, stadiums, competitions };
+    return { teams, players, stadiums, competitions, channels };
   }
 } 
