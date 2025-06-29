@@ -68,7 +68,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'npm run migration:run' >> /app/start.sh && \
     echo 'echo "✅ Migrações concluídas com sucesso."' >> /app/start.sh && \
     echo 'echo "🚀 Iniciando backend..."' >> /app/start.sh && \
-    echo 'node dist/src/main.js' >> /app/start.sh && \
+    echo 'node dist/main.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Criar pastas necessárias com permissões corretas
