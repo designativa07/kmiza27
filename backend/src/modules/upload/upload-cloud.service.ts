@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Exemplo de implementação para Cloudinary
 // Descomente e configure se quiser usar armazenamento em nuvem
@@ -47,15 +49,35 @@ export class UploadCloudService {
 // Configuração para MinIO (S3-compatible) do EasyPanel
 @Injectable()
 export class UploadCloudService {
+  private readonly logger = new Logger(UploadCloudService.name);
+  private readonly s3Client: S3Client;
   private readonly cdnUrl: string;
-  private readonly minioUrl: string;
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
-    // URLs baseadas na sua configuração do EasyPanel
-    this.cdnUrl = 'https://cdn.kmiza27.com';
-    this.minioUrl = 'https://console-kmiza27-minio.h4xd66.easypanel.host';
-    this.bucketName = 'img';
+    this.cdnUrl = this.configService.get<string>('CDN_URL', 'https://cdn.kmiza27.com');
+    this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'img');
+
+    const endpoint = this.configService.get<string>('MINIO_ENDPOINT');
+    const port = this.configService.get<number>('MINIO_PORT');
+    const useSSL = this.configService.get<string>('MINIO_USE_SSL') === 'true';
+
+    if (!endpoint) {
+      this.logger.warn('MINIO_ENDPOINT não está configurado. O upload de arquivos estará desabilitado.');
+      return;
+    }
+    
+    this.s3Client = new S3Client({
+      endpoint: `${useSSL ? 'https' : 'http'}://${endpoint}:${port}`,
+      region: 'us-east-1', // Região padrão para MinIO
+      credentials: {
+        accessKeyId: this.configService.getOrThrow('MINIO_ACCESS_KEY'),
+        secretAccessKey: this.configService.getOrThrow('MINIO_SECRET_KEY'),
+      },
+      forcePathStyle: true, // Necessário para MinIO
+    });
+
+    this.logger.log(`Serviço de Upload inicializado. Endpoint: ${endpoint}, Bucket: ${this.bucketName}`);
   }
 
   async uploadEscudo(file: Express.Multer.File): Promise<string> {
@@ -86,11 +108,11 @@ export class UploadCloudService {
 
   // URLs para acesso direto ao MinIO (uso interno)
   getMinioEscudoUrl(filename: string): string {
-    return `${this.minioUrl}/${this.bucketName}/escudos/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/escudos/${filename}`;
   }
 
   getMinioLogoUrl(filename: string): string {
-    return `${this.minioUrl}/${this.bucketName}/logo-competition/${filename}`;
+    return `${this.cdnUrl}/${this.bucketName}/logo-competition/${filename}`;
   }
 
   // Métodos utilitários
@@ -99,7 +121,7 @@ export class UploadCloudService {
   }
 
   getMinioUrl(): string {
-    return this.minioUrl;
+    return this.cdnUrl;
   }
 
   getBucketName(): string {
@@ -116,8 +138,29 @@ export class UploadCloudService {
    * @returns A URL pública do arquivo no CDN
    */
   async uploadFile(file: Express.Multer.File, folder: string, fileName: string): Promise<string> {
-    // A lógica de upload real para o MinIO/S3 viria aqui.
-    // Por enquanto, apenas retornamos a URL que o arquivo TERIA no CDN.
-    return `${this.cdnUrl}/${this.bucketName}/${folder}/${fileName}`;
+    if (!this.s3Client) {
+      this.logger.error('S3 Client não inicializado. Verifique a configuração do MinIO.');
+      throw new Error('Serviço de upload não configurado.');
+    }
+
+    const key = `${folder}/${fileName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      ACL: 'public-read', // Torna o objeto publicamente acessível
+    });
+
+    try {
+      await this.s3Client.send(command);
+      const publicUrl = `${this.cdnUrl}/${key}`;
+      this.logger.log(`Arquivo enviado com sucesso para ${publicUrl}`);
+      return publicUrl;
+    } catch (error) {
+      this.logger.error(`Erro ao fazer upload do arquivo para o S3: ${error.message}`, error.stack);
+      throw new Error('Erro no upload do arquivo.');
+    }
   }
 } 
