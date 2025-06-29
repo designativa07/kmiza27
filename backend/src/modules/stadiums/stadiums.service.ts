@@ -71,15 +71,16 @@ export class StadiumsService {
     return stadium;
   }
 
-  async uploadImageToCloud(id: number, file: Express.Multer.File): Promise<Stadium> {
+  async uploadImageToCloud(id: number, file: Express.Multer.File, namingStrategy: 'id' | 'name' | 'original' = 'name'): Promise<Stadium> {
     const stadium = await this.findOne(id);
     if (!file) {
       throw new Error('Nenhum arquivo de imagem enviado.');
     }
 
-    // O nome do arquivo no bucket será 'id-do-estadio.extensao'
-    const fileExtension = file.originalname.split('.').pop();
-    const fileName = `${stadium.id}.${fileExtension}`;
+    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    
+    // Gerar nome do arquivo baseado na estratégia escolhida
+    const fileName = this.generateFileName(stadium, file, namingStrategy, fileExtension);
 
     // Faz o upload para a pasta 'estadios'
     const imageUrl = await this.uploadCloudService.uploadFile(file, 'estadios', fileName);
@@ -87,6 +88,46 @@ export class StadiumsService {
     // Atualiza a entidade com a nova URL e salva
     stadium.image_url = imageUrl;
     return this.stadiumsRepository.save(stadium);
+  }
+
+  /**
+   * Gera o nome do arquivo baseado na estratégia escolhida
+   */
+  private generateFileName(stadium: Stadium, file: Express.Multer.File, strategy: 'id' | 'name' | 'original', extension: string): string {
+    switch (strategy) {
+      case 'id':
+        // Apenas ID: "78.jpg"
+        return `${stadium.id}.${extension}`;
+        
+      case 'name':
+        // ID + nome: "78-estadio-do-maracana.jpg"
+        const stadiumSlug = this.createSlug(stadium.name);
+        return `${stadium.id}-${stadiumSlug}.${extension}`;
+        
+      case 'original':
+        // ID + nome original: "78-original-image-name.jpg"
+        const originalSlug = this.createSlug(file.originalname.replace(/\.[^/.]+$/, "")); // Remove extensão
+        return `${stadium.id}-${originalSlug}.${extension}`;
+        
+      default:
+        return `${stadium.id}-${this.createSlug(stadium.name)}.${extension}`;
+    }
+  }
+
+  /**
+   * Converte o nome do estádio em um slug amigável para URLs/arquivos
+   * Ex: "Estádio do Maracanã" -> "estadio-do-maracana"
+   */
+  private createSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .normalize('NFD') // Decomposição de caracteres com acentos
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+      .trim()
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .replace(/-+/g, '-') // Remove hífens duplicados
+      .substring(0, 50); // Limita a 50 caracteres
   }
 
   async update(id: number, updateStadiumDto: UpdateStadiumDto): Promise<Stadium> {

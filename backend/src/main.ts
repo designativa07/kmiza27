@@ -6,7 +6,10 @@ import * as fs from 'fs';
 
 // Carregar variáveis de ambiente manualmente
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-const envPath = join(__dirname, '..', envFile);
+const envPath = join(__dirname, '..', '..', 'backend', envFile);
+
+console.log(`🔍 Procurando arquivo: ${envPath}`);
+console.log(`🔍 __dirname: ${__dirname}`);
 
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -16,8 +19,10 @@ if (fs.existsSync(envPath)) {
     const [key, ...valueParts] = line.split('=');
     if (key && valueParts.length > 0) {
       const value = valueParts.join('=').trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
+      // Sempre definir no process.env (sobrescrever se necessário)
+      process.env[key] = value;
+      if (key.startsWith('MINIO_')) {
+        console.log(`🔧 Definindo ${key} = ${value.substring(0, 20)}...`);
       }
     }
   });
@@ -25,6 +30,7 @@ if (fs.existsSync(envPath)) {
   console.log(`📄 Carregadas variáveis de ambiente de: ${envFile}`);
   console.log(`🔧 MINIO_ENDPOINT: ${process.env.MINIO_ENDPOINT || 'NÃO ENCONTRADO'}`);
   console.log(`🔧 MINIO_ACCESS_KEY: ${process.env.MINIO_ACCESS_KEY ? 'Configurado' : 'NÃO ENCONTRADO'}`);
+  console.log(`🔧 Total de variáveis carregadas: ${envVars.length}`);
 } else {
   console.log(`⚠️  Arquivo ${envFile} não encontrado`);
 }

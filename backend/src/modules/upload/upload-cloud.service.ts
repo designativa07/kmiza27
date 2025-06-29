@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -51,7 +51,7 @@ export class UploadCloudService {
 @Injectable()
 export class UploadCloudService {
   private readonly logger = new Logger(UploadCloudService.name);
-  private readonly s3Client: S3Client;
+  private readonly s3Client: S3Client | null;
   private readonly cdnUrl: string;
   private readonly bucketName: string;
 
@@ -59,48 +59,94 @@ export class UploadCloudService {
     this.logger.log('--- Inicializando UploadCloudService ---');
     this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 
-    // Carregar variáveis de ambiente manualmente se necessário
-    this.loadEnvironmentVariables();
+    // Primeiro tentar usar ConfigService, depois carregar manualmente se necessário
+    this.cdnUrl = this.configService.get('CDN_URL') || process.env.CDN_URL || 'https://cdn.kmiza27.com';
+    this.bucketName = this.configService.get('MINIO_BUCKET_NAME') || process.env.MINIO_BUCKET_NAME || 'img';
 
-    // Debug: verificar variáveis de ambiente diretamente
-    this.logger.log(`MINIO_ENDPOINT (process.env): ${process.env.MINIO_ENDPOINT}`);
-    this.logger.log(`MINIO_ACCESS_KEY (process.env): ${process.env.MINIO_ACCESS_KEY ? 'Encontrado' : 'NÃO ENCONTRADO'}`);
+    let endpoint = this.configService.get('MINIO_ENDPOINT') || process.env.MINIO_ENDPOINT;
+    let accessKey = this.configService.get('MINIO_ACCESS_KEY') || process.env.MINIO_ACCESS_KEY;
+    let secretKey = this.configService.get('MINIO_SECRET_KEY') || process.env.MINIO_SECRET_KEY;
 
-    // Usar process.env diretamente em vez do ConfigService
-    this.cdnUrl = process.env.CDN_URL || 'https://cdn.kmiza27.com';
-    this.bucketName = process.env.MINIO_BUCKET_NAME || 'img';
+    // Se as variáveis não estão disponíveis, tentar carregar manualmente
+    if (!endpoint || !accessKey || !secretKey) {
+      this.logger.log('Variáveis do MinIO não encontradas via ConfigService, tentando carregar manualmente...');
+      this.loadEnvironmentVariables();
+      
+      // Tentar novamente após carregamento manual
+      endpoint = process.env.MINIO_ENDPOINT;
+      accessKey = process.env.MINIO_ACCESS_KEY;
+      secretKey = process.env.MINIO_SECRET_KEY;
+    }
 
-    const endpoint = process.env.MINIO_ENDPOINT;
-    const accessKey = process.env.MINIO_ACCESS_KEY;
-
-    this.logger.log(`Valor de MINIO_ENDPOINT: ${endpoint}`);
-    this.logger.log(`Valor de MINIO_ACCESS_KEY: ${accessKey ? 'Encontrado' : 'NÃO ENCONTRADO'}`);
+    // Debug: verificar variáveis de ambiente
+    this.logger.log(`MINIO_ENDPOINT: ${endpoint || 'NÃO ENCONTRADO'}`);
+    this.logger.log(`MINIO_ACCESS_KEY: ${accessKey ? 'Configurado' : 'NÃO ENCONTRADO'}`);
+    this.logger.log(`MINIO_SECRET_KEY: ${secretKey ? 'Configurado' : 'NÃO ENCONTRADO'}`);
 
     if (!endpoint) {
       this.logger.warn('MINIO_ENDPOINT não está configurado. O upload de arquivos estará desabilitado.');
+      this.s3Client = null;
       return;
     }
-    
-    const port = parseInt(process.env.MINIO_PORT || '443', 10);
-    const useSSL = process.env.MINIO_USE_SSL === 'true';
-    const secretKey = process.env.MINIO_SECRET_KEY;
 
     if (!accessKey || !secretKey) {
       this.logger.error('MINIO_ACCESS_KEY ou MINIO_SECRET_KEY não encontrados');
+      this.s3Client = null;
       return;
     }
+    
+    const port = parseInt(this.configService.get('MINIO_PORT') || process.env.MINIO_PORT || '443', 10);
+    const useSSL = (this.configService.get('MINIO_USE_SSL') || process.env.MINIO_USE_SSL) === 'true';
 
-    this.s3Client = new S3Client({
-      endpoint: `${useSSL ? 'https' : 'http'}://${endpoint}:${port}`,
-      region: 'us-east-1', // Região padrão para MinIO
-      credentials: {
-        accessKeyId: accessKey,
-        secretAccessKey: secretKey,
-      },
-      forcePathStyle: true, // Necessário para MinIO
-    });
+    try {
+      this.s3Client = new S3Client({
+        endpoint: `${useSSL ? 'https' : 'http'}://${endpoint}:${port}`,
+        region: 'us-east-1', // Região padrão para MinIO
+        credentials: {
+          accessKeyId: accessKey,
+          secretAccessKey: secretKey,
+        },
+        forcePathStyle: true, // Necessário para MinIO
+        tls: useSSL,
+        requestHandler: {
+          requestTimeout: 30000, // 30 segundos
+        },
+      });
 
-    this.logger.log(`Serviço de Upload inicializado. Endpoint: ${endpoint}, Bucket: ${this.bucketName}`);
+      this.logger.log(`✅ S3 Client inicializado com sucesso!`);
+      this.logger.log(`   Endpoint: ${useSSL ? 'https' : 'http'}://${endpoint}:${port}`);
+      this.logger.log(`   SSL: ${useSSL}`);
+      this.logger.log(`   Bucket: ${this.bucketName}`);
+      this.logger.log(`   Access Key: ${accessKey.substring(0, 5)}***`);
+      
+      // Testar conexão com MinIO
+      this.testMinIOConnection();
+    } catch (error) {
+      this.logger.error(`Erro ao inicializar S3 Client: ${error.message}`);
+      this.s3Client = null;
+    }
+  }
+
+  private async testMinIOConnection() {
+    if (!this.s3Client) return;
+    
+    try {
+      this.logger.log(`🧪 Testando conexão com MinIO...`);
+      const command = new ListBucketsCommand({});
+      const result = await this.s3Client.send(command);
+      this.logger.log(`✅ Conexão com MinIO bem-sucedida!`);
+      this.logger.log(`📦 Buckets disponíveis: ${result.Buckets?.map(b => b.Name).join(', ') || 'Nenhum'}`);
+      
+      const bucketExists = result.Buckets?.some(b => b.Name === this.bucketName);
+      if (!bucketExists) {
+        this.logger.warn(`⚠️  Bucket "${this.bucketName}" não encontrado!`);
+      } else {
+        this.logger.log(`✅ Bucket "${this.bucketName}" encontrado!`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Erro na conexão com MinIO: ${error.message}`);
+      this.logger.error(`   Código: ${error.Code || 'N/A'}`);
+    }
   }
 
   private loadEnvironmentVariables(): void {
@@ -118,10 +164,9 @@ export class UploadCloudService {
           const [key, ...valueParts] = line.split('=');
           if (key && valueParts.length > 0) {
             const value = valueParts.join('=').trim();
-            if (!process.env[key]) {
-              process.env[key] = value;
-              this.logger.log(`Carregada variável: ${key}`);
-            }
+            // Sempre definir no process.env (sobrescrever se necessário)
+            process.env[key] = value;
+            this.logger.log(`Carregada variável: ${key} = ${value.substring(0, 20)}...`);
           }
         });
         
@@ -198,22 +243,35 @@ export class UploadCloudService {
     }
 
     const key = `${folder}/${fileName}`;
+    
+    this.logger.log(`📤 Iniciando upload para MinIO:`);
+    this.logger.log(`   Bucket: ${this.bucketName}`);
+    this.logger.log(`   Key: ${key}`);
+    this.logger.log(`   Content-Type: ${file.mimetype}`);
+    this.logger.log(`   File Size: ${file.buffer.length} bytes`);
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read', // Torna o objeto publicamente acessível
+      // Remover ACL por enquanto - pode não ser suportado pelo MinIO
+      // ACL: 'public-read',
     });
 
     try {
-      await this.s3Client.send(command);
-      const publicUrl = `${this.cdnUrl}/${key}`;
-      this.logger.log(`Arquivo enviado com sucesso para ${publicUrl}`);
+      this.logger.log(`🚀 Enviando arquivo para MinIO...`);
+      const result = await this.s3Client.send(command);
+      this.logger.log(`✅ Upload realizado com sucesso! ETag: ${result.ETag}`);
+      
+      const publicUrl = `${this.cdnUrl}/${this.bucketName}/${key}`;
+      this.logger.log(`🔗 URL pública: ${publicUrl}`);
       return publicUrl;
     } catch (error) {
-      this.logger.error(`Erro ao fazer upload do arquivo para o S3: ${error.message}`, error.stack);
+      this.logger.error(`❌ Erro ao fazer upload do arquivo para o S3:`);
+      this.logger.error(`   Erro: ${error.message}`);
+      this.logger.error(`   Código: ${error.Code || 'N/A'}`);
+      this.logger.error(`   Stack: ${error.stack}`);
       throw new Error('Erro no upload do arquivo.');
     }
   }
