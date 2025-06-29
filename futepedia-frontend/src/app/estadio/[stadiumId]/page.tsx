@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { MapPin, Users, Calendar, Clock } from 'lucide-react';
 import { Header } from '@/components/Header';
+import { StadiumImage } from '@/components/StadiumImage';
 import { getApiUrl } from '@/lib/config';
-import { getStadiumImageUrl } from '@/lib/cdn';
 
 // Tipos
 interface Stadium {
@@ -58,15 +58,12 @@ export default async function StadiumPage({ params }: Props) {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header do estádio */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-                     {stadium.image_url && (
-             <div className="h-64 md:h-80 bg-gray-200">
-               <img 
-                 src={getStadiumImageUrl(stadium.image_url)} 
-                 alt={stadium.name} 
-                 className="w-full h-full object-cover"
-               />
-             </div>
-           )}
+                     <div className="h-64 md:h-80 bg-gray-200 relative">
+             <StadiumImage 
+               imageUrl={stadium.image_url} 
+               name={stadium.name}
+             />
+           </div>
           
           <div className="p-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">{stadium.name}</h1>

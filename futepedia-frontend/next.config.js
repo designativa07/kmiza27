@@ -14,6 +14,14 @@ const nextConfig = {
   // Configurações de imagem para melhor performance
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.kmiza27.com',
+        port: '',
+        pathname: '/img/**',
+      },
+    ],
   },
   
   // Configurações adicionais para produção

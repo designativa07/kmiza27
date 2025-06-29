@@ -132,6 +132,7 @@ export const API_ENDPOINTS = {
 
   // Players
   players: {
+    base: () => apiUrl('players'),
     list: (page: number = 1, limit: number = 20, search: string = '') => {
       const params = new URLSearchParams({
         page: String(page),
