@@ -95,11 +95,19 @@ export function getStadiumImageCdnUrl(imageUrl: string | null | undefined): stri
  * Interceptador para converter URLs em responses da API
  * Converte automaticamente campos de imagem para URLs do CDN
  */
-export function transformImageUrlsInResponse(data: any): any {
+export function transformImageUrlsInResponse(data: any, visited = new WeakSet()): any {
   if (!data) return data;
 
+  // Proteção contra referências circulares
+  if (typeof data === 'object' && data !== null) {
+    if (visited.has(data)) {
+      return data; // Já processado, evita loop infinito
+    }
+    visited.add(data);
+  }
+
   if (Array.isArray(data)) {
-    return data.map(item => transformImageUrlsInResponse(item));
+    return data.map(item => transformImageUrlsInResponse(item, visited));
   }
 
   if (typeof data === 'object') {
@@ -130,31 +138,32 @@ export function transformImageUrlsInResponse(data: any): any {
       transformed.image_url = getStadiumImageCdnUrl(transformed.image_url);
     }
 
-    // Processar objetos aninhados
-    if (transformed.team && transformed.team.logo_url) {
+    // Processar objetos aninhados específicos (evitando recursão desnecessária)
+    if (transformed.team && typeof transformed.team === 'object' && transformed.team.logo_url) {
       transformed.team.logo_url = getTeamLogoCdnUrl(transformed.team.logo_url);
     }
 
-    if (transformed.home_team && transformed.home_team.logo_url) {
+    if (transformed.home_team && typeof transformed.home_team === 'object' && transformed.home_team.logo_url) {
       transformed.home_team.logo_url = getTeamLogoCdnUrl(transformed.home_team.logo_url);
     }
 
-    if (transformed.away_team && transformed.away_team.logo_url) {
+    if (transformed.away_team && typeof transformed.away_team === 'object' && transformed.away_team.logo_url) {
       transformed.away_team.logo_url = getTeamLogoCdnUrl(transformed.away_team.logo_url);
     }
 
-    if (transformed.competition && transformed.competition.logo_url) {
+    if (transformed.competition && typeof transformed.competition === 'object' && transformed.competition.logo_url) {
       transformed.competition.logo_url = getCompetitionLogoCdnUrl(transformed.competition.logo_url);
     }
 
-    if (transformed.player && transformed.player.image_url) {
+    if (transformed.player && typeof transformed.player === 'object' && transformed.player.image_url) {
       transformed.player.image_url = getPlayerImageCdnUrl(transformed.player.image_url);
     }
 
-    // Recursivamente processar outros objetos aninhados
-    Object.keys(transformed).forEach(key => {
-      if (typeof transformed[key] === 'object' && transformed[key] !== null) {
-        transformed[key] = transformImageUrlsInResponse(transformed[key]);
+    // Processar apenas campos específicos conhecidos para evitar recursão desnecessária
+    const fieldsToProcess = ['data', 'matches', 'teams', 'competitions', 'players', 'stadiums'];
+    fieldsToProcess.forEach(key => {
+      if (transformed[key] && typeof transformed[key] === 'object' && transformed[key] !== null) {
+        transformed[key] = transformImageUrlsInResponse(transformed[key], visited);
       }
     });
 

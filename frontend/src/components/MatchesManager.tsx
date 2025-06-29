@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, ChangeEvent, useRef } from 'react'
+import React, { useState, useEffect, ChangeEvent } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { Combobox } from '@headlessui/react'
-import { format, isToday, parseISO, isPast } from 'date-fns'
+import { format } from 'date-fns'
 
 interface Team {
   id: number
@@ -293,14 +293,14 @@ export default function MatchesManager() {
   const [selectedHomeGoalPlayerId, setSelectedHomeGoalPlayerId] = useState<number | undefined>(undefined);
   const [selectedAwayGoalPlayerId, setSelectedAwayGoalPlayerId] = useState<number | undefined>(undefined);
 
-  // Estados dos filtros
+  // Estados dos filtros - iniciam completamente limpos
   const [filters, setFilters] = useState({
     competition: '',
     round: '',
     group: '',
     phase: '',
     status: '',
-    searchTerm: '' // Adicionado searchTerm ao estado dos filtros
+    searchTerm: ''
   })
 
   // Estados para rodadas e grupos dinâmicos baseados na competição
@@ -340,7 +340,7 @@ export default function MatchesManager() {
     away_team_player_stats: [],
   })
 
-  const isInitialLoad = useRef(true);
+
 
   const fetchStadiums = async () => {
     try {
@@ -376,83 +376,7 @@ export default function MatchesManager() {
     fetchData()
   }, [])
 
-  useEffect(() => {
-    if (matches.length > 0 && competitions.length > 0) {
-      if (isInitialLoad.current) {
-        console.log("Matches e Competitions carregados (primeira carga).")
-
-        const today = new Date();
-        const todayMatches = matches.filter(match => isToday(parseISO(match.match_date)))
-
-        let initialCompetitionId = '';
-        let initialRoundName = '';
-
-        if (todayMatches.length > 0) {
-          // Priorize jogos de hoje
-          const firstTodayMatch = todayMatches[0];
-          initialCompetitionId = firstTodayMatch.competition?.id?.toString() || '';
-          initialRoundName = firstTodayMatch.round?.name || firstTodayMatch.group_name || '';
-          console.log(`🎯 Encontrados jogos para hoje. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
-        } else {
-          // Se não houver jogos hoje, encontre a rodada mais recente com jogos
-          console.log("Nenhum jogo para hoje. Buscando rodada mais recente com jogos.")
-          let mostRecentMatch: Match | null = null;
-
-          for (const match of matches) {
-            const matchDate = parseISO(match.match_date);
-            if (isPast(matchDate) || isToday(matchDate)) { // Incluir partidas passadas e de hoje
-              if (!mostRecentMatch || parseISO(match.match_date) > parseISO(mostRecentMatch.match_date)) {
-                mostRecentMatch = match;
-              }
-            }
-          }
-
-          if (mostRecentMatch) {
-            initialCompetitionId = mostRecentMatch.competition?.id?.toString() || '';
-            initialRoundName = mostRecentMatch.round?.name || mostRecentMatch.group_name || '';
-            console.log(`🗓️ Rodada mais recente encontrada. Competição: ${initialCompetitionId}, Rodada: ${initialRoundName}`)
-          } else if (competitions.length > 0) {
-            // Se ainda não houver partidas, defina a primeira competição disponível
-            initialCompetitionId = competitions[0].id.toString();
-            console.log(`❌ Nenhuma partida encontrada. Selecionando primeira competição: ${initialCompetitionId}`)
-          }
-        }
-
-        // Atualiza os filtros e força o fetch das rodadas para a competição selecionada
-        if (initialCompetitionId || initialRoundName) {
-          setFilters(prev => {
-            let newRoundFilter = '';
-            let newGroupFilter = '';
-
-            // Se tiver um initialRoundName, defina o filtro com base na heurística original
-            if (initialRoundName) {
-              if (initialRoundName.match(/^\d+$|rodada/i)) {
-                newRoundFilter = initialRoundName;
-              } else {
-                newGroupFilter = initialRoundName;
-              }
-            }
-
-            console.log('DEBUG: Initial Filters - Round:', newRoundFilter, 'Group:', newGroupFilter); // Add this
-            return {
-              ...prev,
-              competition: initialCompetitionId,
-              round: newRoundFilter,
-              group: newGroupFilter
-            };
-          });
-          if (initialCompetitionId) {
-            fetchRoundsAndGroupsForFilter(initialCompetitionId);
-          }
-        }
-        isInitialLoad.current = false; // Marca que a carga inicial foi feita
-      } else {
-        console.log("Matches e Competitions recarregados. Preservando filtros existentes.");
-      }
-    } else {
-      console.log("Aguardando Matches e Competitions carregarem...");
-    }
-  }, [matches, competitions]);
+  // Removido useEffect de inicialização automática - filtros iniciam limpos
 
   useEffect(() => {
     applyFilters()
@@ -510,7 +434,16 @@ export default function MatchesManager() {
 
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json()
-        setMatches(matchesData)
+        console.log('Matches data received:', matchesData)
+        // Garantir que sempre temos um array
+        if (Array.isArray(matchesData)) {
+          setMatches(matchesData)
+        } else if (matchesData && Array.isArray(matchesData.data)) {
+          setMatches(matchesData.data)
+        } else {
+          console.error('Matches data is not an array:', matchesData)
+          setMatches([])
+        }
       }
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json()
@@ -552,7 +485,7 @@ export default function MatchesManager() {
 
   // Nova função para buscar rodadas e grupos para os filtros baseados na competição
   const fetchRoundsAndGroupsForFilter = (competitionId: string) => {
-    if (!competitionId) {
+    if (!competitionId || !Array.isArray(matches)) {
       setAvailableRoundsForFilter([])
       setAvailableGroupsForFilter([])
       return
@@ -610,6 +543,13 @@ export default function MatchesManager() {
   }
 
   const applyFilters = () => {
+    // Verificar se matches é um array válido
+    if (!Array.isArray(matches)) {
+      console.error('matches is not an array:', matches);
+      setFilteredMatches([]);
+      return;
+    }
+
     let filtered = [...matches]
 
     if (filters.competition) {
@@ -674,6 +614,10 @@ export default function MatchesManager() {
   }
 
   const getUniqueRoundsByCompetition = (competitionId: string) => {
+    if (!Array.isArray(matches)) {
+      return [];
+    }
+    
     const rounds = new Set<string>();
     matches.forEach(match => {
       if (match.competition?.id?.toString() === competitionId && match.round?.name) {
@@ -693,6 +637,10 @@ export default function MatchesManager() {
   }
 
   const getUniqueGroupsByCompetition = (competitionId: string) => {
+    if (!Array.isArray(matches)) {
+      return [];
+    }
+    
     const groups = new Set<string>();
     matches.forEach(match => {
       if (match.competition?.id?.toString() === competitionId && match.group_name) {
@@ -703,6 +651,10 @@ export default function MatchesManager() {
   }
 
   const getUniquePhasesByCompetition = (competitionId: string) => {
+    if (!Array.isArray(matches)) {
+      return [];
+    }
+    
     const phases = new Set<string>();
     matches.forEach(match => {
       if (match.competition?.id?.toString() === competitionId && match.phase) {
@@ -1278,104 +1230,122 @@ export default function MatchesManager() {
       </div>
 
       {/* Filtros - agora sempre visíveis e sem condição */}
-      <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Competição</label>
-            <select
-              value={filters.competition}
-              onChange={(e) => setFilters({ ...filters, competition: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-            >
-              <option value="">Todas</option>
-              {competitions.map((comp) => (
-                <option key={comp.id} value={comp.id}>{comp.name}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rodada</label>
-            <select
-              value={filters.round}
-              onChange={(e) => setFilters({ ...filters, round: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-              disabled={!filters.competition}
-            >
-              <option value="">Todas</option>
-              {filters.competition && getUniqueRoundsByCompetition(filters.competition).map((roundName) => (
-                <option key={roundName} value={roundName}>
-                  {roundName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="sm:col-span-1">
-            <label htmlFor="groupFilter" className="block text-sm font-medium leading-6 text-gray-900">
-              Grupo
-            </label>
-            <select
-              id="groupFilter"
-              name="groupFilter"
-              className="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={filters.group}
-              onChange={(e) => {
-                setFilters(prev => ({ ...prev, group: e.target.value }));
-                setCurrentPage(1); // Resetar página ao mudar filtro
-              }}
-              disabled={!filters.competition}
-            >
-              <option value="">Todos</option>
-              {filters.competition && getUniqueGroupsByCompetition(filters.competition).map((group) => (
-                <option key={group} value={group}>
-                  {group}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fase</label>
-            <select
-              value={filters.phase}
-              onChange={(e) => setFilters({ ...filters, phase: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-            >
-              <option value="">Todas</option>
-              {getUniquePhasesByCompetition(filters.competition).map((phase) => (
-                <option key={phase} value={phase}>{phase}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm form-input-sm"
-            >
-              <option value="">Todos</option>
-              <option value="scheduled">Agendado</option>
-              <option value="live">Ao Vivo</option>
-              <option value="finished">Finalizado</option>
-              <option value="postponed">Adiado</option>
-              <option value="cancelled">Cancelado</option>
-            </select>
+      <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">🎯 Filtros de Jogos</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {filteredMatches.length} jogos encontrados
+            </span>
           </div>
         </div>
         
-        <div className="mt-3 flex justify-between items-center">
-          <span className="text-sm text-gray-600">
-            {filteredMatches.length} jogos encontrados
-          </span>
-          <button
-            onClick={clearFilters}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
-          >
-            Limpar filtros
-          </button>
+        <div className="px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">🏆 Competição</label>
+              <select
+                value={filters.competition}
+                onChange={(e) => setFilters({ ...filters, competition: e.target.value })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+              >
+                <option value="">Todas</option>
+                {competitions.map((comp) => (
+                  <option key={comp.id} value={comp.id}>{comp.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">🔄 Rodada</label>
+              <select
+                value={filters.round}
+                onChange={(e) => setFilters({ ...filters, round: e.target.value })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+                disabled={!filters.competition}
+              >
+                <option value="">Todas</option>
+                {filters.competition && getUniqueRoundsByCompetition(filters.competition).map((roundName) => (
+                  <option key={roundName} value={roundName}>
+                    {roundName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">👥 Grupo</label>
+              <select
+                value={filters.group}
+                onChange={(e) => {
+                  setFilters(prev => ({ ...prev, group: e.target.value }));
+                  setCurrentPage(1); // Resetar página ao mudar filtro
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+                disabled={!filters.competition}
+              >
+                <option value="">Todos</option>
+                {filters.competition && getUniqueGroupsByCompetition(filters.competition).map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">⚡ Fase</label>
+              <select
+                value={filters.phase}
+                onChange={(e) => setFilters({ ...filters, phase: e.target.value })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+              >
+                <option value="">Todas</option>
+                {getUniquePhasesByCompetition(filters.competition).map((phase) => (
+                  <option key={phase} value={phase}>{phase}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">📍 Status</label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+              >
+                <option value="">Todos</option>
+                <option value="scheduled">⏰ Agendado</option>
+                <option value="live">🔴 Ao Vivo</option>
+                <option value="finished">✅ Finalizado</option>
+                <option value="postponed">⏸️ Adiado</option>
+                <option value="cancelled">❌ Cancelado</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="mt-3 flex justify-between items-center">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setFilters({ ...filters, status: 'live' })}
+                className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+              >
+                🔴 Ao Vivo
+              </button>
+              <button
+                onClick={() => setFilters({ ...filters, status: 'scheduled' })}
+                className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100"
+              >
+                ⏰ Próximos
+              </button>
+            </div>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Limpar filtros
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1384,19 +1354,19 @@ export default function MatchesManager() {
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
             <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
               <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-white dark:bg-slate-800 border-b-2 border-gray-200 dark:border-slate-600">
+                <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Partida
+                      ⚽ Partida
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data/Hora
+                      📅 Data/Hora
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Competição
+                      🏆 Competição
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      📍 Status
                     </th>
                     <th className="relative px-6 py-3">
                       <span className="sr-only">Ações</span>
@@ -1407,32 +1377,28 @@ export default function MatchesManager() {
                   {paginatedMatches.map((match) => (
                     <tr key={match.id}>
                       <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center justify-center space-x-3">
-                          {/* Time da casa */}
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">{match.home_team?.name || 'Time não encontrado'}</span>
+                        <div className="grid grid-cols-3 items-center gap-4">
+                          {/* Time da casa - Alinhado à direita */}
+                          <div className="flex items-center justify-end space-x-2">
+                            <span className="text-sm font-medium text-gray-900 text-right">{match.home_team?.name || 'Time não encontrado'}</span>
                             {match.home_team && <TeamLogo team={match.home_team} />}
                           </div>
                           
-                          {/* Placar da casa */}
-                          <div className="flex items-center space-x-2">
+                          {/* Placar centralizado com X */}
+                          <div className="flex items-center justify-center space-x-1">
                             <span className="text-lg font-bold text-gray-900">
                               {match.home_score !== undefined && match.home_score !== null ? match.home_score : '-'}
                             </span>
-                            
-                            {/* VS */}
-                            <span className="text-lg font-bold text-gray-400">×</span>
-                            
-                            {/* Placar visitante */}
+                            <span className="text-lg font-bold text-gray-400 mx-1">×</span>
                             <span className="text-lg font-bold text-gray-900">
                               {match.away_score !== undefined && match.away_score !== null ? match.away_score : '-'}
                             </span>
                           </div>
                           
-                          {/* Time visitante */}
-                          <div className="flex items-center space-x-2">
+                          {/* Time visitante - Alinhado à esquerda */}
+                          <div className="flex items-center justify-start space-x-2">
                             {match.away_team && <TeamLogo team={match.away_team} />}
-                            <span className="text-sm font-medium text-gray-900">{match.away_team?.name || 'Time não encontrado'}</span>
+                            <span className="text-sm font-medium text-gray-900 text-left">{match.away_team?.name || 'Time não encontrado'}</span>
                           </div>
                         </div>
                         

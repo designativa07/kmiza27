@@ -57,7 +57,13 @@ export const API_ENDPOINTS = {
   
   // Matches
   matches: {
-    list: () => apiUrl('matches'),
+    list: (page: number = 1, limit: number = 1000) => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      return apiUrl(`matches?${params.toString()}`);
+    },
     byId: (id: number) => apiUrl(`matches/${id}`),
     createTwoLegTie: () => apiUrl('matches/two-leg-tie'),
   },

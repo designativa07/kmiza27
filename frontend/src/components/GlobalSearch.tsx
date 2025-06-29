@@ -7,14 +7,16 @@ import {
   CalendarIcon, 
   UsersIcon, 
   BellIcon,
-  CogIcon 
+  CogIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/solid'
+import { apiUrl } from '../config/api'
 
 interface SearchResult {
   id: string
   title: string
   subtitle: string
-  type: 'team' | 'match' | 'user' | 'notification' | 'setting'
+  type: 'team' | 'player' | 'stadium' | 'competition' | 'channel'
   icon: any
   action: () => void
 }
@@ -23,64 +25,102 @@ interface GlobalSearchProps {
   onNavigate: (page: string) => void
 }
 
+interface SearchResponse {
+  teams: Array<{id: number, name: string, short_name?: string, city?: string, state?: string}>
+  players: Array<{id: number, name: string, position?: string, nationality?: string}>
+  stadiums: Array<{id: number, name: string, city?: string, state?: string, country?: string}>
+  competitions: Array<{id: number, name: string, slug?: string}>
+  channels: Array<{id: number, name: string, description?: string, type?: string}>
+}
+
 export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [loading, setLoading] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Dados simulados para busca
-  const searchData: SearchResult[] = [
-    {
-      id: 'team-flamengo',
-      title: 'Flamengo',
-      subtitle: 'Time - Rio de Janeiro',
-      type: 'team',
-      icon: TrophyIcon,
-      action: () => onNavigate('Times')
-    },
-    {
-      id: 'team-palmeiras',
-      title: 'Palmeiras',
-      subtitle: 'Time - São Paulo',
-      type: 'team',
-      icon: TrophyIcon,
-      action: () => onNavigate('Times')
-    },
-    {
-      id: 'match-flamengo-palmeiras',
-      title: 'Flamengo x Palmeiras',
-      subtitle: 'Jogo - 26/05/2025 16:00',
-      type: 'match',
-      icon: CalendarIcon,
-      action: () => onNavigate('Jogos')
-    },
-    {
-      id: 'user-joao',
-      title: 'João Silva',
-      subtitle: 'Usuário - +55 (11) 99999-9999',
-      type: 'user',
-      icon: UsersIcon,
-      action: () => onNavigate('Usuários')
-    },
-    {
-      id: 'notification-reminder',
-      title: 'Lembrete de Jogo',
-      subtitle: 'Notificação - Agendada',
-      type: 'notification',
-      icon: BellIcon,
-      action: () => onNavigate('Notificações')
-    },
-    {
-      id: 'setting-chatbot',
-      title: 'Configurações do Chatbot',
-      subtitle: 'Configuração - Status do Sistema',
-      type: 'setting',
-      icon: CogIcon,
-      action: () => onNavigate('Chatbot')
+  // Função para buscar dados do backend
+  const fetchSearchResults = async (searchTerm: string): Promise<SearchResult[]> => {
+    if (!searchTerm || searchTerm.length < 2) return []
+    
+    try {
+      setLoading(true)
+      const response = await fetch(`${apiUrl}/search?q=${encodeURIComponent(searchTerm)}`)
+      if (!response.ok) throw new Error('Erro na busca')
+      
+      const data: SearchResponse = await response.json()
+      const searchResults: SearchResult[] = []
+
+      // Converter times
+      data.teams.forEach(team => {
+        searchResults.push({
+          id: `team-${team.id}`,
+          title: team.name,
+          subtitle: `Time - ${team.city || team.state || 'Brasil'}`,
+          type: 'team',
+          icon: TrophyIcon,
+          action: () => onNavigate('Times')
+        })
+      })
+
+      // Converter jogadores
+      data.players.forEach(player => {
+        searchResults.push({
+          id: `player-${player.id}`,
+          title: player.name,
+          subtitle: `Jogador - ${player.position || 'Posição não informada'}`,
+          type: 'player',
+          icon: UsersIcon,
+          action: () => onNavigate('Jogadores')
+        })
+      })
+
+      // Converter estádios
+      data.stadiums.forEach(stadium => {
+        searchResults.push({
+          id: `stadium-${stadium.id}`,
+          title: stadium.name,
+          subtitle: `Estádio - ${stadium.city || stadium.state || stadium.country || 'Local não informado'}`,
+          type: 'stadium',
+          icon: BuildingOfficeIcon,
+          action: () => onNavigate('Estádios')
+        })
+      })
+
+      // Converter competições
+      data.competitions.forEach(competition => {
+        searchResults.push({
+          id: `competition-${competition.id}`,
+          title: competition.name,
+          subtitle: 'Competição',
+          type: 'competition',
+          icon: TrophyIcon,
+          action: () => onNavigate('Competições')
+        })
+      })
+
+      // Converter canais
+      data.channels.forEach(channel => {
+        searchResults.push({
+          id: `channel-${channel.id}`,
+          title: channel.name,
+          subtitle: `Canal - ${channel.description || channel.type || 'WhatsApp'}`,
+          type: 'channel',
+          icon: BellIcon,
+          action: () => onNavigate('Canais')
+        })
+      })
+
+      return searchResults
+    } catch (error) {
+      console.error('Erro ao buscar:', error)
+      return []
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   // Atalho de teclado Ctrl+K
   useEffect(() => {
@@ -105,18 +145,20 @@ export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
     }
   }, [isOpen])
 
-  // Filtrar resultados baseado na query
+  // Buscar resultados baseado na query
   useEffect(() => {
-    if (query.trim() === '') {
-      setResults(searchData.slice(0, 6)) // Mostrar alguns resultados por padrão
-    } else {
-      const filtered = searchData.filter(item =>
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        item.subtitle.toLowerCase().includes(query.toLowerCase())
-      )
-      setResults(filtered)
+    const performSearch = async () => {
+      if (query.trim() === '') {
+        setResults([])
+      } else {
+        const searchResults = await fetchSearchResults(query.trim())
+        setResults(searchResults)
+      }
+      setSelectedIndex(0)
     }
-    setSelectedIndex(0)
+    
+    const timeoutId = setTimeout(performSearch, 300) // Debounce de 300ms
+    return () => clearTimeout(timeoutId)
   }, [query])
 
   // Navegação com teclado
@@ -140,21 +182,21 @@ export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
   const getTypeColor = (type: string) => {
     const colors = {
       team: 'bg-blue-100 text-blue-800',
-      match: 'bg-green-100 text-green-800',
-      user: 'bg-purple-100 text-purple-800',
-      notification: 'bg-yellow-100 text-yellow-800',
-      setting: 'bg-gray-100 text-gray-800'
+      player: 'bg-green-100 text-green-800',
+      stadium: 'bg-orange-100 text-orange-800',
+      competition: 'bg-purple-100 text-purple-800',
+      channel: 'bg-yellow-100 text-yellow-800'
     }
-    return colors[type as keyof typeof colors] || colors.setting
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
   const getTypeName = (type: string) => {
     const names = {
       team: 'Time',
-      match: 'Jogo',
-      user: 'Usuário',
-      notification: 'Notificação',
-      setting: 'Configuração'
+      player: 'Jogador',
+      stadium: 'Estádio',
+      competition: 'Competição',
+      channel: 'Canal'
     }
     return names[type as keyof typeof names] || 'Item'
   }
@@ -187,7 +229,7 @@ export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Buscar times, jogos, usuários..."
+                  placeholder="Buscar times, jogadores, estádios, competições, canais..."
                   className="w-full border-0 py-4 pl-3 pr-10 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 bg-transparent focus:outline-none focus:ring-0"
                 />
                 <button
@@ -200,7 +242,12 @@ export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
 
               {/* Resultados */}
               <div className="max-h-96 overflow-y-auto py-2">
-                {results.length > 0 ? (
+                {loading ? (
+                  <div className="px-4 py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Buscando...</p>
+                  </div>
+                ) : results.length > 0 ? (
                   results.map((result, index) => (
                     <button
                       key={result.id}
@@ -236,7 +283,7 @@ export default function GlobalSearch({ onNavigate }: GlobalSearchProps) {
                       Nenhum resultado encontrado
                     </h3>
                     <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
-                      Tente buscar por times, jogos, usuários ou configurações.
+                      Tente buscar por times, jogadores, estádios, competições ou canais.
                     </p>
                   </div>
                 )}

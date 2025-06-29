@@ -92,12 +92,23 @@ export class EvolutionService {
       const url = `${this.evolutionUrl}/message/sendList/${this.instanceName}`;
       const formattedNumber = this.formatPhoneNumber(phoneNumber);
 
+      // Corrigir estrutura das seções para incluir rowId obrigatório
+      const formattedSections = sections.map(section => ({
+        title: section.title,
+        rows: section.rows.map(row => ({
+          rowId: row.id, // Evolution API requer rowId
+          title: row.title,
+          description: row.description
+        }))
+      }));
+
       const payload = {
         number: formattedNumber,
         title: title,
         description: description,
         buttonText: buttonText,
-        sections: sections,
+        footerText: 'Kmiza27 Bot ⚽', // Evolution API requer footerText
+        sections: formattedSections,
       };
 
       this.logger.log(`🌐 URL completa: ${url}`);

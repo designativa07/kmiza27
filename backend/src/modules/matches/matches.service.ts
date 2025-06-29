@@ -242,7 +242,7 @@ export class MatchesService {
 
   async findAll(page: number = 1, limit: number = 20): Promise<{ data: Match[], total: number }> {
     const [data, total] = await this.matchRepository.findAndCount({
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
       order: {
         match_date: 'DESC'
       },
@@ -255,14 +255,14 @@ export class MatchesService {
   async findOne(id: number): Promise<Match | null> {
     return this.matchRepository.findOne({
       where: { id },
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
     });
   }
 
   async findByCompetitionId(competitionId: number): Promise<Match[]> {
     return this.matchRepository.find({
       where: { competition: { id: competitionId } },
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'matchBroadcasts.channel'],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
       order: { match_date: 'ASC' }, // Opcional: ordenar por data da partida
     });
   }
