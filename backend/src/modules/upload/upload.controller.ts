@@ -10,14 +10,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
-import { UploadService } from './upload.service';
 import { UploadCloudService } from './upload-cloud.service';
 import * as path from 'path';
 
 @Controller('upload')
 export class UploadController {
   constructor(
-    private readonly uploadService: UploadService,
     private readonly uploadCloudService: UploadCloudService
   ) {}
 
@@ -50,11 +48,9 @@ export class UploadController {
 
     // Gerar URL do MinIO para retornar ao frontend
     const cloudUrl = await this.uploadCloudService.uploadEscudo(file);
-    const localPath = `/uploads/escudos/${file.filename}`;
     
     return {
       message: 'Escudo enviado com sucesso',
-      localPath: localPath,
       cloudUrl: cloudUrl,
       minioUrl: this.uploadCloudService.getEscudoUrl(file.filename),
       originalName: file.originalname,
