@@ -48,6 +48,28 @@ export class ChatbotController {
             console.log(`💬 Texto encontrado em: ${currentPath} = "${messageText}"`);
           }
           
+          // Procurar por seleção de lista (listResponseMessage)
+          if (key === 'listResponseMessage' && typeof value === 'object' && value !== null) {
+            const selectedRowId = (value as any).singleSelectReply?.selectedRowId;
+            if (selectedRowId) {
+              messageText = selectedRowId;
+              console.log(`📋 Seleção de lista encontrada em: ${currentPath} = "${messageText}"`);
+            }
+          }
+          
+          // Procurar por interactive message (botões)
+          if (key === 'interactive' && typeof value === 'object' && value !== null) {
+            const buttonReply = (value as any).buttonReply?.selectedButtonId;
+            const listReply = (value as any).listReply?.selectedRowId;
+            if (buttonReply) {
+              messageText = buttonReply;
+              console.log(`🔘 Botão interativo encontrado em: ${currentPath} = "${messageText}"`);
+            } else if (listReply) {
+              messageText = listReply;
+              console.log(`📋 Lista interativa encontrada em: ${currentPath} = "${messageText}"`);
+            }
+          }
+          
           // Procurar por nome
           if (key === 'pushName' && typeof value === 'string') {
             pushName = value;
