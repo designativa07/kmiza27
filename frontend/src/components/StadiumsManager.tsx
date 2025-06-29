@@ -141,6 +141,9 @@ export default function StadiumsManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('--- Iniciando handleSubmit ---');
+    console.log('É modo de edição?', !!editingStadium);
+    console.log('Arquivo de imagem selecionado?', imageFile);
 
     let stadiumIdToUpdate = editingStadium?.id;
 
@@ -174,6 +177,7 @@ export default function StadiumsManager() {
 
     // Se há um arquivo de imagem, faça o upload agora que temos um ID
     if (stadiumIdToUpdate && imageFile) {
+      console.log(`Entrou no bloco de upload. ID: ${stadiumIdToUpdate}`);
       const imageFormData = new FormData();
       imageFormData.append('image', imageFile);
 
@@ -194,11 +198,20 @@ export default function StadiumsManager() {
         }));
         
         // Atualiza o estádio com a URL da imagem
-        if (stadiumIdToUpdate) {
+        if (editingStadium) {
+            const finalData = {
+              ...formData,
+              capacity: formData.capacity ? parseInt(formData.capacity) : null,
+              latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+              longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+              image_url: uploadedImageStadium.image_url,
+              url: uploadedImageStadium.url || uploadedImageStadium.image_url,
+            };
+
             await fetch(API_ENDPOINTS.stadiums.byId(stadiumIdToUpdate), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_url: uploadedImageStadium.image_url, url: uploadedImageStadium.image_url }),
+                body: JSON.stringify(finalData),
             });
         }
 
@@ -209,15 +222,16 @@ export default function StadiumsManager() {
       }
     } else if (editingStadium && stadiumIdToUpdate) { // Se estiver editando, mas sem nova imagem, apenas atualize os dados
         try {
+            const finalData = {
+              ...formData,
+              capacity: formData.capacity ? parseInt(formData.capacity) : null,
+              latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+              longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+            };
             await fetch(API_ENDPOINTS.stadiums.byId(stadiumIdToUpdate), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  ...formData,
-                  capacity: formData.capacity ? parseInt(formData.capacity) : null,
-                  latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-                  longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-                }),
+                body: JSON.stringify(finalData),
             });
         } catch (error) {
             console.error('Erro ao atualizar estádio:', error);
@@ -264,16 +278,15 @@ export default function StadiumsManager() {
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      
-      // Criar URL de preview
-      const reader = new FileReader()
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      console.log('Arquivo selecionado em handleImageChange:', file);
+      setImageFile(file);
+      const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(file);
     }
   }
 
