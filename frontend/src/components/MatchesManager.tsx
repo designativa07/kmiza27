@@ -961,7 +961,7 @@ export default function MatchesManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este jogo?')) {
       try {
-        await fetch(`${API_ENDPOINTS.matches.list()}/${id}`, {
+        await fetch(API_ENDPOINTS.matches.byId(id), {
           method: 'DELETE',
         })
         fetchData()
