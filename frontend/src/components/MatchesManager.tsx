@@ -452,7 +452,7 @@ export default function MatchesManager() {
     try {
       const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
         fetch(API_ENDPOINTS.matches.list()),
-        fetch(API_ENDPOINTS.teams.list()),
+        fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`),
         fetch(API_ENDPOINTS.competitions.list()),
         fetch(API_ENDPOINTS.channels.list())
       ])
@@ -472,7 +472,14 @@ export default function MatchesManager() {
       }
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json()
-        setTeams(teamsData)
+        if (teamsData && Array.isArray(teamsData.data)) {
+          setTeams(teamsData.data)
+        } else if (Array.isArray(teamsData)) {
+          setTeams(teamsData)
+        } else {
+          console.error('Teams data is not in expected format:', teamsData)
+          setTeams([])
+        }
       }
       if (competitionsRes.ok) {
         const competitionsData = await competitionsRes.json()

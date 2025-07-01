@@ -25,6 +25,14 @@ interface Team {
   country?: string
   stadium?: Stadium;
   stadium_id?: number;
+  history?: string;
+  information?: string;
+  social_media?: {
+    instagram_url?: string;
+    tiktok_url?: string;
+    youtube_url?: string;
+    official_site_url?: string;
+  };
   created_at: string
 }
 
@@ -83,7 +91,15 @@ export default function TeamsManager() {
     country: 'Brasil',
     founded_year: '',
     logo_url: '',
-    stadium_id: ''
+    stadium_id: '',
+    history: '',
+    information: '',
+    social_media: {
+      instagram_url: '',
+      tiktok_url: '',
+      youtube_url: '',
+      official_site_url: ''
+    }
   })
 
   useEffect(() => {
@@ -141,13 +157,15 @@ export default function TeamsManager() {
   const fetchAllTeams = async () => {
     setLoading(true)
     try {
-      const response = await fetch(API_ENDPOINTS.teams.list(1, 1000)) // Buscar todos os times
+      const response = await fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`)
       const paginatedData = await response.json()
       setTeams(paginatedData.data)
+      setFilteredTeams(paginatedData.data)
       setTotalTeams(paginatedData.total)
     } catch (error) {
       console.error('Erro ao carregar times:', error)
       setTeams([])
+      setFilteredTeams([])
       setTotalTeams(0)
     } finally {
       setLoading(false)
@@ -155,7 +173,7 @@ export default function TeamsManager() {
   }
 
   const applyFilters = () => {
-    if (!teams.length) return;
+    if (!teams.length && filteredTeams.length === 0) return;
     
     let filtered = [...teams]
 
@@ -185,7 +203,9 @@ export default function TeamsManager() {
     }
 
     setFilteredTeams(filtered)
-    setCurrentPage(1) // Reset para primeira página quando filtrar
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
   }
 
   const applyPagination = () => {
@@ -206,7 +226,9 @@ export default function TeamsManager() {
     setSearchTerm('')
     setStateFilter('')
     setCountryFilter('')
-    setCurrentPage(1)
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
   }
 
   const getUniqueStates = () => {
@@ -247,6 +269,17 @@ export default function TeamsManager() {
       setPreviewUrl(value)
     }
   }
+
+  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      social_media: {
+        ...prev.social_media,
+        [name]: value,
+      },
+    }));
+  };
 
   const uploadEscudo = async (teamId: number): Promise<string | null> => {
     if (!selectedFile) return null
@@ -298,7 +331,10 @@ export default function TeamsManager() {
         state: formData.state || null,
         founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
         logo_url: formData.logo_url || null,
-        stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : null
+        stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : null,
+        history: formData.history || null,
+        information: formData.information || null,
+        social_media: formData.social_media || null,
       }
 
       // Log para debug
@@ -361,7 +397,15 @@ export default function TeamsManager() {
       country: 'Brasil',
       founded_year: '',
       logo_url: '',
-      stadium_id: ''
+      stadium_id: '',
+      history: '',
+      information: '',
+      social_media: {
+        instagram_url: '',
+        tiktok_url: '',
+        youtube_url: '',
+        official_site_url: ''
+      }
     })
   }
 
@@ -370,21 +414,24 @@ export default function TeamsManager() {
     setShowModal(true)
     setFormData({
       name: team.name,
-      short_name: team.short_name,
+      short_name: team.short_name || '',
       city: team.city || '',
       state: team.state || '',
       country: team.country || 'Brasil',
       founded_year: team.founded_year?.toString() || '',
       logo_url: team.logo_url || '',
-      stadium_id: team.stadium_id?.toString() || ''
+      stadium_id: team.stadium_id?.toString() || '',
+      history: team.history || '',
+      information: team.information || '',
+      social_media: {
+        instagram_url: team.social_media?.instagram_url || '',
+        tiktok_url: team.social_media?.tiktok_url || '',
+        youtube_url: team.social_media?.youtube_url || '',
+        official_site_url: team.social_media?.official_site_url || '',
+      },
     })
-    if (team.logo_url) {
-      setPreviewUrl(getTeamLogoUrl(team.logo_url))
-      setLogoInputType('url')
-    } else {
-      setPreviewUrl('')
-      setLogoInputType('upload')
-    }
+    setPreviewUrl(team.logo_url || '')
+    setLogoInputType('url')
   }
 
   const handleDelete = async (id: number) => {
@@ -457,7 +504,7 @@ export default function TeamsManager() {
         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalTeams)}</span> de <span className="font-medium">{totalTeams}</span> resultados
+              Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredTeams.length)}</span> de <span className="font-medium">{filteredTeams.length}</span> resultados
             </p>
           </div>
           <div>
@@ -566,7 +613,7 @@ export default function TeamsManager() {
         setSelectedPlayerToAddId('');
         setPlayerJerseyNumber('');
         setPlayerRole('');
-        fetchTeamPlayers(managingTeamRoster.id); // Recarrega o histórico do time
+        fetchTeamPlayers(managingTeamRoster.id); // Recarrega o histórico
         fetchAllPlayers(); // Atualiza a lista de jogadores disponíveis (se necessário)
       } else {
         const errorData = await response.json();
@@ -653,13 +700,12 @@ export default function TeamsManager() {
         </div>
         
         <div>
-          <select
+          <label htmlFor="stateFilter" className="block text-sm font-medium text-gray-700">Filtrar por Estado</label>
+          <select 
+            id="stateFilter"
             value={stateFilter}
-            onChange={(e) => {
-              setStateFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">Todos os Estados</option>
             {getUniqueStates().map(state => (
@@ -669,13 +715,12 @@ export default function TeamsManager() {
         </div>
 
         <div>
-          <select
+          <label htmlFor="countryFilter" className="block text-sm font-medium text-gray-700">Filtrar por País</label>
+          <select 
+            id="countryFilter"
             value={countryFilter}
-            onChange={(e) => {
-              setCountryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            onChange={(e) => setCountryFilter(e.target.value)}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">Todos os Países</option>
             {getUniqueCountries().map(country => (
@@ -779,94 +824,48 @@ export default function TeamsManager() {
             <div className="mt-3 text-center">
               <h3 className="text-lg leading-6 font-medium text-gray-900">{editingTeam ? 'Editar Time' : 'Adicionar Novo Time'}</h3>
               <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="sm:col-span-2">
-                    <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
-                    <input
-                      type="text"
-                      name="city"
-                      id="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Nome" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                  <input type="text" name="short_name" value={formData.short_name} onChange={handleInputChange} placeholder="Nome Curto" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required />
+                  <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="Cidade" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                  <input type="text" name="state" value={formData.state} onChange={handleInputChange} placeholder="Estado" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                  <input type="text" name="country" value={formData.country} onChange={handleInputChange} placeholder="País" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                  <input type="number" name="founded_year" value={formData.founded_year} onChange={handleInputChange} placeholder="Ano de Fundação" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                   <div>
-                    <label htmlFor="short_name" className="block text-sm font-medium text-gray-700">Nome Curto</label>
-                    <input
-                      type="text"
-                      name="short_name"
-                      id="short_name"
-                      value={formData.short_name}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      required
-                    />
+                    <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700">Estádio</label>
+                    <select id="stadium_id" name="stadium_id" value={formData.stadium_id} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                      <option value="">Selecione o Estádio</option>
+                      {stadiums.map(stadium => (
+                        <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
-                    <input
-                      type="text"
-                      name="state"
-                      id="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="country" className="block text-sm font-medium text-gray-700">País</label>
-                    <input
-                      type="text"
-                      name="country"
-                      id="country"
-                      value={formData.country}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="founded_year" className="block text-sm font-medium text-gray-700">Ano de Fundação</label>
-                  <input
-                    type="number"
-                    name="founded_year"
-                    id="founded_year"
-                    value={formData.founded_year}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
                 </div>
                 
-                <div>
-                  <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700">Estádio</label>
-                  <select
-                    id="stadium_id"
-                    name="stadium_id"
-                    value={formData.stadium_id}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Nenhum</option>
-                    {stadiums.map(stadium => (
-                      <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
-                    ))}
-                  </select>
+                {/* Campos de Redes Sociais */}
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Redes Sociais e Links</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <input type="url" name="instagram_url" value={formData.social_media.instagram_url} onChange={handleSocialMediaChange} placeholder="URL do Instagram" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    <input type="url" name="tiktok_url" value={formData.social_media.tiktok_url} onChange={handleSocialMediaChange} placeholder="URL do TikTok" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    <input type="url" name="youtube_url" value={formData.social_media.youtube_url} onChange={handleSocialMediaChange} placeholder="URL do YouTube" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    <input type="url" name="official_site_url" value={formData.social_media.official_site_url} onChange={handleSocialMediaChange} placeholder="URL do Site Oficial" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                  </div>
+                </div>
+
+                {/* Campos de Texto Longo */}
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Informações Adicionais</h4>
+                  <div className="space-y-6">
+                    <div>
+                      <label htmlFor="history" className="block text-sm font-medium text-gray-700">História</label>
+                      <textarea id="history" name="history" value={formData.history} onChange={(e) => handleInputChange(e as any)} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    </div>
+                    <div>
+                      <label htmlFor="information" className="block text-sm font-medium text-gray-700">Informações</label>
+                      <textarea id="information" name="information" value={formData.information} onChange={(e) => handleInputChange(e as any)} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    </div>
+                  </div>
                 </div>
 
                 <div>

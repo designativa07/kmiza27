@@ -43,14 +43,7 @@ export const API_ENDPOINTS = {
   
   // Teams
   teams: {
-    list: (page: number = 1, limit: number = 20, search: string = '') => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      if (search) params.append('search', search);
-      return apiUrl(`teams?${params.toString()}`);
-    },
+    list: () => apiUrl('teams'),
     byId: (id: number) => apiUrl(`teams/${id}`),
     uploadLogo: (id: number) => apiUrl(`teams/${id}/upload-escudo`),
   },
