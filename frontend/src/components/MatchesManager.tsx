@@ -322,6 +322,9 @@ export default function MatchesManager() {
   // Estados para rodadas e grupos dinâmicos baseados na competição
   const [availableRoundsForFilter, setAvailableRoundsForFilter] = useState<string[]>([])
   const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState<string[]>([])
+  
+  // Estados específicos para o modal de edição/criação
+  const [availableGroupsForModal, setAvailableGroupsForModal] = useState<string[]>([])
 
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(1)
@@ -422,6 +425,9 @@ export default function MatchesManager() {
   useEffect(() => {
     if (formData.competition_id) {
       fetchRoundsByCompetition(formData.competition_id)
+      fetchGroupsByCompetition(formData.competition_id)
+    } else {
+      setAvailableGroupsForModal([])
     }
   }, [formData.competition_id])
 
@@ -512,6 +518,25 @@ export default function MatchesManager() {
     } catch (error) {
       console.error('Erro ao buscar rodadas:', error)
       setAvailableRounds([])
+    }
+  }
+
+  // Nova função para buscar grupos específicos da competição para o modal
+  const fetchGroupsByCompetition = async (competitionId: string) => {
+    if (!competitionId) {
+      setAvailableGroupsForModal([])
+      return
+    }
+    
+    try {
+      const response = await fetch(API_ENDPOINTS.standings.groups(parseInt(competitionId)))
+      if (response.ok) {
+        const groups = await response.json()
+        setAvailableGroupsForModal(groups)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar grupos:', error)
+      setAvailableGroupsForModal([])
     }
   }
 
@@ -849,6 +874,9 @@ export default function MatchesManager() {
     setCreateTwoLegTie(false)
     setSelectedHomeGoalPlayerId(undefined);
     setSelectedAwayGoalPlayerId(undefined);
+    // Limpar estados auxiliares do modal
+    setAvailableRounds([])
+    setAvailableGroupsForModal([])
   }
 
   const handleEdit = (match: Match) => {
@@ -1799,7 +1827,11 @@ export default function MatchesManager() {
                       disabled={!formData.competition_id}
                     >
                       <option value="">Selecione o grupo</option>
-                      {/* Este mapeamento deve ser corrigido para usar uma fonte de dados de grupos, se disponível */}
+                      {availableGroupsForModal.map((group) => (
+                        <option key={group} value={group}>
+                          Grupo {group}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
