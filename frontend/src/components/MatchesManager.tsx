@@ -1453,7 +1453,7 @@ export default function MatchesManager() {
                   {paginatedMatches.map((match) => (
                     <tr key={match.id}>
                       <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="grid grid-cols-3 items-center gap-2">
                           {/* Time da casa - Alinhado à direita */}
                           <div className="flex items-center justify-end space-x-2">
                             <span className="text-sm font-medium text-gray-900 text-right">{match.home_team?.name || 'Time não encontrado'}</span>
