@@ -529,13 +529,25 @@ export default function MatchesManager() {
     }
     
     try {
-      const response = await fetch(API_ENDPOINTS.standings.groups(parseInt(competitionId)))
+      // Buscar diretamente da configuração da competição (times e seus grupos)
+      const response = await fetch(`${API_ENDPOINTS.competitions.list()}/${competitionId}/teams`)
       if (response.ok) {
-        const groups = await response.json()
-        setAvailableGroupsForModal(groups)
+        const competitionTeams = await response.json()
+        
+        // Extrair grupos únicos dos times da competição
+        const groups = new Set<string>()
+        competitionTeams.forEach((ct: any) => {
+          if (ct.group_name) {
+            groups.add(ct.group_name)
+          }
+        })
+        
+        const sortedGroups = Array.from(groups).sort()
+        setAvailableGroupsForModal(sortedGroups)
+        console.log('Grupos encontrados na competição:', sortedGroups)
       }
     } catch (error) {
-      console.error('Erro ao buscar grupos:', error)
+      console.error('Erro ao buscar grupos da competição:', error)
       setAvailableGroupsForModal([])
     }
   }
