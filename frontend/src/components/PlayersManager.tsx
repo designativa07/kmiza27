@@ -150,7 +150,7 @@ export default function PlayersManager() {
 
   const fetchTeams = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.teams.list(1, 1000))
+      const response = await fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`)
       if (response.ok) {
         const teamsData = await response.json()
         setTeams(teamsData.data) 
@@ -566,7 +566,9 @@ export default function PlayersManager() {
         </div>
         
         <div>
+          <label htmlFor="positionFilter" className="sr-only">Filtrar por Posição</label>
           <select
+            id="positionFilter"
             value={positionFilter}
             onChange={(e) => {
               setPositionFilter(e.target.value);
@@ -582,7 +584,9 @@ export default function PlayersManager() {
         </div>
 
         <div>
+          <label htmlFor="nationalityFilter" className="sr-only">Filtrar por Nacionalidade</label>
           <select
+            id="nationalityFilter"
             value={nationalityFilter}
             onChange={(e) => {
               setNationalityFilter(e.target.value);
@@ -600,7 +604,9 @@ export default function PlayersManager() {
 
 
         <div>
+          <label htmlFor="stateFilter" className="sr-only">Filtrar por Estado</label>
           <select
+            id="stateFilter"
             value={stateFilter}
             onChange={(e) => {
               setStateFilter(e.target.value);
