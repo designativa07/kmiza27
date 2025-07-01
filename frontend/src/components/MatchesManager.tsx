@@ -873,6 +873,10 @@ export default function MatchesManager() {
     const localDate = new Date(date.getTime() - (timezoneOffset * 60000));
     const formattedDate = localDate.toISOString().slice(0, 16);
 
+    const stadiumId = typeof match.stadium === 'number'
+      ? match.stadium
+      : (match.stadium?.id || null);
+
     const newFormData = {
       home_team_id: match.home_team?.id?.toString() || '',
       away_team_id: match.away_team?.id?.toString() || '',
@@ -897,7 +901,7 @@ export default function MatchesManager() {
       tie_id: match.tie_id || '',
       match_date_second_leg: '',
       stadium_id_second_leg: '',
-      stadium_id: match.stadium?.id?.toString() || null, // Atribuir string ou null
+      stadium_id: stadiumId !== null ? stadiumId.toString() : null, // Correção aqui
       home_team_player_stats: match.home_team_player_stats || [],
       away_team_player_stats: match.away_team_player_stats || [],
     } as MatchFormData;
