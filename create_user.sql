@@ -1,0 +1,3 @@
+CREATE USER devuser WITH PASSWORD 'devuser';
+GRANT ALL PRIVILEGES ON DATABASE kmiza27_dev TO devuser;
+ALTER USER devuser CREATEDB; 

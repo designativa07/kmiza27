@@ -180,14 +180,24 @@ function TeamAutocomplete({
   onChange,
   label
 }: { teams: Team[], value: string, onChange: (id: string) => void, label: string }) {
-  const [query, setQuery] = useState('')
-  const filteredTeams = query === '' ? teams : teams.filter(team => team?.name?.toLowerCase().includes(query.toLowerCase()))
-  const selectedTeam = teams.find(team => team.id.toString() === value)
+  const [query, setQuery] = useState('');
+
+  const filteredTeams = query === ''
+    ? (Array.isArray(teams) ? teams.filter(t => t) : [])
+    : (Array.isArray(teams) ? teams.filter(team =>
+        team && team.name?.toLowerCase().includes(query.toLowerCase())
+      ) : []);
+
+  const selectedTeam = Array.isArray(teams) ? teams.find(team => team && team.id.toString() === value) : undefined;
 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-900">{label}</label>
-      <Combobox value={selectedTeam || null} onChange={(team: Team) => onChange(team.id.toString())}>
+      <Combobox value={selectedTeam || null} onChange={(team: Team | null) => {
+        if (team) {
+          onChange(team.id.toString());
+        }
+      }}>
         <div className="relative mt-1">
           <Combobox.Input
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
@@ -225,9 +235,15 @@ function PlayerAutocomplete({
   onChange,
   label
 }: { players: Player[], value: number | undefined, onChange: (id: number | undefined) => void, label: string }) {
-  const [query, setQuery] = useState('')
-  const filteredPlayers = query === '' ? players : players.filter(player => player?.name?.toLowerCase().includes(query.toLowerCase()))
-  const selectedPlayer = players.find(player => player.id === value)
+  const [query, setQuery] = useState('');
+
+  const filteredPlayers = query === ''
+    ? (Array.isArray(players) ? players.filter(p => p) : [])
+    : (Array.isArray(players) ? players.filter(player =>
+        player && player.name?.toLowerCase().includes(query.toLowerCase())
+      ) : []);
+
+  const selectedPlayer = Array.isArray(players) ? players.find(player => player && player.id === value) : undefined;
 
   return (
     <div>
@@ -362,10 +378,19 @@ export default function MatchesManager() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // A resposta do backend agora é PlayerTeamHistoryResponse[], então mapeamos para Player[]
-      const data: PlayerTeamHistoryResponse[] = await response.json();
-      const players = data.map(entry => entry.player); // Extrai o objeto player de cada entrada
-      setPlayers(players);
+      const responseData = await response.json();
+      
+      // Corrigido para lidar com a resposta paginada do backend
+      if (responseData && Array.isArray(responseData.data)) {
+        const players = responseData.data.map((entry: PlayerTeamHistoryResponse) => entry.player);
+        setPlayers(players);
+      } else if (Array.isArray(responseData)) { // Fallback para o caso da API retornar um array diretamente
+        const players = responseData.map((entry: PlayerTeamHistoryResponse) => entry.player);
+        setPlayers(players);
+      } else {
+        console.error(`A resposta para os jogadores do time ${teamId} não é um array ou objeto esperado:`, responseData);
+        setPlayers([]);
+      }
     } catch (error) {
       console.error(`Erro ao buscar jogadores para o time ${teamId}:`, error);
       setPlayers([]);
@@ -713,7 +738,7 @@ export default function MatchesManager() {
       };
 
       if (editingMatch) {
-        url = `${API_ENDPOINTS.matches.list()}/${editingMatch.id}`;
+        url = API_ENDPOINTS.matches.update(editingMatch.id);
         method = 'PATCH';
         payload = {
           home_team_id: parseInt(String(formData.home_team_id || '')),
@@ -1250,7 +1275,7 @@ export default function MatchesManager() {
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
               >
                 <option value="">Todas</option>
-                {competitions.map((comp) => (
+                {Array.isArray(competitions) && competitions.map((comp) => (
                   <option key={comp.id} value={comp.id}>{comp.name}</option>
                 ))}
               </select>
@@ -1265,7 +1290,7 @@ export default function MatchesManager() {
                 disabled={!filters.competition}
               >
                 <option value="">Todas</option>
-                {filters.competition && getUniqueRoundsByCompetition(filters.competition).map((roundName) => (
+                {filters.competition && Array.isArray(getUniqueRoundsByCompetition(filters.competition)) && getUniqueRoundsByCompetition(filters.competition).map((roundName) => (
                   <option key={roundName} value={roundName}>
                     {roundName}
                   </option>
@@ -1285,7 +1310,7 @@ export default function MatchesManager() {
                 disabled={!filters.competition}
               >
                 <option value="">Todos</option>
-                {filters.competition && getUniqueGroupsByCompetition(filters.competition).map((group) => (
+                {filters.competition && Array.isArray(getUniqueGroupsByCompetition(filters.competition)) && getUniqueGroupsByCompetition(filters.competition).map((group) => (
                   <option key={group} value={group}>
                     {group}
                   </option>
@@ -1301,7 +1326,7 @@ export default function MatchesManager() {
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
               >
                 <option value="">Todas</option>
-                {getUniquePhasesByCompetition(filters.competition).map((phase) => (
+                {Array.isArray(getUniquePhasesByCompetition(filters.competition)) && getUniquePhasesByCompetition(filters.competition).map((phase) => (
                   <option key={phase} value={phase}>{phase}</option>
                 ))}
               </select>
@@ -1548,7 +1573,7 @@ export default function MatchesManager() {
                 {/* Seção para Adicionar Gols (Time da Casa) */}
                 <div className="mt-6 bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
+                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {Array.isArray(teams) && teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                       Total: {calculateTotalScore(formData.home_team_player_stats)} gol(s)
                     </span>
@@ -1599,7 +1624,7 @@ export default function MatchesManager() {
                 {/* Seção para Adicionar Gols (Time Visitante) */}
                 <div className="mt-6 bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
+                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {Array.isArray(teams) && teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                       Total: {calculateTotalScore(formData.away_team_player_stats)} gol(s)
                     </span>
@@ -1704,11 +1729,25 @@ export default function MatchesManager() {
                     <select
                       required
                       value={formData.competition_id}
-                      onChange={(e) => setFormData({ ...formData, competition_id: e.target.value })}
+                      onChange={(e) => {
+                        const newCompetitionId = e.target.value;
+                        setFormData({
+                          ...formData,
+                          competition_id: newCompetitionId,
+                          round_id: '', 
+                          group_name: '',
+                          phase: '',
+                        });
+                        if (newCompetitionId) {
+                          fetchRoundsByCompetition(newCompetitionId);
+                        } else {
+                          setAvailableRounds([]); 
+                        }
+                      }}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                     >
                       <option value="">Selecione...</option>
-                      {competitions.map((comp) => (
+                      {Array.isArray(competitions) && competitions.map((comp) => (
                         <option key={comp.id} value={comp.id}>{comp.name}</option>
                       ))}
                     </select>
@@ -1720,9 +1759,10 @@ export default function MatchesManager() {
                         value={formData.round_id}
                         onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                        disabled={!formData.competition_id || availableRounds.length === 0}
                       >
                         <option value="">Selecione uma rodada existente...</option>
-                        {availableRounds.map((round) => (
+                        {Array.isArray(availableRounds) && availableRounds.map((round) => (
                           <option key={round.id} value={round.id}>{round.name}</option>
                         ))}
                       </select>
@@ -1741,23 +1781,27 @@ export default function MatchesManager() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Grupo</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.group_name}
                       onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="Ex: A, B, C..."
-                    />
+                      disabled={!formData.competition_id}
+                    >
+                      <option value="">Selecione o grupo</option>
+                      {/* Este mapeamento deve ser corrigido para usar uma fonte de dados de grupos, se disponível */}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Fase</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.phase}
                       onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="Ex: Grupos, Oitavas..."
-                    />
+                      disabled={!formData.competition_id}
+                    >
+                      <option value="">Selecione a fase</option>
+                      {/* Este mapeamento deve ser corrigido para usar uma fonte de dados de fases, se disponível */}
+                    </select>
                   </div>
                 </div>
                 
@@ -1889,7 +1933,7 @@ export default function MatchesManager() {
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                         >
                           <option value="">Selecione o estádio</option>
-                          {stadiums.map((stadium) => (
+                          {Array.isArray(stadiums) && stadiums.map((stadium) => (
                             stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id?.toString() || ''}>{stadium.name}</option>
                           ))}
                         </select>
@@ -1903,20 +1947,14 @@ export default function MatchesManager() {
                   <div>
                     <label className="block text-sm font-medium text-gray-900">Estádio</label>
                     <select
-                      value={(formData.stadium_id ?? '') as string}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        console.log('🔍 onChange Stadium Select - e.target.value:', value);
-                        setFormData({
-                          ...formData,
-                          stadium_id: value === '' ? null : value, // Armazenar como string ou null
-                        });
-                      }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                      id="stadium_id"
+                      value={formData.stadium_id || ''}
+                      onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     >
                       <option value="">Selecione o estádio</option>
-                      {stadiums.map((stadium) => (
-                        stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id?.toString() || ''}>
+                      {Array.isArray(stadiums) && stadiums.map((stadium) => (
+                        stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id}>
                           {stadium.name} ({stadium.city})
                         </option>
                       ))}

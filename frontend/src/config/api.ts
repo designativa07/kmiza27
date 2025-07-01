@@ -65,6 +65,7 @@ export const API_ENDPOINTS = {
       return apiUrl(`matches?${params.toString()}`);
     },
     byId: (id: number) => apiUrl(`matches/${id}`),
+    update: (id: number) => apiUrl(`matches/${id}`),
     createTwoLegTie: () => apiUrl('matches/two-leg-tie'),
   },
   
