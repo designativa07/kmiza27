@@ -52,6 +52,12 @@ export class Team {
   @Column({ type: 'jsonb', nullable: true })
   social_media: any;
 
+  @Column({ type: 'text', nullable: true })
+  history: string;
+
+  @Column({ type: 'text', nullable: true })
+  information: string;
+
   @CreateDateColumn()
   created_at: Date;
 
