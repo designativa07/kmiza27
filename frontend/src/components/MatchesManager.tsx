@@ -330,6 +330,9 @@ export default function MatchesManager() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
+  // Estado para ordenação por data
+  const [dateSort, setDateSort] = useState<'none' | 'asc' | 'desc'>('none')
+
   const [formData, setFormData] = useState<MatchFormData>({
     home_team_id: '',
     away_team_id: '',
@@ -420,7 +423,7 @@ export default function MatchesManager() {
 
   useEffect(() => {
     applyFilters()
-  }, [filters, matches])
+  }, [filters, matches, dateSort])
 
   useEffect(() => {
     applyPagination()
@@ -663,6 +666,20 @@ export default function MatchesManager() {
       )
     }
 
+    // Aplicar ordenação por data
+    if (dateSort !== 'none') {
+      filtered = filtered.sort((a, b) => {
+        const dateA = new Date(a.match_date).getTime()
+        const dateB = new Date(b.match_date).getTime()
+        
+        if (dateSort === 'asc') {
+          return dateA - dateB // Crescente (mais antigo primeiro)
+        } else {
+          return dateB - dateA // Decrescente (mais recente primeiro)
+        }
+      })
+    }
+
     setFilteredMatches(filtered)
     console.log('DEBUG: Number of filtered matches:', filtered.length); // Add this
     // setCurrentPage(1) // REMOVIDO: A página só deve resetar quando um filtro é alterado diretamente
@@ -691,7 +708,20 @@ export default function MatchesManager() {
       status: '',
       searchTerm: ''
     });
+    setDateSort('none');
     setCurrentPage(1); // Mantido: Ao limpar filtros, volta para a página 1
+  }
+
+  const toggleDateSort = () => {
+    setDateSort(prev => {
+      switch (prev) {
+        case 'none': return 'asc'
+        case 'asc': return 'desc'
+        case 'desc': return 'none'
+        default: return 'asc'
+      }
+    })
+    setCurrentPage(1) // Reset para primeira página ao mudar ordenação
   }
 
   const getUniqueRoundsByCompetition = (competitionId: string) => {
@@ -1320,12 +1350,19 @@ export default function MatchesManager() {
       {/* Filtros - agora sempre visíveis e sem condição */}
       <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">🎯 Filtros de Jogos</h3>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {filteredMatches.length} jogos encontrados
-            </span>
-          </div>
+                      <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <h3 className="text-lg font-medium text-gray-900">🎯 Filtros de Jogos</h3>
+                {dateSort !== 'none' && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    📅 {dateSort === 'asc' ? 'Data: Crescente' : 'Data: Decrescente'}
+                  </span>
+                )}
+              </div>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                {filteredMatches.length} jogos encontrados
+              </span>
+            </div>
         </div>
         
         <div className="px-6 py-4">
@@ -1448,7 +1485,28 @@ export default function MatchesManager() {
                       ⚽ Partida
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      📅 Data/Hora
+                      <button
+                        onClick={toggleDateSort}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                        title={`Ordenar por data ${dateSort === 'none' ? '(clique para crescente)' : dateSort === 'asc' ? '(crescente - clique para decrescente)' : '(decrescente - clique para remover)'}`}
+                      >
+                        <span>📅 Data/Hora</span>
+                        {dateSort === 'asc' && (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        )}
+                        {dateSort === 'desc' && (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                        {dateSort === 'none' && (
+                          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                          </svg>
+                        )}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       🏆 Competição
