@@ -363,11 +363,23 @@ export default function MatchesManager() {
 
   const fetchStadiums = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.stadiums.list())
+      const response = await fetch(API_ENDPOINTS.stadiums.list(1, 1000)) // Buscar todos os estádios
       const data = await response.json()
-      setStadiums(data)
+      // A API retorna dados paginados: { data: Stadium[], total: number }
+      if (data && Array.isArray(data.data)) {
+        setStadiums(data.data)
+        console.log('✅ Estádios carregados com sucesso:', data.data.length, 'estádios')
+      } else if (Array.isArray(data)) {
+        // Fallback para caso a API mude
+        setStadiums(data)
+        console.log('✅ Estádios carregados (formato direto):', data.length, 'estádios')
+      } else {
+        console.error('Formato de dados de estádios inesperado:', data)
+        setStadiums([])
+      }
     } catch (error) {
       console.error('Erro ao carregar estádios:', error)
+      setStadiums([])
     }
   }
 
@@ -1988,9 +2000,15 @@ export default function MatchesManager() {
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
                         >
                           <option value="">Selecione o estádio</option>
-                          {Array.isArray(stadiums) && stadiums.map((stadium) => (
-                            stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id?.toString() || ''}>{stadium.name}</option>
-                          ))}
+                          {Array.isArray(stadiums) && stadiums.length > 0 ? (
+                            stadiums.map((stadium) => (
+                              stadium && stadium.id && <option key={stadium.id} value={stadium.id.toString()}>
+                                {stadium.name}{stadium.city ? ` (${stadium.city})` : ''}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>Nenhum estádio disponível</option>
+                          )}
                         </select>
                       </div>
                     </div>
@@ -2008,11 +2026,15 @@ export default function MatchesManager() {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     >
                       <option value="">Selecione o estádio</option>
-                      {Array.isArray(stadiums) && stadiums.map((stadium) => (
-                        stadium && <option key={stadium.id || 'null-' + Math.random()} value={stadium.id}>
-                          {stadium.name} ({stadium.city})
-                        </option>
-                      ))}
+                      {Array.isArray(stadiums) && stadiums.length > 0 ? (
+                        stadiums.map((stadium) => (
+                          stadium && stadium.id && <option key={stadium.id} value={stadium.id}>
+                            {stadium.name}{stadium.city ? ` (${stadium.city})` : ''}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>Nenhum estádio disponível</option>
+                      )}
                     </select>
                   </div>
                 )}
