@@ -4,52 +4,18 @@ import Link from 'next/link';
 import type { NextPage } from 'next';
 import { getTeamLogoUrl } from '@/lib/cdn';
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // Importar useRouter e useSearchParams de next/navigation
-import { RoundNavigator } from '@/components/RoundNavigator'; // Importar RoundNavigator
+import { useRouter, useSearchParams } from 'next/navigation';
+import { RoundNavigator } from '@/components/RoundNavigator';
+import { createKnockoutTies, isKnockoutCompetition, shouldShowBracket } from '@/lib/competition-utils';
+import { Match } from '@/types/match';
 
 // Interfaces
 interface Competition {
   id: number;
   name: string;
   slug: string;
-  type: string; // Adicionado para identificar o tipo da competição (mata-mata, grupos)
-}
-
-interface Match {
-  id: number;
-  match_date: string;
-  round: {
-    id: number;
-    name: string;
-    round_number: number;
-  } | null;
-  status: string;
-  home_score: number | null;
-  away_score: number | null;
-  home_team: {
-    id: number;
-    name: string;
-    logo_url: string;
-  };
-  away_team: {
-    id: number;
-    name: string;
-    logo_url: string;
-  };
-  stadium: {
-    id: number;
-    name: string;
-    city?: string; // Adicionado
-  } | null;
-  broadcasts?: {
-    channel: {
-      id: number;
-      name: string;
-      channel_link: string;
-    };
-  }[];
-  broadcast_channels?: string[] | string;
-  group_name?: string; // Adicionado para agrupar por grupo
+  type: string;
+  season: string;
 }
 
 interface Round {
@@ -93,7 +59,7 @@ async function getMatchesData(slug: string): Promise<{ competition: Competition,
           const matchesForRound: Match[] = await roundMatchesResponse.json();
           // Anexar informações da rodada a cada partida
           matchesForRound.forEach(match => {
-            match.round = { // Garante que match.round é um objeto com nome e número
+            match.round = {
               id: round.id,
               name: round.name,
               round_number: round.round_number
@@ -124,8 +90,8 @@ const formatDate = (dateString: string) => {
 
 // Componente de página agora usa o tipo 'NextPage' com as nossas Props
 const MatchesPage = ({ params }: Props) => {
-  const router = useRouter(); // Inicializar useRouter
-  const searchParams = useSearchParams(); // Inicializar useSearchParams
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { competitionSlug } = params;
 
@@ -205,9 +171,9 @@ const MatchesPage = ({ params }: Props) => {
     };
 
     fetchData();
-  }, [competitionSlug]); // Dependência: competitionSlug
+  }, [competitionSlug]);
 
-  // Estado para a rodada atualmente selecionada (movido para fora do useEffect)
+  // Estado para a rodada atualmente selecionada
   const [currentRoundId, setCurrentRoundId] = useState<number | null>(null);
   const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(null);
 
@@ -215,13 +181,42 @@ const MatchesPage = ({ params }: Props) => {
   const handleRoundChange = (roundId: number, roundNumber: number) => {
     setCurrentRoundId(roundId);
     setCurrentRoundNumber(roundNumber);
-    router.push(`/${competitionSlug}/jogos?roundId=${roundId}`); // Simplificado: apenas a URL
+    router.push(`/${competitionSlug}/jogos?roundId=${roundId}`);
   };
 
   // Filtrar as partidas pela rodada selecionada (se houver)
   const filteredMatches = currentRoundId 
     ? matches.filter(match => match.round?.id === currentRoundId) 
-    : matches; // Se não houver rodada selecionada, mostrar todas (ou a lógica que desejar)
+    : matches;
+
+  // Verificar se é competição de mata-mata
+  // Forçar mata-mata se houver partidas com tie_id, leg, ou se é uma rodada específica
+  const hasKnockoutMatches = filteredMatches.some(match => 
+    match.phase || 
+    (match as any).tie_id || 
+    (match as any).leg
+  );
+  
+  // Forçar mata-mata se é uma rodada específica (como Rodada 7)
+  const isSpecificKnockoutRound = currentRoundNumber && currentRoundNumber >= 7;
+  
+  const isKnockout = competition && (
+    isKnockoutCompetition(competition.type) || 
+    shouldShowBracket(filteredMatches, competition) ||
+    hasKnockoutMatches ||
+    isSpecificKnockoutRound
+  );
+  
+  // Criar confrontos de mata-mata se necessário
+  const knockoutTies = isKnockout ? createKnockoutTies(filteredMatches) : [];
+
+  // Debug: mostrar informações no console
+  console.log('Current round number:', currentRoundNumber);
+  console.log('Filtered matches:', filteredMatches);
+  console.log('Has knockout matches:', hasKnockoutMatches);
+  console.log('Is specific knockout round:', isSpecificKnockoutRound);
+  console.log('Is knockout:', isKnockout);
+  console.log('Knockout ties:', knockoutTies);
 
   if (isLoading) {
     return (
@@ -257,7 +252,7 @@ const MatchesPage = ({ params }: Props) => {
     <main className="container mx-auto pt-0 p-4">
       {/* Container unificado: Navegação + Jogos */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-        <div className="space-y-2">  {/* Reduzido de space-y-4 para space-y-2 */}
+        <div className="space-y-2">
           {/* Renderizar RoundNavigator sempre que houver rounds */}
           {rounds.length > 0 && (
             <RoundNavigator 
@@ -269,9 +264,22 @@ const MatchesPage = ({ params }: Props) => {
             />
           )}
           
-          {/* Lista de Jogos */}
+          {/* Conteúdo principal - Mata-mata ou Lista de Jogos */}
           <div className="px-4 pb-4">
-            {filteredMatches.length > 0 ? (
+            {isKnockout && knockoutTies.length > 0 ? (
+              /* Formato de Mata-mata Simples */
+              <div className="space-y-4">
+                {knockoutTies.map(tie => (
+                  <KnockoutTieCard 
+                    key={tie.id} 
+                    tie={tie} 
+                    formatDate={formatDate} 
+                    getTeamLogoUrl={getTeamLogoUrl} 
+                  />
+                ))}
+              </div>
+            ) : filteredMatches.length > 0 ? (
+              /* Formato de Lista tradicional */
               filteredMatches.map(match => (
                 <MatchCard 
                   key={match.id} 
@@ -281,12 +289,144 @@ const MatchesPage = ({ params }: Props) => {
                 />
               ))
             ) : (
-              <p className="text-center text-gray-500 py-4">Nenhuma partida encontrada para esta rodada</p>
+              <p className="text-center text-gray-500 py-4">
+                {isKnockout ? 'Nenhum confronto encontrado para esta rodada' : 'Nenhuma partida encontrada para esta rodada'}
+              </p>
             )}
           </div>
         </div>
       </div>
     </main>
+  );
+};
+
+// Componente para confrontos de mata-mata (formato simples)
+interface KnockoutTieCardProps {
+  tie: any;
+  formatDate: (dateString: string) => string;
+  getTeamLogoUrl: (logoUrl: string) => string;
+}
+
+const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ tie, formatDate, getTeamLogoUrl }) => {
+  const isFinished = tie.status === 'FINISHED';
+  const winner = tie.winner_team;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+      {/* Cabeçalho da fase */}
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">{tie.phase}</h3>
+      </div>
+
+      {/* Confronto lado a lado - formato do painel administrativo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Jogo de Ida */}
+        <div className="text-center">
+          <div className="text-blue-600 font-semibold text-sm mb-2">JOGO DE IDA</div>
+          <div className="text-xs text-gray-500 mb-3">
+            {formatDate(tie.leg1.match_date)}
+            {tie.leg1.stadium && (
+              <div>{tie.leg1.stadium.name}</div>
+            )}
+          </div>
+          
+          {/* Confronto visual */}
+          <div className="flex items-center justify-center space-x-3">
+            {/* Time da casa */}
+            <div className="flex items-center space-x-2">
+              <img 
+                src={getTeamLogoUrl(tie.home_team.logo_url)} 
+                alt={tie.home_team.name} 
+                className="h-8 w-8 object-contain"
+              />
+              <span className="text-sm font-medium">{tie.home_team.name.length > 10 ? tie.home_team.name.substring(0, 10) + '...' : tie.home_team.name}</span>
+            </div>
+
+            {/* Placar */}
+            <div className="bg-gray-100 px-3 py-1 rounded-md min-w-[60px]">
+              <span className="text-lg font-bold text-gray-800">
+                {tie.leg1.home_score !== undefined ? tie.leg1.home_score : '-'}
+              </span>
+              <span className="text-lg font-bold text-gray-800 mx-1">:</span>
+              <span className="text-lg font-bold text-gray-800">
+                {tie.leg1.away_score !== undefined ? tie.leg1.away_score : '-'}
+              </span>
+            </div>
+
+            {/* Time visitante */}
+            <div className="flex items-center space-x-2">
+              <img 
+                src={getTeamLogoUrl(tie.away_team.logo_url)} 
+                alt={tie.away_team.name} 
+                className="h-8 w-8 object-contain"
+              />
+              <span className="text-sm font-medium">{tie.away_team.name.length > 10 ? tie.away_team.name.substring(0, 10) + '...' : tie.away_team.name}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Jogo de Volta */}
+        {tie.leg2 && (
+          <div className="text-center">
+            <div className="text-blue-600 font-semibold text-sm mb-2">JOGO DE VOLTA</div>
+            <div className="text-xs text-gray-500 mb-3">
+              {formatDate(tie.leg2.match_date)}
+              {tie.leg2.stadium && (
+                <div>{tie.leg2.stadium.name}</div>
+              )}
+            </div>
+            
+            {/* Confronto visual */}
+            <div className="flex items-center justify-center space-x-3">
+              {/* Time da casa */}
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={getTeamLogoUrl(tie.leg2.home_team.logo_url)} 
+                  alt={tie.leg2.home_team.name} 
+                  className="h-8 w-8 object-contain"
+                />
+                <span className="text-sm font-medium">{tie.leg2.home_team.name.length > 10 ? tie.leg2.home_team.name.substring(0, 10) + '...' : tie.leg2.home_team.name}</span>
+              </div>
+
+              {/* Placar */}
+              <div className="bg-gray-100 px-3 py-1 rounded-md min-w-[60px]">
+                <span className="text-lg font-bold text-gray-800">
+                  {tie.leg2.home_score !== undefined ? tie.leg2.home_score : '-'}
+                </span>
+                <span className="text-lg font-bold text-gray-800 mx-1">:</span>
+                <span className="text-lg font-bold text-gray-800">
+                  {tie.leg2.away_score !== undefined ? tie.leg2.away_score : '-'}
+                </span>
+              </div>
+
+              {/* Time visitante */}
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={getTeamLogoUrl(tie.leg2.away_team.logo_url)} 
+                  alt={tie.leg2.away_team.name} 
+                  className="h-8 w-8 object-contain"
+                />
+                <span className="text-sm font-medium">{tie.leg2.away_team.name.length > 10 ? tie.leg2.away_team.name.substring(0, 10) + '...' : tie.leg2.away_team.name}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Resultado final */}
+      {isFinished && winner && (
+        <div className="text-center mt-4 pt-3 border-t border-gray-200">
+          <div className="text-blue-600 font-semibold text-sm mb-2">
+            Classificado: {winner.name}
+          </div>
+          {(tie.aggregate_home_score !== undefined && tie.aggregate_away_score !== undefined) && (
+            <div className="text-sm text-gray-600">
+              Agregado: {tie.aggregate_home_score} × {tie.aggregate_away_score}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -308,48 +448,48 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             {match.stadium.city && ` (${match.stadium.city})`}
           </span>
         )}
-              </div>
+      </div>
       <div className="flex items-center justify-center mb-3">
         {/* Lado esquerdo: mandante + escudo */}
         <div className="flex items-center justify-end flex-1 pr-1">
           <span className="font-semibold text-gray-800 mr-1">{match.home_team.name}</span>
-                  <img 
-                    src={getTeamLogoUrl(match.home_team.logo_url)} 
-                    alt={match.home_team.name} 
+          <img 
+            src={getTeamLogoUrl(match.home_team.logo_url)} 
+            alt={match.home_team.name} 
             className="h-8 w-8 object-contain"
-                  />
-                </div>
+          />
+        </div>
 
         {/* Centro: placar fixo */}
         <div className="flex items-center justify-center min-w-[60px]">
-          {(match.status === 'COMPLETED' || match.status === 'finished' || match.status === 'FINISHED' || (match.home_score !== null && match.away_score !== null)) ? (
+          {(match.status === 'finished' || match.status === 'FINISHED' || (match.home_score !== null && match.away_score !== null)) ? (
             <>
               <span className="text-xl font-bold text-gray-800">{match.home_score}</span>
               <span className="text-xl font-bold text-gray-800 mx-0.5">×</span>
               <span className="text-xl font-bold text-gray-800">{match.away_score}</span>
             </>
-                  ) : (
+          ) : (
             <span className="text-xl font-bold text-gray-400">×</span>
-                  )}
-                </div>
+          )}
+        </div>
 
         {/* Lado direito: escudo + visitante */}
         <div className="flex items-center justify-start flex-1 pl-1">
-                  <img 
-                    src={getTeamLogoUrl(match.away_team.logo_url)} 
-                    alt={match.away_team.name} 
+          <img 
+            src={getTeamLogoUrl(match.away_team.logo_url)} 
+            alt={match.away_team.name} 
             className="h-8 w-8 object-contain"
-                  />
+          />
           <span className="font-semibold text-gray-800 ml-1">{match.away_team.name}</span>
         </div>
-                </div>
+      </div>
       
       {/* Canais de Transmissão e Links */}
-      {( (match.broadcasts && match.broadcasts.length > 0) || (match.broadcast_channels)) && (
+      {((match.broadcasts && match.broadcasts.length > 0) || (match.broadcast_channels)) && (
         <div className="flex flex-wrap gap-2 justify-center">
           {/* Canais de Transmissão (apenas nome clicável) */}
           {match.broadcasts && match.broadcasts.length > 0 && (
-            match.broadcasts.map((broadcast) => (
+            match.broadcasts.map((broadcast: any) => (
               <div key={broadcast.channel.id} className="flex items-center gap-2">
                 {broadcast.channel.channel_link ? (
                   <a 
@@ -372,7 +512,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           )}
           {/* Botões 'ASSISTIR' da coluna broadcast_channels */}
           {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
-            match.broadcast_channels.split(',').map((link, index) => {
+            match.broadcast_channels.split(',').map((link: string, index: number) => {
               const url = link.startsWith('http') ? link : `https://${link}`;
               return (
                 <a 
@@ -388,7 +528,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             })
           )}
           {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
-            match.broadcast_channels.map((link, index) => {
+            match.broadcast_channels.map((link: string, index: number) => {
               const url = link.startsWith('http') ? link : `https://${link}`;
               return (
                 <a 
