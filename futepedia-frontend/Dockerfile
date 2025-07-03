@@ -1,16 +1,16 @@
-# Build otimizado para Next.js standalone
-FROM node:18-alpine
-RUN apk add --no-cache libc6-compat
+# Estágio 1: Builder - Constrói a aplicação
+FROM node:18-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache libc6-compat
 
-# Instalar dependências
+# Copiar package.json e instalar dependências
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copiar código e fazer build
+# Copiar o resto do código
 COPY . .
 
-# Variables de build
+# Variáveis de build (apenas para o estágio de build)
 ARG NEXT_PUBLIC_API_URL
 ARG NODE_ENV=production
 ARG BUILD_TIMESTAMP
@@ -25,22 +25,31 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build da aplicação
 RUN npm run build
 
-# Verificar estrutura e preparar standalone
-RUN ls -la .next/
-RUN cp -r .next/static .next/standalone/.next/static 2>/dev/null || echo "Static already included"
-RUN mkdir -p .next/standalone/public
+# ---
+# Estágio 2: Runner - Executa a aplicação
+FROM node:18-alpine AS runner
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-RUN chown -R nextjs:nodejs .next/standalone
 
+# Copiar apenas os artefatos necessários do estágio de build
+# E MAIS IMPORTANTE: definir o proprietário durante a cópia para evitar 'chown -R'
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Definir o usuário para executar a aplicação
 USER nextjs
-WORKDIR /app/.next/standalone
 
 EXPOSE 3003
 
-ENV PORT=3003
-ENV HOSTNAME="0.0.0.0"
+ENV PORT 3003
+ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"] 
