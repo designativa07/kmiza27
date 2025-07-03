@@ -362,7 +362,7 @@ export default function MatchesManager() {
     away_team_player_stats: [],
   })
 
-
+  const [showPenalties, setShowPenalties] = useState(false);
 
   const fetchStadiums = async () => {
     try {
@@ -795,6 +795,29 @@ export default function MatchesManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validações básicas
+    if (!formData.home_team_id || !formData.away_team_id) {
+      alert('Selecione os times da casa e visitante')
+      return
+    }
+    
+    if (!formData.competition_id) {
+      alert('Selecione uma competição')
+      return
+    }
+
+    if (createTwoLegTie && !editingMatch) {
+      if (!formData.match_date_second_leg) {
+        alert('Informe a data da segunda mão')
+        return
+      }
+      if (!formData.stadium_id_second_leg) {
+        alert('Selecione o estádio da segunda mão')
+        return
+      }
+    }
+
     try {
       let url: string;
       let method: string;
@@ -809,14 +832,14 @@ export default function MatchesManager() {
         status: formData.status,
         broadcast_channels: formData.broadcast_channels || null,
         channel_ids: formData.channel_ids,
-        home_score: formData.home_score,
-        away_score: formData.away_score,
-        home_yellow_cards: formData.home_yellow_cards,
-        away_yellow_cards: formData.away_yellow_cards,
-        home_red_cards: formData.home_red_cards,
-        away_red_cards: formData.away_red_cards,
-        home_score_penalties: formData.home_score_penalties,
-        away_score_penalties: formData.away_score_penalties,
+        home_score: formData.home_score !== undefined ? formData.home_score : null,
+        away_score: formData.away_score !== undefined ? formData.away_score : null,
+        home_yellow_cards: formData.home_yellow_cards !== undefined ? formData.home_yellow_cards : null,
+        away_yellow_cards: formData.away_yellow_cards !== undefined ? formData.away_yellow_cards : null,
+        home_red_cards: formData.home_red_cards !== undefined ? formData.home_red_cards : null,
+        away_red_cards: formData.away_red_cards !== undefined ? formData.away_red_cards : null,
+        home_score_penalties: formData.home_score_penalties !== undefined ? formData.home_score_penalties : null,
+        away_score_penalties: formData.away_score_penalties !== undefined ? formData.away_score_penalties : null,
         leg: formData.leg,
         tie_id: formData.tie_id === '' ? null : formData.tie_id,
         home_team_player_stats: formData.home_team_player_stats,
@@ -824,6 +847,7 @@ export default function MatchesManager() {
       };
 
       if (editingMatch) {
+        // Editando jogo existente
         url = API_ENDPOINTS.matches.update(editingMatch.id);
         method = 'PATCH';
         payload = {
@@ -835,6 +859,7 @@ export default function MatchesManager() {
           ...basePayload,
         };
       } else if (createTwoLegTie) {
+        // Criando confronto de ida e volta
         url = API_ENDPOINTS.matches.createTwoLegTie();
         method = 'POST';
         payload = {
@@ -850,7 +875,10 @@ export default function MatchesManager() {
             : parseInt(String(formData.stadium_id_second_leg)),
           ...basePayload,
         };
+        
+        console.log('🏆 Criando confronto de ida e volta:', payload);
       } else {
+        // Criando jogo único
         url = API_ENDPOINTS.matches.list();
         method = 'POST';
         payload = {
@@ -864,7 +892,9 @@ export default function MatchesManager() {
         };
       }
 
-      console.log('🔍 Frontend - Enviando payload COMPLETO:', payload);
+      console.log('🔍 Frontend - Enviando payload:', payload);
+      console.log('🔍 Frontend - home_score enviado:', payload.home_score);
+      console.log('🔍 Frontend - away_score enviado:', payload.away_score);
 
       const response = await fetch(url, {
         method,
@@ -878,21 +908,43 @@ export default function MatchesManager() {
 
       if (response.ok) {
         console.log('✅ Frontend - Resposta OK');
+        
+        // Mensagem de sucesso específica
+        if (createTwoLegTie && !editingMatch) {
+          alert('✅ Confronto de ida e volta criado com sucesso!')
+        } else if (editingMatch) {
+          alert('✅ Jogo atualizado com sucesso!')
+        } else {
+          alert('✅ Jogo criado com sucesso!')
+        }
+        
         setShowModal(false)
         setEditingMatch(null)
         resetForm()
+        
+        // Aguardar um pouco mais para garantir que o backend processou
         setTimeout(() => {
-          console.log('🔄 Recarregando dados após atualização...');
+          console.log('🔄 Recarregando dados após operação...');
           fetchData()
-        }, 500)
+        }, 800)
       } else {
         const errorText = await response.text();
         console.error('❌ Frontend - Erro na resposta:', response.status, errorText);
-        alert(`Erro ao salvar: ${response.status} - ${errorText}`)
+        
+        // Tentar parsear como JSON para obter mais detalhes
+        let errorMessage = `Erro ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorText;
+        } catch {
+          errorMessage = errorText || `Erro ${response.status}`;
+        }
+        
+        alert(`❌ Erro ao salvar: ${errorMessage}`)
       }
     } catch (error) {
       console.error('❌ Frontend - Erro ao salvar jogo:', error)
-      alert('Erro ao salvar jogo. Tente novamente.')
+      alert('❌ Erro de conexão. Verifique sua internet e tente novamente.')
     }
   }
 
@@ -1231,25 +1283,14 @@ export default function MatchesManager() {
 
   // Funções para manipular gols por jogador
   const handleAddGoal = (teamType: 'home' | 'away') => {
+    const newStat: MatchPlayerStat = {
+      player_id: teamType === 'home' ? selectedHomeGoalPlayerId! : selectedAwayGoalPlayerId!,
+      goals: 1, // Começa com 1 gol ao adicionar
+    };
+
     setFormData(prevData => {
       const currentStats = teamType === 'home' ? prevData.home_team_player_stats : prevData.away_team_player_stats;
-      const selectedPlayerId = teamType === 'home' ? selectedHomeGoalPlayerId : selectedAwayGoalPlayerId;
-
-      if (selectedPlayerId === undefined) {
-        alert('Por favor, selecione um jogador para adicionar o gol.');
-        return prevData;
-      }
-
-      const playerStatIndex = currentStats.findIndex(stat => stat.player_id === selectedPlayerId);
-      let updatedStats;
-
-      if (playerStatIndex > -1) {
-        updatedStats = currentStats.map((stat, index) =>
-          index === playerStatIndex ? { ...stat, goals: (stat.goals || 0) + 1 } : stat
-        );
-      } else {
-        updatedStats = [...currentStats, { player_id: selectedPlayerId, goals: 1 }];
-      }
+      const updatedStats = [...currentStats, newStat];
 
       if (teamType === 'home') {
         setSelectedHomeGoalPlayerId(undefined); // Resetar após adicionar
@@ -1285,19 +1326,17 @@ export default function MatchesManager() {
   };
 
   // Função para calcular o placar total baseado nos gols dos jogadores
-  const calculateTotalScore = (playerStats: MatchPlayerStat[]): number => {
-    return playerStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+  const calculateTotalScore = (playerStats: MatchPlayerStat[]): number | undefined => {
+    const total = playerStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+    return total === 0 ? undefined : total; // Retorna undefined se o total for 0
   };
 
   // Função para sincronizar o placar total com os gols dos jogadores
   const syncScoreWithPlayerGoals = () => {
-    const homeScore = calculateTotalScore(formData.home_team_player_stats);
-    const awayScore = calculateTotalScore(formData.away_team_player_stats);
-    
     setFormData(prevData => ({
       ...prevData,
-      home_score: homeScore,
-      away_score: awayScore
+      home_score: calculateTotalScore(prevData.home_team_player_stats),
+      away_score: calculateTotalScore(prevData.away_team_player_stats),
     }));
   };
 
@@ -1350,19 +1389,19 @@ export default function MatchesManager() {
       {/* Filtros - agora sempre visíveis e sem condição */}
       <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
-                      <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <h3 className="text-lg font-medium text-gray-900">🎯 Filtros de Jogos</h3>
-                {dateSort !== 'none' && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    📅 {dateSort === 'asc' ? 'Data: Crescente' : 'Data: Decrescente'}
-                  </span>
-                )}
-              </div>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {filteredMatches.length} jogos encontrados
-              </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h3 className="text-lg font-medium text-gray-900">🎯 Filtros de Jogos</h3>
+              {dateSort !== 'none' && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  📅 {dateSort === 'asc' ? 'Data: Crescente' : 'Data: Decrescente'}
+                </span>
+              )}
             </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {filteredMatches.length} jogos encontrados
+            </span>
+          </div>
         </div>
         
         <div className="px-6 py-4">
@@ -1607,495 +1646,493 @@ export default function MatchesManager() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-[500px] shadow-lg rounded-md bg-white">
+          <div className="relative top-4 mx-auto p-6 border w-[95vw] max-w-8xl shadow-lg rounded-md bg-white max-h-[95vh] overflow-y-auto">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 {editingMatch ? 'Editar Jogo' : 'Adicionar Jogo'}
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <TeamAutocomplete teams={teams} value={formData.home_team_id} onChange={(id) => setFormData({ ...formData, home_team_id: id })} label="Time da Casa" />
-                  </div>
-                  <div>
-                    <TeamAutocomplete teams={teams} value={formData.away_team_id} onChange={(id) => setFormData({ ...formData, away_team_id: id })} label="Time Visitante" />
-                  </div>
-                </div>
-                {/* Campos de placar */}
-                <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
-                  <div>
-                    <label htmlFor="home_score" className="block text-sm font-medium text-gray-700">
-                      Placar Casa
-                    </label>
-                    <div className="flex gap-2">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                
+                {/* Checkbox para Ida e Volta - TOPO DO FORMULÁRIO */}
+                {!editingMatch && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center">
                       <input
-                        type="number"
-                        name="home_score"
-                        id="home_score"
-                        value={formData.home_score === undefined ? '' : formData.home_score}
-                        onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : Number(e.target.value) })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        id="create_two_leg_tie"
+                        name="create_two_leg_tie"
+                        type="checkbox"
+                        checked={createTwoLegTie}
+                        onChange={(e) => {
+                          setCreateTwoLegTie(e.target.checked);
+                          if (e.target.checked) {
+                            setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
+                          } else {
+                            setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null }));
+                          }
+                        }}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
-                      <button
-                        type="button"
-                        onClick={syncScoreWithPlayerGoals}
-                        className="mt-1 px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        title="Sincronizar placar com gols dos jogadores"
-                      >
-                        Sync
-                      </button>
+                      <label htmlFor="create_two_leg_tie" className="ml-3 block text-sm font-semibold text-blue-800">
+                        🏆 Criar Confronto de Ida e Volta (Primeira + Segunda Mão)
+                      </label>
                     </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="away_score" className="block text-sm font-medium text-gray-700">
-                      Placar Visitante
-                    </label>
-                    <input
-                      type="number"
-                      name="away_score"
-                      id="away_score"
-                      value={formData.away_score === undefined ? '' : formData.away_score}
-                      onChange={(e) => setFormData({ ...formData, away_score: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-
-                  {/* Novos campos para gols de pênaltis */}
-                  <div>
-                    <label htmlFor="home_score_penalties" className="block text-sm font-medium text-gray-700">
-                      Gols Pênaltis Casa
-                    </label>
-                    <input
-                      type="number"
-                      name="home_score_penalties"
-                      id="home_score_penalties"
-                      value={formData.home_score_penalties === undefined ? '' : formData.home_score_penalties}
-                      onChange={(e) => setFormData({ ...formData, home_score_penalties: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="away_score_penalties" className="block text-sm font-medium text-gray-700">
-                      Gols Pênaltis Visitante
-                    </label>
-                    <input
-                      type="number"
-                      name="away_score_penalties"
-                      id="away_score_penalties"
-                      value={formData.away_score_penalties === undefined ? '' : formData.away_score_penalties}
-                      onChange={(e) => setFormData({ ...formData, away_score_penalties: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Seção para Adicionar Gols (Time da Casa) */}
-                <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {Array.isArray(teams) && teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h4>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Total: {calculateTotalScore(formData.home_team_player_stats)} gol(s)
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {formData.home_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
-                      const player = homeTeamPlayers.find(p => p.id === stat.player_id);
-                      return (
-                        <div key={stat.player_id} className="flex items-center gap-2">
-                          <p className="text-sm text-gray-700 font-medium w-3/4">{player?.name || 'Jogador desconhecido'}:</p>
-                          <span className="text-lg font-bold text-green-600">{stat.goals} Gol(s)</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveGoal('home', stat.player_id)}
-                            className="p-1 text-red-600 hover:text-red-900"
-                            title="Remover gol(s) deste jogador"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 flex items-end gap-2">
-                    <div className="flex-1">
-                      <PlayerAutocomplete
-                        players={homeTeamPlayers}
-                        value={selectedHomeGoalPlayerId}
-                        onChange={(playerId) => handleGoalPlayerChange('home', playerId)}
-                        label="Adicionar Gol para Jogador"
-                      />
-                      {!formData.home_team_id && (
-                        <p className="mt-1 text-sm text-gray-500">Selecione o time da casa primeiro</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAddGoal('home')}
-                      disabled={!formData.home_team_id || !selectedHomeGoalPlayerId}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      title={!formData.home_team_id ? "Selecione o time da casa primeiro" : !selectedHomeGoalPlayerId ? "Selecione um jogador" : "Adicionar gol"}
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Seção para Adicionar Gols (Time Visitante) */}
-                <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900">Registrar Gols - {Array.isArray(teams) && teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h4>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Total: {calculateTotalScore(formData.away_team_player_stats)} gol(s)
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {formData.away_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
-                      const player = awayTeamPlayers.find(p => p.id === stat.player_id);
-                      return (
-                        <div key={stat.player_id} className="flex items-center gap-2">
-                          <p className="text-sm text-gray-700 font-medium w-3/4">{player?.name || 'Jogador desconhecido'}:</p>
-                          <span className="text-lg font-bold text-green-600">{stat.goals} Gol(s)</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveGoal('away', stat.player_id)}
-                            className="p-1 text-red-600 hover:text-red-900"
-                            title="Remover gol(s) deste jogador"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 flex items-end gap-2">
-                    <div className="flex-1">
-                      <PlayerAutocomplete
-                        players={awayTeamPlayers}
-                        value={selectedAwayGoalPlayerId}
-                        onChange={(playerId) => handleGoalPlayerChange('away', playerId)}
-                        label="Adicionar Gol para Jogador"
-                      />
-                      {!formData.away_team_id && (
-                        <p className="mt-1 text-sm text-gray-500">Selecione o time visitante primeiro</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAddGoal('away')}
-                      disabled={!formData.away_team_id || !selectedAwayGoalPlayerId}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      title={!formData.away_team_id ? "Selecione o time visitante primeiro" : !selectedAwayGoalPlayerId ? "Selecione um jogador" : "Adicionar gol"}
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Campos de cartões */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Cartões Amarelos Casa</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.home_yellow_cards ?? ''}
-                      onChange={(e) => setFormData({ ...formData, home_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Cartões Vermelhos Casa</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.home_red_cards ?? ''}
-                      onChange={(e) => setFormData({ ...formData, home_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Cartões Amarelos Visitante</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.away_yellow_cards ?? ''}
-                      onChange={(e) => setFormData({ ...formData, away_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Cartões Vermelhos Visitante</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.away_red_cards ?? ''}
-                      onChange={(e) => setFormData({ ...formData, away_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-
-                {/* Outros campos do formulário (competição, data, status, etc.) */}
-                <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
-                  <div>
-                    <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700">
-                      Competição
-                    </label>
-                    <select
-                      required
-                      value={formData.competition_id}
-                      onChange={(e) => {
-                        const newCompetitionId = e.target.value;
-                        setFormData({
-                          ...formData,
-                          competition_id: newCompetitionId,
-                          round_id: '', 
-                          group_name: '',
-                          phase: '',
-                        });
-                        if (newCompetitionId) {
-                          fetchRoundsByCompetition(newCompetitionId);
-                        } else {
-                          setAvailableRounds([]); 
-                        }
-                      }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    >
-                      <option value="">Selecione...</option>
-                      {Array.isArray(competitions) && competitions.map((comp) => (
-                        <option key={comp.id} value={comp.id}>{comp.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Rodada</label>
-                    <div className="space-y-2">
-                      <select
-                        value={formData.round_id}
-                        onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                        disabled={!formData.competition_id || availableRounds.length === 0}
-                      >
-                        <option value="">Selecione uma rodada existente...</option>
-                        {Array.isArray(availableRounds) && availableRounds.map((round) => (
-                          <option key={round.id} value={round.id}>{round.name}</option>
-                        ))}
-                      </select>
-                      <div className="text-center text-sm text-gray-500">ou</div>
-                      <input
-                        type="text"
-                        value={formData.round_name || ''}
-                        onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                        placeholder="Digite o nome da nova rodada (ex: Rodada 13)"
-                      />
-                    </div>
-                    {!formData.competition_id && (
-                      <p className="mt-1 text-sm text-gray-500">Selecione uma competição primeiro</p>
+                    {createTwoLegTie && (
+                      <div className="mt-3 text-xs text-blue-700 bg-blue-100 p-3 rounded border border-blue-200">
+                        ℹ️ <strong>Será criado automaticamente:</strong> Jogo de ida e volta com times invertidos na segunda mão.
+                      </div>
                     )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Grupo</label>
-                    <select
-                      value={formData.group_name}
-                      onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      disabled={!formData.competition_id}
-                    >
-                      <option value="">Selecione o grupo</option>
-                      {availableGroupsForModal.map((group) => (
-                        <option key={group} value={group}>
-                          Grupo {group}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Fase</label>
-                    <select
-                      value={formData.phase}
-                      onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                      disabled={!formData.competition_id}
-                    >
-                      <option value="">Selecione a fase</option>
-                      {/* Este mapeamento deve ser corrigido para usar uma fonte de dados de fases, se disponível */}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Data e Hora</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={formData.match_date}
-                      onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    >
-                      <option value="scheduled">Agendado</option>
-                      <option value="live">Ao Vivo</option>
-                      <option value="finished">Finalizado</option>
-                      <option value="postponed">Adiado</option>
-                      <option value="cancelled">Cancelado</option>
-                    </select>
-                  </div>
-                </div>
-                
-                <div>
-                  <ChannelMultiSelect
-                    channels={channels}
-                    selectedIds={formData.channel_ids}
-                    onChange={(ids) => setFormData({ ...formData, channel_ids: ids })}
-                    label="Canais de Transmissão"
-                  />
-                </div>
-                
-                {/* Campo para canais em texto (compatibilidade) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-900">Canais Adicionais (texto)</label>
-                  <input
-                    type="text"
-                    value={formData.broadcast_channels}
-                    onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                    placeholder="Ex: Outros canais não cadastrados"
-                  />
-                </div>
-                
-                {/* Adicionado: Campo Leg */}
-                <div className="col-span-full sm:col-span-3">
-                  <label htmlFor="leg" className="block text-sm font-medium leading-6 text-gray-900">Mão</label>
-                  <select
-                    id="leg"
-                    name="leg"
-                    value={formData.leg}
-                    onChange={(e) => setFormData({ ...formData, leg: e.target.value as '' | 'first_leg' | 'second_leg' | 'single_match' })}
-                    className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    disabled={createTwoLegTie}
-                  >
-                    <option value="">Selecione a mão</option>
-                    <option value="single_match">Jogo Único</option>
-                    <option value="first_leg">Jogo de ida</option>
-                    <option value="second_leg">Jogo de volta</option>
-                  </select>
-                </div>
-
-                {/* Opção para criar confrontos de ida e volta */}
-                {competitions.find(comp => comp.id.toString() === formData.competition_id)?.name.toLowerCase().includes('copa') && !editingMatch && (
-                  <div className="col-span-full mt-4 bg-blue-50 p-4 rounded-lg flex items-center">
-                    <input
-                      id="create_two_leg_tie"
-                      name="create_two_leg_tie"
-                      type="checkbox"
-                      checked={createTwoLegTie}
-                      onChange={(e) => {
-                        setCreateTwoLegTie(e.target.checked);
-                        if (e.target.checked) {
-                          setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
-                        } else {
-                          setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null })); // Definir como null
-                        }
-                      }}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="create_two_leg_tie" className="ml-2 block text-sm text-blue-800 font-semibold">
-                      Criar Confronto de Ida e Volta (Primeira Mão + Segunda Mão)
-                    </label>
                   </div>
                 )}
 
-                {/* Adicionado: Campo Tie ID */}
-                <div className="col-span-full sm:col-span-3">
-                  <label htmlFor="tie_id" className="block text-sm font-medium leading-6 text-gray-900">ID do Confronto (Tie ID)</label>
-                  <input
-                    type="text"
-                    name="tie_id"
-                    id="tie_id"
-                    value={formData.tie_id}
-                    onChange={(e) => setFormData({ ...formData, tie_id: e.target.value })}
-                    className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder={createTwoLegTie ? "Gerado automaticamente" : "Preencha para jogos de volta"}
-                    disabled={createTwoLegTie || formData.leg !== 'second_leg'}
-                  />
+                                 {/* Seção 1: Times e Placares - Layout Horizontal */}
+                 <div className="bg-gray-50 p-4 rounded-lg">
+                   {/* Times e Placares na mesma linha */}
+                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end mb-4">
+                     <div className="col-span-full md:col-span-2">
+                       <TeamAutocomplete
+                         teams={teams}
+                         value={formData.home_team_id}
+                         onChange={(teamId) => {
+                           setFormData({ ...formData, home_team_id: teamId })
+                           fetchPlayersByTeam(teamId, setHomeTeamPlayers)
+                         }}
+                         label="Time da Casa"
+                       />
+                     </div>
+                     <div className="col-span-full md:col-span-1">
+                       <label className="block text-xs font-medium text-gray-600">Placar Casa</label>
+                       <input
+                         type="number"
+                         value={formData.home_score == null ? '' : formData.home_score}
+                         onChange={(e) => setFormData({ ...formData, home_score: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center font-bold"
+                         title="Placar do Time da Casa"
+                       />
+                     </div>
+                     <div className="col-span-full md:col-span-1 flex items-center justify-center sm:hidden">
+                       <span className="text-2xl font-bold text-gray-400 mt-5">×</span>
+                     </div>
+                     <div className="col-span-full md:col-span-1">
+                       <label className="block text-xs font-medium text-gray-600">Placar Visitante</label>
+                       <input
+                         type="number"
+                         value={formData.away_score == null ? '' : formData.away_score}
+                         onChange={(e) => setFormData({ ...formData, away_score: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center font-bold"
+                         title="Placar do Time Visitante"
+                       />
+                     </div>
+                     <div className="col-span-full md:col-span-2">
+                       <TeamAutocomplete
+                         teams={teams}
+                         value={formData.away_team_id}
+                         onChange={(teamId) => {
+                           setFormData({ ...formData, away_team_id: teamId })
+                           fetchPlayersByTeam(teamId, setAwayTeamPlayers)
+                         }}
+                         label="Time Visitante"
+                       />
+                     </div>
+                     <div className="col-span-full md:col-span-2">
+                       <label className="block text-sm font-medium text-gray-700">Data e Hora</label>
+                       <input
+                         type="datetime-local"
+                         required
+                         value={formData.match_date}
+                         onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
+                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       />
+                     </div>
+                     <div className="col-span-full md:col-span-1">
+                       <button
+                         type="button"
+                         onClick={syncScoreWithPlayerGoals}
+                         className="w-full px-2 py-2 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                         title="Sincronizar placares com gols dos jogadores"
+                       >
+                         🔄 Sync
+                       </button>
+                     </div>
+                     {/* Novo local para o estádio */}
+                     <div className="col-span-full md:col-span-2">
+                       <label className="block text-sm font-medium text-gray-700">Estádio da Partida</label>
+                       <select
+                         id="stadium_id"
+                         value={formData.stadium_id || ''}
+                         onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
+                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       >
+                         <option value="">Selecione o estádio</option>
+                         {Array.isArray(stadiums) && stadiums.length > 0 ? (
+                           stadiums.map((stadium) => (
+                             stadium && stadium.id && <option key={stadium.id} value={stadium.id}>
+                               {stadium.name}{stadium.city ? ` (${stadium.city})` : ''}
+                             </option>
+                           ))
+                         ) : (
+                           <option value="" disabled>Nenhum estádio disponível</option>
+                         )}
+                       </select>
+                     </div>
+                     <div className="col-span-full md:col-span-1">
+                       <label className="block text-sm font-medium text-gray-700">Status</label>
+                       <select
+                         value={formData.status}
+                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       >
+                         <option value="scheduled">Agendado</option>
+                         <option value="live">Ao Vivo</option>
+                         <option value="finished">Finalizado</option>
+                         <option value="postponed">Adiado</option>
+                         <option value="cancelled">Cancelado</option>
+                       </select>
+                     </div>
+                   </div>
+
+                  {/* Checkbox para Pênaltis */}
+                  <div className="mt-4 flex items-center">
+                    <input
+                      id="show_penalties"
+                      type="checkbox"
+                      checked={showPenalties}
+                      onChange={(e) => setShowPenalties(e.target.checked)}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="show_penalties" className="ml-2 block text-sm text-gray-700">
+                      ⚽ Decisão por Pênaltis
+                    </label>
+                  </div>
+
+                  {/* Campos de Pênaltis (condicionais) */}
+                  {showPenalties && (
+                    <div className="mt-3 grid grid-cols-4 gap-3 bg-yellow-50 p-3 rounded border border-yellow-200">
+                      <div>
+                        <label className="block text-xs font-medium text-yellow-700">Pênaltis Mandante</label>
+                        <input
+                          type="number"
+                          value={formData.home_score_penalties == null ? '' : formData.home_score_penalties}
+                          onChange={(e) => setFormData({ ...formData, home_score_penalties: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-yellow-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm text-center font-bold"
+                          title="Placar de Pênaltis do Mandante"
+                        />
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <span className="text-lg font-bold text-yellow-600">🥅</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-yellow-700">Pênaltis Visitante</label>
+                        <input
+                          type="number"
+                          value={formData.away_score_penalties == null ? '' : formData.away_score_penalties}
+                          onChange={(e) => setFormData({ ...formData, away_score_penalties: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-yellow-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm text-center font-bold"
+                          title="Placar de Pênaltis do Visitante"
+                        />
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs text-yellow-600">Após empate</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
+
+                {/* Novo contêiner para Gols e Cartões */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Seção 2: Gols dos Jogadores */}
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-900 mb-4">⚽ Registrar Gols dos Jogadores</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Time da Casa */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <div className="flex justify-between items-center mb-3">
+                          <h5 className="text-sm font-semibold text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h5>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {calculateTotalScore(formData.home_team_player_stats)} gol(s)
+                          </span>
+                        </div>
+                        <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                          {formData.home_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
+                            const player = homeTeamPlayers.find(p => p.id === stat.player_id);
+                            return (
+                              <div key={stat.player_id} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-700">{player?.name || 'Jogador desconhecido'}</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-bold text-green-600">{stat.goals} gol(s)</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveGoal('home', stat.player_id)}
+                                    className="p-1 text-red-600 hover:text-red-900"
+                                    title="Remover gol(s)"
+                                  >
+                                    <TrashIcon className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <PlayerAutocomplete
+                              players={homeTeamPlayers}
+                              value={selectedHomeGoalPlayerId}
+                              onChange={(playerId) => handleGoalPlayerChange('home', playerId)}
+                              label="Jogador"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddGoal('home')}
+                            disabled={!formData.home_team_id || !selectedHomeGoalPlayerId}
+                            className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            title="Adicionar gol"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Time Visitante */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <div className="flex justify-between items-center mb-3">
+                          <h5 className="text-sm font-semibold text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h5>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {calculateTotalScore(formData.away_team_player_stats)} gol(s)
+                          </span>
+                        </div>
+                        <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                          {formData.away_team_player_stats.filter(stat => stat.goals && stat.goals > 0).map((stat) => {
+                            const player = awayTeamPlayers.find(p => p.id === stat.player_id);
+                            return (
+                              <div key={stat.player_id} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-700">{player?.name || 'Jogador desconhecido'}</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-bold text-green-600">{stat.goals} gol(s)</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveGoal('away', stat.player_id)}
+                                    className="p-1 text-red-600 hover:text-red-900"
+                                    title="Remover gol(s)"
+                                  >
+                                    <TrashIcon className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <PlayerAutocomplete
+                              players={awayTeamPlayers}
+                              value={selectedAwayGoalPlayerId}
+                              onChange={(playerId) => handleGoalPlayerChange('away', playerId)}
+                              label="Jogador"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddGoal('away')}
+                            disabled={!formData.away_team_id || !selectedAwayGoalPlayerId}
+                            className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            title="Adicionar gol"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção 3: Cartões */}
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">🟨 Cartões</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Amarelos Casa</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.home_yellow_cards ?? ''}
+                          onChange={(e) => setFormData({ ...formData, home_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Vermelhos Casa</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.home_red_cards ?? ''}
+                          onChange={(e) => setFormData({ ...formData, home_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Amarelos Visitante</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.away_yellow_cards ?? ''}
+                          onChange={(e) => setFormData({ ...formData, away_yellow_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Vermelhos Visitante</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.away_red_cards ?? ''}
+                          onChange={(e) => setFormData({ ...formData, away_red_cards: e.target.value === '' ? undefined : Number(e.target.value) })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Novo contêiner para Informações da Partida e Transmissão */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Seção 4: Informações da Partida */}
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">📋 Informações da Partida</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700">
+                          Competição
+                        </label>
+                        <select
+                          required
+                          value={formData.competition_id}
+                          onChange={(e) => {
+                            const newCompetitionId = e.target.value;
+                            setFormData({
+                              ...formData,
+                              competition_id: newCompetitionId,
+                              round_id: '',
+                              group_name: '',
+                              phase: '',
+                            });
+                            if (newCompetitionId) {
+                              fetchRoundsByCompetition(newCompetitionId);
+                            } else {
+                              setAvailableRounds([]);
+                            }
+                          }}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                        >
+                          <option value="">Selecione...</option>
+                          {Array.isArray(competitions) && competitions.map((comp) => (
+                            <option key={comp.id} value={comp.id}>{comp.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Rodada</label>
+                        <div className="space-y-2">
+                          <select
+                            value={formData.round_id}
+                            onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                            disabled={!formData.competition_id || availableRounds.length === 0}
+                          >
+                            <option value="">Selecione uma rodada existente...</option>
+                            {Array.isArray(availableRounds) && availableRounds.map((round) => (
+                              <option key={round.id} value={round.id}>{round.name}</option>
+                            ))}
+                          </select>
+                          <div className="text-center text-sm text-gray-500">ou</div>
+                          <input
+                            type="text"
+                            value={formData.round_name || ''}
+                            onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                            placeholder="Digite o nome da nova rodada (ex: Rodada 13)"
+                          />
+                        </div>
+                        {!formData.competition_id && (
+                          <p className="mt-1 text-sm text-gray-500">Selecione uma competição primeiro</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Grupo</label>
+                        <select
+                          value={formData.group_name}
+                          onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                          disabled={!formData.competition_id}
+                        >
+                          <option value="">Selecione o grupo</option>
+                          {availableGroupsForModal.map((group) => (
+                            <option key={group} value={group}>
+                              Grupo {group}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção 5: Transmissão */}
+                  <div className="bg-indigo-50 p-4 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">📺 Transmissão</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <ChannelMultiSelect
+                          channels={channels}
+                          selectedIds={formData.channel_ids}
+                          onChange={(ids) => setFormData({ ...formData, channel_ids: ids })}
+                          label="Canais de Transmissão"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="broadcast_channels" className="block text-sm font-medium text-gray-700">LINK direto para transmissão</label>
+                        <input
+                          type="text"
+                          name="broadcast_channels"
+                          id="broadcast_channels"
+                          value={formData.broadcast_channels}
+                          onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Campos para a segunda mão (apenas se 'Criar Confronto de Ida e Volta' estiver marcado e não estiver editando) */}
                 {createTwoLegTie && !editingMatch && (
-                  <div className="mt-8 px-4 py-5 sm:p-6 bg-white shadow sm:rounded-lg">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">Dados da Segunda Mão</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">🔄 Dados da Segunda Mão</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-900">Data e Hora da Volta</label>
+                        <label className="block text-sm font-medium text-gray-700">📅 Data e Hora da Volta</label>
                         <input
                           type="datetime-local"
                           required
                           value={formData.match_date_second_leg}
                           onChange={(e) => setFormData({ ...formData, match_date_second_leg: e.target.value })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900">Estádio da Volta</label>
-                        <select
-                          value={(formData.stadium_id_second_leg ?? '') as string}
-                          onChange={(e) => setFormData({ ...formData, stadium_id_second_leg: e.target.value })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                        >
-                          <option value="">Selecione o estádio</option>
-                          {Array.isArray(stadiums) && stadiums.length > 0 ? (
-                            stadiums.map((stadium) => (
-                              stadium && stadium.id && <option key={stadium.id} value={stadium.id.toString()}>
-                                {stadium.name}{stadium.city ? ` (${stadium.city})` : ''}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="" disabled>Nenhum estádio disponível</option>
-                          )}
-                        </select>
+                      <div className="flex items-end">
+                        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                          <strong>🔄 Times na volta:</strong><br/>
+                          <span className="text-blue-600">Mandante:</span> {teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Selecione time visitante'}<br/>
+                          <span className="text-red-600">Visitante:</span> {teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Selecione time da casa'}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
-                
-                {/* Adicionado: Campo Estádio (para partidas únicas) */}
-                {!createTwoLegTie && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900">Estádio</label>
-                    <select
-                      id="stadium_id"
-                      value={formData.stadium_id || ''}
-                      onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    >
-                      <option value="">Selecione o estádio</option>
-                      {Array.isArray(stadiums) && stadiums.length > 0 ? (
-                        stadiums.map((stadium) => (
-                          stadium && stadium.id && <option key={stadium.id} value={stadium.id}>
-                            {stadium.name}{stadium.city ? ` (${stadium.city})` : ''}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>Nenhum estádio disponível</option>
-                      )}
-                    </select>
-                  </div>
-                )}
+
                 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
@@ -2113,7 +2150,12 @@ export default function MatchesManager() {
                     type="submit"
                     className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
                   >
-                    {editingMatch ? 'Atualizar' : 'Criar'}
+                    {editingMatch 
+                      ? 'Atualizar Jogo' 
+                      : createTwoLegTie 
+                        ? '�� Criar Ida e Volta' 
+                        : 'Criar Jogo'
+                    }
                   </button>
                 </div>
               </form>
