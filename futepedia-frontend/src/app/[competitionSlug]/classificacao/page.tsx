@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { StandingsTable } from '@/components/StandingsTable';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getTeamLogoUrl } from '@/lib/cdn';
 import { RoundNavigator } from '@/components/RoundNavigator';
-import { TournamentBracket } from '@/components/TournamentBracket';
+import { createKnockoutTies, isKnockoutCompetition, shouldShowBracket } from '@/lib/competition-utils';
 import { Match } from '@/types/match';
-import { getApiUrl } from '@/lib/config';
-import { getTeamLogoUrl } from '@/lib/cdn-simple';
-import { createKnockoutTies } from '@/lib/competition-utils';
 
-// Tipos
+// Interfaces
 interface Competition {
   id: number;
   name: string;
@@ -44,7 +42,9 @@ interface Round {
   round_number: number;
 }
 
-// Função para formatar a data (mesma da página de jogos)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Função para formatar a data
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -56,10 +56,8 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Função para buscar dados (similar à página de jogos)
+// Função para buscar os dados no servidor
 async function getClassificationData(slug: string): Promise<{ competition: Competition, standings: Standing[], matches: Match[], rounds: Round[] }> {
-  const API_URL = getApiUrl();
-  
   // 1. Buscar detalhes da competição
   const competitionResponse = await fetch(`${API_URL}/competitions/slug/${slug}`, { cache: 'no-store' });
   if (!competitionResponse.ok) throw new Error('Competição não encontrada');
@@ -78,7 +76,7 @@ async function getClassificationData(slug: string): Promise<{ competition: Compe
       roundsData = await roundsResponse.json();
     }
   } catch (err) {
-    console.warn('Erro ao carregar rodadas para a página de classificação:', err);
+    console.warn('Erro ao carregar rodadas:', err);
   }
 
   // 4. Buscar as partidas para cada rodada
@@ -108,30 +106,30 @@ async function getClassificationData(slug: string): Promise<{ competition: Compe
   return { competition, standings, matches: allMatches, rounds: roundsData };
 }
 
-export default function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { competitionSlug } = params;
+
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [standings, setStandings] = useState<Standing[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
-  
-  // Estados para navegação de jogos (igual à página de jogos)
-  const [currentRoundId, setCurrentRoundId] = useState<number | null>(null);
-  const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-        setLoading(true);
+      setIsLoading(true);
       setError(null);
       try {
-        const data = await getClassificationData(params.competitionSlug);
+        const data = await getClassificationData(competitionSlug);
         setCompetition(data.competition);
         setStandings(data.standings);
         setMatches(data.matches);
         setRounds(data.rounds);
-    
-        // Encontrar a rodada com a data mais atual (igual à página de jogos)
+
+        // Encontrar a rodada com a data mais atual (mais próxima da data atual)
         const filteredRounds = data.rounds.filter(round => typeof round.round_number === 'number');
         let initialRound: Round | null = null;
         
@@ -140,10 +138,12 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           let closestRound: Round | null = null;
           let smallestTimeDiff = Infinity;
           
+          // Para cada rodada, encontrar a data mais próxima da atual
           for (const round of filteredRounds) {
             const roundMatches = data.matches.filter(match => match.round?.id === round.id);
             
             if (roundMatches.length > 0) {
+              // Encontrar a data mais próxima da atual nesta rodada
               for (const match of roundMatches) {
                 if (match.match_date) {
                   const matchDate = new Date(match.match_date);
@@ -158,31 +158,48 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
             }
           }
           
+          // Se não encontrou nenhuma rodada com datas, usar a última rodada como fallback
           initialRound = closestRound || filteredRounds.reduce((prev, current) => 
             (prev.round_number > current.round_number) ? prev : current
           );
         }
 
-        if (initialRound) {
+        const roundIdFromUrl = searchParams.get('roundId');
+        if (roundIdFromUrl) {
+          const parsedRoundId = parseInt(roundIdFromUrl);
+          const roundFromUrl = data.rounds.find(r => r.id === parsedRoundId);
+          if (roundFromUrl) {
+            setCurrentRoundId(roundFromUrl.id);
+            setCurrentRoundNumber(roundFromUrl.round_number);
+          } else if (initialRound) {
+            setCurrentRoundId(initialRound.id);
+            setCurrentRoundNumber(initialRound.round_number);
+          }
+        } else if (initialRound) {
           setCurrentRoundId(initialRound.id);
           setCurrentRoundNumber(initialRound.round_number);
-              }
+        }
 
       } catch (err: any) {
         console.error('Erro ao buscar dados da classificação:', err);
         setError(err.message || 'Erro ao carregar dados.');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [params.competitionSlug]);
+  }, [competitionSlug]);
 
-  // Lógica para navegação de rodadas (igual à página de jogos)
+  // Estado para a rodada atualmente selecionada
+  const [currentRoundId, setCurrentRoundId] = useState<number | null>(null);
+  const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(null);
+
+  // Lógica para navegação de rodadas
   const handleRoundChange = (roundId: number, roundNumber: number) => {
     setCurrentRoundId(roundId);
     setCurrentRoundNumber(roundNumber);
+    router.push(`/${competitionSlug}/classificacao?roundId=${roundId}`);
   };
 
   // Filtrar as partidas pela rodada selecionada
@@ -190,7 +207,7 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     ? matches.filter(match => match.round?.id === currentRoundId) 
     : matches;
 
-  // Agrupar classificação por grupos
+  // Agrupar classificação por grupo
   const standingsByGroup = standings.reduce((acc, standing) => {
     const groupName = standing.group_name || 'Classificação Geral';
     if (!acc[groupName]) {
@@ -200,53 +217,26 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
     return acc;
   }, {} as Record<string, Standing[]>);
 
-  // Detectar se é fase de mata-mata
-  const isKnockoutPhase = (phase: string) => {
-    const knockoutPhases = [
-      'Oitavas de Final', 'Oitavas', 
-      'Quartas de Final', 'Quartas',
-      'Semifinal', 'Semifinais',
-      'Final', 'Disputa do 3º lugar',
-      'Terceira Fase', 'Primeira Fase'
-    ];
-    return knockoutPhases.some(p => phase.toLowerCase().includes(p.toLowerCase()));
-  };
-
-  const isKnockoutCompetition = (competitionType: string) => {
-    return competitionType === 'mata_mata' || 
-           competitionType === 'grupos_e_mata_mata' || 
-           competitionType === 'copa';
-  };
-
-  // Filtrar partidas de mata-mata
-  const knockoutMatches = matches.filter(match => {
-    if (competition && isKnockoutCompetition(competition.type)) {
-      return match.phase && isKnockoutPhase(match.phase);
-    }
-    return match.phase && isKnockoutPhase(match.phase);
-  });
-
-  // Criar os confrontos (ties) a partir das partidas de mata-mata
-  const knockoutTies = createKnockoutTies(knockoutMatches);
-
-  const shouldShowBracket = knockoutTies.length > 0 && 
-    (competition && (isKnockoutCompetition(competition.type) || knockoutMatches.length > 0));
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <p className="text-xl text-gray-600">Carregando classificação...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600 text-center">
-          <h2 className="text-2xl font-bold mb-2">Erro ao carregar dados</h2>
-          <p>{error}</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <p className="text-xl text-red-600">Erro: {error}</p>
+      </div>
+    );
+  }
+
+  if (!competition) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <p className="text-xl text-gray-600">Competição não encontrada.</p>
       </div>
     );
   }
@@ -254,16 +244,6 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-4">
-
-        {/* Mostrar chaveamento se for mata-mata */}
-        {shouldShowBracket && (
-          <div className="mb-8">
-            <TournamentBracket 
-              ties={knockoutTies} 
-              competitionName={competition?.name}
-            />
-          </div>
-        )}
 
         {/* Layout baseado no tipo de competição */}
         {Object.keys(standingsByGroup).length > 1 ? (
@@ -339,26 +319,24 @@ export default function ClassificacaoPage({ params }: { params: { competitionSlu
           </div>
         )}
 
-        {/* Seção adicional para estatísticas se não for mata-mata */}
-        {!shouldShowBracket && (
-          <div className="mt-8 bg-white rounded-lg p-6 shadow-md border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Estatísticas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
-                <div className="text-sm text-gray-600">Times</div>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{rounds.length}</div>
-                <div className="text-sm text-gray-600">Rodadas</div>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{matches.length}</div>
-                <div className="text-sm text-gray-600">Partidas</div>
-              </div>
+        {/* Seção adicional para estatísticas */}
+        <div className="mt-8 bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Estatísticas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
+              <div className="text-sm text-gray-600">Times</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{rounds.length}</div>
+              <div className="text-sm text-gray-600">Rodadas</div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{matches.length}</div>
+              <div className="text-sm text-gray-600">Partidas</div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -426,7 +404,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
         <div className="flex flex-wrap gap-1 justify-center mt-2">
           {/* Canais de Transmissão (apenas nome clicável) */}
           {match.broadcasts && match.broadcasts.length > 0 && (
-            match.broadcasts.map((broadcast) => (
+            match.broadcasts.map((broadcast: any) => (
               <div key={broadcast.channel.id} className="flex items-center gap-1">
                 {broadcast.channel.channel_link ? (
                   <a 
@@ -449,7 +427,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           )}
           {/* Botões 'ASSISTIR' da coluna broadcast_channels */}
           {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
-            match.broadcast_channels.split(',').map((link, index) => {
+            match.broadcast_channels.split(',').map((link: string, index: number) => {
               const url = link.startsWith('http') ? link : `https://${link}`;
               return (
                 <a 
@@ -465,7 +443,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             })
           )}
           {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
-            match.broadcast_channels.map((link, index) => {
+            match.broadcast_channels.map((link: string, index: number) => {
               const url = link.startsWith('http') ? link : `https://${link}`;
               return (
                 <a 
@@ -485,3 +463,83 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
     </div>
   );
 };
+
+// Componente da tabela de classificação
+interface StandingsTableProps {
+  standings: Standing[];
+}
+
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
+  return (
+    <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">POS</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIME</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">J</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">V</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">E</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">D</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GP</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GC</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">SG</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">FORM</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {standings.map((standing, index) => (
+              <tr key={standing.team.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-900">{standing.position}</span>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <img 
+                      src={getTeamLogoUrl(standing.team.logo_url)} 
+                      alt={standing.team.name} 
+                      className="h-8 w-8 object-contain mr-3"
+                    />
+                    <span className="text-sm font-medium text-gray-900">{standing.team.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-center">
+                  <span className="text-sm font-bold text-gray-900">{standing.points}</span>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.played}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-green-600">{standing.won}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-yellow-600">{standing.drawn}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-red-600">{standing.lost}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goals_for}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goals_against}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goal_difference}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-center">
+                  {standing.form && (
+                    <div className="flex justify-center space-x-1">
+                      {standing.form.split('').slice(-5).map((result, idx) => (
+                        <span
+                          key={idx}
+                          className={`inline-block w-4 h-4 rounded-full text-xs text-white font-bold flex items-center justify-center ${
+                            result === 'V' ? 'bg-green-500' :
+                            result === 'E' ? 'bg-yellow-500' :
+                            result === 'D' ? 'bg-red-500' : 'bg-gray-400'
+                          }`}
+                        >
+                          {result}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default ClassificacaoPage;

@@ -113,13 +113,25 @@ export const createKnockoutTies = (matches: Match[]): KnockoutTie[] => {
   const tiesMap = new Map<string, KnockoutTie>();
 
   matches.forEach(match => {
-    if (!match.phase) return; // Ignora partidas sem fase definida
+    // Aceitar partidas mesmo sem fase definida, usar "Mata-mata" como padrão
+    const phase = match.phase || 'Mata-mata';
+    
+    // Verificar se a partida tem tie_id ou leg definidos
+    const tieId = (match as any).tie_id || (match as any).leg_id;
+    const leg = (match as any).leg;
+    
+    let confrontoId: string;
+    
+    if (tieId) {
+      // Se tem tie_id, usar ele como base
+      confrontoId = `${phase}-${tieId}`;
+    } else {
+      // Gerar um ID de confronto baseado nos times e fase, para agrupar jogos de ida e volta
+      const teamPairKey = [match.home_team.id, match.away_team.id].sort().join('-');
+      confrontoId = `${phase}-${teamPairKey}`;
+    }
 
-    // Gerar um ID de confronto baseado nos times e fase, para agrupar jogos de ida e volta
-    const teamPairKey = [match.home_team.id, match.away_team.id].sort().join('-');
-    const tieId = `${match.phase}-${teamPairKey}`;
-
-    let tie = tiesMap.get(tieId);
+    let tie = tiesMap.get(confrontoId);
 
     if (!tie) {
       let tieStatus: KnockoutTie['status'] = 'SCHEDULED'; // Default to SCHEDULED
@@ -129,14 +141,14 @@ export const createKnockoutTies = (matches: Match[]): KnockoutTie[] => {
       }
 
       tie = {
-        id: tieId,
-        phase: match.phase,
+        id: confrontoId,
+        phase: phase,
         home_team: match.home_team,
         away_team: match.away_team,
         leg1: match,
         status: tieStatus,
       };
-      tiesMap.set(tieId, tie as KnockoutTie); // Casting here to help TypeScript
+      tiesMap.set(confrontoId, tie as KnockoutTie);
     } else {
       // Se já existe um confronto, esta é a partida de volta
       tie.leg2 = match;

@@ -1646,16 +1646,43 @@ export default function MatchesManager() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-4 mx-auto p-6 border w-[95vw] max-w-8xl shadow-lg rounded-md bg-white max-h-[95vh] overflow-y-auto">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                {editingMatch ? 'Editar Jogo' : 'Adicionar Jogo'}
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative top-2 mx-auto p-4 border w-[95vw] max-w-8xl shadow-lg rounded-md bg-white max-h-[96vh] overflow-y-auto">
+            <div className="mt-1">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-base font-inter-medium text-gray-900 tracking-tight">
+                  {editingMatch ? 'Editar Jogo' : 'Adicionar Jogo'}
+                </h3>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false)
+                      setEditingMatch(null)
+                      resetForm()
+                    }}
+                    className="rounded-md border border-gray-300 bg-white dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 dark:hover:bg-slate-600"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    form="match-form"
+                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-500"
+                  >
+                    {editingMatch 
+                      ? 'Atualizar Jogo' 
+                      : createTwoLegTie 
+                        ? '🔄 Criar Ida e Volta' 
+                        : 'Criar Jogo'
+                    }
+                  </button>
+                </div>
+              </div>
+              <form id="match-form" onSubmit={handleSubmit} className="space-y-3">
                 
                 {/* Checkbox para Ida e Volta - TOPO DO FORMULÁRIO */}
                 {!editingMatch && (
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="bg-blue-50 p-2 rounded-lg border border-blue-200">
                     <div className="flex items-center">
                       <input
                         id="create_two_leg_tie"
@@ -1672,12 +1699,12 @@ export default function MatchesManager() {
                         }}
                         className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
-                      <label htmlFor="create_two_leg_tie" className="ml-3 block text-sm font-semibold text-blue-800">
+                      <label htmlFor="create_two_leg_tie" className="ml-3 block text-xs font-inter-medium text-blue-800">
                         🏆 Criar Confronto de Ida e Volta (Primeira + Segunda Mão)
                       </label>
                     </div>
                     {createTwoLegTie && (
-                      <div className="mt-3 text-xs text-blue-700 bg-blue-100 p-3 rounded border border-blue-200">
+                      <div className="mt-2 text-xs text-blue-700 bg-blue-100 p-2 rounded border border-blue-200">
                         ℹ️ <strong>Será criado automaticamente:</strong> Jogo de ida e volta com times invertidos na segunda mão.
                       </div>
                     )}
@@ -1685,10 +1712,10 @@ export default function MatchesManager() {
                 )}
 
                                  {/* Seção 1: Times e Placares - Layout Horizontal */}
-                 <div className="bg-gray-50 p-4 rounded-lg">
+                 <div className="bg-gray-50 p-2 rounded-lg">
                    {/* Times e Placares na mesma linha */}
-                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end mb-4">
-                     <div className="col-span-full md:col-span-2">
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-x-2 gap-y-4 items-end mb-2">
+                     <div className="lg:col-span-2">
                        <TeamAutocomplete
                          teams={teams}
                          value={formData.home_team_id}
@@ -1699,7 +1726,7 @@ export default function MatchesManager() {
                          label="Time da Casa"
                        />
                      </div>
-                     <div className="col-span-full md:col-span-1">
+                     <div className="lg:col-span-1">
                        <label className="block text-xs font-medium text-gray-600">Placar Casa</label>
                        <input
                          type="number"
@@ -1709,10 +1736,7 @@ export default function MatchesManager() {
                          title="Placar do Time da Casa"
                        />
                      </div>
-                     <div className="col-span-full md:col-span-1 flex items-center justify-center sm:hidden">
-                       <span className="text-2xl font-bold text-gray-400 mt-5">×</span>
-                     </div>
-                     <div className="col-span-full md:col-span-1">
+                     <div className="lg:col-span-1">
                        <label className="block text-xs font-medium text-gray-600">Placar Visitante</label>
                        <input
                          type="number"
@@ -1722,7 +1746,7 @@ export default function MatchesManager() {
                          title="Placar do Time Visitante"
                        />
                      </div>
-                     <div className="col-span-full md:col-span-2">
+                     <div className="lg:col-span-2">
                        <TeamAutocomplete
                          teams={teams}
                          value={formData.away_team_id}
@@ -1733,7 +1757,17 @@ export default function MatchesManager() {
                          label="Time Visitante"
                        />
                      </div>
-                     <div className="col-span-full md:col-span-2">
+                     <div className="lg:col-span-1 flex justify-center">
+                       <button
+                         type="button"
+                         onClick={syncScoreWithPlayerGoals}
+                         className="px-2 py-2 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-12 h-10"
+                         title="Sincronizar placares com gols dos jogadores"
+                       >
+                         🔄
+                       </button>
+                     </div>
+                     <div className="lg:col-span-2">
                        <label className="block text-sm font-medium text-gray-700">Data e Hora</label>
                        <input
                          type="datetime-local"
@@ -1743,18 +1777,8 @@ export default function MatchesManager() {
                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                        />
                      </div>
-                     <div className="col-span-full md:col-span-1">
-                       <button
-                         type="button"
-                         onClick={syncScoreWithPlayerGoals}
-                         className="w-full px-2 py-2 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                         title="Sincronizar placares com gols dos jogadores"
-                       >
-                         🔄 Sync
-                       </button>
-                     </div>
                      {/* Novo local para o estádio */}
-                     <div className="col-span-full md:col-span-2">
+                     <div className="lg:col-span-2">
                        <label className="block text-sm font-medium text-gray-700">Estádio da Partida</label>
                        <select
                          id="stadium_id"
@@ -1774,7 +1798,7 @@ export default function MatchesManager() {
                          )}
                        </select>
                      </div>
-                     <div className="col-span-full md:col-span-1">
+                     <div className="lg:col-span-1">
                        <label className="block text-sm font-medium text-gray-700">Status</label>
                        <select
                          value={formData.status}
@@ -1841,12 +1865,12 @@ export default function MatchesManager() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Seção 2: Gols dos Jogadores */}
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="text-md font-medium text-gray-900 mb-4">⚽ Registrar Gols dos Jogadores</h4>
+                    <h4 className="text-xs font-inter-medium text-gray-800 mb-3 uppercase tracking-wide">⚽ Registrar Gols dos Jogadores</h4>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Time da Casa */}
                       <div className="bg-white p-4 rounded-lg border">
                         <div className="flex justify-between items-center mb-3">
-                          <h5 className="text-sm font-semibold text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h5>
+                          <h5 className="text-xs font-inter-medium text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.home_team_id)?.name || 'Time da Casa'}</h5>
                           <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                             {calculateTotalScore(formData.home_team_player_stats)} gol(s)
                           </span>
@@ -1896,7 +1920,7 @@ export default function MatchesManager() {
                       {/* Time Visitante */}
                       <div className="bg-white p-4 rounded-lg border">
                         <div className="flex justify-between items-center mb-3">
-                          <h5 className="text-sm font-semibold text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h5>
+                          <h5 className="text-xs font-inter-medium text-gray-900">{Array.isArray(teams) && teams.find(t => t.id.toString() === formData.away_team_id)?.name || 'Time Visitante'}</h5>
                           <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                             {calculateTotalScore(formData.away_team_player_stats)} gol(s)
                           </span>
@@ -1945,10 +1969,10 @@ export default function MatchesManager() {
                     </div>
                   </div>
 
-                  {/* Seção 3: Cartões */}
+                  {/* Seção 3: Cartões e Transmissão */}
                   <div className="bg-yellow-50 p-4 rounded-lg">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">🟨 Cartões</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <h4 className="text-xs font-inter-medium text-gray-800 mb-3 uppercase tracking-wide">🟨 Cartões</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Amarelos Casa</label>
                         <input
@@ -1994,115 +2018,122 @@ export default function MatchesManager() {
                         />
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Novo contêiner para Informações da Partida e Transmissão */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Seção 4: Informações da Partida */}
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">📋 Informações da Partida</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700">
-                          Competição
-                        </label>
-                        <select
-                          required
-                          value={formData.competition_id}
-                          onChange={(e) => {
-                            const newCompetitionId = e.target.value;
-                            setFormData({
-                              ...formData,
-                              competition_id: newCompetitionId,
-                              round_id: '',
-                              group_name: '',
-                              phase: '',
-                            });
-                            if (newCompetitionId) {
-                              fetchRoundsByCompetition(newCompetitionId);
-                            } else {
-                              setAvailableRounds([]);
-                            }
-                          }}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                        >
-                          <option value="">Selecione...</option>
-                          {Array.isArray(competitions) && competitions.map((comp) => (
-                            <option key={comp.id} value={comp.id}>{comp.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Rodada</label>
-                        <div className="space-y-2">
-                          <select
-                            value={formData.round_id}
-                            onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                            disabled={!formData.competition_id || availableRounds.length === 0}
-                          >
-                            <option value="">Selecione uma rodada existente...</option>
-                            {Array.isArray(availableRounds) && availableRounds.map((round) => (
-                              <option key={round.id} value={round.id}>{round.name}</option>
-                            ))}
-                          </select>
-                          <div className="text-center text-sm text-gray-500">ou</div>
-                          <input
-                            type="text"
-                            value={formData.round_name || ''}
-                            onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                            placeholder="Digite o nome da nova rodada (ex: Rodada 13)"
+                    
+                    {/* Transmissão dentro da seção de cartões */}
+                    <div className="border-t border-yellow-200 pt-4">
+                      <h5 className="text-sm font-medium text-gray-900 mb-3">📺 Transmissão</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <ChannelMultiSelect
+                            channels={channels}
+                            selectedIds={formData.channel_ids}
+                            onChange={(ids) => setFormData({ ...formData, channel_ids: ids })}
+                            label="Canais de Transmissão"
                           />
                         </div>
-                        {!formData.competition_id && (
-                          <p className="mt-1 text-sm text-gray-500">Selecione uma competição primeiro</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Grupo</label>
-                        <select
-                          value={formData.group_name}
-                          onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 placeholder-gray-500 px-4 py-3"
-                          disabled={!formData.competition_id}
-                        >
-                          <option value="">Selecione o grupo</option>
-                          {availableGroupsForModal.map((group) => (
-                            <option key={group} value={group}>
-                              Grupo {group}
-                            </option>
-                          ))}
-                        </select>
+                        <div>
+                          <label htmlFor="broadcast_channels" className="block text-sm font-medium text-gray-700">LINK direto para transmissão</label>
+                          <input
+                            type="text"
+                            name="broadcast_channels"
+                            id="broadcast_channels"
+                            value={formData.broadcast_channels}
+                            onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="https://..."
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Seção 5: Transmissão */}
-                  <div className="bg-indigo-50 p-4 rounded-lg">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">📺 Transmissão</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <ChannelMultiSelect
-                          channels={channels}
-                          selectedIds={formData.channel_ids}
-                          onChange={(ids) => setFormData({ ...formData, channel_ids: ids })}
-                          label="Canais de Transmissão"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="broadcast_channels" className="block text-sm font-medium text-gray-700">LINK direto para transmissão</label>
+                {/* Seção 4: Informações da Partida - Linha completa */}
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <h4 className="text-xs font-inter-medium text-gray-800 mb-2 uppercase tracking-wide">📋 Informações da Partida</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label htmlFor="competition_id" className="block text-xs font-inter-medium text-gray-600 mb-1">
+                        Competição
+                      </label>
+                      <select
+                        required
+                        value={formData.competition_id}
+                        onChange={(e) => {
+                          const newCompetitionId = e.target.value;
+                          setFormData({
+                            ...formData,
+                            competition_id: newCompetitionId,
+                            round_id: '',
+                            group_name: '',
+                            phase: '',
+                          });
+                          if (newCompetitionId) {
+                            fetchRoundsByCompetition(newCompetitionId);
+                          } else {
+                            setAvailableRounds([]);
+                          }
+                        }}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                      >
+                        <option value="">Selecione...</option>
+                        {Array.isArray(competitions) && competitions.map((comp) => (
+                          <option key={comp.id} value={comp.id}>{comp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Rodada</label>
+                      <div className="space-y-1">
+                        <select
+                          value={formData.round_id}
+                          onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                          disabled={!formData.competition_id || availableRounds.length === 0}
+                        >
+                          <option value="">Selecione rodada...</option>
+                          {Array.isArray(availableRounds) && availableRounds.map((round) => (
+                            <option key={round.id} value={round.id}>{round.name}</option>
+                          ))}
+                        </select>
+                        <div className="text-center text-xs text-gray-400">ou</div>
                         <input
                           type="text"
-                          name="broadcast_channels"
-                          id="broadcast_channels"
-                          value={formData.broadcast_channels}
-                          onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          placeholder="https://..."
+                          value={formData.round_name || ''}
+                          onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                          placeholder="Nova rodada (ex: Rodada 13)"
                         />
                       </div>
+                      {!formData.competition_id && (
+                        <p className="mt-1 text-xs text-gray-400">Selecione competição primeiro</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Grupo</label>
+                      <select
+                        value={formData.group_name}
+                        onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                        disabled={!formData.competition_id}
+                      >
+                        <option value="">Selecione grupo</option>
+                        {availableGroupsForModal.map((group) => (
+                          <option key={group} value={group}>
+                            Grupo {group}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Fase</label>
+                      <input
+                        type="text"
+                        value={formData.phase}
+                        onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                        placeholder="Ex: Oitavas, Quartas, Semifinal, Final"
+                      />
                     </div>
                   </div>
                 </div>
@@ -2134,30 +2165,6 @@ export default function MatchesManager() {
                 )}
 
                 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false)
-                      setEditingMatch(null)
-                      resetForm()
-                    }}
-                    className="rounded-md border border-gray-300 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 dark:hover:bg-slate-600"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
-                  >
-                    {editingMatch 
-                      ? 'Atualizar Jogo' 
-                      : createTwoLegTie 
-                        ? '�� Criar Ida e Volta' 
-                        : 'Criar Jogo'
-                    }
-                  </button>
-                </div>
               </form>
             </div>
           </div>

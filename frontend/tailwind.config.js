@@ -20,7 +20,7 @@ module.exports = {
         'text-muted': 'var(--text-muted)',
       },
       fontFamily: {
-        sans: ['var(--font-sora)', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
