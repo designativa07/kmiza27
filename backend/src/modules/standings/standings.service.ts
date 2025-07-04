@@ -408,9 +408,10 @@ export class StandingsService {
       .leftJoinAndSelect('match.round', 'round')
       .where('match.competition_id = :competitionId', { competitionId })
       .andWhere('match.round IS NOT NULL')
-      .select(['round.id', 'round.name', 'round.round_number', 'round.phase', 'round.is_current'])
-      .groupBy('round.id, round.name, round.round_number, round.phase, round.is_current')
-      .orderBy('round.round_number', 'ASC')
+      .select(['round.id', 'round.name', 'round.round_number', 'round.phase', 'round.is_current', 'round.display_order'])
+      .groupBy('round.id, round.name, round.round_number, round.phase, round.is_current, round.display_order')
+      .orderBy('round.display_order', 'ASC')
+      .addOrderBy('round.round_number', 'ASC')
       .getRawMany();
 
     return rounds.map(round => ({
@@ -419,6 +420,7 @@ export class StandingsService {
       round_number: round.round_round_number,
       phase: round.round_phase,
       is_current: round.round_is_current,
+      display_order: round.round_display_order,
     }));
   }
 
@@ -448,8 +450,9 @@ export class StandingsService {
         'MIN(match.match_date) as min_date',
         'MAX(match.match_date) as max_date'
       ])
-      .groupBy('round.id, round.name, round.round_number, round.phase')
-      .orderBy('round.round_number', 'ASC')
+      .groupBy('round.id, round.name, round.round_number, round.phase, round.display_order')
+      .orderBy('round.display_order', 'ASC')
+      .addOrderBy('round.round_number', 'ASC')
       .getRawMany() as RoundWithDate[];
 
     if (roundsWithDates && roundsWithDates.length > 0) {
@@ -484,9 +487,10 @@ export class StandingsService {
       .leftJoinAndSelect('match.round', 'round')
       .where('match.competition_id = :competitionId', { competitionId })
       .andWhere('match.round IS NOT NULL')
-      .select(['round.id', 'round.name', 'round.round_number', 'round.phase'])
-      .groupBy('round.id, round.name, round.round_number, round.phase')
-      .orderBy('round.round_number', 'DESC')
+      .select(['round.id', 'round.name', 'round.round_number', 'round.phase', 'round.display_order'])
+      .groupBy('round.id, round.name, round.round_number, round.phase, round.display_order')
+      .orderBy('round.display_order', 'DESC')
+      .addOrderBy('round.round_number', 'DESC')
       .limit(1)
       .getRawOne();
 

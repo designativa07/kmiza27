@@ -525,7 +525,8 @@ export default function MatchesManager() {
     }
     
     try {
-      const response = await fetch(API_ENDPOINTS.standings.rounds(parseInt(competitionId)))
+      // Usar o novo endpoint do módulo de matches que retorna rodadas ordenadas por display_order
+      const response = await fetch(`${API_ENDPOINTS.matches.list().split('?')[0]}/competition/${competitionId}/rounds`)
       if (response.ok) {
         const rounds = await response.json()
         setAvailableRounds(rounds)
@@ -2142,7 +2143,7 @@ export default function MatchesManager() {
                 {createTwoLegTie && !editingMatch && (
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h4 className="text-md font-medium text-gray-900 mb-3">🔄 Dados da Segunda Mão</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">📅 Data e Hora da Volta</label>
                         <input
@@ -2152,6 +2153,22 @@ export default function MatchesManager() {
                           onChange={(e) => setFormData({ ...formData, match_date_second_leg: e.target.value })}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         />
+                      </div>
+                      <div>
+                        <label htmlFor="stadium_id_second_leg" className="block text-sm font-medium text-gray-700">🏟️ Estádio do Jogo de Volta</label>
+                        <select
+                          id="stadium_id_second_leg"
+                          value={formData.stadium_id_second_leg || ''}
+                          onChange={(e) => setFormData({ ...formData, stadium_id_second_leg: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        >
+                          <option value="">Selecionar estádio...</option>
+                          {Array.isArray(stadiums) && stadiums.map((stadium) => (
+                            <option key={stadium.id} value={stadium.id}>
+                              {stadium.name} {stadium.city ? `- ${stadium.city}` : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="flex items-end">
                         <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">

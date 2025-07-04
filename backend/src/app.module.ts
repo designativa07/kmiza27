@@ -50,6 +50,7 @@ import { PlayersModule } from './modules/players/players.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { CdnTransformInterceptor } from './interceptors/cdn-transform.interceptor';
 import { SearchModule } from './modules/search/search.module';
+import { RoundsModule } from './modules/rounds/rounds.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { SearchModule } from './modules/search/search.module';
     PlayersModule,
     CompetitionsModule,
     SearchModule,
+    RoundsModule,
   ],
   controllers: [AppController],
   providers: [

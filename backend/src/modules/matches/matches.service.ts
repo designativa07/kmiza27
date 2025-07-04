@@ -267,6 +267,14 @@ export class MatchesService {
     });
   }
 
+  async getRoundsByCompetition(competitionId: number): Promise<Round[]> {
+    return this.roundRepository.find({
+      where: { competition: { id: competitionId } },
+      relations: ['competition'],
+      order: { display_order: 'ASC', round_number: 'ASC' }
+    });
+  }
+
   async update(id: number, updateMatchDto: UpdateMatchDto): Promise<Match | null> {
     try {
       console.log('🔍 MatchesService.update - Atualizando match:', { id, updateMatchDto });

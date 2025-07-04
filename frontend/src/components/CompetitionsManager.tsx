@@ -5,6 +5,7 @@ import { PlusIcon, PencilIcon, TrashIcon, UsersIcon, PhotoIcon } from '@heroicon
 import { API_ENDPOINTS } from '../config/api'
 import { getCompetitionLogoUrl, handleImageError } from '../lib/cdn'
 import CompetitionTeamsManager from './CompetitionTeamsManager'
+import RoundsManager from './RoundsManager'
 
 interface Competition {
   id: number
@@ -15,6 +16,7 @@ interface Competition {
   country?: string
   logo_url?: string
   is_active: boolean
+  regulamento?: string
   created_at: string
   updated_at: string
 }
@@ -27,7 +29,8 @@ interface CompetitionFormData {
   season: string;
   country: string;
   is_active: boolean;
-  logo_url?: string; // Incluir logo_url aqui
+  logo_url?: string;
+  regulamento?: string;
 }
 
 export default function CompetitionsManager() {
@@ -36,6 +39,7 @@ export default function CompetitionsManager() {
   const [showModal, setShowModal] = useState(false)
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null)
   const [showTeamsManager, setShowTeamsManager] = useState<number | null>(null)
+  const [showRoundsManager, setShowRoundsManager] = useState<{ competitionId: number; competitionName: string; competitionType: string } | null>(null)
   
   // Usar a nova interface para o formData
   const [formData, setFormData] = useState<CompetitionFormData>({
@@ -108,7 +112,8 @@ export default function CompetitionsManager() {
       season: new Date().getFullYear().toString(),
       country: 'Brasil',
       is_active: true,
-      logo_url: ''
+      logo_url: '',
+      regulamento: ''
     })
   }
 
@@ -121,7 +126,8 @@ export default function CompetitionsManager() {
       season: competition.season,
       country: competition.country || 'Brasil',
       is_active: competition.is_active,
-      logo_url: competition.logo_url || ''
+      logo_url: competition.logo_url || '',
+      regulamento: competition.regulamento || ''
     })
     setShowModal(true)
   }
@@ -152,9 +158,11 @@ export default function CompetitionsManager() {
 
   const getTypeLabel = (type: string) => {
     const types = {
-      pontos_corridos: 'Pontos Corridos',
-      grupos_e_mata_mata: 'Copa com Grupos',
-      copa: 'Copa'
+      pontos_corridos: 'Campeonato',
+      grupos_e_mata_mata: 'Copa',
+      copa: 'Copa',
+      mata_mata: 'Torneio',
+      serie: 'Série C'
     }
     return types[type as keyof typeof types] || type
   }
@@ -232,6 +240,14 @@ export default function CompetitionsManager() {
                           onClick={() => setShowTeamsManager(competition.id)}
                           className="text-blue-600 hover:text-blue-900 mr-3" title="Gerenciar Times"
                         ><UsersIcon className="h-4 w-4" /></button>
+                        <button
+                          onClick={() => setShowRoundsManager({ 
+                            competitionId: competition.id, 
+                            competitionName: competition.name,
+                            competitionType: competition.type 
+                          })}
+                          className="text-green-600 hover:text-green-900 mr-3" title="Gerenciar Rodadas"
+                        ><PhotoIcon className="h-4 w-4" /></button>
                         <button onClick={() => handleEdit(competition)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><PencilIcon className="h-4 w-4" /></button>
                         <button onClick={() => handleDelete(competition.id)} className="text-red-600 hover:text-red-900" title="Excluir"><TrashIcon className="h-4 w-4" /></button>
                       </td>
@@ -284,9 +300,10 @@ export default function CompetitionsManager() {
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
                   required
                 >
-                  <option value="pontos_corridos">Pontos Corridos</option>
-                  <option value="grupos_e_mata_mata">Copa com Grupos</option>
-                  <option value="copa">Copa</option>
+                  <option value="pontos_corridos">Campeonato (Pontos Corridos)</option>
+                  <option value="grupos_e_mata_mata">Copa (Grupos + Mata-mata)</option>
+                  <option value="mata_mata">Torneio (Mata-mata)</option>
+                  <option value="serie">Série C (1ª Fase + Quadrangular)</option>
                 </select>
               </div>
               <div className="mb-4">
@@ -333,6 +350,21 @@ export default function CompetitionsManager() {
                   required
                 />
               </div>
+
+              {/* Campo Regulamento */}
+              <div className="mb-4">
+                <label htmlFor="regulamento" className="block text-sm font-medium text-gray-700">Regulamento</label>
+                <textarea
+                  name="regulamento"
+                  id="regulamento"
+                  rows={4}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.regulamento || ''}
+                  onChange={e => setFormData({ ...formData, regulamento: e.target.value })}
+                  placeholder="Ex: Os 20 participantes se enfrentam em turno único na primeira fase, totalizando 19 rodadas..."
+                />
+              </div>
+
               <div className="mb-4 flex items-center">
                 <input
                   type="checkbox"
@@ -369,6 +401,28 @@ export default function CompetitionsManager() {
           competitionId={showTeamsManager}
           onClose={() => setShowTeamsManager(null)}
         />
+      )}
+
+      {showRoundsManager && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border max-w-6xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium leading-6 text-gray-900">
+                Gerenciar Rodadas - {showRoundsManager.competitionName}
+              </h3>
+              <button
+                onClick={() => setShowRoundsManager(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <RoundsManager 
+              competitionId={showRoundsManager.competitionId} 
+              competitionType={showRoundsManager.competitionType}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

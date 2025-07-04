@@ -17,6 +17,9 @@ export class Round {
   @Column({ type: 'int', nullable: true })
   round_number: number;
 
+  @Column({ type: 'int', default: 0 })
+  display_order: number;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   phase: string;
 
