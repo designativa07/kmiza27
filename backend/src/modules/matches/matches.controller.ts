@@ -47,6 +47,18 @@ export class MatchesController {
     return res.json(matches);
   }
 
+  @Get('/competition/:competitionId/rounds')
+  async getRoundsByCompetition(@Param('competitionId') competitionId: string, @Res() res: Response) {
+    const rounds = await this.matchesService.getRoundsByCompetition(+competitionId);
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    return res.json(rounds);
+  }
+
   @Get()
   async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
     const pageNumber = parseInt(page, 10);

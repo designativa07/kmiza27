@@ -7,7 +7,8 @@ export enum CompetitionType {
   PONTOS_CORRIDOS = 'pontos_corridos',
   MATA_MATA = 'mata_mata',
   GRUPOS_E_MATA_MATA = 'grupos_e_mata_mata',
-  COPA = 'copa'
+  COPA = 'copa',
+  SERIE = 'serie'
 }
 
 @Entity('competitions')
@@ -42,6 +43,9 @@ export class Competition {
 
   @Column({ type: 'jsonb', nullable: true })
   rules: any;
+
+  @Column({ type: 'text', nullable: true })
+  regulamento: string;
 
   @CreateDateColumn()
   created_at: Date;
