@@ -31,12 +31,35 @@ export const isKnockoutPhase = (phase: string): boolean => {
 };
 
 /**
+ * Detectar se uma rodada específica é mata-mata baseada no nome da rodada e tipo da competição
+ */
+export const isRoundKnockout = (roundName: string, competitionType: string): boolean => {
+  // Para competições de pontos corridos puros, nunca é mata-mata
+  if (competitionType === 'pontos_corridos') {
+    return false;
+  }
+  
+  // Para competições mata-mata puras, sempre é mata-mata
+  if (competitionType === 'mata_mata') {
+    return true;
+  }
+  
+  // Para competições mistas (grupos + mata-mata), verificar pelo nome da rodada
+  if (competitionType === 'grupos_e_mata_mata' || competitionType === 'copa' || competitionType === 'serie') {
+    return isKnockoutPhase(roundName);
+  }
+  
+  return false;
+};
+
+/**
  * Detectar se uma competição é do tipo mata-mata pelo seu tipo
  */
 export const isKnockoutCompetition = (competitionType: string): boolean => {
   return competitionType === 'mata_mata' || 
          competitionType === 'grupos_e_mata_mata' || 
-         competitionType === 'copa';
+         competitionType === 'copa' ||
+         competitionType === 'serie';
 };
 
 /**

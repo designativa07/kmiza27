@@ -21,6 +21,7 @@ export interface Match {
   home_score_penalties?: number;
   away_score_penalties?: number;
   stadium?: Stadium;
+  is_knockout?: boolean;
 
   broadcasts?: {
     channel: {

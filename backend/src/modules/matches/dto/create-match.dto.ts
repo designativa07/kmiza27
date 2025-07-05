@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString, IsDateString, IsEnum, IsArray, IsOptional, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsDateString, IsEnum, IsArray, IsOptional, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MatchStatus } from '../../../entities/match.entity';
 import { MatchLeg } from '../../../entities/match.entity';
@@ -123,6 +123,10 @@ export class CreateMatchDto {
   @IsOptional()
   @IsNumber()
   qualified_team_id?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_knockout?: boolean;
 
   @IsOptional()
   @IsArray()
