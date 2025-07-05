@@ -120,6 +120,9 @@ export class Match {
   @Column({ type: 'int', nullable: true })
   qualified_team_id: number | null; // For foreign key relationship
 
+  @Column({ type: 'boolean', default: false })
+  is_knockout: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 

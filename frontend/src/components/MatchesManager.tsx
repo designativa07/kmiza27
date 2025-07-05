@@ -60,6 +60,7 @@ interface Match {
   tie_id?: string
   home_team_player_stats?: MatchPlayerStat[];
   away_team_player_stats?: MatchPlayerStat[];
+  is_knockout?: boolean;
 }
 
 interface Channel {
@@ -95,6 +96,7 @@ interface MatchFormData {
   stadium_id?: string | null; // Alterado para string | null
   home_team_player_stats: MatchPlayerStat[];
   away_team_player_stats: MatchPlayerStat[];
+  is_knockout?: boolean;
 }
 
 // Componente para seleção múltipla de canais
@@ -360,6 +362,7 @@ export default function MatchesManager() {
     stadium_id: null, // Inicializar como null
     home_team_player_stats: [],
     away_team_player_stats: [],
+    is_knockout: false,
   })
 
   const [showPenalties, setShowPenalties] = useState(false);
@@ -845,6 +848,8 @@ export default function MatchesManager() {
         tie_id: formData.tie_id === '' ? null : formData.tie_id,
         home_team_player_stats: formData.home_team_player_stats,
         away_team_player_stats: formData.away_team_player_stats,
+        // Automaticamente definir como mata-mata se for confronto ida e volta
+        is_knockout: formData.is_knockout || formData.leg === 'first_leg' || formData.leg === 'second_leg' || createTwoLegTie,
       };
 
       if (editingMatch) {
@@ -977,6 +982,7 @@ export default function MatchesManager() {
       stadium_id: null, // Inicializar como null
       home_team_player_stats: [],
       away_team_player_stats: [],
+      is_knockout: false,
     })
     setCreateTwoLegTie(false)
     setSelectedHomeGoalPlayerId(undefined);
@@ -1046,6 +1052,7 @@ export default function MatchesManager() {
       stadium_id: stadiumId !== null ? stadiumId.toString() : null, // Correção aqui
       home_team_player_stats: match.home_team_player_stats || [],
       away_team_player_stats: match.away_team_player_stats || [],
+      is_knockout: match.is_knockout,
     } as MatchFormData;
 
     setFormData(newFormData);
@@ -1681,36 +1688,63 @@ export default function MatchesManager() {
               </div>
               <form id="match-form" onSubmit={handleSubmit} className="space-y-3">
                 
-                {/* Checkbox para Ida e Volta - TOPO DO FORMULÁRIO */}
-                {!editingMatch && (
-                  <div className="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                    <div className="flex items-center">
-                      <input
-                        id="create_two_leg_tie"
-                        name="create_two_leg_tie"
-                        type="checkbox"
-                        checked={createTwoLegTie}
-                        onChange={(e) => {
-                          setCreateTwoLegTie(e.target.checked);
-                          if (e.target.checked) {
-                            setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '' }));
-                          } else {
-                            setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null }));
-                          }
-                        }}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="create_two_leg_tie" className="ml-3 block text-xs font-inter-medium text-blue-800">
-                        🏆 Criar Confronto de Ida e Volta (Primeira + Segunda Mão)
-                      </label>
-                    </div>
-                    {createTwoLegTie && (
-                      <div className="mt-2 text-xs text-blue-700 bg-blue-100 p-2 rounded border border-blue-200">
-                        ℹ️ <strong>Será criado automaticamente:</strong> Jogo de ida e volta com times invertidos na segunda mão.
+                {/* Checkboxes para Ida e Volta + Mata-mata - TOPO DO FORMULÁRIO */}
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Checkbox Ida e Volta */}
+                    {!editingMatch && (
+                      <div>
+                        <div className="flex items-center">
+                          <input
+                            id="create_two_leg_tie"
+                            name="create_two_leg_tie"
+                            type="checkbox"
+                            checked={createTwoLegTie}
+                            onChange={(e) => {
+                              setCreateTwoLegTie(e.target.checked);
+                              if (e.target.checked) {
+                                setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '', is_knockout: true }));
+                              } else {
+                                setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null }));
+                              }
+                            }}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="create_two_leg_tie" className="ml-3 block text-xs font-inter-medium text-blue-800">
+                            🔄 Criar Confronto de Ida e Volta
+                          </label>
+                        </div>
+                        {createTwoLegTie && (
+                          <div className="mt-2 text-xs text-blue-700 bg-blue-100 p-2 rounded border border-blue-200">
+                            ℹ️ <strong>Automaticamente:</strong> Cria jogo de ida e volta + marca como mata-mata
+                          </div>
+                        )}
                       </div>
                     )}
+                    
+                    {/* Checkbox Mata-mata */}
+                    <div>
+                      <div className="flex items-center">
+                        <input
+                          id="is_knockout"
+                          type="checkbox"
+                          checked={formData.is_knockout || false}
+                          onChange={(e) => setFormData({ ...formData, is_knockout: e.target.checked })}
+                          disabled={createTwoLegTie || formData.leg === 'first_leg' || formData.leg === 'second_leg'}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded disabled:opacity-50"
+                        />
+                        <label htmlFor="is_knockout" className="ml-3 block text-xs font-inter-medium text-red-800">
+                          🏆 Partida mata-mata
+                        </label>
+                      </div>
+                      {(createTwoLegTie || formData.leg === 'first_leg' || formData.leg === 'second_leg') && (
+                        <div className="mt-2 text-xs text-red-700 bg-red-100 p-2 rounded border border-red-200">
+                          ℹ️ <strong>Automático:</strong> Confrontos ida e volta são sempre mata-mata
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
 
                                  {/* Seção 1: Times e Placares - Layout Horizontal */}
                  <div className="bg-gray-50 p-2 rounded-lg">
@@ -1860,6 +1894,8 @@ export default function MatchesManager() {
                       </div>
                     </div>
                   )}
+
+
                 </div>
 
                 {/* Novo contêiner para Gols e Cartões */}
@@ -2049,13 +2085,15 @@ export default function MatchesManager() {
                   </div>
                 </div>
 
-                {/* Seção 4: Informações da Partida - Linha completa */}
+                {/* Seção 4: Informações da Partida - Todos os campos na mesma linha */}
                 <div className="bg-purple-50 p-3 rounded-lg">
-                  <h4 className="text-xs font-inter-medium text-gray-800 mb-2 uppercase tracking-wide">📋 Informações da Partida</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                  <h4 className="text-xs font-inter-medium text-gray-800 mb-3 uppercase tracking-wide">📋 Informações da Partida</h4>
+                  
+                  {/* Todos os campos na mesma linha */}
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div>
-                      <label htmlFor="competition_id" className="block text-xs font-inter-medium text-gray-600 mb-1">
-                        Competição
+                      <label htmlFor="competition_id" className="block text-sm font-inter-medium text-gray-700 mb-2">
+                        🏆 Competição
                       </label>
                       <select
                         required
@@ -2075,21 +2113,21 @@ export default function MatchesManager() {
                             setAvailableRounds([]);
                           }
                         }}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
                       >
-                        <option value="">Selecione...</option>
+                        <option value="">Selecione competição...</option>
                         {Array.isArray(competitions) && competitions.map((comp) => (
                           <option key={comp.id} value={comp.id}>{comp.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Rodada</label>
+                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">📅 Rodada</label>
                       <div className="space-y-1">
                         <select
                           value={formData.round_id}
                           onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
                           disabled={!formData.competition_id || availableRounds.length === 0}
                         >
                           <option value="">Selecione rodada...</option>
@@ -2102,7 +2140,7 @@ export default function MatchesManager() {
                           type="text"
                           value={formData.round_name || ''}
                           onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
                           placeholder="Nova rodada (ex: Rodada 13)"
                         />
                       </div>
@@ -2111,11 +2149,11 @@ export default function MatchesManager() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Grupo</label>
+                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">👥 Grupo</label>
                       <select
                         value={formData.group_name}
                         onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
                         disabled={!formData.competition_id}
                       >
                         <option value="">Selecione grupo</option>
@@ -2127,12 +2165,12 @@ export default function MatchesManager() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-inter-medium text-gray-600 mb-1">Fase</label>
+                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">⚡ Fase</label>
                       <input
                         type="text"
                         value={formData.phase}
                         onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-xs px-2 py-1.5"
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
                         placeholder="Ex: Oitavas, Quartas, Semifinal, Final"
                       />
                     </div>

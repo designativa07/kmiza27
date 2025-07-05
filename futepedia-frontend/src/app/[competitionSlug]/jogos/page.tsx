@@ -6,7 +6,7 @@ import { getTeamLogoUrl } from '@/lib/cdn';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RoundNavigator } from '@/components/RoundNavigator';
-import { createKnockoutTies, isKnockoutCompetition, shouldShowBracket } from '@/lib/competition-utils';
+import { createKnockoutTies, isRoundKnockout } from '@/lib/competition-utils';
 import { Match } from '@/types/match';
 
 // Interfaces
@@ -189,34 +189,17 @@ const MatchesPage = ({ params }: Props) => {
     ? matches.filter(match => match.round?.id === currentRoundId) 
     : matches;
 
-  // Verificar se é competição de mata-mata
-  // Forçar mata-mata se houver partidas com tie_id, leg, ou se é uma rodada específica
-  const hasKnockoutMatches = filteredMatches.some(match => 
-    match.phase || 
-    (match as any).tie_id || 
-    (match as any).leg
-  );
-  
-  // Forçar mata-mata se é uma rodada específica (como Rodada 7)
-  const isSpecificKnockoutRound = currentRoundNumber && currentRoundNumber >= 7;
-  
-  const isKnockout = competition && (
-    isKnockoutCompetition(competition.type) || 
-    shouldShowBracket(filteredMatches, competition) ||
-    hasKnockoutMatches ||
-    isSpecificKnockoutRound
-  );
+  // Verificar se as partidas da rodada atual são mata-mata
+  // Usar o campo is_knockout das partidas em vez de lógica complexa
+  const isKnockout = filteredMatches.length > 0 && filteredMatches.some(match => (match as any).is_knockout);
   
   // Criar confrontos de mata-mata se necessário
   const knockoutTies = isKnockout ? createKnockoutTies(filteredMatches) : [];
 
   // Debug: mostrar informações no console
-  console.log('Current round number:', currentRoundNumber);
   console.log('Filtered matches:', filteredMatches);
-  console.log('Has knockout matches:', hasKnockoutMatches);
-  console.log('Is specific knockout round:', isSpecificKnockoutRound);
+  console.log('Matches with is_knockout:', filteredMatches.map(m => ({ id: m.id, is_knockout: (m as any).is_knockout })));
   console.log('Is knockout:', isKnockout);
-  console.log('Knockout ties:', knockoutTies);
 
   if (isLoading) {
     return (
