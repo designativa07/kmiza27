@@ -43,8 +43,10 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copiar pasta public se existir
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Criar pasta public básica (Next.js requer essa pasta)
+RUN mkdir -p ./public && \
+    echo '<!doctype html><html><head><title>Futepédia</title></head><body><h1>Futepédia</h1></body></html>' > ./public/index.html && \
+    chown -R nextjs:nodejs ./public
 
 # Definir o usuário para executar a aplicação
 USER nextjs
