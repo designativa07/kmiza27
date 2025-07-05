@@ -40,16 +40,18 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copiar apenas os artefatos necessários do estágio de build
 # E MAIS IMPORTANTE: definir o proprietário durante a cópia para evitar 'chown -R'
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copiar pasta public se existir
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Definir o usuário para executar a aplicação
 USER nextjs
 
 EXPOSE 3003
 
-ENV PORT 3003
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3003
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"] 
