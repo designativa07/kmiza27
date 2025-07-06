@@ -402,12 +402,19 @@ export class StandingsService {
     return query.getMany();
   }
 
-  async getCompetitionRounds(competitionId: number): Promise<any[]> {
-    const rounds = await this.matchRepository
+  async getCompetitionRounds(competitionId: number, onlyWithGroups?: boolean): Promise<any[]> {
+    let query = this.matchRepository
       .createQueryBuilder('match')
       .leftJoinAndSelect('match.round', 'round')
       .where('match.competition_id = :competitionId', { competitionId })
-      .andWhere('match.round IS NOT NULL')
+      .andWhere('match.round IS NOT NULL');
+
+    // Se onlyWithGroups for true, filtrar apenas rodadas com jogos que têm grupos
+    if (onlyWithGroups) {
+      query = query.andWhere('match.group_name IS NOT NULL');
+    }
+
+    const rounds = await query
       .select(['round.id', 'round.name', 'round.round_number', 'round.phase', 'round.is_current', 'round.display_order'])
       .groupBy('round.id, round.name, round.round_number, round.phase, round.is_current, round.display_order')
       .orderBy('round.display_order', 'ASC')

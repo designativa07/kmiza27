@@ -41,7 +41,16 @@ async function getMatchesData(slug: string): Promise<{ competition: Competition,
   // 2. Buscar as rodadas da competição
   let roundsData: Round[] = [];
   try {
-    const roundsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/rounds`, { cache: 'no-store' });
+    // Primeiro, verificar se a competição tem grupos verificando se há partidas com group_name
+    const testGroupsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/groups`, { cache: 'no-store' });
+    const hasGroups = testGroupsResponse.ok && (await testGroupsResponse.json()).length > 0;
+    
+    // Se há grupos, buscar apenas rodadas que têm jogos com grupos
+    const roundsUrl = hasGroups 
+      ? `${API_URL}/standings/competition/${competition.id}/rounds?onlyWithGroups=true`
+      : `${API_URL}/standings/competition/${competition.id}/rounds`;
+    
+    const roundsResponse = await fetch(roundsUrl, { cache: 'no-store' });
     if (roundsResponse.ok) {
       roundsData = await roundsResponse.json();
     }
@@ -181,7 +190,7 @@ const MatchesPage = ({ params }: Props) => {
   const handleRoundChange = (roundId: number, roundNumber: number) => {
     setCurrentRoundId(roundId);
     setCurrentRoundNumber(roundNumber);
-    router.push(`/${competitionSlug}/jogos?roundId=${roundId}`);
+    router.push(`/${competitionSlug}/jogos?roundId=${roundId}`, { scroll: false });
   };
 
   // Filtrar as partidas pela rodada selecionada (se houver)
@@ -248,7 +257,7 @@ const MatchesPage = ({ params }: Props) => {
           )}
           
           {/* Conteúdo principal - Mata-mata ou Lista de Jogos */}
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-3">
             {isKnockout && knockoutTies.length > 0 ? (
               /* Formato de Mata-mata Simples */
               <div className="space-y-4">
@@ -262,15 +271,63 @@ const MatchesPage = ({ params }: Props) => {
                 ))}
               </div>
             ) : filteredMatches.length > 0 ? (
-              /* Formato de Lista tradicional */
-              filteredMatches.map(match => (
-                <MatchCard 
-                  key={match.id} 
-                  match={match} 
-                  formatDate={formatDate} 
-                  getTeamLogoUrl={getTeamLogoUrl} 
-                />
-              ))
+              /* Verificar se há grupos nas partidas */
+              (() => {
+                // Agrupar partidas por grupo
+                const matchesByGroup = filteredMatches.reduce((acc, match) => {
+                  const groupName = match.group_name || 'Sem Grupo';
+                  if (!acc[groupName]) {
+                    acc[groupName] = [];
+                  }
+                  acc[groupName].push(match);
+                  return acc;
+                }, {} as Record<string, Match[]>);
+
+                const groupNames = Object.keys(matchesByGroup);
+                const hasGroups = groupNames.length > 1 || (groupNames.length === 1 && groupNames[0] !== 'Sem Grupo');
+
+                if (hasGroups) {
+                  // Renderizar por grupos
+                  return (
+                    <div className="space-y-6">
+                      {Object.entries(matchesByGroup)
+                        .filter(([groupName]) => groupName !== 'Sem Grupo') // Filtrar apenas grupos válidos
+                        .sort(([a], [b]) => a.localeCompare(b)) // Ordenar grupos alfabeticamente
+                        .map(([groupName, groupMatches]) => (
+                          <div key={groupName} className="space-y-2">
+                            <h3 className="text-lg font-semibold text-gray-800 text-center py-2 bg-gray-50 rounded-md border">
+                              Grupo {groupName}
+                            </h3>
+                            <div className="space-y-0">
+                              {groupMatches
+                                .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()) // Ordenar por data
+                                .map(match => (
+                                  <MatchCard 
+                                    key={match.id} 
+                                    match={match} 
+                                    formatDate={formatDate} 
+                                    getTeamLogoUrl={getTeamLogoUrl} 
+                                  />
+                                ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  );
+                } else {
+                  // Renderizar formato tradicional (sem grupos)
+                  return filteredMatches
+                    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+                    .map(match => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        formatDate={formatDate} 
+                        getTeamLogoUrl={getTeamLogoUrl} 
+                      />
+                    ));
+                }
+              })()
             ) : (
               <p className="text-center text-gray-500 py-4">
                 {isKnockout ? 'Nenhum confronto encontrado para esta rodada' : 'Nenhuma partida encontrada para esta rodada'}
@@ -296,11 +353,6 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ tie, formatDate, getT
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-      {/* Cabeçalho da fase */}
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">{tie.phase}</h3>
-      </div>
-
       {/* Confronto lado a lado - formato do painel administrativo */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Jogo de Ida */}
@@ -422,8 +474,8 @@ interface MatchCardProps {
 
 const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl }) => {
   return (
-    <div className="py-4 border-b border-gray-200 last:border-b-0">
-      <div className="text-center text-sm text-gray-600 mb-3">
+    <div className="py-2.5 border-b border-gray-200 last:border-b-0">
+      <div className="text-center text-sm text-gray-600 mb-2.5">
         <span>{formatDate(match.match_date)}</span>
         {match.stadium && (
           <span className="ml-2">
@@ -432,10 +484,10 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           </span>
         )}
       </div>
-      <div className="flex items-center justify-center mb-3">
+      <div className="flex items-center justify-center mb-2.5">
         {/* Lado esquerdo: mandante + escudo */}
         <div className="flex items-center justify-end flex-1 pr-1">
-          <span className="font-semibold text-gray-800 mr-1">{match.home_team.name}</span>
+          <span className="font-semibold text-gray-800 mr-1 text-sm">{match.home_team.name}</span>
           <img 
             src={getTeamLogoUrl(match.home_team.logo_url)} 
             alt={match.home_team.name} 
@@ -463,7 +515,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             alt={match.away_team.name} 
             className="h-8 w-8 object-contain"
           />
-          <span className="font-semibold text-gray-800 ml-1">{match.away_team.name}</span>
+          <span className="font-semibold text-gray-800 ml-1 text-sm">{match.away_team.name}</span>
         </div>
       </div>
       

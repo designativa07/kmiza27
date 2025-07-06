@@ -71,7 +71,16 @@ async function getClassificationData(slug: string): Promise<{ competition: Compe
   // 3. Buscar as rodadas da competição
   let roundsData: Round[] = [];
   try {
-    const roundsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/rounds`, { cache: 'no-store' });
+    // Primeiro, verificar se a competição tem grupos verificando se há partidas com group_name
+    const testGroupsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/groups`, { cache: 'no-store' });
+    const hasGroups = testGroupsResponse.ok && (await testGroupsResponse.json()).length > 0;
+    
+    // Se há grupos, buscar apenas rodadas que têm jogos com grupos
+    const roundsUrl = hasGroups 
+      ? `${API_URL}/standings/competition/${competition.id}/rounds?onlyWithGroups=true`
+      : `${API_URL}/standings/competition/${competition.id}/rounds`;
+    
+    const roundsResponse = await fetch(roundsUrl, { cache: 'no-store' });
     if (roundsResponse.ok) {
       roundsData = await roundsResponse.json();
     }
@@ -199,7 +208,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
   const handleRoundChange = (roundId: number, roundNumber: number) => {
     setCurrentRoundId(roundId);
     setCurrentRoundNumber(roundNumber);
-    router.push(`/${competitionSlug}/classificacao?roundId=${roundId}`);
+    router.push(`/${competitionSlug}/classificacao?roundId=${roundId}`, { scroll: false });
   };
 
   // Filtrar as partidas pela rodada selecionada
@@ -216,6 +225,11 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
     acc[groupName].push(standing);
     return acc;
   }, {} as Record<string, Standing[]>);
+
+  // Verificar se é competição apenas mata-mata (sem grupos)
+  const isPureKnockoutCompetition = competition?.type?.toLowerCase() === 'mata_mata' || 
+                                   competition?.type?.toLowerCase() === 'torneio' ||
+                                   competition?.type?.toLowerCase() === 'knockout';
 
   if (isLoading) {
     return (
@@ -237,6 +251,61 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
         <p className="text-xl text-gray-600">Competição não encontrada.</p>
+      </div>
+    );
+  }
+
+  // Para competições apenas mata-mata, mostrar apenas os jogos
+  if (isPureKnockoutCompetition) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-4">
+          {/* Container para competições de mata-mata */}
+          <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+            {/* Navegação de Rodadas */}
+            {currentRoundId && currentRoundNumber && rounds.length > 1 && (
+              <RoundNavigator
+                competitionType={competition?.type || ''}
+                rounds={rounds.filter(round => typeof round.round_number === 'number')}
+                currentRoundId={currentRoundId}
+                currentRoundNumber={currentRoundNumber}
+                onRoundChange={handleRoundChange}
+              />
+            )}
+
+            {/* Confrontos da rodada */}
+            <div className="px-4 pb-3">
+              {matchesForSelectedRound.length > 0 ? (
+                <div className="space-y-0">
+                  {matchesForSelectedRound
+                    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+                    .map((match) => (
+                      <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
+                    ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">
+                  Nenhum confronto encontrado para esta rodada.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Seção de estatísticas adaptada para mata-mata */}
+          <div className="mt-8 bg-white rounded-lg p-6 shadow-md border border-gray-100">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações da Competição</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{rounds.length}</div>
+                <div className="text-sm text-gray-600">Fases</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{matches.length}</div>
+                <div className="text-sm text-gray-600">Partidas</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -274,7 +343,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
                     )}
 
                     {/* Jogos do grupo */}
-                    <div className="px-4">
+                    <div className="px-4 pb-3">
                       {matchesForSelectedRound
                         .filter(match => (match.group_name || 'Geral') === groupName)
                         .map((match) => (
@@ -309,7 +378,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
                 )}
 
                 {/* Jogos */}
-                <div className="px-4">
+                <div className="px-4 pb-3">
                   {matchesForSelectedRound.map((match) => (
                     <MatchCard key={match.id} match={match} formatDate={formatDate} getTeamLogoUrl={getTeamLogoUrl} />
                   ))}
@@ -351,9 +420,9 @@ interface MatchCardProps {
 
 const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl }) => {
   return (
-    <div className="py-4 border-b border-gray-200 last:border-b-0">
+    <div className="py-2.5 border-b border-gray-200 last:border-b-0">
       {/* Data, hora e estádio */}
-      <div className="text-center text-xs text-gray-600 mb-3">
+      <div className="text-center text-xs text-gray-600 mb-2.5">
         <span>{formatDate(match.match_date)}</span>
         {match.stadium && (
           <span className="ml-2">
@@ -364,10 +433,10 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
       </div>
       
       {/* Confronto */}
-      <div className="flex items-center justify-center mb-3">
+      <div className="flex items-center justify-center mb-2.5">
         {/* Lado esquerdo: mandante + escudo */}
         <div className="flex items-center justify-end flex-1 pr-3">
-          <span className="font-semibold text-gray-800 mr-2 text-base">{match.home_team.name}</span>
+          <span className="font-semibold text-gray-800 mr-2 text-sm">{match.home_team.name}</span>
           <img 
             src={getTeamLogoUrl(match.home_team.logo_url)} 
             alt={match.home_team.name} 
@@ -395,7 +464,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
             alt={match.away_team.name} 
             className="h-8 w-8 object-contain"
           />
-          <span className="font-semibold text-gray-800 ml-2 text-base">{match.away_team.name}</span>
+          <span className="font-semibold text-gray-800 ml-2 text-sm">{match.away_team.name}</span>
         </div>
       </div>
 
@@ -476,58 +545,58 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">POS</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIME</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">J</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">V</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">E</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">D</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GP</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GC</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">SG</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">FORM</th>
+              <th className="px-1 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIME</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">J</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">V</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">E</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">D</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GP</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GC</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">SG</th>
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Últimos Jogos</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {standings.map((standing, index) => (
               <tr key={standing.team.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-1 py-3 whitespace-nowrap w-8 text-center">
                   <span className="text-sm font-medium text-gray-900">{standing.position}</span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-2 py-3 whitespace-nowrap">
                   <div className="flex items-center">
                     <img 
                       src={getTeamLogoUrl(standing.team.logo_url)} 
                       alt={standing.team.name} 
-                      className="h-8 w-8 object-contain mr-3"
+                      className="h-7 w-7 object-contain mr-2"
                     />
-                    <span className="text-sm font-medium text-gray-900">{standing.team.name}</span>
+                    <span className="text-xs font-medium text-gray-900">{standing.team.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-center">
+                <td className="px-2 py-3 whitespace-nowrap text-center">
                   <span className="text-sm font-bold text-gray-900">{standing.points}</span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.played}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-green-600">{standing.won}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-yellow-600">{standing.drawn}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-red-600">{standing.lost}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goals_for}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goals_against}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">{standing.goal_difference}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-center">
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.played}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-green-600">{standing.won}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-yellow-600">{standing.drawn}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-red-600">{standing.lost}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goals_for}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goals_against}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goal_difference}</td>
+                <td className="px-2 py-3 whitespace-nowrap text-center">
                   {standing.form && (
                     <div className="flex justify-center space-x-1">
                       {standing.form.split('').slice(-5).map((result, idx) => (
                         <span
                           key={idx}
-                          className={`inline-block w-4 h-4 rounded-full text-xs text-white font-bold flex items-center justify-center ${
-                            result === 'V' ? 'bg-green-500' :
-                            result === 'E' ? 'bg-yellow-500' :
-                            result === 'D' ? 'bg-red-500' : 'bg-gray-400'
+                          className={`inline-block w-3.5 h-3.5 rounded-full text-xs text-white font-bold flex items-center justify-center ${
+                            result === 'W' ? 'bg-green-500' :
+                            result === 'D' ? 'bg-yellow-500' :
+                            result === 'L' ? 'bg-red-500' : 'bg-gray-400'
                           }`}
                         >
-                          {result}
+                          {result === 'W' ? 'V' : result === 'D' ? 'E' : 'D'}
                         </span>
                       ))}
                     </div>
