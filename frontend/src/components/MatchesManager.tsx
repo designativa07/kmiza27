@@ -303,7 +303,7 @@ export default function MatchesManager() {
   const [showModal, setShowModal] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [stadiums, setStadiums] = useState<Stadium[]>([])
-  const [availableRounds, setAvailableRounds] = useState<{id: number, name: string}[]>([])
+  const [availableRounds, setAvailableRounds] = useState<any[]>([])
   const [createTwoLegTie, setCreateTwoLegTie] = useState(false)
   const [homeTeamPlayers, setHomeTeamPlayers] = useState<Player[]>([])
   const [awayTeamPlayers, setAwayTeamPlayers] = useState<Player[]>([])
@@ -330,10 +330,11 @@ export default function MatchesManager() {
 
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
 
   // Estado para ordenação por data
-  const [dateSort, setDateSort] = useState<'none' | 'asc' | 'desc'>('none')
+  const [dateSort, setDateSort] = useState<'asc' | 'desc' | 'none'>('none');
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<MatchFormData>({
     home_team_id: '',
@@ -430,7 +431,7 @@ export default function MatchesManager() {
 
   useEffect(() => {
     applyPagination()
-  }, [filteredMatches, currentPage, itemsPerPage])
+  }, [filteredMatches, currentPage])
 
   // Buscar rodadas e grupos quando a competição do filtro mudar
   useEffect(() => {
@@ -631,35 +632,31 @@ export default function MatchesManager() {
   }
 
   const applyFilters = () => {
-    // Verificar se matches é um array válido
     if (!Array.isArray(matches)) {
-      console.error('matches is not an array:', matches);
       setFilteredMatches([]);
       return;
     }
 
-    let filtered = [...matches]
+    let filtered = [...matches];
 
     if (filters.competition) {
-      filtered = filtered.filter(match => match.competition?.id?.toString() === filters.competition)
+      filtered = filtered.filter(match => match.competition?.id?.toString() === filters.competition);
     }
 
     if (filters.round) {
-      console.log('DEBUG: Filtering by Round:', filters.round); // Add this
-      filtered = filtered.filter(match => match.round?.name?.toLowerCase().includes(filters.round.toLowerCase()))
+      filtered = filtered.filter(match => match.round?.id?.toString() === filters.round);
     }
 
     if (filters.group) {
-      console.log('DEBUG: Filtering by Group:', filters.group); // Add this
-      filtered = filtered.filter(match => match.group_name?.toLowerCase().includes(filters.group.toLowerCase()))
+      filtered = filtered.filter(match => match.group_name?.toLowerCase().includes(filters.group.toLowerCase()));
     }
 
     if (filters.phase) {
-      filtered = filtered.filter(match => match.phase?.toLowerCase().includes(filters.phase.toLowerCase()))
+      filtered = filtered.filter(match => match.phase?.toLowerCase().includes(filters.phase.toLowerCase()));
     }
 
     if (filters.status) {
-      filtered = filtered.filter(match => match.status?.toLowerCase().includes(filters.status.toLowerCase()))
+      filtered = filtered.filter(match => match.status?.toLowerCase().includes(filters.status.toLowerCase()));
     }
 
     if (filters.searchTerm) {
@@ -667,32 +664,25 @@ export default function MatchesManager() {
         match.home_team?.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         match.away_team?.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         match.competition?.name.toLowerCase().includes(filters.searchTerm.toLowerCase())
-      )
+      );
     }
 
-    // Aplicar ordenação por data
     if (dateSort !== 'none') {
-      filtered = filtered.sort((a, b) => {
-        const dateA = new Date(a.match_date).getTime()
-        const dateB = new Date(b.match_date).getTime()
-        
-        if (dateSort === 'asc') {
-          return dateA - dateB // Crescente (mais antigo primeiro)
-        } else {
-          return dateB - dateA // Decrescente (mais recente primeiro)
-        }
-      })
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.match_date).getTime();
+        const dateB = new Date(b.match_date).getTime();
+        return dateSort === 'asc' ? dateA - dateB : dateB - dateA;
+      });
     }
 
-    setFilteredMatches(filtered)
-    console.log('DEBUG: Number of filtered matches:', filtered.length); // Add this
-    // setCurrentPage(1) // REMOVIDO: A página só deve resetar quando um filtro é alterado diretamente
-  }
+    setFilteredMatches(filtered);
+  };
 
   const applyPagination = () => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     setPaginatedMatches(filteredMatches.slice(startIndex, endIndex))
+    setCurrentPage(1);
   }
 
   const totalPages = Math.ceil(filteredMatches.length / itemsPerPage)
@@ -728,28 +718,29 @@ export default function MatchesManager() {
     setCurrentPage(1) // Reset para primeira página ao mudar ordenação
   }
 
-  const getUniqueRoundsByCompetition = (competitionId: string) => {
+  const getUniqueRoundsByCompetition = (competitionId: string): { id: number; name: string }[] => {
     if (!Array.isArray(matches)) {
       return [];
     }
-    
-    const rounds = new Set<string>();
+  
+    const roundsMap = new Map<number, { id: number; name: string }>();
     matches.forEach(match => {
-      if (match.competition?.id?.toString() === competitionId && match.round?.name) {
-        rounds.add(match.round.name);
+      if (match.competition?.id?.toString() === competitionId && match.round?.id && match.round?.name) {
+        if (!roundsMap.has(match.round.id)) {
+          roundsMap.set(match.round.id, { id: match.round.id, name: match.round.name });
+        }
       }
     });
-    return Array.from(rounds).sort((a, b) => {
-      // Tenta ordenar numericamente se forem rodadas numéricas (ex: "1ª Rodada")
-      const numA = parseInt(a.replace(/\D/g, ''));
-      const numB = parseInt(b.replace(/\D/g, ''));
+  
+    return Array.from(roundsMap.values()).sort((a, b) => {
+      const numA = parseInt(a.name.replace(/\D/g, ''));
+      const numB = parseInt(b.name.replace(/\D/g, ''));
       if (!isNaN(numA) && !isNaN(numB)) {
         return numA - numB;
       }
-      // Caso contrário, ordena alfabeticamente
-      return a.localeCompare(b);
+      return a.name.localeCompare(b.name);
     });
-  }
+  };
 
   const getUniqueGroupsByCompetition = (competitionId: string) => {
     if (!Array.isArray(matches)) {
@@ -1355,6 +1346,16 @@ export default function MatchesManager() {
     }
   }, [formData.home_team_player_stats, formData.away_team_player_stats]);
 
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+    setCurrentPage(1); // Resetar para a primeira página ao mudar um filtro
+  };
+
+  useEffect(() => {
+    fetchData()
+  }, [filters, dateSort])
+
   if (loading) {
     return <div className="text-center">Carregando jogos...</div>
   }
@@ -1429,17 +1430,19 @@ export default function MatchesManager() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">🔄 Rodada</label>
+              <label htmlFor="round-filter" className="block text-sm font-medium text-gray-700 mb-2">🔄 Rodada</label>
               <select
+                id="round-filter"
+                name="round"
                 value={filters.round}
-                onChange={(e) => setFilters({ ...filters, round: e.target.value })}
+                onChange={handleFilterChange}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
                 disabled={!filters.competition}
               >
                 <option value="">Todas</option>
-                {filters.competition && Array.isArray(getUniqueRoundsByCompetition(filters.competition)) && getUniqueRoundsByCompetition(filters.competition).map((roundName) => (
-                  <option key={roundName} value={roundName}>
-                    {roundName}
+                {filters.competition && getUniqueRoundsByCompetition(filters.competition).map((round) => (
+                  <option key={round.id} value={round.id}>
+                    {round.name}
                   </option>
                 ))}
               </select>
