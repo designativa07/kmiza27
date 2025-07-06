@@ -51,9 +51,22 @@ export function RoundNavigator({
   }
 
   const isMataMata = competitionType === 'mata-mata';
-  const displayName = isMataMata 
-    ? currentRound.phase || currentRound.name 
-    : `Rodada ${currentRound.round_number} de ${rounds.length}`;
+  
+  // Melhorar a lógica de exibição do nome da rodada
+  const getDisplayName = () => {
+    if (isMataMata) {
+      // Para mata-mata, priorizar phase se disponível, senão usar name
+      return currentRound.phase || currentRound.name;
+    } else {
+      // Para liga, usar name se disponível, senão usar "Rodada x de y"
+      if (currentRound.name && currentRound.name.trim() !== '') {
+        return currentRound.name;
+      }
+      return `Rodada ${currentRound.round_number} de ${rounds.length}`;
+    }
+  };
+
+  const displayName = getDisplayName();
 
   return (
     <div className="bg-white overflow-hidden">
@@ -76,11 +89,17 @@ export function RoundNavigator({
 
         {/* Central section: Display Name and Round Indicators */}
         <div className="flex flex-col items-center flex-grow">
-          <h3 className="text-lg font-semibold text-gray-800 text-center mb-2">
+          <h3 className="text-lg font-semibold text-gray-800 text-center mb-0">
             {displayName}
           </h3>
+          {/* Mostrar informações adicionais se disponíveis */}
+          {!isMataMata && currentRound.phase && (
+            <p className="text-sm text-gray-600 text-center mb-0">
+              {currentRound.phase}
+            </p>
+          )}
           {/* Indicadores de Rodada */}
-          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs justify-center">
+          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs justify-center mt-2">
             {rounds.map((round, index) => (
               <button
                 key={round.id}
@@ -94,7 +113,7 @@ export function RoundNavigator({
                       : 'bg-gray-300 hover:bg-gray-400'
                     }
                   `}
-                title={isMataMata ? (round.phase || round.name) : `Rodada ${round.round_number}`}
+                title={isMataMata ? (round.phase || round.name) : (round.name || `Rodada ${round.round_number}`)}
               />
             ))}
           </div>

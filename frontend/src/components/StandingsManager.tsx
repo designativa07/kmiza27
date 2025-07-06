@@ -501,9 +501,16 @@ export default function StandingsManager() {
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
-        <h3 className="text-lg font-semibold text-gray-800">
-          {rounds.length > 0 ? rounds[currentRoundIndex]?.name : 'Carregando Fases...'}
-        </h3>
+        <div className="flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-gray-800">
+            {rounds.length > 0 ? rounds[currentRoundIndex]?.name : 'Carregando Fases...'}
+          </h3>
+          {rounds.length > 0 && rounds[currentRoundIndex]?.phase && (
+            <p className="text-sm text-gray-600 mt-1">
+              {rounds[currentRoundIndex]?.phase}
+            </p>
+          )}
+        </div>
         <button
           onClick={() => navigateRound('next')}
           disabled={currentRoundIndex === rounds.length - 1}
@@ -752,6 +759,7 @@ export default function StandingsManager() {
               value={selectedCompetition || ''}
               onChange={(e) => setSelectedCompetition(Number(e.target.value))}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              aria-label="Selecionar competição"
             >
               <option value="">Selecione uma competição</option>
               {competitions.map((comp) => (
@@ -767,6 +775,7 @@ export default function StandingsManager() {
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(e.target.value)}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                aria-label="Selecionar grupo"
               >
                 <option value="">Todos os grupos</option>
                 {groups.map((group) => (
@@ -842,6 +851,7 @@ export default function StandingsManager() {
                       value={selectedTeam || ''}
                       onChange={(e) => setSelectedTeam(Number(e.target.value))}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      aria-label="Selecionar time para estatísticas"
                     >
                       <option value="">Selecione um time</option>
                       {availableTeams().map((team) => (
@@ -945,6 +955,7 @@ export default function StandingsManager() {
                         value={h2hTeam1 || ''}
                         onChange={(e) => setH2hTeam1(Number(e.target.value))}
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        aria-label="Selecionar primeiro time para confronto direto"
                       >
                         <option value="">Selecione um time</option>
                         {availableTeams().map((team) => (
@@ -958,6 +969,7 @@ export default function StandingsManager() {
                         value={h2hTeam2 || ''}
                         onChange={(e) => setH2hTeam2(Number(e.target.value))}
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        aria-label="Selecionar segundo time para confronto direto"
                       >
                         <option value="">Selecione um time</option>
                         {availableTeams().map((team) => (

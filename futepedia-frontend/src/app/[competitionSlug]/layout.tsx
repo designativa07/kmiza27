@@ -9,6 +9,7 @@ interface Competition {
   name: string;
   slug: string;
   logo_url?: string;
+  type?: string;
 }
 
 async function getCompetition(slug: string): Promise<Competition | null> {
@@ -40,7 +41,13 @@ export default async function CompetitionLayout({
     notFound();
   }
 
-  const navLinks = [
+  // Verificar se é competição apenas mata-mata (sem grupos)
+  const isPureKnockoutCompetition = competition?.type?.toLowerCase() === 'mata_mata' || 
+                                   competition?.type?.toLowerCase() === 'torneio' ||
+                                   competition?.type?.toLowerCase() === 'knockout';
+
+  // Definir abas baseadas no tipo de competição
+  const allNavLinks = [
     { name: 'Tabela', href: `/${competition.slug}/classificacao`, icon: <ListOrdered className="h-4 w-4" /> },
     { name: 'Jogos', href: `/${competition.slug}/jogos`, icon: <CalendarDays className="h-4 w-4" /> },
     { name: 'Artilharia', href: `/${competition.slug}/artilharia`, icon: <Star className="h-4 w-4" /> },
@@ -48,6 +55,12 @@ export default async function CompetitionLayout({
     // Descomente quando as páginas estiverem prontas
     // { name: 'Estatísticas', href: `/${competition.slug}/estatisticas` },
   ];
+
+  // Para competições apenas mata-mata, remover a aba "Tabela"
+  // Para competições mistas (grupos + mata-mata), manter a aba "Tabela"
+  const navLinks = isPureKnockoutCompetition 
+    ? allNavLinks.filter(link => link.name !== 'Tabela')
+    : allNavLinks;
 
   return (
     <div className="bg-gray-50 min-h-screen">

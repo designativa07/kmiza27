@@ -44,8 +44,9 @@ export class StandingsController {
   }
 
   @Get('competition/:id/rounds')
-  getCompetitionRounds(@Param('id') id: string) {
-    return this.standingsService.getCompetitionRounds(+id);
+  getCompetitionRounds(@Param('id') id: string, @Query('onlyWithGroups') onlyWithGroups?: string) {
+    const filterByGroups = onlyWithGroups === 'true';
+    return this.standingsService.getCompetitionRounds(+id, filterByGroups);
   }
 
   @Get('competition/:id/current-round')
