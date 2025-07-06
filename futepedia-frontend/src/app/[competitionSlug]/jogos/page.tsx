@@ -38,17 +38,10 @@ async function getMatchesData(slug: string): Promise<{ competition: Competition,
   if (!competitionResponse.ok) throw new Error('Competição não encontrada');
   const competition: Competition = await competitionResponse.json();
 
-  // 2. Buscar as rodadas da competição
+  // 2. Buscar TODAS as rodadas da competição para a página de Jogos
   let roundsData: Round[] = [];
   try {
-    // Primeiro, verificar se a competição tem grupos verificando se há partidas com group_name
-    const testGroupsResponse = await fetch(`${API_URL}/standings/competition/${competition.id}/groups`, { cache: 'no-store' });
-    const hasGroups = testGroupsResponse.ok && (await testGroupsResponse.json()).length > 0;
-    
-    // Se há grupos, buscar apenas rodadas que têm jogos com grupos
-    const roundsUrl = hasGroups 
-      ? `${API_URL}/standings/competition/${competition.id}/rounds?onlyWithGroups=true`
-      : `${API_URL}/standings/competition/${competition.id}/rounds`;
+    const roundsUrl = `${API_URL}/standings/competition/${competition.id}/rounds`;
     
     const roundsResponse = await fetch(roundsUrl, { cache: 'no-store' });
     if (roundsResponse.ok) {
