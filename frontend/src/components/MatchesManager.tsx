@@ -1016,6 +1016,11 @@ export default function MatchesManager() {
       ? match.stadium
       : (match.stadium?.id || null);
 
+    // Extrair os IDs dos canais do array de broadcasts
+    const broadcastChannelIds = Array.isArray((match as any).broadcasts)
+      ? (match as any).broadcasts.map((b: any) => b.channel?.id).filter(Boolean)
+      : [];
+
     const newFormData = {
       home_team_id: match.home_team?.id?.toString() || '',
       away_team_id: match.away_team?.id?.toString() || '',
@@ -1027,7 +1032,7 @@ export default function MatchesManager() {
       match_date: formattedDate,
       status: match.status,
       broadcast_channels: processBroadcastChannels(match.broadcast_channels),
-      channel_ids: match.channel_ids || [],
+      channel_ids: broadcastChannelIds.length > 0 ? broadcastChannelIds : (match.channel_ids || []),
       home_score: match.home_score ?? undefined,
       away_score: match.away_score ?? undefined,
       home_yellow_cards: (match as any).home_yellow_cards ?? undefined,
