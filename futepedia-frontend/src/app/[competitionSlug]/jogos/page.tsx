@@ -333,6 +333,74 @@ const MatchesPage = ({ params }: Props) => {
   );
 };
 
+// Componente para renderizar os botões de transmissão
+const BroadcastButtons: React.FC<{ match: Match }> = ({ match }) => {
+  if (!match || (!match.broadcasts?.length && !match.broadcast_channels)) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 justify-center mt-2">
+      {/* Canais de Transmissão (da relação broadcasts) */}
+      {match.broadcasts?.map((broadcast: any) => (
+        <div key={broadcast.channel.id} className="flex items-center gap-2">
+          {broadcast.channel.channel_link ? (
+            <a 
+              href={broadcast.channel.channel_link} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-md hover:bg-indigo-200 transition-colors shadow-sm"
+            >
+              {broadcast.channel.name}
+            </a>
+          ) : (
+            <span 
+              className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-md shadow-sm"
+            >
+              {broadcast.channel.name}
+            </span>
+          )}
+        </div>
+      ))}
+      
+      {/* Links de broadcast_channels */}
+      {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
+        match.broadcast_channels.split(',').map((link: string, index: number) => {
+          const url = link.startsWith('http') ? link : `https://${link}`;
+          return (
+            <a 
+              key={index} 
+              href={url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
+            >
+              ASSISTIR
+            </a>
+          );
+        })
+      )}
+      {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
+        match.broadcast_channels.map((link: string, index: number) => {
+          const url = link.startsWith('http') ? link : `https://${link}`;
+          return (
+            <a 
+              key={index} 
+              href={url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors shadow-sm"
+            >
+              ASSISTIR
+            </a>
+          );
+        })
+      )}
+    </div>
+  );
+};
+
+
 // Componente para confrontos de mata-mata (formato simples)
 interface KnockoutTieCardProps {
   tie: any;
@@ -391,6 +459,7 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ tie, formatDate, getT
               <span className="text-sm font-medium">{tie.away_team.name.length > 10 ? tie.away_team.name.substring(0, 10) + '...' : tie.away_team.name}</span>
             </div>
           </div>
+          <BroadcastButtons match={tie.leg1} />
         </div>
 
         {/* Jogo de Volta */}
@@ -437,6 +506,7 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ tie, formatDate, getT
                 <span className="text-sm font-medium">{tie.leg2.away_team.name.length > 10 ? tie.leg2.away_team.name.substring(0, 10) + '...' : tie.leg2.away_team.name}</span>
               </div>
             </div>
+            <BroadcastButtons match={tie.leg2} />
           </div>
         )}
       </div>

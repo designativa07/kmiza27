@@ -59,6 +59,7 @@ export const isKnockoutCompetition = (competitionType: string): boolean => {
   return competitionType === 'mata_mata' || 
          competitionType === 'grupos_e_mata_mata' || 
          competitionType === 'copa' ||
+         competitionType === 'torneio' || // Adicionado para suportar "Torneio (Mata-mata)"
          competitionType === 'serie';
 };
 
