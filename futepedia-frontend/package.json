@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "cross-env NEXT_PUBLIC_API_URL=http://localhost:3000 next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
+    "start:prod": "NODE_ENV=production next start -p 3001 -H 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {
