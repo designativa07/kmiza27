@@ -251,7 +251,7 @@ export function Header({ currentCompetition, showBackToHome = true }: HeaderProp
                           teams: { title: 'Times', icon: <Shield className="h-4 w-4 text-gray-500" />, link: (item: any) => `/time/${item.id}` },
                           players: { title: 'Jogadores', icon: <User className="h-4 w-4 text-gray-500" />, link: () => '/jogadores' },
                           stadiums: { title: 'Estádios', icon: <Building className="h-4 w-4 text-gray-500" />, link: (item: any) => `/estadio/${item.id}` },
-                          competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" />, link: (item: any) => `/${item.slug}/classificacao` },
+                          competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" />, link: (item: any) => `/${item.slug}/jogos` },
                         };
                         return (
                           <div key={type}>
@@ -313,7 +313,7 @@ export function Header({ currentCompetition, showBackToHome = true }: HeaderProp
                   teams: { title: 'Times', icon: <Shield className="h-4 w-4 text-gray-500" />, link: (item: any) => `/time/${item.id}` },
                   players: { title: 'Jogadores', icon: <User className="h-4 w-4 text-gray-500" />, link: () => '/jogadores' },
                   stadiums: { title: 'Estádios', icon: <Building className="h-4 w-4 text-gray-500" />, link: (item: any) => `/estadio/${item.id}` },
-                  competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" />, link: (item: any) => `/${item.slug}/classificacao` },
+                  competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" />, link: (item: any) => `/${item.slug}/jogos` },
                 };
                 return (
                   <div key={type}>
