@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { NextPage } from 'next';
 import { getTeamLogoUrl } from '@/lib/cdn';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RoundNavigator } from '@/components/RoundNavigator';
 import { createKnockoutTies, isRoundKnockout } from '@/lib/competition-utils';
@@ -193,15 +193,32 @@ const MatchesPage = ({ params }: Props) => {
 
   // Verificar se as partidas da rodada atual são mata-mata
   // Usar o campo is_knockout das partidas em vez de lógica complexa
-  const isKnockout = filteredMatches.length > 0 && filteredMatches.some(match => (match as any).is_knockout);
+  const isKnockout = filteredMatches.some(match => match.is_knockout);
   
-  // Criar confrontos de mata-mata se necessário
-  const knockoutTies = isKnockout ? createKnockoutTies(filteredMatches) : [];
+  // Agrupar partidas por tie_id (igual ao painel admin)
+  const groupedMatchesByTieId = useMemo(() => {
+    const grouped: { [key: string]: Match[] } = {};
+    filteredMatches.forEach(match => {
+      const key = match.tie_id || match.id.toString();
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(match);
+    });
+    // Ordenar as partidas dentro de cada confronto para garantir que ida venha antes de volta
+    for (const key in grouped) {
+      if (grouped.hasOwnProperty(key)) {
+        grouped[key].sort((a, b) => {
+          if (a.leg === 'first_leg' && b.leg === 'second_leg') return -1;
+          if (a.leg === 'second_leg' && b.leg === 'first_leg') return 1;
+          return 0;
+        });
+      }
+    }
+    return grouped;
+  }, [filteredMatches]);
 
-  // Debug: mostrar informações no console
-  console.log('Filtered matches:', filteredMatches);
-  console.log('Matches with is_knockout:', filteredMatches.map(m => ({ id: m.id, is_knockout: (m as any).is_knockout })));
-  console.log('Is knockout:', isKnockout);
+
 
   if (isLoading) {
     return (
@@ -251,17 +268,20 @@ const MatchesPage = ({ params }: Props) => {
           
           {/* Conteúdo principal - Mata-mata ou Lista de Jogos */}
           <div className="px-4 pb-3">
-            {isKnockout && knockoutTies.length > 0 ? (
+            {isKnockout && Object.keys(groupedMatchesByTieId).length > 0 ? (
               /* Formato de Mata-mata Simples */
               <div className="space-y-4">
-                {knockoutTies.map(tie => (
-                  <KnockoutTieCard 
-                    key={tie.id} 
-                    tie={tie} 
-                    formatDate={formatDate} 
-                    getTeamLogoUrl={getTeamLogoUrl} 
-                  />
-                ))}
+                {Object.keys(groupedMatchesByTieId).map((tieId, index) => {
+                  const matchesInTie = groupedMatchesByTieId[tieId];
+                  return (
+                    <KnockoutTieCard 
+                      key={tieId} 
+                      matches={matchesInTie} 
+                      formatDate={formatDate} 
+                      getTeamLogoUrl={getTeamLogoUrl} 
+                    />
+                  );
+                })}
               </div>
             ) : filteredMatches.length > 0 ? (
               /* Verificar se há grupos nas partidas */
@@ -403,127 +423,379 @@ const BroadcastButtons: React.FC<{ match: Match }> = ({ match }) => {
 
 // Componente para confrontos de mata-mata (formato simples)
 interface KnockoutTieCardProps {
-  tie: any;
+  matches: Match[];
   formatDate: (dateString: string) => string;
   getTeamLogoUrl: (logoUrl: string) => string;
 }
 
-const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ tie, formatDate, getTeamLogoUrl }) => {
-  const isFinished = tie.status === 'FINISHED';
-  const winner = tie.winner_team;
+const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, getTeamLogoUrl }) => {
+  // Função para calcular o placar agregado corretamente
+  const calculateAggregate = (matches: Match[]) => {
+    if (matches.length !== 2) return null;
+    
+    const firstLeg = matches.find(m => m.leg === 'first_leg');
+    const secondLeg = matches.find(m => m.leg === 'second_leg');
+    
+    if (!firstLeg || !secondLeg) return null;
+    
+    // Verificar se ambos os jogos têm placares
+    const firstLegFinished = firstLeg.home_score !== null && firstLeg.away_score !== null;
+    const secondLegFinished = secondLeg.home_score !== null && secondLeg.away_score !== null;
+    
+    if (!firstLegFinished || !secondLegFinished) return null;
+    
+    // Calcular agregado corretamente:
+    // Time A (mandante ida) = placar mandante ida + placar visitante volta
+    // Time B (visitante ida) = placar visitante ida + placar mandante volta
+    const teamA = firstLeg.home_team;
+    const teamB = firstLeg.away_team;
+    
+    const teamA_aggregate = (firstLeg.home_score || 0) + (secondLeg.away_score || 0);
+    const teamB_aggregate = (firstLeg.away_score || 0) + (secondLeg.home_score || 0);
+    
+    // Verificar quem se classificou
+    let qualified = null;
+    let wonByPenalties = false;
+    
+    if (teamA_aggregate > teamB_aggregate) {
+      qualified = teamA;
+    } else if (teamB_aggregate > teamA_aggregate) {
+      qualified = teamB;
+    } else {
+      // Empate no agregado - verificar pênaltis
+      const penaltiesMatch = [firstLeg, secondLeg].find(m => 
+        m.home_score_penalties !== null && m.away_score_penalties !== null
+      );
+      
+      if (penaltiesMatch) {
+        wonByPenalties = true;
+        if ((penaltiesMatch.home_score_penalties || 0) > (penaltiesMatch.away_score_penalties || 0)) {
+          qualified = penaltiesMatch.home_team;
+        } else {
+          qualified = penaltiesMatch.away_team;
+        }
+      }
+    }
+    
+    return {
+      teamA,
+      teamB,
+      teamA_aggregate,
+      teamB_aggregate,
+      qualified,
+      wonByPenalties,
+      firstLeg,
+      secondLeg
+    };
+  };
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-      {/* Confronto lado a lado - formato do painel administrativo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Jogo de Ida */}
-        <div className="text-center">
-          <div className="text-blue-600 font-semibold text-sm mb-2">JOGO DE IDA</div>
-          <div className="text-xs text-gray-500 mb-3">
-            {formatDate(tie.leg1.match_date)}
-            {tie.leg1.stadium && (
-              <div>{tie.leg1.stadium.name}</div>
+  // Para confrontos de ida e volta
+  if (matches.length === 2) {
+    const aggregate = calculateAggregate(matches);
+    
+    if (!aggregate) {
+      // Se não conseguir calcular agregado, mostrar no mesmo formato lado a lado
+      const firstLeg = matches.find(m => m.leg === 'first_leg') || matches[0];
+      const secondLeg = matches.find(m => m.leg === 'second_leg') || matches[1];
+      
+      return (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          {/* Jogos lado a lado na parte superior */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Jogo de Ida */}
+            {firstLeg && (
+              <div className="text-center">
+                <div className="font-semibold text-blue-600 text-sm mb-2">JOGO DE IDA</div>
+                <div className="text-gray-500 text-xs mb-3">
+                  {formatDate(firstLeg.match_date)}
+                  <br />{firstLeg.stadium?.name}
+                </div>
+                
+                {/* Layout do jogo */}
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  {/* Mandante */}
+                  <div className="flex items-center space-x-1 flex-1 justify-end">
+                    <span className="font-medium text-gray-800 text-xs truncate">{firstLeg.home_team.name}</span>
+                    <img
+                      src={getTeamLogoUrl(firstLeg.home_team.logo_url)}
+                      alt={`${firstLeg.home_team.name} logo`}
+                      className="w-6 h-6 object-contain"
+                    />
+                  </div>
+
+                  {/* Placar */}
+                  <div className="flex items-center space-x-1 px-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {firstLeg.home_score !== null ? firstLeg.home_score : '-'}
+                    </span>
+                    <span className="text-gray-500 font-medium">×</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {firstLeg.away_score !== null ? firstLeg.away_score : '-'}
+                    </span>
+                  </div>
+
+                  {/* Visitante */}
+                  <div className="flex items-center space-x-1 flex-1">
+                    <img
+                      src={getTeamLogoUrl(firstLeg.away_team.logo_url)}
+                      alt={`${firstLeg.away_team.name} logo`}
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span className="font-medium text-gray-800 text-xs truncate">{firstLeg.away_team.name}</span>
+                  </div>
+                </div>
+                
+                <BroadcastButtons match={firstLeg} />
+              </div>
+            )}
+
+            {/* Jogo de Volta */}
+            {secondLeg && (
+              <div className="text-center">
+                <div className="font-semibold text-blue-600 text-sm mb-2">JOGO DE VOLTA</div>
+                <div className="text-gray-500 text-xs mb-3">
+                  {formatDate(secondLeg.match_date)}
+                  <br />{secondLeg.stadium?.name}
+                </div>
+                
+                {/* Layout do jogo */}
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  {/* Mandante */}
+                  <div className="flex items-center space-x-1 flex-1 justify-end">
+                    <span className="font-medium text-gray-800 text-xs truncate">{secondLeg.home_team.name}</span>
+                    <img
+                      src={getTeamLogoUrl(secondLeg.home_team.logo_url)}
+                      alt={`${secondLeg.home_team.name} logo`}
+                      className="w-6 h-6 object-contain"
+                    />
+                  </div>
+
+                  {/* Placar */}
+                  <div className="flex items-center space-x-1 px-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {secondLeg.home_score !== null ? secondLeg.home_score : '-'}
+                    </span>
+                    <span className="text-gray-500 font-medium">×</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {secondLeg.away_score !== null ? secondLeg.away_score : '-'}
+                    </span>
+                  </div>
+
+                  {/* Visitante */}
+                  <div className="flex items-center space-x-1 flex-1">
+                    <img
+                      src={getTeamLogoUrl(secondLeg.away_team.logo_url)}
+                      alt={`${secondLeg.away_team.name} logo`}
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span className="font-medium text-gray-800 text-xs truncate">{secondLeg.away_team.name}</span>
+                  </div>
+                </div>
+
+                {/* Mostrar pênaltis se houver */}
+                {secondLeg.home_score_penalties !== null && secondLeg.away_score_penalties !== null && (
+                  <div className="text-xs text-gray-600 mb-2">
+                    Pênaltis: {secondLeg.home_score_penalties} × {secondLeg.away_score_penalties}
+                  </div>
+                )}
+                
+                <BroadcastButtons match={secondLeg} />
+              </div>
             )}
           </div>
-          
-          {/* Confronto visual */}
-          <div className="flex items-center justify-center space-x-3">
-            {/* Time da casa */}
-            <div className="flex items-center space-x-2">
-              <img 
-                src={getTeamLogoUrl(tie.home_team.logo_url)} 
-                alt={tie.home_team.name} 
-                className="h-8 w-8 object-contain"
-              />
-              <span className="text-sm font-medium">{tie.home_team.name.length > 10 ? tie.home_team.name.substring(0, 10) + '...' : tie.home_team.name}</span>
-            </div>
 
-            {/* Placar */}
-            <div className="bg-gray-100 px-3 py-1 rounded-md min-w-[60px]">
-              <span className="text-lg font-bold text-gray-800">
-                {tie.leg1.home_score !== undefined ? tie.leg1.home_score : '-'}
-              </span>
-              <span className="text-lg font-bold text-gray-800 mx-1">:</span>
-              <span className="text-lg font-bold text-gray-800">
-                {tie.leg1.away_score !== undefined ? tie.leg1.away_score : '-'}
-              </span>
-            </div>
-
-            {/* Time visitante */}
-            <div className="flex items-center space-x-2">
-              <img 
-                src={getTeamLogoUrl(tie.away_team.logo_url)} 
-                alt={tie.away_team.name} 
-                className="h-8 w-8 object-contain"
-              />
-              <span className="text-sm font-medium">{tie.away_team.name.length > 10 ? tie.away_team.name.substring(0, 10) + '...' : tie.away_team.name}</span>
+          {/* Resultado sem agregado calculado */}
+          <div className="border-t pt-3 text-center">
+            <div className="text-sm text-gray-600">
+              Confronto de Ida e Volta
             </div>
           </div>
-          <BroadcastButtons match={tie.leg1} />
         </div>
+      );
+    }
 
-        {/* Jogo de Volta */}
-        {tie.leg2 && (
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        {/* Jogos lado a lado na parte superior */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Jogo de Ida */}
           <div className="text-center">
-            <div className="text-blue-600 font-semibold text-sm mb-2">JOGO DE VOLTA</div>
-            <div className="text-xs text-gray-500 mb-3">
-              {formatDate(tie.leg2.match_date)}
-              {tie.leg2.stadium && (
-                <div>{tie.leg2.stadium.name}</div>
-              )}
+            <div className="font-semibold text-blue-600 text-sm mb-2">JOGO DE IDA</div>
+            <div className="text-gray-500 text-xs mb-3">
+              {formatDate(aggregate.firstLeg.match_date)}
+              <br />{aggregate.firstLeg.stadium?.name}
             </div>
             
-            {/* Confronto visual */}
-            <div className="flex items-center justify-center space-x-3">
-              {/* Time da casa */}
-              <div className="flex items-center space-x-2">
-                <img 
-                  src={getTeamLogoUrl(tie.leg2.home_team.logo_url)} 
-                  alt={tie.leg2.home_team.name} 
-                  className="h-8 w-8 object-contain"
+            {/* Layout do jogo */}
+            <div className="flex items-center justify-center space-x-2 mb-3">
+              {/* Mandante */}
+              <div className="flex items-center space-x-1 flex-1 justify-end">
+                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.firstLeg.home_team.name}</span>
+                <img
+                  src={getTeamLogoUrl(aggregate.firstLeg.home_team.logo_url)}
+                  alt={`${aggregate.firstLeg.home_team.name} logo`}
+                  className="w-6 h-6 object-contain"
                 />
-                <span className="text-sm font-medium">{tie.leg2.home_team.name.length > 10 ? tie.leg2.home_team.name.substring(0, 10) + '...' : tie.leg2.home_team.name}</span>
               </div>
 
               {/* Placar */}
-              <div className="bg-gray-100 px-3 py-1 rounded-md min-w-[60px]">
-                <span className="text-lg font-bold text-gray-800">
-                  {tie.leg2.home_score !== undefined ? tie.leg2.home_score : '-'}
+              <div className="flex items-center space-x-1 px-2">
+                <span className="text-lg font-bold text-gray-900">
+                  {aggregate.firstLeg.home_score}
                 </span>
-                <span className="text-lg font-bold text-gray-800 mx-1">:</span>
-                <span className="text-lg font-bold text-gray-800">
-                  {tie.leg2.away_score !== undefined ? tie.leg2.away_score : '-'}
+                <span className="text-gray-500 font-medium">×</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {aggregate.firstLeg.away_score}
                 </span>
               </div>
 
-              {/* Time visitante */}
-              <div className="flex items-center space-x-2">
-                <img 
-                  src={getTeamLogoUrl(tie.leg2.away_team.logo_url)} 
-                  alt={tie.leg2.away_team.name} 
-                  className="h-8 w-8 object-contain"
+              {/* Visitante */}
+              <div className="flex items-center space-x-1 flex-1">
+                <img
+                  src={getTeamLogoUrl(aggregate.firstLeg.away_team.logo_url)}
+                  alt={`${aggregate.firstLeg.away_team.name} logo`}
+                  className="w-6 h-6 object-contain"
                 />
-                <span className="text-sm font-medium">{tie.leg2.away_team.name.length > 10 ? tie.leg2.away_team.name.substring(0, 10) + '...' : tie.leg2.away_team.name}</span>
+                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.firstLeg.away_team.name}</span>
               </div>
             </div>
-            <BroadcastButtons match={tie.leg2} />
+            
+            <BroadcastButtons match={aggregate.firstLeg} />
           </div>
-        )}
-      </div>
 
-      {/* Resultado final */}
-      {isFinished && winner && (
-        <div className="text-center mt-4 pt-3 border-t border-gray-200">
-          <div className="text-blue-600 font-semibold text-sm mb-2">
-            Classificado: {winner.name}
+          {/* Jogo de Volta */}
+          <div className="text-center">
+            <div className="font-semibold text-blue-600 text-sm mb-2">JOGO DE VOLTA</div>
+            <div className="text-gray-500 text-xs mb-3">
+              {formatDate(aggregate.secondLeg.match_date)}
+              <br />{aggregate.secondLeg.stadium?.name}
+            </div>
+            
+            {/* Layout do jogo */}
+            <div className="flex items-center justify-center space-x-2 mb-3">
+              {/* Mandante */}
+              <div className="flex items-center space-x-1 flex-1 justify-end">
+                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.secondLeg.home_team.name}</span>
+                <img
+                  src={getTeamLogoUrl(aggregate.secondLeg.home_team.logo_url)}
+                  alt={`${aggregate.secondLeg.home_team.name} logo`}
+                  className="w-6 h-6 object-contain"
+                />
+              </div>
+
+              {/* Placar */}
+              <div className="flex items-center space-x-1 px-2">
+                <span className="text-lg font-bold text-gray-900">
+                  {aggregate.secondLeg.home_score}
+                </span>
+                <span className="text-gray-500 font-medium">×</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {aggregate.secondLeg.away_score}
+                </span>
+              </div>
+
+              {/* Visitante */}
+              <div className="flex items-center space-x-1 flex-1">
+                <img
+                  src={getTeamLogoUrl(aggregate.secondLeg.away_team.logo_url)}
+                  alt={`${aggregate.secondLeg.away_team.name} logo`}
+                  className="w-6 h-6 object-contain"
+                />
+                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.secondLeg.away_team.name}</span>
+              </div>
+            </div>
+
+            {/* Mostrar pênaltis se houver */}
+            {aggregate.secondLeg.home_score_penalties !== null && aggregate.secondLeg.away_score_penalties !== null && (
+              <div className="text-xs text-gray-600 mb-2">
+                Pênaltis: {aggregate.secondLeg.home_score_penalties} × {aggregate.secondLeg.away_score_penalties}
+              </div>
+            )}
+            
+            <BroadcastButtons match={aggregate.secondLeg} />
           </div>
-          {(tie.aggregate_home_score !== undefined && tie.aggregate_away_score !== undefined) && (
-            <div className="text-sm text-gray-600">
-              Agregado: {tie.aggregate_home_score} × {tie.aggregate_away_score}
+        </div>
+
+        {/* Resultado final - parte inferior */}
+        <div className="border-t pt-3 text-center">
+          {aggregate.qualified && (
+            <div className="mb-2">
+              <div className="text-sm font-semibold text-green-700">
+                🏆 Classificado: {aggregate.qualified.name}
+                {aggregate.wonByPenalties && (
+                  <span className="text-xs text-green-600 block mt-1">
+                    (Decidido nos pênaltis)
+                  </span>
+                )}
+              </div>
             </div>
           )}
+          
+          <div className="text-sm text-gray-600">
+            Agregado: {aggregate.teamA_aggregate} × {aggregate.teamB_aggregate}
+          </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Para jogos únicos
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      {matches.map(match => (
+        <div key={match.id}>
+          {/* Data, Hora, Estádio */}
+          <div className="text-center text-gray-600 text-sm mb-3">
+            {formatDate(match.match_date)}
+            {match.stadium?.name && ` • ${match.stadium.name}`}
+            {match.stadium?.city && `, ${match.stadium.city}`}
+          </div>
+
+          {/* Layout: Mandante (escudo) (placar) X (placar) (escudo) Visitante */}
+          <div className="flex items-center justify-center space-x-4">
+            {/* Mandante */}
+            <div className="flex items-center space-x-2 flex-1 justify-end">
+              <span className="font-semibold text-gray-800">{match.home_team.name}</span>
+              <img
+                src={getTeamLogoUrl(match.home_team.logo_url)}
+                alt={`${match.home_team.name} logo`}
+                className="w-10 h-10 object-contain"
+              />
+            </div>
+
+            {/* Placar */}
+            <div className="text-center px-4">
+              <div className="text-2xl font-bold text-gray-900">
+                {match.home_score !== null ? match.home_score : '-'} × {match.away_score !== null ? match.away_score : '-'}
+              </div>
+            </div>
+
+            {/* Visitante */}
+            <div className="flex items-center space-x-2 flex-1">
+              <img
+                src={getTeamLogoUrl(match.away_team.logo_url)}
+                alt={`${match.away_team.name} logo`}
+                className="w-10 h-10 object-contain"
+              />
+              <span className="font-semibold text-gray-800">{match.away_team.name}</span>
+            </div>
+          </div>
+
+          {/* Pênaltis (se houver) */}
+          {match.home_score_penalties !== null && match.away_score_penalties !== null && (
+            <div className="text-center text-sm text-gray-600 mt-2">
+              Pênaltis: {match.home_score_penalties} × {match.away_score_penalties}
+            </div>
+          )}
+          
+          {/* Classificado seria determinado por outros critérios se necessário */}
+          
+          {/* Botões de transmissão */}
+          <div className="mt-3">
+            <BroadcastButtons match={match} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

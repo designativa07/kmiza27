@@ -59,8 +59,7 @@ export const isKnockoutCompetition = (competitionType: string): boolean => {
   return competitionType === 'mata_mata' || 
          competitionType === 'grupos_e_mata_mata' || 
          competitionType === 'copa' ||
-         competitionType === 'torneio' || // Adicionado para suportar "Torneio (Mata-mata)"
-         competitionType === 'serie';
+         competitionType === 'torneio'; // Adicionado para suportar "Torneio (Mata-mata)"
 };
 
 /**
@@ -141,8 +140,8 @@ export const createKnockoutTies = (matches: Match[]): KnockoutTie[] => {
     const phase = match.phase || 'Mata-mata';
     
     // Verificar se a partida tem tie_id ou leg definidos
-    const tieId = (match as any).tie_id || (match as any).leg_id;
-    const leg = (match as any).leg;
+    const tieId = match.tie_id;
+    const leg = match.leg;
     
     let confrontoId: string;
     

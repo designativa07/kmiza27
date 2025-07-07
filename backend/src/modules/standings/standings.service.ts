@@ -515,25 +515,19 @@ export class StandingsService {
   }
 
   async getRoundMatches(competitionId: number, roundId: number): Promise<Match[]> {
-    return this.matchRepository.find({
-      where: {
-        competition: { id: competitionId },
-        round: { id: roundId },
-      },
-      relations: [
-        'home_team',
-        'away_team',
-        'stadium',
-        'round',
-        'competition',
-        'qualified_team',
-        'broadcasts', // Adicionado para carregar transmissões
-        'broadcasts.channel', // Adicionado para carregar detalhes do canal
-      ],
-      order: {
-        match_date: 'ASC',
-      },
-    });
+    return this.matchRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.home_team', 'home_team')
+      .leftJoinAndSelect('match.away_team', 'away_team')
+      .leftJoinAndSelect('match.stadium', 'stadium')
+      .leftJoinAndSelect('match.round', 'round')
+      .leftJoinAndSelect('match.broadcasts', 'broadcasts')
+      .leftJoinAndSelect('broadcasts.channel', 'channel')
+      .where('match.competition_id = :competitionId', { competitionId })
+      .andWhere('match.round_id = :roundId', { roundId })
+      .addSelect(['match.is_knockout', 'match.tie_id', 'match.leg'])
+      .orderBy('match.match_date', 'ASC')
+      .getMany();
   }
 
   private calculateRecord(matches: Match[], teamId: number) {

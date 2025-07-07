@@ -56,9 +56,6 @@ export class UploadCloudService {
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
-    this.logger.log('--- Inicializando UploadCloudService ---');
-    this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-
     // Primeiro tentar usar ConfigService, depois carregar manualmente se necessário
     this.cdnUrl = this.configService.get('CDN_URL') || process.env.CDN_URL || 'https://cdn.kmiza27.com';
     this.bucketName = this.configService.get('MINIO_BUCKET_NAME') || process.env.MINIO_BUCKET_NAME || 'img';
@@ -69,7 +66,6 @@ export class UploadCloudService {
 
     // Se as variáveis não estão disponíveis, tentar carregar manualmente
     if (!endpoint || !accessKey || !secretKey) {
-      this.logger.log('Variáveis do MinIO não encontradas via ConfigService, tentando carregar manualmente...');
       this.loadEnvironmentVariables();
       
       // Tentar novamente após carregamento manual
@@ -77,11 +73,6 @@ export class UploadCloudService {
       accessKey = process.env.MINIO_ACCESS_KEY;
       secretKey = process.env.MINIO_SECRET_KEY;
     }
-
-    // Debug: verificar variáveis de ambiente
-    this.logger.log(`MINIO_ENDPOINT: ${endpoint || 'NÃO ENCONTRADO'}`);
-    this.logger.log(`MINIO_ACCESS_KEY: ${accessKey ? 'Configurado' : 'NÃO ENCONTRADO'}`);
-    this.logger.log(`MINIO_SECRET_KEY: ${secretKey ? 'Configurado' : 'NÃO ENCONTRADO'}`);
 
     if (!endpoint) {
       this.logger.warn('MINIO_ENDPOINT não está configurado. O upload de arquivos estará desabilitado.');
@@ -113,13 +104,7 @@ export class UploadCloudService {
         },
       });
 
-      this.logger.log(`✅ S3 Client inicializado com sucesso!`);
-      this.logger.log(`   Endpoint: ${useSSL ? 'https' : 'http'}://${endpoint}:${port}`);
-      this.logger.log(`   SSL: ${useSSL}`);
-      this.logger.log(`   Bucket: ${this.bucketName}`);
-      this.logger.log(`   Access Key: ${accessKey.substring(0, 5)}***`);
-      
-      // Testar conexão com MinIO
+      // Testar conexão com MinIO silenciosamente
       this.testMinIOConnection();
     } catch (error) {
       this.logger.error(`Erro ao inicializar S3 Client: ${error.message}`);
@@ -131,29 +116,21 @@ export class UploadCloudService {
     if (!this.s3Client) return;
     
     try {
-      this.logger.log(`🧪 Testando conexão com MinIO...`);
       const command = new ListBucketsCommand({});
       const result = await this.s3Client.send(command);
-      this.logger.log(`✅ Conexão com MinIO bem-sucedida!`);
-      this.logger.log(`📦 Buckets disponíveis: ${result.Buckets?.map(b => b.Name).join(', ') || 'Nenhum'}`);
       
       const bucketExists = result.Buckets?.some(b => b.Name === this.bucketName);
       if (!bucketExists) {
-        this.logger.warn(`⚠️  Bucket "${this.bucketName}" não encontrado!`);
-      } else {
-        this.logger.log(`✅ Bucket "${this.bucketName}" encontrado!`);
+        this.logger.warn(`Bucket "${this.bucketName}" não encontrado!`);
       }
     } catch (error) {
-      this.logger.error(`❌ Erro na conexão com MinIO: ${error.message}`);
-      this.logger.error(`   Código: ${error.Code || 'N/A'}`);
+      this.logger.error(`Erro na conexão com MinIO: ${error.message}`);
     }
   }
 
   private loadEnvironmentVariables(): void {
     const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
     const envPath = path.join(__dirname, '..', '..', '..', envFile);
-
-    this.logger.log(`Tentando carregar variáveis de: ${envPath}`);
 
     if (fs.existsSync(envPath)) {
       try {
@@ -166,16 +143,11 @@ export class UploadCloudService {
             const value = valueParts.join('=').trim();
             // Sempre definir no process.env (sobrescrever se necessário)
             process.env[key] = value;
-            this.logger.log(`Carregada variável: ${key} = ${value.substring(0, 20)}...`);
           }
         });
-        
-        this.logger.log(`✅ Variáveis carregadas de: ${envFile}`);
       } catch (error) {
         this.logger.error(`Erro ao carregar ${envFile}: ${error.message}`);
       }
-    } else {
-      this.logger.warn(`⚠️  Arquivo ${envFile} não encontrado em ${envPath}`);
     }
   }
 
@@ -243,12 +215,6 @@ export class UploadCloudService {
     }
 
     const key = `${folder}/${fileName}`;
-    
-    this.logger.log(`📤 Iniciando upload para MinIO:`);
-    this.logger.log(`   Bucket: ${this.bucketName}`);
-    this.logger.log(`   Key: ${key}`);
-    this.logger.log(`   Content-Type: ${file.mimetype}`);
-    this.logger.log(`   File Size: ${file.buffer.length} bytes`);
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
@@ -260,18 +226,11 @@ export class UploadCloudService {
     });
 
     try {
-      this.logger.log(`🚀 Enviando arquivo para MinIO...`);
       const result = await this.s3Client.send(command);
-      this.logger.log(`✅ Upload realizado com sucesso! ETag: ${result.ETag}`);
-      
       const publicUrl = `${this.cdnUrl}/${this.bucketName}/${key}`;
-      this.logger.log(`🔗 URL pública: ${publicUrl}`);
       return publicUrl;
     } catch (error) {
-      this.logger.error(`❌ Erro ao fazer upload do arquivo para o S3:`);
-      this.logger.error(`   Erro: ${error.message}`);
-      this.logger.error(`   Código: ${error.Code || 'N/A'}`);
-      this.logger.error(`   Stack: ${error.stack}`);
+      this.logger.error(`Erro ao fazer upload: ${error.message}`);
       throw new Error('Erro no upload do arquivo.');
     }
   }
