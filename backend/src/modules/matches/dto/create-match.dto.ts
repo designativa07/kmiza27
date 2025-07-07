@@ -1,16 +1,23 @@
 import { IsNotEmpty, IsNumber, IsString, IsDateString, IsEnum, IsArray, IsOptional, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MatchStatus } from '../../../entities/match.entity';
-import { MatchLeg } from '../../../entities/match.entity';
+import { MatchStatus, MatchLeg } from '../../../entities/match.entity';
 
 export class MatchPlayerStatDto {
   @IsNotEmpty()
   @IsNumber()
   player_id: number;
 
+  @IsNotEmpty()
+  @IsNumber()
+  minutes_played: number;
+
   @IsOptional()
   @IsNumber()
   goals?: number;
+
+  @IsOptional()
+  @IsNumber()
+  assists?: number;
 
   @IsOptional()
   @IsNumber()
@@ -21,15 +28,8 @@ export class MatchPlayerStatDto {
   red_cards?: number;
 }
 
+
 export class CreateMatchDto {
-  @IsNotEmpty()
-  @IsNumber()
-  home_team_id: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  away_team_id: number;
-
   @IsNotEmpty()
   @IsNumber()
   competition_id: number;
@@ -42,6 +42,14 @@ export class CreateMatchDto {
   @IsString()
   round_name?: string;
 
+  @IsNotEmpty()
+  @IsNumber()
+  home_team_id: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  away_team_id: number;
+
   @IsOptional()
   @IsNumber()
   stadium_id?: number;
@@ -53,8 +61,11 @@ export class CreateMatchDto {
   @IsOptional()
   @IsString()
   phase?: string;
+  
+  @IsOptional()
+  @IsBoolean()
+  is_knockout?: boolean;
 
-  @IsNotEmpty()
   @IsDateString()
   match_date: string;
 
@@ -88,21 +99,16 @@ export class CreateMatchDto {
 
   @IsOptional()
   @IsArray()
-  broadcast_channels?: any;
-
-  @IsOptional()
-  @IsArray()
-  @IsNumber({}, { each: true })
-  channel_ids?: number[];
-
-
+  @IsString({ each: true })
+  broadcast_channels?: string[];
 
   @IsOptional()
   @IsString()
   highlights_url?: string;
 
   @IsOptional()
-  match_stats?: any;
+  @IsString()
+  match_stats?: string;
 
   @IsOptional()
   @IsEnum(MatchLeg)
@@ -125,10 +131,6 @@ export class CreateMatchDto {
   qualified_team_id?: number;
 
   @IsOptional()
-  @IsBoolean()
-  is_knockout?: boolean;
-
-  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MatchPlayerStatDto)
@@ -139,4 +141,9 @@ export class CreateMatchDto {
   @ValidateNested({ each: true })
   @Type(() => MatchPlayerStatDto)
   away_team_player_stats?: MatchPlayerStatDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  channel_ids?: number[];
 } 

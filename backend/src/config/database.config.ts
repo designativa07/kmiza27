@@ -4,7 +4,7 @@ import { LogLevel } from 'typeorm';
 export const databaseConfig = (): TypeOrmModuleOptions => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  const loggingLevels: LogLevel[] = isDevelopment ? ['query', 'error'] : ['error'];
+  const loggingLevels: LogLevel[] = isDevelopment ? ['error'] : ['error'];
 
   const baseConfig = {
     type: 'postgres' as const,

@@ -163,6 +163,7 @@ function ChannelMultiSelect({
                     checked={selectedIds.includes(channel.id)}
                     onChange={() => toggleChannel(channel.id)}
                     className="mr-2"
+                    aria-label={`Selecionar canal ${channel.name}`}
                   />
                   <span className="text-sm">{channel.name}</span>
                 </div>
@@ -627,8 +628,7 @@ export default function MatchesManager() {
 
     setAvailableRoundsForFilter(sortedRounds)
     setAvailableGroupsForFilter(sortedGroups)
-    console.log('DEBUG: Available Rounds for Filter:', sortedRounds); // Add this
-    console.log('DEBUG: Available Groups for Filter:', sortedGroups); // Add this
+
   }
 
   const applyFilters = () => {
@@ -1202,6 +1202,7 @@ export default function MatchesManager() {
                   setCurrentPage(1)
                 }}
                 className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                aria-label="Selecionar itens por página"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -1426,6 +1427,7 @@ export default function MatchesManager() {
                 value={filters.competition}
                 onChange={(e) => setFilters({ ...filters, competition: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+                aria-label="Filtrar por competição"
               >
                 <option value="">Todas</option>
                 {Array.isArray(competitions) && competitions.map((comp) => (
@@ -1463,6 +1465,7 @@ export default function MatchesManager() {
                 }}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
                 disabled={!filters.competition}
+                aria-label="Filtrar por grupo"
               >
                 <option value="">Todos</option>
                 {filters.competition && Array.isArray(getUniqueGroupsByCompetition(filters.competition)) && getUniqueGroupsByCompetition(filters.competition).map((group) => (
@@ -1479,6 +1482,7 @@ export default function MatchesManager() {
                 value={filters.phase}
                 onChange={(e) => setFilters({ ...filters, phase: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+                aria-label="Filtrar por fase"
               >
                 <option value="">Todas</option>
                 {Array.isArray(getUniquePhasesByCompetition(filters.competition)) && getUniquePhasesByCompetition(filters.competition).map((phase) => (
@@ -1493,6 +1497,7 @@ export default function MatchesManager() {
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10"
+                aria-label="Filtrar por status"
               >
                 <option value="">Todos</option>
                 <option value="scheduled">⏰ Agendado</option>
@@ -1637,12 +1642,14 @@ export default function MatchesManager() {
                         <button
                           onClick={() => handleEdit(match)}
                           className="text-indigo-600 hover:text-indigo-900 mr-3"
+                          aria-label={`Editar jogo ${match.home_team?.name || 'Time A'} vs ${match.away_team?.name || 'Time B'}`}
                         >
                           <PencilIcon className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(match.id)}
                           className="text-red-600 hover:text-red-900"
+                          aria-label={`Excluir jogo ${match.home_team?.name || 'Time A'} vs ${match.away_team?.name || 'Time B'}`}
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
@@ -1709,11 +1716,14 @@ export default function MatchesManager() {
                             type="checkbox"
                             checked={createTwoLegTie}
                             onChange={(e) => {
-                              setCreateTwoLegTie(e.target.checked);
-                              if (e.target.checked) {
-                                setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: '', is_knockout: true }));
+                              const isChecked = e.target.checked;
+                              setCreateTwoLegTie(isChecked);
+                              if (isChecked) {
+                                // Gerar automaticamente um tie_id único quando marcar ida e volta
+                                const newTieId = crypto.randomUUID();
+                                setFormData(prev => ({ ...prev, leg: 'first_leg', tie_id: newTieId, is_knockout: true }));
                               } else {
-                                setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', stadium_id: null }));
+                                setFormData(prev => ({ ...prev, leg: '', tie_id: '', match_date_second_leg: '', stadium_id_second_leg: '', is_knockout: false }));
                               }
                             }}
                             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
@@ -1811,8 +1821,9 @@ export default function MatchesManager() {
                        </button>
                      </div>
                      <div className="lg:col-span-2">
-                       <label className="block text-sm font-medium text-gray-700">Data e Hora</label>
+                       <label htmlFor="match_date" className="block text-sm font-medium text-gray-700">Data e Hora</label>
                        <input
+                         id="match_date"
                          type="datetime-local"
                          required
                          value={formData.match_date}
@@ -1828,6 +1839,7 @@ export default function MatchesManager() {
                          value={formData.stadium_id || ''}
                          onChange={(e) => setFormData({ ...formData, stadium_id: e.target.value })}
                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                         aria-label="Selecionar estádio da partida"
                        >
                          <option value="">Selecione o estádio</option>
                          {Array.isArray(stadiums) && stadiums.length > 0 ? (
@@ -1847,6 +1859,7 @@ export default function MatchesManager() {
                          value={formData.status}
                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                         aria-label="Selecionar status da partida"
                        >
                          <option value="scheduled">Agendado</option>
                          <option value="live">Ao Vivo</option>
@@ -2104,6 +2117,7 @@ export default function MatchesManager() {
                         🏆 Competição
                       </label>
                       <select
+                        id="competition_id"
                         required
                         value={formData.competition_id}
                         onChange={(e) => {
@@ -2130,9 +2144,10 @@ export default function MatchesManager() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">📅 Rodada</label>
+                      <label htmlFor="round_id" className="block text-sm font-inter-medium text-gray-700 mb-2">📅 Rodada</label>
                       <div className="space-y-1">
                         <select
+                          id="round_id"
                           value={formData.round_id}
                           onChange={(e) => setFormData({ ...formData, round_id: e.target.value, round_name: '' })}
                           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
@@ -2144,7 +2159,9 @@ export default function MatchesManager() {
                           ))}
                         </select>
                         <div className="text-center text-xs text-gray-400">ou</div>
+                        <label htmlFor="round_name" className="sr-only">Nova rodada</label>
                         <input
+                          id="round_name"
                           type="text"
                           value={formData.round_name || ''}
                           onChange={(e) => setFormData({ ...formData, round_name: e.target.value, round_id: '' })}
@@ -2157,8 +2174,9 @@ export default function MatchesManager() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">👥 Grupo</label>
+                      <label htmlFor="group_name" className="block text-sm font-inter-medium text-gray-700 mb-2">👥 Grupo</label>
                       <select
+                        id="group_name"
                         value={formData.group_name}
                         onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 text-sm px-2 py-2"
@@ -2173,8 +2191,9 @@ export default function MatchesManager() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-inter-medium text-gray-700 mb-2">⚡ Fase</label>
+                      <label htmlFor="phase" className="block text-sm font-inter-medium text-gray-700 mb-2">⚡ Fase</label>
                       <input
+                        id="phase"
                         type="text"
                         value={formData.phase}
                         onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
@@ -2191,8 +2210,9 @@ export default function MatchesManager() {
                     <h4 className="text-md font-medium text-gray-900 mb-3">🔄 Dados da Segunda Mão</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">📅 Data e Hora da Volta</label>
+                        <label htmlFor="match_date_second_leg" className="block text-sm font-medium text-gray-700">📅 Data e Hora da Volta</label>
                         <input
+                          id="match_date_second_leg"
                           type="datetime-local"
                           required
                           value={formData.match_date_second_leg}

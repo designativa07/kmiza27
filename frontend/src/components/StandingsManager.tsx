@@ -159,8 +159,13 @@ export default function StandingsManager() {
   const isCupCompetition = useMemo(() => {
     if (!selectedCompetition || competitions.length === 0) return false;
     const comp = competitions.find(c => c.id === selectedCompetition);
-    console.log('Competição selecionada:', comp); // Debug
-    return comp?.type === 'copa';
+    
+    // TESTE: Forçar Copa do Brasil a ser mata-mata
+    if (comp?.name === 'Copa do Brasil') {
+      return true;
+    }
+    
+    return comp?.type === 'copa' || comp?.type === 'torneio';
   }, [selectedCompetition, competitions]);
 
   useEffect(() => {
@@ -198,12 +203,12 @@ export default function StandingsManager() {
     if (rounds.length > 0 && selectedRound) {
       const roundIndex = rounds.findIndex(round => round.id === selectedRound)
       if (roundIndex !== -1 && roundIndex !== currentRoundIndex) {
-        console.log(`Sincronizando índice: ${roundIndex} para rodada ID: ${selectedRound}`) // Debug
+
         setCurrentRoundIndex(roundIndex)
       }
     } else if (rounds.length > 0) {
       // Se há rodadas mas nenhuma selecionada, selecione a primeira
-      console.log("Nenhuma rodada selecionada, definindo a primeira: ", rounds[0].id); // Debug
+
       setCurrentRoundIndex(0);
       setSelectedRound(rounds[0].id);
     }
@@ -293,11 +298,11 @@ export default function StandingsManager() {
       const response = await fetch(API_ENDPOINTS.standings.rounds(selectedCompetition))
       if (response.ok) {
         const data = await response.json()
-        console.log('Rodadas carregadas (fetchRounds):', data) // Debug
+
         setRounds(data)
         // Se houver rodadas e selectedRound não estiver nas rodadas carregadas, selecione a primeira
         if (data.length > 0 && (!selectedRound || !data.some((round: any) => round.id === selectedRound))) {
-          console.log("Definindo selectedRound para a primeira rodada: ", data[0].id); // Debug
+
           setSelectedRound(data[0].id);
         }
       }
@@ -308,20 +313,20 @@ export default function StandingsManager() {
 
   const fetchRoundMatches = async () => {
     if (!selectedCompetition || !selectedRound) {
-      console.log("Não carregando jogos: Competição ou Rodada não selecionada.", { selectedCompetition, selectedRound }); // Debug
+
       setRoundMatches([]); 
       return;
     }
     
     try {
-      console.log(`Carregando jogos para competição ${selectedCompetition}, rodada ${selectedRound}`); // Debug
+
       const response = await fetch(API_ENDPOINTS.standings.roundMatches(selectedCompetition, selectedRound))
       if (response.ok) {
         const data = await response.json()
-        console.log('Jogos da rodada carregados:', data); // Debug
+        
         setRoundMatches(data)
       } else {
-        console.error(`Erro ao carregar jogos da rodada: ${response.status} - ${response.statusText}`); // Debug
+        console.error(`Erro ao carregar jogos da rodada: ${response.status} - ${response.statusText}`);
         setRoundMatches([]); 
       }
     } catch (error) {
@@ -394,20 +399,20 @@ export default function StandingsManager() {
   }
 
   const navigateRound = (direction: 'prev' | 'next') => {
-    console.log(`Navegando ${direction}, índice atual: ${currentRoundIndex}, total de rodadas: ${rounds.length}`) // Debug
+
     
     if (direction === 'prev' && currentRoundIndex > 0) {
       const newIndex = currentRoundIndex - 1
-      console.log(`Indo para rodada anterior, novo índice: ${newIndex}, rodada ID: ${rounds[newIndex].id}`) // Debug
+      
       setCurrentRoundIndex(newIndex)
       setSelectedRound(rounds[newIndex].id)
     } else if (direction === 'next' && currentRoundIndex < rounds.length - 1) {
       const newIndex = currentRoundIndex + 1
-      console.log(`Indo para próxima rodada, novo índice: ${newIndex}, rodada ID: ${rounds[newIndex].id}`) // Debug
+      
       setCurrentRoundIndex(newIndex)
       setSelectedRound(rounds[newIndex].id)
     } else {
-      console.log(`Navegação bloqueada: ${direction}, índice: ${currentRoundIndex}, limites: 0-${rounds.length - 1}`) // Debug
+      
     }
   }
 
@@ -498,6 +503,7 @@ export default function StandingsManager() {
           onClick={() => navigateRound('prev')}
           disabled={currentRoundIndex === 0}
           className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+          title="Fase anterior"
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
@@ -515,6 +521,7 @@ export default function StandingsManager() {
           onClick={() => navigateRound('next')}
           disabled={currentRoundIndex === rounds.length - 1}
           className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+          title="Próxima fase"
         >
           <ChevronRightIcon className="h-5 w-5" />
         </button>

@@ -90,6 +90,9 @@ export class MatchesService {
       away_team_player_stats: createMatchDto.away_team_player_stats,
     };
 
+    // Usar a flag is_knockout do DTO, com um fallback para false se não for fornecida
+    matchData.is_knockout = createMatchDto.is_knockout ?? false;
+
     // Se for o primeiro jogo de um confronto e não tiver um tie_id, gerar um novo
     if (matchData.leg === MatchLeg.FIRST_LEG && !matchData.tie_id) {
       matchData.tie_id = uuidv4();
@@ -112,9 +115,19 @@ export class MatchesService {
       matchData.stadium = { id: createMatchDto.stadium_id };
     }
 
+    // Adicionar lógica para is_knockout
+    if (createMatchDto.competition_id) {
+      const competition = await this.competitionRepository.findOneBy({ id: createMatchDto.competition_id });
+      if (competition) {
+        matchData.competition = competition;
+        const isKnockoutCompetition = ['mata_mata', 'grupos_e_mata_mata', 'copa', 'torneio'].includes(competition.type);
+        matchData.is_knockout = isKnockoutCompetition;
+      }
+    }
+
     const match = this.matchRepository.create(matchData);
     const savedMatch = await this.matchRepository.save(match);
-    const finalMatch = savedMatch[0] || savedMatch;
+    const finalMatch = Array.isArray(savedMatch) ? savedMatch[0] : savedMatch;
 
     // Gerenciar transmissões usando a nova tabela match_broadcasts
     if (createMatchDto.channel_ids && createMatchDto.channel_ids.length > 0) {
@@ -197,6 +210,7 @@ export class MatchesService {
         tie_id: tieId,
         stadium: stadiumFirstLeg || undefined,
         broadcast_channels: broadcast_channels,
+        is_knockout: true, // Confrontos de ida e volta são sempre mata-mata
       };
       const firstLeg = queryRunner.manager.create(Match, firstLegMatchData);
       const savedFirstLeg = await queryRunner.manager.save(firstLeg);
@@ -220,6 +234,7 @@ export class MatchesService {
         tie_id: tieId,
         stadium: stadiumSecondLeg || undefined,
         broadcast_channels: broadcast_channels,
+        is_knockout: true, // Confrontos de ida e volta são sempre mata-mata
       };
       const secondLeg = queryRunner.manager.create(Match, secondLegMatchData);
       const savedSecondLeg = await queryRunner.manager.save(secondLeg);
@@ -279,107 +294,51 @@ export class MatchesService {
     try {
       console.log('🔍 MatchesService.update - Atualizando match:', { id, updateMatchDto });
       
-      // Converter o DTO para o formato correto para o TypeORM
-      const updateData: any = {};
-      
-      // Campos diretos
-      if (updateMatchDto.match_date !== undefined) {
-        updateData.match_date = new Date(updateMatchDto.match_date);
-      }
-      if (updateMatchDto.status !== undefined) {
-        updateData.status = updateMatchDto.status;
-      }
-      if (updateMatchDto.home_score !== undefined) {
-        updateData.home_score = updateMatchDto.home_score;
-      }
-      if (updateMatchDto.away_score !== undefined) {
-        updateData.away_score = updateMatchDto.away_score;
-      }
-      if (updateMatchDto.home_score_penalties !== undefined) {
-        updateData.home_score_penalties = updateMatchDto.home_score_penalties;
-      }
-      if (updateMatchDto.away_score_penalties !== undefined) {
-        updateData.away_score_penalties = updateMatchDto.away_score_penalties;
-      }
-      if (updateMatchDto.attendance !== undefined) {
-        updateData.attendance = updateMatchDto.attendance;
-      }
-      if (updateMatchDto.referee !== undefined) {
-        updateData.referee = updateMatchDto.referee;
-      }
-      if (updateMatchDto.broadcast_channels !== undefined) {
-        updateData.broadcast_channels = updateMatchDto.broadcast_channels;
-      }
-      
-      if (updateMatchDto.highlights_url !== undefined) {
-        updateData.highlights_url = updateMatchDto.highlights_url;
-      }
-      if (updateMatchDto.match_stats !== undefined) {
-        updateData.match_stats = updateMatchDto.match_stats;
-      }
-      if (updateMatchDto.group_name !== undefined) {
-        updateData.group_name = updateMatchDto.group_name;
-      }
-      if (updateMatchDto.phase !== undefined) {
-        updateData.phase = updateMatchDto.phase;
-      }
-      if (updateMatchDto.leg !== undefined) {
-        updateData.leg = updateMatchDto.leg;
-      }
-      if (updateMatchDto.tie_id !== undefined) {
-        updateData.tie_id = updateMatchDto.tie_id === '' ? null : updateMatchDto.tie_id;
-      }
-      if (updateMatchDto.home_aggregate_score !== undefined) {
-        updateData.home_aggregate_score = updateMatchDto.home_aggregate_score;
-      }
-      if (updateMatchDto.away_aggregate_score !== undefined) {
-        updateData.away_aggregate_score = updateMatchDto.away_aggregate_score;
-      }
-      if (updateMatchDto.qualified_team_id !== undefined) {
-        updateData.qualified_team_id = updateMatchDto.qualified_team_id;
-      }
-      if (updateMatchDto.home_team_player_stats !== undefined) {
-        updateData.home_team_player_stats = updateMatchDto.home_team_player_stats;
-      }
-      if (updateMatchDto.away_team_player_stats !== undefined) {
-        updateData.away_team_player_stats = updateMatchDto.away_team_player_stats;
-      }
-      
-      // Relacionamentos - usar os nomes das colunas de foreign key
-      if (updateMatchDto.home_team_id !== undefined) {
-        updateData.home_team = { id: updateMatchDto.home_team_id };
-      }
-      if (updateMatchDto.away_team_id !== undefined) {
-        updateData.away_team = { id: updateMatchDto.away_team_id };
-      }
-      if (updateMatchDto.competition_id !== undefined) {
-        updateData.competition = { id: updateMatchDto.competition_id };
-      }
-      if (updateMatchDto.round_id !== undefined) {
-        updateData.round = { id: updateMatchDto.round_id };
-      }
-      if (updateMatchDto.stadium_id !== undefined) {
-        updateData.stadium = updateMatchDto.stadium_id === null ? null : { id: updateMatchDto.stadium_id };
-      }
-      
-      console.log('🔍 MatchesService.update - Dados processados:', updateData);
-      
-      const updatedMatch = await this.matchRepository.save({ id, ...updateData });
-
-      // Gerenciar transmissões usando a nova tabela match_broadcasts
+      // Se channel_ids for fornecido, atualiza as transmissões
       if (updateMatchDto.channel_ids !== undefined) {
-        await this.updateMatchBroadcasts(id, updateMatchDto.channel_ids || []);
+        await this.updateMatchBroadcasts(id, updateMatchDto.channel_ids);
       }
 
-      // Se o status da partida for finalizado, e a competição for de mata-mata, calcular e atualizar o placar agregado
-      const fullMatch = await this.matchRepository.findOne({ 
-        where: { id },
-        relations: ['competition']
-      });
+      // Construir objeto de atualização apenas com os campos fornecidos
+      const updateData: Partial<Match> = {};
+      
+      if (updateMatchDto.match_date) updateData.match_date = new Date(updateMatchDto.match_date);
+      if (updateMatchDto.status) updateData.status = updateMatchDto.status;
+      if (updateMatchDto.home_score !== undefined) updateData.home_score = updateMatchDto.home_score;
+      if (updateMatchDto.away_score !== undefined) updateData.away_score = updateMatchDto.away_score;
+      if (updateMatchDto.home_score_penalties !== undefined) updateData.home_score_penalties = updateMatchDto.home_score_penalties;
+      if (updateMatchDto.away_score_penalties !== undefined) updateData.away_score_penalties = updateMatchDto.away_score_penalties;
+      if (updateMatchDto.attendance) updateData.attendance = updateMatchDto.attendance;
+      if (updateMatchDto.referee) updateData.referee = updateMatchDto.referee;
+      if (updateMatchDto.broadcast_channels) updateData.broadcast_channels = updateMatchDto.broadcast_channels;
+      if (updateMatchDto.highlights_url) updateData.highlights_url = updateMatchDto.highlights_url;
+      if (updateMatchDto.match_stats) updateData.match_stats = updateMatchDto.match_stats;
+      if (updateMatchDto.group_name) updateData.group_name = updateMatchDto.group_name;
+      if (updateMatchDto.phase) updateData.phase = updateMatchDto.phase;
+      if (updateMatchDto.leg) updateData.leg = updateMatchDto.leg;
+      if (updateMatchDto.tie_id) updateData.tie_id = updateMatchDto.tie_id;
+      if (updateMatchDto.home_aggregate_score) updateData.home_aggregate_score = updateMatchDto.home_aggregate_score;
+      if (updateMatchDto.away_aggregate_score) updateData.away_aggregate_score = updateMatchDto.away_aggregate_score;
+      if (updateMatchDto.qualified_team_id) updateData.qualified_team_id = updateMatchDto.qualified_team_id;
+      if (updateMatchDto.is_knockout !== undefined) updateData.is_knockout = updateMatchDto.is_knockout;
 
-      if (fullMatch && fullMatch.status === MatchStatus.FINISHED && 
-          (fullMatch.competition.type === 'mata_mata' || fullMatch.competition.type === 'grupos_e_mata_mata' || fullMatch.competition.type === 'copa')) {
-        await this._handleMatchOutcome(fullMatch);
+
+      // Se houver dados para atualizar, executa o update
+      if (Object.keys(updateData).length > 0) {
+        await this.matchRepository.update(id, updateData);
+      }
+
+      // Recalcular o resultado da partida se o placar mudou
+      if ('home_score' in updateMatchDto || 'away_score' in updateMatchDto) {
+        const fullMatch = await this.matchRepository.findOne({ 
+          where: { id },
+          relations: ['competition']
+        });
+
+        if (fullMatch && fullMatch.status === MatchStatus.FINISHED && 
+            (fullMatch.competition.type === 'mata_mata' || fullMatch.competition.type === 'grupos_e_mata_mata' || fullMatch.competition.type === 'copa')) {
+          await this._handleMatchOutcome(fullMatch);
+        }
       }
 
       const finalMatch = await this.findOne(id);

@@ -83,6 +83,7 @@ export function RoundNavigator({
                 : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
               }
             `}
+          aria-label="Rodada anterior"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
@@ -130,6 +131,7 @@ export function RoundNavigator({
                 : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600 shadow-sm'
               }
             `}
+          aria-label="Próxima rodada"
         >
           <ChevronRight className="h-6 w-6" />
         </button>

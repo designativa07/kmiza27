@@ -8,9 +8,6 @@ import * as fs from 'fs';
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 const envPath = join(__dirname, '..', '..', 'backend', envFile);
 
-console.log(`🔍 Procurando arquivo: ${envPath}`);
-console.log(`🔍 __dirname: ${__dirname}`);
-
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
   const envVars = envContent.split('\n').filter(line => line.trim() && !line.startsWith('#'));
@@ -21,18 +18,8 @@ if (fs.existsSync(envPath)) {
       const value = valueParts.join('=').trim();
       // Sempre definir no process.env (sobrescrever se necessário)
       process.env[key] = value;
-      if (key.startsWith('MINIO_')) {
-        console.log(`🔧 Definindo ${key} = ${value.substring(0, 20)}...`);
-      }
     }
   });
-  
-  console.log(`📄 Carregadas variáveis de ambiente de: ${envFile}`);
-  console.log(`🔧 MINIO_ENDPOINT: ${process.env.MINIO_ENDPOINT || 'NÃO ENCONTRADO'}`);
-  console.log(`🔧 MINIO_ACCESS_KEY: ${process.env.MINIO_ACCESS_KEY ? 'Configurado' : 'NÃO ENCONTRADO'}`);
-  console.log(`🔧 Total de variáveis carregadas: ${envVars.length}`);
-} else {
-  console.log(`⚠️  Arquivo ${envFile} não encontrado`);
 }
 
 async function bootstrap() {
@@ -90,18 +77,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
   
-  console.log('🚀 Starting kmiza27-chatbot...');
-  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Host: ${host}`);
-  console.log(`🚪 Port: ${port}`);
-  console.log('🔧 CORS Fix: 2025-05-26T03:20:00Z - Frontend URL updated');
-  console.log('✅ UTF-8 Fix: 2025-05-26T04:00:00Z - Chatbot webhook with charset UTF-8');
-  console.log('🔗 API Prefix: REMOVED - Using api.kmiza27.com domain instead');
-  
   await app.listen(port, host);
   
-  console.log(`✅ Application is running on: http://${host}:${port}`);
-  console.log(`🔗 Health check: http://${host}:${port}/health`);
-  console.log(`📊 Standings API: http://${host}:${port}/standings/slug/{slug}`);
+  console.log(`✅ Application running on: http://${host}:${port}`);
 }
 bootstrap();

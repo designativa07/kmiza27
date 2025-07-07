@@ -22,6 +22,8 @@ export interface Match {
   away_score_penalties?: number;
   stadium?: Stadium;
   is_knockout?: boolean;
+  tie_id?: string;
+  leg?: 'first_leg' | 'second_leg' | 'single_match';
 
   broadcasts?: {
     channel: {
