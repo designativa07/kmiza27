@@ -960,8 +960,8 @@ ${result}`;
   private async getBotName(): Promise<string> {
     try {
       const botNameConfig = await this.botConfigService.getConfig('BOT_NOME');
-      if (botNameConfig && botNameConfig.value) {
-        return botNameConfig.value;
+      if (botNameConfig) {
+        return botNameConfig;
       }
     } catch (error) {
       this.logger.error('Erro ao buscar nome do bot no banco de dados. Usando fallback.', error);
@@ -973,9 +973,9 @@ ${result}`;
     try {
       // Tenta obter a mensagem do banco de dados
       const welcomeConfig = await this.botConfigService.getConfig('MENSAGEM_BEM_VINDO');
-      this.logger.log(`Mensagem de boas-vindas do DB: ${welcomeConfig?.value}`);
-      if (welcomeConfig && welcomeConfig.value) {
-        return welcomeConfig.value;
+      this.logger.log(`Mensagem de boas-vindas do DB: ${welcomeConfig}`);
+      if (welcomeConfig) {
+        return welcomeConfig;
       }
     } catch (error) {
       this.logger.error('Erro ao buscar mensagem de boas-vindas do banco de dados. Usando fallback.', error);
