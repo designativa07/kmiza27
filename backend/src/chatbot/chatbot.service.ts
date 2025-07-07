@@ -147,7 +147,7 @@ export class ChatbotService {
         default:
           // Enviar menu de boas-vindas como botões de lista
           await this.sendWelcomeMenu(phoneNumber);
-          return 'Menu enviado! Selecione uma opção.';
+          return '';
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
@@ -957,163 +957,158 @@ ${result}`;
     }
   }
 
-  private async getWelcomeMessage(): Promise<string> {
+  private async getBotName(): Promise<string> {
     try {
-      // Tentar buscar a mensagem de boas-vindas do banco de dados
-      const welcomeMessage = await this.botConfigService.getConfig('welcome_message');
-      
-      if (welcomeMessage) {
-        return welcomeMessage;
+      const botNameConfig = await this.botConfigService.getConfig('BOT_NOME');
+      if (botNameConfig && botNameConfig.value) {
+        return botNameConfig.value;
       }
     } catch (error) {
-      console.error('Erro ao buscar welcome_message do banco:', error);
+      this.logger.error('Erro ao buscar nome do bot no banco de dados. Usando fallback.', error);
     }
-    
-    // Fallback para mensagem padrão se não conseguir buscar do banco
-    return `👋 Olá! Sou o Kmiza27 Bot ⚽
+    return 'Tudo sobre futebol';
+  }
 
-🤖 Posso te ajudar com informações sobre futebol:
-
-⚽ *Próximos jogos* - "Próximo jogo do Flamengo"
-🔴 *Jogos ao vivo* - "Jogo atual do Avaí" ou "Avaí está jogando?"
-🏁 *Último jogo* - "Último jogo do Palmeiras"
-ℹ️ *Info do time* - "Informações do Corinthians"
-👥 *Elenco do time* - "Elenco do Flamengo"
-👤 *Info do jogador* - "Informações do jogador Neymar"
-📊 *Tabelas* - "Tabela do Brasileirão"
-📍 *Posição* - "Posição do São Paulo"
-📈 *Estatísticas* - "Estatísticas do Santos"
-🥇 *Artilheiros* - "Artilheiros do Brasileirão"
-📅 *Jogos hoje* - "Jogos de hoje"
-📺 *Transmissão* - "Onde passa o jogo do Botafogo"
-📡 *Canais* - "Lista de canais"
-🗓️ *Jogos da semana* - "Jogos da semana"
-🏆 *Competições* - "Estatísticas da Libertadores"
-
-💬 O que você gostaria de saber?
-
-Para mais informações acesse Kmiza27.com`;
+  private async getWelcomeMessage(): Promise<string> {
+    try {
+      // Tenta obter a mensagem do banco de dados
+      const welcomeConfig = await this.botConfigService.getConfig('MENSAGEM_BEM_VINDO');
+      this.logger.log(`Mensagem de boas-vindas do DB: ${welcomeConfig?.value}`);
+      if (welcomeConfig && welcomeConfig.value) {
+        return welcomeConfig.value;
+      }
+    } catch (error) {
+      this.logger.error('Erro ao buscar mensagem de boas-vindas do banco de dados. Usando fallback.', error);
+    }
+    // Fallback se não encontrar no banco
+    return 'Futebot Kmiza27 ⚽\n\nComo posso te ajudar com informações sobre futebol? Selecione uma categoria:';
   }
 
   private async sendWelcomeMenu(phoneNumber: string): Promise<boolean> {
-    try {
-      return await this.evolutionService.sendListMessage(
-        phoneNumber,
-        '👋 Olá! Sou o Kmiza27 Bot ⚽',
-        'Como posso te ajudar com informações sobre futebol? Selecione uma categoria:',
-        'Ver Opções',
-        [
-          {
-            title: '⚡ Ações Rápidas',
-            rows: [
-              {
-                id: 'MENU_TABELAS_CLASSIFICACAO',
-                title: '📊 Tabelas de Classificação',
-                description: 'Ver classificação das competições'
-              },
-              {
-                id: 'CMD_JOGOS_HOJE',
-                title: '📅 Jogos de Hoje',
-                description: 'Todos os jogos de hoje'
-              },
-              {
-                id: 'CMD_JOGOS_AMANHA',
-                title: '📆 Jogos de Amanhã',
-                description: 'Todos os jogos de amanhã'
-              },
-              {
-                id: 'CMD_JOGOS_SEMANA',
-                title: '🗓️ Jogos da Semana',
-                description: 'Jogos desta semana'
-              }
-            ]
-          },
-          {
-            title: '⚽ Informações de Partidas',
-            rows: [
-              {
-                id: 'CMD_PROXIMOS_JOGOS',
-                title: '⚽ Próximos Jogos',
-                description: 'Próximo jogo de um time'
-              },
-              {
-                id: 'CMD_JOGOS_AO_VIVO',
-                title: '🔴 Jogos ao Vivo',
-                description: 'Jogo atual de um time'
-              },
-              {
-                id: 'CMD_ULTIMO_JOGO',
-                title: '🏁 Últimos Jogos',
-                description: 'Último jogo de um time'
-              },
-              {
-                id: 'CMD_TRANSMISSAO',
-                title: '📺 Transmissão',
-                description: 'Onde passa o jogo de um time'
-              }
-            ]
-          },
-          {
-            title: '👥 Times, Jogadores e Estádios',
-            rows: [
-              {
-                id: 'CMD_INFO_TIME',
-                title: 'ℹ️ Informações do Time',
-                description: 'Dados gerais de um time'
-              },
-              {
-                id: 'CMD_ELENCO_TIME',
-                title: '👥 Elenco do Time',
-                description: 'Ver elenco de um time'
-              },
-              {
-                id: 'CMD_INFO_JOGADOR',
-                title: '👤 Informações do Jogador',
-                description: 'Dados de um jogador'
-              },
-              {
-                id: 'CMD_POSICAO_TIME',
-                title: '📍 Posição na Tabela',
-                description: 'Posição do time na competição'
-              },
-              {
-                id: 'CMD_ESTATISTICAS_TIME',
-                title: '📈 Estatísticas do Time',
-                description: 'Estatísticas detalhadas de um time'
-              },
-              {
-                id: 'CMD_ESTADIOS',
-                title: '🏟️ Estádios',
-                description: 'Informações sobre estádios'
-              }
-            ]
-          },
-          {
-            title: '🏆 Competições e Outros',
-            rows: [
-              {
-                id: 'CMD_ARTILHEIROS',
-                title: '🥇 Artilheiros',
-                description: 'Maiores goleadores de uma competição'
-              },
-              {
-                id: 'CMD_CANAIS',
-                title: '📡 Canais',
-                description: 'Canais de transmissão'
-              },
-              {
-                id: 'CMD_INFO_COMPETICOES',
-                title: '🏆 Informações de Competições',
-                description: 'Dados gerais de uma competição'
-              }
-            ]
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Erro ao enviar menu de boas-vindas:', error);
-      return false;
-    }
+    const welcomeMessage = await this.getWelcomeMessage();
+    const botName = await this.getBotName();
+
+    const payload = {
+      buttonText: 'MENU INTERATIVO',
+      description: welcomeMessage,
+      title: botName, // Título da lista
+      footer: 'Selecione uma das opções abaixo',
+      sections: [
+        {
+          title: '⚡ Ações Rápidas',
+          rows: [
+            {
+              id: 'MENU_TABELAS_CLASSIFICACAO',
+              title: '📊 Tabelas de Classificação',
+              description: 'Ver classificação das competições'
+            },
+            {
+              id: 'CMD_JOGOS_HOJE',
+              title: '📅 Jogos de Hoje',
+              description: 'Todos os jogos de hoje'
+            },
+            {
+              id: 'CMD_JOGOS_AMANHA',
+              title: '📆 Jogos de Amanhã',
+              description: 'Todos os jogos de amanhã'
+            },
+            {
+              id: 'CMD_JOGOS_SEMANA',
+              title: '🗓️ Jogos da Semana',
+              description: 'Jogos desta semana'
+            }
+          ]
+        },
+        {
+          title: '⚽ Informações de Partidas',
+          rows: [
+            {
+              id: 'CMD_PROXIMOS_JOGOS',
+              title: '⚽ Próximos Jogos',
+              description: 'Próximo jogo de um time'
+            },
+            {
+              id: 'CMD_JOGOS_AO_VIVO',
+              title: '🔴 Jogos ao Vivo',
+              description: 'Jogo atual de um time'
+            },
+            {
+              id: 'CMD_ULTIMO_JOGO',
+              title: '🏁 Últimos Jogos',
+              description: 'Último jogo de um time'
+            },
+            {
+              id: 'CMD_TRANSMISSAO',
+              title: '📺 Transmissão',
+              description: 'Onde passa o jogo de um time'
+            }
+          ]
+        },
+        {
+          title: '👥 Times, Jogadores e Estádios',
+          rows: [
+            {
+              id: 'CMD_INFO_TIME',
+              title: 'ℹ️ Informações do Time',
+              description: 'Dados gerais de um time'
+            },
+            {
+              id: 'CMD_ELENCO_TIME',
+              title: '👥 Elenco do Time',
+              description: 'Ver elenco de um time'
+            },
+            {
+              id: 'CMD_INFO_JOGADOR',
+              title: '👤 Informações do Jogador',
+              description: 'Dados de um jogador'
+            },
+            {
+              id: 'CMD_POSICAO_TIME',
+              title: '📍 Posição na Tabela',
+              description: 'Posição do time na competição'
+            },
+            {
+              id: 'CMD_ESTATISTICAS_TIME',
+              title: '📈 Estatísticas do Time',
+              description: 'Estatísticas detalhadas de um time'
+            },
+            {
+              id: 'CMD_ESTADIOS',
+              title: '🏟️ Estádios',
+              description: 'Informações sobre estádios'
+            }
+          ]
+        },
+        {
+          title: '🏆 Competições e Outros',
+          rows: [
+            {
+              id: 'CMD_ARTILHEIROS',
+              title: '🥇 Artilheiros',
+              description: 'Maiores goleadores de uma competição'
+            },
+            {
+              id: 'CMD_CANAIS',
+              title: '📡 Canais',
+              description: 'Canais de transmissão'
+            },
+            {
+              id: 'CMD_INFO_COMPETICOES',
+              title: '🏆 Informações de Competições',
+              description: 'Dados gerais de uma competição'
+            }
+          ]
+        }
+      ]
+    };
+
+    return await this.evolutionService.sendListMessage(
+      phoneNumber,
+      payload.title,
+      payload.description,
+      payload.buttonText,
+      payload.sections
+    );
   }
 
   private async sendCompetitionsMenu(phoneNumber: string): Promise<boolean> {
