@@ -55,7 +55,7 @@ export function CompetitionSwitcher({
             {competitions.map((competition) => (
               <DropdownMenu.Item key={competition.id} asChild>
                 <Link
-                  href={`/${competition.slug}/classificacao`}
+                  href={`/${competition.slug}/jogos`}
                   className="flex items-center px-2 py-1.5 text-base text-gray-700 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                 >
                   {competition.logo_url && (

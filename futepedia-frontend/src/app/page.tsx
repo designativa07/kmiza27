@@ -76,7 +76,7 @@ export default function Home() {
                   {competitions.map((comp) => (
                     <div key={comp.id} className="p-3 sm:px-4 hover:bg-gray-50 transition-colors duration-200">
                       <div className="flex items-center justify-between">
-                        <Link href={`/${comp.slug}/classificacao`} className="flex items-center space-x-3 flex-1">
+                        <Link href={`/${comp.slug}/jogos`} className="flex items-center space-x-3 flex-1">
                           <img
                             src={getCompetitionLogoUrl(comp.logo_url || '')}
                             alt={comp.name}
