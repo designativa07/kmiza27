@@ -676,13 +676,17 @@ export default function MatchesManager() {
     }
 
     setFilteredMatches(filtered);
+    
+    // Reset para página 1 quando os filtros mudam
+    if (currentPage > 1) {
+      setCurrentPage(1);
+    }
   };
 
   const applyPagination = () => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     setPaginatedMatches(filteredMatches.slice(startIndex, endIndex))
-    setCurrentPage(1);
   }
 
   const totalPages = Math.ceil(filteredMatches.length / itemsPerPage)

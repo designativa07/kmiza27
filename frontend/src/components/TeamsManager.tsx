@@ -435,15 +435,69 @@ export default function TeamsManager() {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este time?')) {
-      try {
-        await fetch(API_ENDPOINTS.teams.byId(id), {
-          method: 'DELETE',
-        })
-        fetchAllTeams()
-      } catch (error) {
-        console.error('Erro ao excluir time:', error)
+    try {
+      // Primeiro, verificar as dependências do time
+      const dependenciesResponse = await fetch(`${API_ENDPOINTS.teams.byId(id)}/dependencies`)
+      const dependenciesData = await dependenciesResponse.json()
+
+      if (dependenciesData.canDelete) {
+        // Se pode deletar diretamente, confirmar e deletar
+        if (confirm(`Tem certeza que deseja excluir o time "${dependenciesData.team.name}"?`)) {
+          const deleteResponse = await fetch(API_ENDPOINTS.teams.byId(id), {
+            method: 'DELETE',
+          })
+          
+          if (deleteResponse.ok) {
+            alert('Time excluído com sucesso!')
+            fetchAllTeams()
+          } else {
+            const errorData = await deleteResponse.json()
+            alert(`Erro ao excluir time: ${errorData.message || deleteResponse.statusText}`)
+          }
+        }
+      } else {
+        // Se não pode deletar, mostrar as dependências e opções
+        const { dependencies, team, message } = dependenciesData
+        let dependenciesText = []
+        
+        if (dependencies.matches > 0) {
+          dependenciesText.push(`${dependencies.matches} partida(s)`)
+        }
+        if (dependencies.competitions > 0) {
+          dependenciesText.push(`${dependencies.competitions} competição(ões)`)
+        }
+        if (dependencies.players > 0) {
+          dependenciesText.push(`${dependencies.players} jogador(es) no histórico`)
+        }
+
+        const forceDelete = confirm(
+          `⚠️ ATENÇÃO: O time "${team.name}" não pode ser excluído diretamente pois possui:\n\n` +
+          `• ${dependenciesText.join('\n• ')}\n\n` +
+          `Deseja FORÇAR a exclusão? Isso irá:\n` +
+          `✗ Remover o time de todas as competições\n` +
+          `✗ Excluir todas as partidas onde o time participa\n` +
+          `✗ Remover todo o histórico de jogadores\n\n` +
+          `⚠️ ESTA AÇÃO NÃO PODE SER DESFEITA!\n\n` +
+          `Clique OK para FORÇAR a exclusão ou Cancelar para manter o time.`
+        )
+
+        if (forceDelete) {
+          const deleteResponse = await fetch(`${API_ENDPOINTS.teams.byId(id)}?force=true`, {
+            method: 'DELETE',
+          })
+          
+          if (deleteResponse.ok) {
+            alert('Time e todas suas dependências foram excluídos com sucesso!')
+            fetchAllTeams()
+          } else {
+            const errorData = await deleteResponse.json()
+            alert(`Erro ao excluir time: ${errorData.message || deleteResponse.statusText}`)
+          }
+        }
       }
+    } catch (error) {
+      console.error('Erro ao verificar/excluir time:', error)
+      alert('Erro de conexão ao tentar excluir o time.')
     }
   }
 

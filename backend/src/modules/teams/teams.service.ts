@@ -174,14 +174,23 @@ export class TeamsService {
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async checkTeamDependencies(id: number): Promise<{
+    team: Team;
+    canDelete: boolean;
+    dependencies: {
+      matches: number;
+      competitions: number;
+      players: number;
+    };
+    message?: string;
+  }> {
     // Verificar se o time existe
     const team = await this.findOne(id);
     if (!team) {
       throw new BadRequestException('Time não encontrado');
     }
 
-    // Verificar se o time está sendo usado em partidas
+    // Verificar dependências
     const matchesAsHome = await this.matchRepository.count({
       where: { home_team: { id } }
     });
@@ -190,21 +199,57 @@ export class TeamsService {
       where: { away_team: { id } }
     });
 
-    if (matchesAsHome > 0 || matchesAsAway > 0) {
-      throw new BadRequestException(
-        `Não é possível excluir o time "${team.name}" pois ele possui ${matchesAsHome + matchesAsAway} partida(s) cadastrada(s). Remova as partidas primeiro.`
-      );
-    }
+    const totalMatches = matchesAsHome + matchesAsAway;
 
-    // Verificar se o time está em competições
     const competitionTeams = await this.competitionTeamRepository.count({
       where: { team: { id } }
     });
 
-    if (competitionTeams > 0) {
-      throw new BadRequestException(
-        `Não é possível excluir o time "${team.name}" pois ele está participando de ${competitionTeams} competição(ões). Remova o time das competições primeiro.`
-      );
+    const playerHistories = await this.playerTeamHistoryRepository.count({
+      where: { team: { id } }
+    });
+
+    const canDelete = totalMatches === 0 && competitionTeams === 0;
+    
+    let message = '';
+    if (!canDelete) {
+      const issues: string[] = [];
+      if (totalMatches > 0) {
+        issues.push(`${totalMatches} partida(s)`);
+      }
+      if (competitionTeams > 0) {
+        issues.push(`${competitionTeams} competição(ões)`);
+      }
+      message = `Não é possível excluir o time "${team.name}" pois ele possui: ${issues.join(' e ')}.`;
+    }
+
+    return {
+      team,
+      canDelete,
+      dependencies: {
+        matches: totalMatches,
+        competitions: competitionTeams,
+        players: playerHistories,
+      },
+      message: canDelete ? undefined : message,
+    };
+  }
+
+  async remove(id: number, force: boolean = false): Promise<void> {
+    const dependencyCheck = await this.checkTeamDependencies(id);
+    
+    if (!dependencyCheck.canDelete && !force) {
+      throw new BadRequestException(dependencyCheck.message);
+    }
+
+    if (force) {
+      // Remover dependências antes de excluir o time
+      // 1. Remover das competições
+      await this.competitionTeamRepository.delete({ team: { id } });
+      
+      // 2. Remover partidas onde o time participa
+      await this.matchRepository.delete({ home_team: { id } });
+      await this.matchRepository.delete({ away_team: { id } });
     }
 
     // Excluir histórico de jogadores associado ao time
