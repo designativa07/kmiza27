@@ -7,8 +7,9 @@
     "dev": "cross-env NEXT_PUBLIC_API_URL=http://localhost:3000 next dev -p 3002",
     "build": "next build",
     "build:win": "next build",
-    "start": "next start -p 3002",
-    "start:prod": "NODE_ENV=production FRONTEND_PORT=3002 next start -p 3002 -H 0.0.0.0",
+    "start": "cross-env PORT=3002 node .next/standalone/server.js",
+    "start:regular": "next start -p 3002",
+    "start:prod": "cross-env NODE_ENV=production PORT=3002 HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "next lint"
   },
   "dependencies": {

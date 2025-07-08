@@ -89,7 +89,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
       
       const [competitionRes, teamsRes, competitionTeamsRes] = await Promise.all([
         fetch(`${API_ENDPOINTS.competitions.list()}/${competitionId}`),
-        fetch(API_ENDPOINTS.teams.list()),
+        fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`),
         fetch(`${API_ENDPOINTS.competitions.list()}/${competitionId}/teams`)
       ])
 
@@ -289,6 +289,8 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
                           <button
                             onClick={() => handleRemoveTeam(competitionTeam.id)}
                             className="text-red-600 hover:text-red-900"
+                            aria-label={`Remover ${competitionTeam.team.name} da competição`}
+                            title={`Remover ${competitionTeam.team.name} da competição`}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
@@ -322,6 +324,8 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
                     <button
                       onClick={() => handleRemoveTeam(competitionTeam.id)}
                       className="text-red-600 hover:text-red-900"
+                      aria-label={`Remover ${competitionTeam.team.name} da competição`}
+                      title={`Remover ${competitionTeam.team.name} da competição`}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -382,6 +386,8 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                        aria-label="Buscar times"
+                        title="Buscar times por nome, sigla ou cidade"
                       />
                     </div>
                   </div>
@@ -391,6 +397,8 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
                       value={stateFilter}
                       onChange={(e) => setStateFilter(e.target.value)}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                      aria-label="Filtrar por estado"
+                      title="Filtrar times por estado"
                     >
                       <option value="">Todos os estados</option>
                       {getUniqueStates().map((state) => (
