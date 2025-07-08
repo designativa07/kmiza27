@@ -60,10 +60,20 @@ export class TeamsController {
     return this.teamsService.update(+id, updateTeamDto);
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
+  @Get(':id/dependencies')
+  async checkDependencies(@Param('id') id: string) {
     try {
-      await this.teamsService.remove(+id);
+      return await this.teamsService.checkTeamDependencies(+id);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Query('force') force?: string) {
+    try {
+      const forceDelete = force === 'true';
+      await this.teamsService.remove(+id, forceDelete);
       return { message: 'Time excluído com sucesso' };
     } catch (error) {
       if (error.message.includes('Não é possível excluir')) {
