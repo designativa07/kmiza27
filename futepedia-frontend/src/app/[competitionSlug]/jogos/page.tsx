@@ -512,36 +512,36 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
                 </div>
                 
                 {/* Layout do jogo */}
-                <div className="flex items-center justify-center space-x-2 mb-3">
+                <div className="flex items-center justify-center space-x-3 mb-3">
                   {/* Mandante */}
-                  <div className="flex items-center space-x-1 flex-1 justify-end">
-                    <span className="font-medium text-gray-800 text-xs truncate">{firstLeg.home_team.name}</span>
+                  <div className="flex items-center space-x-2 flex-1 justify-end">
+                    <span className="font-medium text-gray-800 text-sm truncate">{firstLeg.home_team.name}</span>
                     <img
                       src={getTeamLogoUrl(firstLeg.home_team.logo_url)}
                       alt={`${firstLeg.home_team.name} logo`}
-                      className="w-6 h-6 object-contain"
+                      className="w-8 h-8 object-contain"
                     />
                   </div>
 
                   {/* Placar */}
-                  <div className="flex items-center space-x-1 px-2">
-                    <span className="text-lg font-bold text-gray-900">
+                  <div className="flex items-center space-x-1 px-3">
+                    <span className="text-xl font-bold text-gray-900">
                       {firstLeg.home_score !== null ? firstLeg.home_score : '-'}
                     </span>
                     <span className="text-gray-500 font-medium">×</span>
-                    <span className="text-lg font-bold text-gray-900">
+                    <span className="text-xl font-bold text-gray-900">
                       {firstLeg.away_score !== null ? firstLeg.away_score : '-'}
                     </span>
                   </div>
 
                   {/* Visitante */}
-                  <div className="flex items-center space-x-1 flex-1">
+                  <div className="flex items-center space-x-2 flex-1">
                     <img
                       src={getTeamLogoUrl(firstLeg.away_team.logo_url)}
                       alt={`${firstLeg.away_team.name} logo`}
-                      className="w-6 h-6 object-contain"
+                      className="w-8 h-8 object-contain"
                     />
-                    <span className="font-medium text-gray-800 text-xs truncate">{firstLeg.away_team.name}</span>
+                    <span className="font-medium text-gray-800 text-sm truncate">{firstLeg.away_team.name}</span>
                   </div>
                 </div>
                 
@@ -559,36 +559,36 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
                 </div>
                 
                 {/* Layout do jogo */}
-                <div className="flex items-center justify-center space-x-2 mb-3">
+                <div className="flex items-center justify-center space-x-3 mb-3">
                   {/* Mandante */}
-                  <div className="flex items-center space-x-1 flex-1 justify-end">
-                    <span className="font-medium text-gray-800 text-xs truncate">{secondLeg.home_team.name}</span>
+                  <div className="flex items-center space-x-2 flex-1 justify-end">
+                    <span className="font-medium text-gray-800 text-sm truncate">{secondLeg.home_team.name}</span>
                     <img
                       src={getTeamLogoUrl(secondLeg.home_team.logo_url)}
                       alt={`${secondLeg.home_team.name} logo`}
-                      className="w-6 h-6 object-contain"
+                      className="w-8 h-8 object-contain"
                     />
                   </div>
 
                   {/* Placar */}
-                  <div className="flex items-center space-x-1 px-2">
-                    <span className="text-lg font-bold text-gray-900">
+                  <div className="flex items-center space-x-1 px-3">
+                    <span className="text-xl font-bold text-gray-900">
                       {secondLeg.home_score !== null ? secondLeg.home_score : '-'}
                     </span>
                     <span className="text-gray-500 font-medium">×</span>
-                    <span className="text-lg font-bold text-gray-900">
+                    <span className="text-xl font-bold text-gray-900">
                       {secondLeg.away_score !== null ? secondLeg.away_score : '-'}
                     </span>
                   </div>
 
                   {/* Visitante */}
-                  <div className="flex items-center space-x-1 flex-1">
+                  <div className="flex items-center space-x-2 flex-1">
                     <img
                       src={getTeamLogoUrl(secondLeg.away_team.logo_url)}
                       alt={`${secondLeg.away_team.name} logo`}
-                      className="w-6 h-6 object-contain"
+                      className="w-8 h-8 object-contain"
                     />
-                    <span className="font-medium text-gray-800 text-xs truncate">{secondLeg.away_team.name}</span>
+                    <span className="font-medium text-gray-800 text-sm truncate">{secondLeg.away_team.name}</span>
                   </div>
                 </div>
 
@@ -627,36 +627,36 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             </div>
             
             {/* Layout do jogo */}
-            <div className="flex items-center justify-center space-x-2 mb-3">
+            <div className="flex items-center justify-center space-x-3 mb-3">
               {/* Mandante */}
-              <div className="flex items-center space-x-1 flex-1 justify-end">
-                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.firstLeg.home_team.name}</span>
+              <div className="flex items-center space-x-2 flex-1 justify-end">
+                <span className="font-medium text-gray-800 text-sm truncate">{aggregate.firstLeg.home_team.name}</span>
                 <img
                   src={getTeamLogoUrl(aggregate.firstLeg.home_team.logo_url)}
                   alt={`${aggregate.firstLeg.home_team.name} logo`}
-                  className="w-6 h-6 object-contain"
+                  className="w-8 h-8 object-contain"
                 />
               </div>
 
               {/* Placar */}
-              <div className="flex items-center space-x-1 px-2">
-                <span className="text-lg font-bold text-gray-900">
+              <div className="flex items-center space-x-1 px-3">
+                <span className="text-xl font-bold text-gray-900">
                   {aggregate.firstLeg.home_score}
                 </span>
                 <span className="text-gray-500 font-medium">×</span>
-                <span className="text-lg font-bold text-gray-900">
+                <span className="text-xl font-bold text-gray-900">
                   {aggregate.firstLeg.away_score}
                 </span>
               </div>
 
               {/* Visitante */}
-              <div className="flex items-center space-x-1 flex-1">
+              <div className="flex items-center space-x-2 flex-1">
                 <img
                   src={getTeamLogoUrl(aggregate.firstLeg.away_team.logo_url)}
                   alt={`${aggregate.firstLeg.away_team.name} logo`}
-                  className="w-6 h-6 object-contain"
+                  className="w-8 h-8 object-contain"
                 />
-                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.firstLeg.away_team.name}</span>
+                <span className="font-medium text-gray-800 text-sm truncate">{aggregate.firstLeg.away_team.name}</span>
               </div>
             </div>
             
@@ -672,36 +672,36 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             </div>
             
             {/* Layout do jogo */}
-            <div className="flex items-center justify-center space-x-2 mb-3">
+            <div className="flex items-center justify-center space-x-3 mb-3">
               {/* Mandante */}
-              <div className="flex items-center space-x-1 flex-1 justify-end">
-                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.secondLeg.home_team.name}</span>
+              <div className="flex items-center space-x-2 flex-1 justify-end">
+                <span className="font-medium text-gray-800 text-sm truncate">{aggregate.secondLeg.home_team.name}</span>
                 <img
                   src={getTeamLogoUrl(aggregate.secondLeg.home_team.logo_url)}
                   alt={`${aggregate.secondLeg.home_team.name} logo`}
-                  className="w-6 h-6 object-contain"
+                  className="w-8 h-8 object-contain"
                 />
               </div>
 
               {/* Placar */}
-              <div className="flex items-center space-x-1 px-2">
-                <span className="text-lg font-bold text-gray-900">
+              <div className="flex items-center space-x-1 px-3">
+                <span className="text-xl font-bold text-gray-900">
                   {aggregate.secondLeg.home_score}
                 </span>
                 <span className="text-gray-500 font-medium">×</span>
-                <span className="text-lg font-bold text-gray-900">
+                <span className="text-xl font-bold text-gray-900">
                   {aggregate.secondLeg.away_score}
                 </span>
               </div>
 
               {/* Visitante */}
-              <div className="flex items-center space-x-1 flex-1">
+              <div className="flex items-center space-x-2 flex-1">
                 <img
                   src={getTeamLogoUrl(aggregate.secondLeg.away_team.logo_url)}
                   alt={`${aggregate.secondLeg.away_team.name} logo`}
-                  className="w-6 h-6 object-contain"
+                  className="w-8 h-8 object-contain"
                 />
-                <span className="font-medium text-gray-800 text-xs truncate">{aggregate.secondLeg.away_team.name}</span>
+                <span className="font-medium text-gray-800 text-sm truncate">{aggregate.secondLeg.away_team.name}</span>
               </div>
             </div>
 
@@ -788,7 +788,49 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             </div>
           )}
           
-          {/* Classificado seria determinado por outros critérios se necessário */}
+          {/* Classificado (para jogos únicos mata-mata finalizados) */}
+          {match.home_score !== null && match.away_score !== null && (
+            <div className="border-t pt-3 mt-3 text-center">
+              {(() => {
+                let qualified = null;
+                let wonByPenalties = false;
+                
+                // Verificar quem se classificou
+                const homeScore = match.home_score || 0;
+                const awayScore = match.away_score || 0;
+                
+                if (homeScore > awayScore) {
+                  qualified = match.home_team;
+                } else if (awayScore > homeScore) {
+                  qualified = match.away_team;
+                } else {
+                  // Empate no tempo normal - verificar pênaltis
+                  const homePenalties = match.home_score_penalties;
+                  const awayPenalties = match.away_score_penalties;
+                  
+                  if (homePenalties !== null && awayPenalties !== null && homePenalties !== undefined && awayPenalties !== undefined) {
+                    wonByPenalties = true;
+                    if (homePenalties > awayPenalties) {
+                      qualified = match.home_team;
+                    } else {
+                      qualified = match.away_team;
+                    }
+                  }
+                }
+                
+                return qualified ? (
+                  <div className="text-sm font-semibold text-green-700">
+                    🏆 Classificado: {qualified.name}
+                    {wonByPenalties && (
+                      <span className="text-xs text-green-600 block mt-1">
+                        (Decidido nos pênaltis)
+                      </span>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
           
           {/* Botões de transmissão */}
           <div className="mt-3">
