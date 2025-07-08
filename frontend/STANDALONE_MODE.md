@@ -1,18 +1,29 @@
 # Modo Standalone - Frontend Next.js
 
-## ⚠️ Configuração Corrigida
+## ⚠️ Configurações Corrigidas
 
-O arquivo `next.config.js` foi corrigido para remover configurações inválidas e melhorar o deployment em produção.
+### 1. Arquivo `next.config.js`
+- Removido configuração `server` inválida
+- Adicionada configuração de imagens para CDN
+
+### 2. Scripts do `package.json`
+- Corrigido problema com `cross-env not found`
+- Criados scripts alternativos que não dependem do cross-env
+- Adicionado `cross-env` às devDependencies
 
 ## 🚀 Como Executar
 
 ### Desenvolvimento
 ```bash
+# Simples (configuração padrão)
 npm run dev
+
+# Com API específica (quando necessário)
+npm run dev:api
 ```
 - Usa `next dev -p 3002`
-- Conecta-se ao backend em `http://localhost:3000`
 - Hot reload ativo
+- Detecta API automaticamente
 
 ### Produção - Modo Standalone
 ```bash
@@ -23,7 +34,7 @@ npm run build
 npm run start
 ```
 - Usa `node .next/standalone/server.js`
-- Porta: 3002 (configurada via PORT=3002)
+- Porta: 3002 (detectada automaticamente)
 - Otimizado para deployment em containers
 
 ### Produção - Modo Regular (alternativo)
