@@ -1,22 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { UserIcon, UserGroupIcon, HeartIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { UserIcon, UserGroupIcon, HeartIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 
 interface UserStats {
   total: number
   active: number
   withFavoriteTeam: number
-  recentInteractions: number
 }
 
 export default function UserStats() {
   const [stats, setStats] = useState<UserStats>({
     total: 0,
     active: 0,
-    withFavoriteTeam: 0,
-    recentInteractions: 0
+    withFavoriteTeam: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -56,8 +54,7 @@ export default function UserStats() {
       setStats({
         total: 0,
         active: 0,
-        withFavoriteTeam: 0,
-        recentInteractions: 0
+        withFavoriteTeam: 0
       })
     } finally {
       setLoading(false)
@@ -66,8 +63,8 @@ export default function UserStats() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
           <div key={i} className="relative overflow-hidden rounded-lg bg-white px-4 pb-12 pt-5 shadow sm:px-6 sm:pt-6 animate-pulse">
             <div className="absolute rounded-md bg-indigo-200 p-3">
               <div className="h-6 w-6 bg-indigo-300 rounded"></div>
@@ -97,16 +94,11 @@ export default function UserStats() {
       name: 'Com Time Favorito',
       value: stats.withFavoriteTeam,
       icon: HeartIcon,
-    },
-    {
-      name: 'Interações Recentes (24h)',
-      value: stats.recentInteractions,
-      icon: ClockIcon,
     }
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {statCards.map((stat) => (
         <div
           key={stat.name}

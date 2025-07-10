@@ -7,12 +7,12 @@ const data = JSON.stringify({
 });
 
 const options = {
-  hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
+  hostname: 'evolution.kmiza27.com',
   port: 443,
   path: '/webhook/set/Kmiza27',
   method: 'POST',
   headers: {
-    'apikey': 'DEEFCBB25D74-4E46-BE91-CA7852798094',
+    'apikey': '7C761B66EE97-498A-A058-E27A33A4AD78',
     'Content-Type': 'application/json',
     'Content-Length': data.length
   }
