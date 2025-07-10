@@ -42,13 +42,11 @@ import NotificationsManager from './NotificationsManager'
 import GlobalSearch from './GlobalSearch'
 import SystemSettings from './SystemSettings'
 import ThemeToggle from './ThemeToggle'
-import WhatsAppConversations from './WhatsAppConversations'
+import TopScorersTable from './TopScorersTable'
 import AutomationPanel from './AutomationPanel'
-import CompetitionTeamsManager from './CompetitionTeamsManager'
-import UserStats from './UserStats'
 import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
-import TopScorersTable from './TopScorersTable'
+import UserStats from './UserStats'
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
@@ -83,10 +81,8 @@ export default function Dashboard() {
     totalChannels: 0,
     totalStadiums: 0,
     totalPlayers: 0,
-    activeConversations: 0,
     totalAdmins: 0,
-    usersWithFavoriteTeam: 0,
-    recentInteractions: 0
+    usersWithFavoriteTeam: 0
   })
 
   // Verificar autenticação
@@ -233,10 +229,8 @@ export default function Dashboard() {
         totalChannels,
         totalStadiums,
         totalPlayers,
-        activeConversations: whatsappData?.totalConversations || 0,
         totalAdmins: adminsCount || 0,
-        usersWithFavoriteTeam: usersWithTeam || 0,
-        recentInteractions: whatsappData?.recentInteractions || 0
+        usersWithFavoriteTeam: usersWithTeam || 0
       })
       
     } catch (error) {
@@ -250,10 +244,8 @@ export default function Dashboard() {
         totalChannels: 0,
         totalStadiums: 0,
         totalPlayers: 0,
-        activeConversations: 0,
         totalAdmins: 0,
-        usersWithFavoriteTeam: 0,
-        recentInteractions: 0
+        usersWithFavoriteTeam: 0
       })
     }
   }
@@ -439,23 +431,23 @@ export default function Dashboard() {
                 </dd>
               </div>
 
-              {/* Card Conversas Ativas */}
+              {/* Card Chatwoot */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setCurrentPage('Conversas WhatsApp')}
+                onClick={() => window.open('https://chat.kmiza27.com', '_blank', 'noopener,noreferrer')}
               >
                 <dt>
                   <div className="absolute rounded-md bg-teal-500 p-3">
                     <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Conversas Ativas</p>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Chatwoot</p>
                 </dt>
                 <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.activeConversations}</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">Live</p>
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
                       <span className="font-medium text-teal-600 hover:text-teal-500">
-                        Ver conversas →
+                        Abrir Chatwoot →
                       </span>
                     </div>
                   </div>
@@ -485,28 +477,7 @@ export default function Dashboard() {
                 </dd>
               </div>
 
-              {/* Card Interações Recentes */}
-              <div 
-                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setCurrentPage('Conversas WhatsApp')}
-              >
-                <dt>
-                  <div className="absolute rounded-md bg-indigo-500 p-3">
-                    <ClockIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </div>
-                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Interações Recentes (24h)</p>
-                </dt>
-                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.recentInteractions}</p>
-                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
-                    <div className="text-sm">
-                      <span className="font-medium text-indigo-600 hover:text-indigo-500">
-                        Ver logs de interações →
-                      </span>
-                    </div>
-                  </div>
-                </dd>
-              </div>
+
 
               {/* Card Artilharia */}
               <div 
@@ -561,8 +532,6 @@ export default function Dashboard() {
         return <UserStats />
       case 'Administradores':
         return <AdminsManager />
-      case 'Conversas WhatsApp':
-        return <WhatsAppConversations />
       case 'Automação IA':
         return <AutomationPanel />
       case 'Notificações':
@@ -597,13 +566,25 @@ export default function Dashboard() {
     { name: 'Usuários', icon: UsersIcon, page: 'Usuários' },
     { name: 'Estatísticas de Usuários', icon: ChartBarIcon, page: 'Estatísticas de Usuários' },
     { name: 'Administradores', icon: WrenchScrewdriverIcon, page: 'Administradores' },
-    { name: 'Conversas WhatsApp', icon: ChatBubbleLeftRightIcon, page: 'Conversas WhatsApp' },
+    { name: 'Chatwoot', icon: ChatBubbleLeftRightIcon, page: 'Chatwoot', isExternalLink: true },
     { name: 'Automação IA', icon: CpuChipIcon, page: 'Automação IA' },
     { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
     { name: 'Status do Sistema', icon: ComputerDesktopIcon, page: 'Status do Sistema' },
     { name: 'Chatbot', icon: ChatBubbleLeftRightIcon, page: 'Chatbot' },
     { name: 'Configurações', icon: CogIcon, page: 'Configurações' }
   ]
+
+  // Função para lidar com cliques no menu
+  const handleMenuClick = (item: any) => {
+    if (item.isExternalLink && item.page === 'Chatwoot') {
+      // Abrir Chatwoot em nova aba
+      window.open('https://chat.kmiza27.com', '_blank', 'noopener,noreferrer')
+      setSidebarOpen(false) // Fechar sidebar mobile
+    } else {
+      setCurrentPage(item.page)
+      setSidebarOpen(false) // Fechar sidebar mobile
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900">
@@ -625,10 +606,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={item.name}
-                  onClick={() => {
-                    setCurrentPage(item.page)
-                    setSidebarOpen(false)
-                  }}
+                  onClick={() => handleMenuClick(item)}
                   className={`flex w-full items-center px-4 py-3 text-sm font-medium ${
                     isActive
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
@@ -659,7 +637,7 @@ export default function Dashboard() {
                     return (
                       <li key={item.name}>
                         <button
-                          onClick={() => setCurrentPage(item.page)}
+                          onClick={() => handleMenuClick(item)}
                           className={`group flex w-full gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
                             isActive
                               ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'

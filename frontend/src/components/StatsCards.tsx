@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { UsersIcon, TrophyIcon, CalendarIcon, ChatBubbleLeftRightIcon, ChartBarIcon, HeartIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { UsersIcon, TrophyIcon, CalendarIcon, ChatBubbleLeftRightIcon, ChartBarIcon, HeartIcon } from '@heroicons/react/24/outline'
 import AdvancedCharts from './AdvancedCharts'
 import StatusCard from './StatusCard'
 
@@ -10,7 +10,6 @@ interface StatsProps {
     totalUsers: number
     totalTeams: number
     totalMatches: number
-    activeConversations: number
   }
   onNavigate?: (page: string) => void
 }
@@ -35,14 +34,6 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       change: 'Configurado',
       changeType: 'neutral',
       onClick: onNavigate ? () => onNavigate('Estatísticas de Usuários') : undefined,
-    },
-    {
-      name: 'Interações Recentes (24h)',
-      stat: '1',
-      icon: ClockIcon,
-      change: 'Últimas 24h',
-      changeType: 'neutral',
-      onClick: onNavigate ? () => onNavigate('Conversas WhatsApp') : undefined,
     },
   ]
 
@@ -73,19 +64,19 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
       onClick: onNavigate ? () => onNavigate('Jogos') : undefined,
     },
     {
-      name: 'Conversas Ativas',
-      stat: stats.activeConversations.toString(),
+      name: 'Chatwoot',
+      stat: 'Live',
       icon: ChatBubbleLeftRightIcon,
-      change: 'Em tempo real',
+      change: 'Sistema de chat',
       changeType: 'neutral',
-      onClick: onNavigate ? () => onNavigate('Conversas WhatsApp') : undefined,
+      onClick: () => window.open('https://chat.kmiza27.com', '_blank', 'noopener,noreferrer'),
     },
   ]
 
   return (
     <div>
       {/* Primeira linha de cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
         {mainStatsData.map((item) => (
           <div
             key={item.name}
@@ -195,15 +186,15 @@ export default function StatsCards({ stats, onNavigate }: StatsProps) {
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
                           <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
-                            <ChatBubbleLeftRightIcon className="h-4 w-4 text-white" />
+                            <TrophyIcon className="h-4 w-4 text-white" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            Nova conversa iniciada
+                            Sistema atualizado
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-300 truncate">
-                            Usuário perguntou sobre próximo jogo do Flamengo
+                            Integração com Chatwoot ativada
                           </p>
                         </div>
                         <div className="flex-shrink-0 text-sm text-gray-500 dark:text-gray-300">
