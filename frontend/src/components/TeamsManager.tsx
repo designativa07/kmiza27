@@ -329,6 +329,7 @@ export default function TeamsManager() {
         short_name: formData.short_name,
         city: formData.city || null,
         state: formData.state || null,
+        country: formData.country || null,
         founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
         logo_url: formData.logo_url || null,
         stadium_id: formData.stadium_id ? parseInt(formData.stadium_id) : null,
