@@ -58,6 +58,7 @@ export class WhatsAppService {
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionConfig.apiKey,
+          'Authorization': `Bearer ${evolutionConfig.apiKey}`,
         },
         body: JSON.stringify(payload),
       });
