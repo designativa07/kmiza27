@@ -39,10 +39,24 @@ export class TeamsController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '20',
     @Query('search') search?: string,
+    @Query('state') state?: string,
+    @Query('city') city?: string,
+    @Query('country') country?: string,
+    @Query('competitionId') competitionId?: string,
   ): Promise<PaginatedTeamsResult> {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return this.teamsService.findAll(pageNumber, limitNumber, search);
+    const competitionIdNumber = competitionId ? parseInt(competitionId, 10) : undefined;
+    
+    return this.teamsService.findAll(
+      pageNumber, 
+      limitNumber, 
+      search, 
+      state, 
+      city, 
+      country, 
+      competitionIdNumber
+    );
   }
 
   @Get(':id')
@@ -120,5 +134,23 @@ export class TeamsController {
   @Get(':teamId/players')
   async getTeamActivePlayers(@Param('teamId') teamId: string): Promise<PlayerTeamHistory[]> {
     return this.teamsService.getTeamActivePlayers(+teamId);
+  }
+
+  @Get('filters/states')
+  async getUniqueStates(@Query('country') country?: string): Promise<string[]> {
+    return this.teamsService.getUniqueStates(country);
+  }
+
+  @Get('filters/cities')
+  async getUniqueCities(
+    @Query('country') country?: string,
+    @Query('state') state?: string
+  ): Promise<string[]> {
+    return this.teamsService.getUniqueCities(country, state);
+  }
+
+  @Get('filters/countries')
+  async getUniqueCountries(): Promise<string[]> {
+    return this.teamsService.getUniqueCountries();
   }
 } 
