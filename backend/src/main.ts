@@ -39,12 +39,13 @@ async function bootstrap() {
       'http://127.0.0.1:3003',
       'http://192.168.0.43:3002',
       'https://kmizafront.h4xd66.easypanel.host',
-      'https://kmizabot.h4xd66.easypanel.host',
+      'https://kmiza27.h4xd66.easypanel.host',
       'https://kmiza27-evolution.h4xd66.easypanel.host',
       'https://kmiza27-futepedia.h4xd66.easypanel.host',
       'https://admin.kmiza27.com',
       'https://futepedia.kmiza27.com',
-      'https://api.kmiza27.com'
+      'https://api.kmiza27.com',
+      'https://evolution.kmiza27.com'
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,

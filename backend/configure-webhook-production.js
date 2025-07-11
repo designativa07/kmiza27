@@ -16,7 +16,7 @@ const data = JSON.stringify({
 const options = {
   hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
   port: 443,
-  path: '/webhook/set/kmizabot',
+  path: '/webhook/set/Kmiza27',
   method: 'POST',
   headers: {
     'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
@@ -26,7 +26,7 @@ const options = {
 };
 
 console.log('📡 Configurando webhook para: https://api.kmiza27.com/chatbot/webhook');
-console.log('🔧 Instância Evolution API: kmizabot');
+console.log('🔧 Instância Evolution API: Kmiza27');
 
 const req = https.request(options, (res) => {
   console.log(`📊 Status: ${res.statusCode}`);
@@ -46,7 +46,7 @@ const req = https.request(options, (res) => {
       console.log('✅ WEBHOOK CONFIGURADO COM SUCESSO!');
       console.log('🎯 DETALHES DA CONFIGURAÇÃO:');
       console.log('- 🌐 URL: https://api.kmiza27.com/chatbot/webhook');
-      console.log('- 🤖 Instância: kmizabot');
+      console.log('- 🤖 Instância: Kmiza27');
       console.log('- 📱 Eventos: MESSAGES_UPSERT');
       console.log('- ✅ Status: Habilitado');
       console.log('');

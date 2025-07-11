@@ -3,6 +3,7 @@ import { WhatsAppService } from './whatsapp.service';
 import { AutomationService } from './automation.service';
 import { NotificationService } from './notification.service';
 import { ChatbotService } from '../../chatbot/chatbot.service';
+import { evolutionConfig } from '../../config/evolution.config';
 
 @Controller('whatsapp')
 export class WhatsAppController {
@@ -277,6 +278,12 @@ export class WhatsAppController {
       console.log('🧹 Iniciando limpeza do cache da Evolution API...');
       
       const https = require('https');
+      const apiUrl = new URL(evolutionConfig.apiUrl);
+      const hostname = apiUrl.hostname;
+      const port = apiUrl.port ? parseInt(apiUrl.port) : (apiUrl.protocol === 'https:' ? 443 : 80);
+      const apikey = evolutionConfig.apiKey;
+      const instance = evolutionConfig.instanceName;
+      
       const results: Array<{ method: string; status: number; data?: any; error?: string }> = [];
       
       // Método 1: Tentar restart (PUT /instance/restart/{instance})
@@ -284,12 +291,12 @@ export class WhatsAppController {
       try {
         const restartResult = await new Promise<{ status: number; data: any; raw: string }>((resolve) => {
           const req = https.request({
-            hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
-            port: 443,
-            path: '/instance/restart/kmizabot',
+            hostname,
+            port,
+            path: `/instance/restart/${instance}`,
             method: 'PUT',
             headers: {
-              'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
+              'apikey': apikey,
               'Content-Type': 'application/json'
             }
           }, (res) => {
@@ -333,12 +340,12 @@ export class WhatsAppController {
         // Logout
         const logoutResult = await new Promise<{ status: number; data: any }>((resolve) => {
           const req = https.request({
-            hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
-            port: 443,
-            path: '/instance/logout/kmizabot',
+            hostname,
+            port,
+            path: `/instance/logout/${instance}`,
             method: 'DELETE',
             headers: {
-              'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
+              'apikey': apikey,
               'Content-Type': 'application/json'
             }
           }, (res) => {
@@ -364,12 +371,12 @@ export class WhatsAppController {
         // Connect
         const connectResult = await new Promise<{ status: number; data: any }>((resolve) => {
           const req = https.request({
-            hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
-            port: 443,
-            path: '/instance/connect/kmizabot',
+            hostname,
+            port,
+            path: `/instance/connect/${instance}`,
             method: 'GET',
             headers: {
-              'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
+              'apikey': apikey,
               'Content-Type': 'application/json'
             }
           }, (res) => {
@@ -434,14 +441,13 @@ export class WhatsAppController {
     try {
       console.log('🧹 Limpeza simples do cache - Método alternativo...');
       
-      // Método mais simples: apenas informar que o cache deve ser limpo manualmente
       return {
         success: true,
         message: 'Para limpar o cache da Evolution API, use um dos métodos abaixo:',
         methods: [
           '1. Na interface da Evolution API, clique em "RESTART"',
           '2. Ou clique em "DISCONNECT" → aguarde → "CONNECT"',
-          '3. Ou execute: curl -X PUT https://kmiza27-evolution.h4xd66.easypanel.host/instance/restart/kmizabot -H "apikey: 95DC243F41B2-4858-B0F1-FF49D8C46A85"'
+          `3. Ou execute: curl -X PUT ${evolutionConfig.apiUrl}/instance/restart/${evolutionConfig.instanceName} -H "apikey: ${evolutionConfig.apiKey}"`
         ],
         instructions: 'Após limpar o cache, aguarde alguns segundos e atualize as conversas.'
       };
@@ -461,6 +467,12 @@ export class WhatsAppController {
       console.log('🧹 Forçando limpeza completa do cache...');
       
       const https = require('https');
+      const apiUrl = new URL(evolutionConfig.apiUrl);
+      const hostname = apiUrl.hostname;
+      const port = apiUrl.port ? parseInt(apiUrl.port) : (apiUrl.protocol === 'https:' ? 443 : 80);
+      const apikey = evolutionConfig.apiKey;
+      const instance = evolutionConfig.instanceName;
+      
       const results: Array<{ step: string; status: number; data?: any; error?: any }> = [];
       
       // 1. Logout da instância
@@ -468,12 +480,12 @@ export class WhatsAppController {
       try {
         const logoutResult = await new Promise<{ status: number; data: any }>((resolve) => {
           const req = https.request({
-            hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
-            port: 443,
-            path: '/instance/logout/kmizabot',
+            hostname,
+            port,
+            path: `/instance/logout/${instance}`,
             method: 'DELETE',
             headers: {
-              'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
+              'apikey': apikey,
               'Content-Type': 'application/json'
             }
           }, (res) => {
@@ -503,12 +515,12 @@ export class WhatsAppController {
       try {
         const connectResult = await new Promise<{ status: number; data: any }>((resolve) => {
           const req = https.request({
-            hostname: 'kmiza27-evolution.h4xd66.easypanel.host',
-            port: 443,
-            path: '/instance/connect/kmizabot',
+            hostname,
+            port,
+            path: `/instance/connect/${instance}`,
             method: 'GET',
             headers: {
-              'apikey': '95DC243F41B2-4858-B0F1-FF49D8C46A85',
+              'apikey': apikey,
               'Content-Type': 'application/json'
             }
           }, (res) => {
@@ -530,21 +542,19 @@ export class WhatsAppController {
         results.push({ step: 'connect', status: 500, error: error.message });
       }
       
-      console.log('✅ Limpeza forçada concluída:', results);
+      // Verificar se pelo menos um passo teve sucesso
+      const success = results.some(r => r.status >= 200 && r.status < 400);
       
       return {
-        success: true,
-        message: 'Limpeza forçada executada - Logout e reconexão realizados',
-        details: results,
-        instructions: 'Aguarde alguns segundos e atualize as conversas. Se necessário, escaneie o QR Code novamente.'
+        success,
+        message: success ? 'Força de limpeza completada com sucesso' : 'Força de limpeza parcial - verifique os detalhes',
+        details: results
       };
-      
     } catch (error) {
-      console.error('❌ Erro crítico na limpeza forçada:', error);
-      
+      console.error('❌ Erro crítico na força de limpeza:', error);
       return {
         success: false,
-        message: 'Erro crítico na limpeza forçada',
+        message: 'Erro crítico na força de limpeza',
         error: error.message
       };
     }
