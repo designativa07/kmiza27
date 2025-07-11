@@ -36,6 +36,7 @@ export class EvolutionService {
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.apiKey,
+          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -120,6 +121,7 @@ export class EvolutionService {
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.apiKey,
+          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -176,6 +178,7 @@ export class EvolutionService {
         method: 'GET',
         headers: {
           'apikey': this.apiKey,
+          'Authorization': `Bearer ${this.apiKey}`,
         },
       });
 
