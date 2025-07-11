@@ -20,6 +20,8 @@ export class EvolutionService {
       this.logger.log(`🌐 URL: ${this.evolutionUrl}`);
       this.logger.log(`🤖 Instância: ${this.instanceName}`);
       this.logger.log(`🔑 API Key: ${this.apiKey ? '***SET***' : 'NOT_SET'}`);
+      this.logger.log(`🔍 API Key length: ${this.apiKey?.length || 0}`);
+      this.logger.log(`🔍 API Key starts with: ${this.apiKey?.substring(0, 8) || 'N/A'}...`);
 
       const url = `${this.evolutionUrl}/message/sendText/${this.instanceName}`;
       
@@ -57,6 +59,10 @@ export class EvolutionService {
         this.logger.error(`🔢 Status: ${response.status}`);
         this.logger.error(`📄 Resposta: ${errorText}`);
         this.logger.error(`🌐 URL: ${url}`);
+        this.logger.error(`🔍 Headers enviados:`, {
+          'Content-Type': 'application/json',
+          'apikey': this.apiKey?.substring(0, 8) + '...' || 'NOT_SET',
+        });
         
         try {
           const errorJson = JSON.parse(errorText);

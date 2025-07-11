@@ -28,6 +28,7 @@ import {
   PlayerTeamHistory,
   Card
 } from './entities';
+import { SystemSetting } from './entities/system-setting.entity';
 import { BotConfig } from './entities/bot-config.entity';
 
 // Import modules
