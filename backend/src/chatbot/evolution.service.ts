@@ -11,6 +11,9 @@ export class EvolutionService {
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {
     try {
+      // Verificar e reconectar a instância se necessário
+      await this.ensureInstanceConnected();
+      
       this.logger.log(`🚀 ENVIANDO MENSAGEM VIA EVOLUTION API`);
       this.logger.log(`📱 Para: ${phoneNumber}`);
       this.logger.log(`📝 Mensagem: ${message.substring(0, 100)}...`);
@@ -36,7 +39,6 @@ export class EvolutionService {
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.apiKey,
-          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -82,6 +84,9 @@ export class EvolutionService {
     }[],
   ): Promise<boolean> {
     try {
+      // Verificar e reconectar a instância se necessário
+      await this.ensureInstanceConnected();
+      
       this.logger.log(`🚀 ENVIANDO MENSAGEM DE LISTA VIA EVOLUTION API`);
       this.logger.log(`📱 Para: ${phoneNumber}`);
       this.logger.log(`📝 Título: ${title}`);
@@ -121,7 +126,6 @@ export class EvolutionService {
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.apiKey,
-          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -178,7 +182,6 @@ export class EvolutionService {
         method: 'GET',
         headers: {
           'apikey': this.apiKey,
-          'Authorization': `Bearer ${this.apiKey}`,
         },
       });
 
@@ -186,24 +189,31 @@ export class EvolutionService {
         const data = await response.json();
         this.logger.log(`📋 Instâncias encontradas:`, data.length);
         
-        const instance = data.find((inst: any) => inst.instanceName === this.instanceName);
+        const instance = data.find((inst: any) => inst.name === this.instanceName);
         
         if (instance) {
           this.logger.log(`✅ Instância encontrada:`, {
-            name: instance.instanceName,
-            state: instance.state || instance.status
+            name: instance.name,
+            state: instance.connectionStatus
           });
+          
+          return {
+            instance: {
+              instanceName: this.instanceName,
+              state: instance.connectionStatus,
+              available: true
+            }
+          };
         } else {
           this.logger.warn(`⚠️ Instância ${this.instanceName} não encontrada`);
+          return {
+            instance: {
+              instanceName: this.instanceName,
+              state: 'not_found',
+              available: false
+            }
+          };
         }
-        
-        return {
-          instance: {
-            instanceName: this.instanceName,
-            state: instance?.state || instance?.status || 'not_found',
-            available: !!instance
-          }
-        };
       } else {
         const errorText = await response.text();
         this.logger.error(`❌ Erro ao verificar instâncias: ${response.status} - ${errorText}`);
@@ -225,6 +235,42 @@ export class EvolutionService {
           error: error.message
         }
       };
+    }
+  }
+
+  async ensureInstanceConnected(): Promise<boolean> {
+    try {
+      this.logger.log(`🔍 Verificando conexão da instância ${this.instanceName}...`);
+      
+      const status = await this.getInstanceStatus();
+      
+      if (status.instance.state === 'open') {
+        this.logger.log(`✅ Instância ${this.instanceName} já está conectada`);
+        return true;
+      }
+      
+      this.logger.warn(`⚠️ Instância ${this.instanceName} não está conectada (${status.instance.state}). Tentando reconectar...`);
+      
+      // Tentar reconectar
+      const response = await fetch(`${this.evolutionUrl}/instance/connect/${this.instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': this.apiKey,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        this.logger.log(`✅ Instância ${this.instanceName} reconectada com sucesso:`, result);
+        return true;
+      } else {
+        const errorText = await response.text();
+        this.logger.error(`❌ Erro ao reconectar instância: ${response.status} - ${errorText}`);
+        return false;
+      }
+    } catch (error) {
+      this.logger.error('❌ Erro ao verificar/reconectar instância:', error);
+      return false;
     }
   }
 } 
