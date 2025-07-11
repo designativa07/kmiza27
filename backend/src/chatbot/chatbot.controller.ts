@@ -117,22 +117,10 @@ export class ChatbotController {
       console.log(`- Mensagem: ${messageText || 'NÃO ENCONTRADA'}`);
       console.log(`- Nome: ${pushName || 'NÃO ENCONTRADO'}`);
 
-      // 🛡️ FILTROS ADICIONAIS ANTI-LOOP
-      
-      // Filtro 5: Verificar se a mensagem não é vazia ou apenas espaços
-      if (!messageText || messageText.trim() === '') {
-        console.log('⚠️ Mensagem vazia ou apenas espaços - ignorando');
+      // 🛡️ FILTRO BÁSICO: Verificar se temos dados mínimos
+      if (!messageText) {
+        console.log('⚠️ Mensagem vazia - ignorando');
         return { success: true, message: 'Mensagem vazia ignorada' };
-      }
-      
-      // Filtro 6: Verificar se não é uma mensagem de sistema (contém emojis de sistema)
-      const systemMessagePatterns = [
-        /^✅/, /^❌/, /^🤖/, /^📋/, /^🔍/, /^⚽/, /^🏆/, /^📊/, /^🎯/
-      ];
-      
-      if (systemMessagePatterns.some(pattern => pattern.test(messageText))) {
-        console.log('⚠️ Mensagem parece ser do sistema - ignorando para evitar loop');
-        return { success: true, message: 'Mensagem de sistema ignorada' };
       }
 
       // Se não encontrou dados, tentar extrair de forma mais agressiva
@@ -159,7 +147,7 @@ export class ChatbotController {
       }
 
       // FORÇAR processamento se tiver pelo menos um telefone válido
-      if (phoneNumber && phoneNumber.length >= 10) {
+      if (phoneNumber && phoneNumber.length >= 10 && messageText) {
         // 🛡️ FILTRO FINAL: Verificar se não é o próprio número do bot
         const botNumbers = ['5511999999999', '5511888888888']; // Adicione os números do bot aqui
         if (botNumbers.includes(phoneNumber)) {
@@ -167,10 +155,10 @@ export class ChatbotController {
           return { success: true, message: 'Número do bot ignorado' };
         }
         
-        // Se não tem mensagem, usar uma mensagem padrão
-        if (!messageText) {
-          messageText = 'oi';
-          console.log('💬 Usando mensagem padrão: "oi"');
+        // Filtro básico: evitar mensagens que começam com emojis de sistema
+        if (messageText.startsWith('✅') || messageText.startsWith('❌') || messageText.startsWith('🤖')) {
+          console.log('⚠️ Mensagem parece ser do sistema - ignorando para evitar loop');
+          return { success: true, message: 'Mensagem de sistema ignorada' };
         }
         
         console.log(`📱 PROCESSANDO MENSAGEM de ${phoneNumber}: "${messageText}"`);
@@ -191,7 +179,7 @@ export class ChatbotController {
           return { success: true, message: 'Erro no processamento', error: error.message };
         }
       } else {
-        console.log('⚠️ Não foi possível extrair telefone válido do webhook');
+        console.log('⚠️ Não foi possível extrair telefone e mensagem válidos do webhook');
         console.log('📋 Estrutura completa do body:', JSON.stringify(body, null, 2));
         return { success: true, message: 'Webhook recebido mas sem dados válidos', processed: false };
       }
