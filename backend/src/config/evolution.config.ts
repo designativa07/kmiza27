@@ -32,6 +32,14 @@ export const evolutionConfig = {
   apiUrl,
   apiKey,
   instanceName,
+  enabled: true, // Sempre habilitado - usar apenas dados reais
+  
+  // Endpoints da Evolution API
+  endpoints: {
+    sendMessage: '/message/sendText',
+    instanceInfo: '/instance/fetchInstances',
+    createInstance: '/instance/create',
+  },
   
   // Método para validar se as configurações estão corretas
   isValid(): boolean {
