@@ -10,6 +10,32 @@ export class ChatbotController {
     try {
       console.log('📨 Webhook recebido:', JSON.stringify(body, null, 2));
       
+      // 🛡️ FILTROS ANTI-LOOP - Verificar se a mensagem é do próprio bot
+      
+      // Filtro 1: Verificar se é mensagem enviada pelo bot (fromMe: true)
+      if (body.data?.key?.fromMe === true) {
+        console.log('⚠️ Mensagem enviada pelo próprio bot - ignorando para evitar loop');
+        return { success: true, message: 'Mensagem própria ignorada' };
+      }
+      
+      // Filtro 2: Verificar se é mensagem de status/sistema
+      if (body.event === 'messages.set' || body.event === 'messages.update') {
+        console.log('⚠️ Evento de sistema - ignorando para evitar loop');
+        return { success: true, message: 'Evento de sistema ignorado' };
+      }
+      
+      // Filtro 3: Verificar se é apenas um evento de entrega/leitura
+      if (body.event === 'messages.receipt.update') {
+        console.log('⚠️ Evento de entrega/leitura - ignorando');
+        return { success: true, message: 'Evento de entrega ignorado' };
+      }
+      
+      // Filtro 4: Só processar mensagens novas (UPSERT)
+      if (body.event !== 'messages.upsert') {
+        console.log(`⚠️ Evento ${body.event} ignorado - só processamos messages.upsert`);
+        return { success: true, message: 'Evento ignorado' };
+      }
+      
       // Verificar se as respostas automáticas estão habilitadas
       const autoResponseEnabled = await this.chatbotService.isAutoResponseEnabled();
       if (!autoResponseEnabled) {
@@ -91,6 +117,24 @@ export class ChatbotController {
       console.log(`- Mensagem: ${messageText || 'NÃO ENCONTRADA'}`);
       console.log(`- Nome: ${pushName || 'NÃO ENCONTRADO'}`);
 
+      // 🛡️ FILTROS ADICIONAIS ANTI-LOOP
+      
+      // Filtro 5: Verificar se a mensagem não é vazia ou apenas espaços
+      if (!messageText || messageText.trim() === '') {
+        console.log('⚠️ Mensagem vazia ou apenas espaços - ignorando');
+        return { success: true, message: 'Mensagem vazia ignorada' };
+      }
+      
+      // Filtro 6: Verificar se não é uma mensagem de sistema (contém emojis de sistema)
+      const systemMessagePatterns = [
+        /^✅/, /^❌/, /^🤖/, /^📋/, /^🔍/, /^⚽/, /^🏆/, /^📊/, /^🎯/
+      ];
+      
+      if (systemMessagePatterns.some(pattern => pattern.test(messageText))) {
+        console.log('⚠️ Mensagem parece ser do sistema - ignorando para evitar loop');
+        return { success: true, message: 'Mensagem de sistema ignorada' };
+      }
+
       // Se não encontrou dados, tentar extrair de forma mais agressiva
       if (!phoneNumber || !messageText) {
         console.log('🔍 Tentativa de extração agressiva...');
@@ -116,6 +160,13 @@ export class ChatbotController {
 
       // FORÇAR processamento se tiver pelo menos um telefone válido
       if (phoneNumber && phoneNumber.length >= 10) {
+        // 🛡️ FILTRO FINAL: Verificar se não é o próprio número do bot
+        const botNumbers = ['5511999999999', '5511888888888']; // Adicione os números do bot aqui
+        if (botNumbers.includes(phoneNumber)) {
+          console.log('⚠️ Número do próprio bot detectado - ignorando');
+          return { success: true, message: 'Número do bot ignorado' };
+        }
+        
         // Se não tem mensagem, usar uma mensagem padrão
         if (!messageText) {
           messageText = 'oi';
