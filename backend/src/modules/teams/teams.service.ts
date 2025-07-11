@@ -27,6 +27,10 @@ export class TeamsService {
     page: number = 1,
     limit: number = 20,
     search?: string,
+    state?: string,
+    city?: string,
+    country?: string,
+    competitionId?: number,
   ): Promise<PaginatedTeamsResult> {
     const queryBuilder = this.teamRepository.createQueryBuilder('team')
       .leftJoinAndSelect('team.stadium', 'stadium')
@@ -34,16 +38,44 @@ export class TeamsService {
       .skip((page - 1) * limit)
       .take(limit);
 
+    let whereConditions: string[] = [];
+    let parameters: any = {};
+
     if (search) {
       const searchTerm = search.trim();
-      
-      queryBuilder.where(
-        `UNACCENT(team.name) ILIKE UNACCENT(:searchTerm) OR 
+      whereConditions.push(
+        `(UNACCENT(team.name) ILIKE UNACCENT(:searchTerm) OR 
          UNACCENT(team.short_name) ILIKE UNACCENT(:searchTerm) OR
          UNACCENT(team.city) ILIKE UNACCENT(:searchTerm) OR
-         UNACCENT(team.state) ILIKE UNACCENT(:searchTerm)`,
-        { searchTerm: `%${searchTerm}%` }
+         UNACCENT(team.state) ILIKE UNACCENT(:searchTerm))`
       );
+      parameters.searchTerm = `%${searchTerm}%`;
+    }
+
+    if (state) {
+      whereConditions.push('team.state = :state');
+      parameters.state = state.trim();
+    }
+
+    if (city) {
+      whereConditions.push('team.city = :city');
+      parameters.city = city.trim();
+    }
+
+    if (country) {
+      whereConditions.push('team.country = :country');
+      parameters.country = country.trim();
+    }
+
+    if (competitionId) {
+      queryBuilder.innerJoin('team.competitionTeams', 'competitionTeam')
+                  .innerJoin('competitionTeam.competition', 'competition');
+      whereConditions.push('competition.id = :competitionId');
+      parameters.competitionId = competitionId;
+    }
+
+    if (whereConditions.length > 0) {
+      queryBuilder.where(whereConditions.join(' AND '), parameters);
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -338,5 +370,54 @@ export class TeamsService {
       relations: ['player'],
       order: { start_date: 'DESC' },
     });
+  }
+
+  async getUniqueStates(country?: string): Promise<string[]> {
+    const queryBuilder = this.teamRepository
+      .createQueryBuilder('team')
+      .select('DISTINCT team.state', 'state')
+      .where('team.state IS NOT NULL AND team.state != \'\'');
+    
+    if (country) {
+      queryBuilder.andWhere('team.country = :country', { country });
+    }
+    
+    const result = await queryBuilder
+      .orderBy('team.state', 'ASC')
+      .getRawMany();
+    
+    return result.map(item => item.state).filter(Boolean);
+  }
+
+  async getUniqueCities(country?: string, state?: string): Promise<string[]> {
+    const queryBuilder = this.teamRepository
+      .createQueryBuilder('team')
+      .select('DISTINCT team.city', 'city')
+      .where('team.city IS NOT NULL AND team.city != \'\'');
+    
+    if (country) {
+      queryBuilder.andWhere('team.country = :country', { country });
+    }
+    
+    if (state) {
+      queryBuilder.andWhere('team.state = :state', { state });
+    }
+    
+    const result = await queryBuilder
+      .orderBy('team.city', 'ASC')
+      .getRawMany();
+    
+    return result.map(item => item.city).filter(Boolean);
+  }
+
+  async getUniqueCountries(): Promise<string[]> {
+    const result = await this.teamRepository
+      .createQueryBuilder('team')
+      .select('DISTINCT team.country', 'country')
+      .where('team.country IS NOT NULL AND team.country != \'\'')
+      .orderBy('team.country', 'ASC')
+      .getRawMany();
+    
+    return result.map(item => item.country).filter(Boolean);
   }
 } 
