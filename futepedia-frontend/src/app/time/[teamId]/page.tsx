@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { Shield, User, Calendar, Shirt } from 'lucide-react';
-import { getTeamLogoUrl, getPlayerImageUrl } from '@/lib/cdn';
+import { Shield, User, Calendar, Shirt, MapPin, Users } from 'lucide-react';
+import { getTeamLogoUrl, getPlayerImageUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { Header } from '@/components/Header';
 
 // Tipos (poderiam ser movidos para @/types)
@@ -17,14 +17,28 @@ interface PlayerHistory {
   jersey_number?: string;
 }
 
+interface Stadium {
+  id: number;
+  name: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  capacity?: number;
+  opened_year?: number;
+  image_url?: string;
+  history?: string;
+}
+
 interface Team {
-  id:number;
+  id: number;
   name: string;
   logo_url: string;
   city?: string;
+  state?: string;
   country?: string;
   history?: string;
   information?: string;
+  stadium?: Stadium;
   social_media?: {
     instagram_url?: string;
     tiktok_url?: string;
@@ -119,6 +133,70 @@ const SocialLinks = ({ team }: { team: Team }) => {
   );
 };
 
+const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
+        Estádio
+      </h2>
+      
+      <div className="flex flex-col md:flex-row md:space-x-6">
+        {/* Imagem do estádio */}
+        <div className="md:w-1/3 mb-4 md:mb-0">
+          {stadium.image_url ? (
+            <img 
+              src={getStadiumImageUrl(stadium.image_url)} 
+              alt={`${stadium.name}`} 
+              className="w-full h-48 object-cover rounded-lg"
+            />
+          ) : (
+            <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+              <MapPin className="h-12 w-12 text-gray-400" />
+            </div>
+          )}
+        </div>
+        
+        {/* Informações do estádio */}
+        <div className="md:w-2/3">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">{stadium.name}</h3>
+          
+          <div className="space-y-2 text-sm text-gray-600">
+            {(stadium.city || stadium.state) && (
+              <p className="flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                {stadium.city}{stadium.city && stadium.state ? ', ' : ''}{stadium.state}
+                {stadium.country && stadium.country !== 'Brasil' && `, ${stadium.country}`}
+              </p>
+            )}
+            
+            {stadium.capacity && (
+              <p className="flex items-center">
+                <Users className="h-4 w-4 mr-1" />
+                Capacidade: {stadium.capacity.toLocaleString()} pessoas
+              </p>
+            )}
+            
+            {stadium.opened_year && (
+              <p className="flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Inaugurado em: {stadium.opened_year}
+              </p>
+            )}
+          </div>
+          
+          {stadium.history && (
+            <div className="mt-4">
+              <h4 className="font-semibold text-gray-800 mb-2">História</h4>
+              <p className="text-sm text-gray-600 line-clamp-3">{stadium.history}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default async function TeamPage({ params }: Props) {
   const { team, players } = await getTeamData(params.teamId);
 
@@ -151,12 +229,18 @@ export default async function TeamPage({ params }: Props) {
         </div>
       )}
 
-      {team.information && (
-        <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
-          <p className="text-gray-600 whitespace-pre-wrap">{team.information}</p>
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {team.information && (
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
+            <p className="text-gray-600 whitespace-pre-wrap">{team.information}</p>
+          </div>
+        )}
+
+        {team.stadium && (
+          <StadiumCard stadium={team.stadium} />
+        )}
+      </div>
       
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Elenco Principal</h2>
 
