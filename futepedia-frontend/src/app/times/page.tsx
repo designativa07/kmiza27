@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Shield, Search, Filter, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { getApiUrl } from '@/lib/config';
@@ -186,7 +186,8 @@ const TeamCard = ({ team }: { team: Team }) => {
   );
 };
 
-export default function TeamsPage() {
+// Componente interno que usa useSearchParams
+function TeamsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -540,5 +541,28 @@ export default function TeamsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+// Componente de loading para o Suspense
+function TeamsPageLoading() {
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <Header showBackToHome={true} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="text-center py-16">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Componente principal exportado com Suspense
+export default function TeamsPage() {
+  return (
+    <Suspense fallback={<TeamsPageLoading />}>
+      <TeamsPageContent />
+    </Suspense>
   );
 } 
