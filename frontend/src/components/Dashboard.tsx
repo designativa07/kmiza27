@@ -37,7 +37,7 @@ import StandingsManager from './StandingsManager'
 import ChannelsManager from './ChannelsManager'
 import UsersManager from './UsersManager'
 import AdminsManager from './AdminsManager'
-import ChatbotSettings from './ChatbotSettings'
+
 import NotificationsManager from './NotificationsManager'
 import GlobalSearch from './GlobalSearch'
 import SystemSettings from './SystemSettings'
@@ -149,6 +149,19 @@ export default function Dashboard() {
   useEffect(() => {
     // Carregar estatísticas do backend
     fetchStats()
+  }, [])
+
+  useEffect(() => {
+    // Listener para navegação customizada
+    const handleNavigateToAutomation = (event: CustomEvent) => {
+      setCurrentPage('Configurações do Bot')
+    }
+
+    window.addEventListener('navigate-to-automation', handleNavigateToAutomation as EventListener)
+    
+    return () => {
+      window.removeEventListener('navigate-to-automation', handleNavigateToAutomation as EventListener)
+    }
   }, [])
 
   const fetchStats = async () => {
@@ -454,6 +467,29 @@ export default function Dashboard() {
                 </dd>
               </div>
 
+              {/* Card Status do Sistema */}
+              <div 
+                className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setCurrentPage('Status do Sistema')}
+              >
+                <dt>
+                  <div className="absolute rounded-md bg-emerald-500 p-3">
+                    <ServerIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </div>
+                  <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Status do Sistema</p>
+                </dt>
+                <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                  <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">Online</p>
+                  <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                    <div className="text-sm">
+                      <span className="font-medium text-emerald-600 hover:text-emerald-500">
+                        Ver detalhes →
+                      </span>
+                    </div>
+                  </div>
+                </dd>
+              </div>
+
               {/* Card Usuários com Time Favorito */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
@@ -532,14 +568,13 @@ export default function Dashboard() {
         return <UserStats />
       case 'Administradores':
         return <AdminsManager />
-      case 'Automação IA':
+      case 'Configurações do Bot':
         return <AutomationPanel />
       case 'Notificações':
         return <NotificationsManager />
       case 'Status do Sistema':
         return <StatusContent />
-      case 'Chatbot':
-        return <ChatbotSettings />
+
       case 'Artilharia':
         return <TopScorersTable />
       case 'Configurações':
@@ -567,10 +602,10 @@ export default function Dashboard() {
     { name: 'Estatísticas de Usuários', icon: ChartBarIcon, page: 'Estatísticas de Usuários' },
     { name: 'Administradores', icon: WrenchScrewdriverIcon, page: 'Administradores' },
     { name: 'Chatwoot', icon: ChatBubbleLeftRightIcon, page: 'Chatwoot', isExternalLink: true },
-    { name: 'Automação IA', icon: CpuChipIcon, page: 'Automação IA' },
+    { name: 'Configurações do Bot', icon: CpuChipIcon, page: 'Configurações do Bot' },
     { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
     { name: 'Status do Sistema', icon: ComputerDesktopIcon, page: 'Status do Sistema' },
-    { name: 'Chatbot', icon: ChatBubbleLeftRightIcon, page: 'Chatbot' },
+
     { name: 'Configurações', icon: CogIcon, page: 'Configurações' }
   ]
 
@@ -655,27 +690,7 @@ export default function Dashboard() {
             </ul>
             
             {/* Status do Sistema no final do menu */}
-            <div className="mt-auto pb-4">
-              <div className="px-2">
-                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-                  Status do Sistema
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    Backend Online
-                  </div>
-                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    WhatsApp Conectado
-                  </div>
-                  <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    Banco de Dados OK
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </nav>
         </div>
       </div>

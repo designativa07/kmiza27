@@ -42,12 +42,13 @@ export class UsersService {
     });
   }
 
-  async createUser(phoneNumber: string, name?: string): Promise<User> {
+  async createUser(phoneNumber: string, name?: string, origin: string = 'whatsapp'): Promise<User> {
     const user = this.userRepository.create({
       phone_number: phoneNumber,
       name: name || undefined,
       is_active: true,
       whatsapp_status: 'active',
+      origin: origin,
       preferences: {
         notifications: true,
         language: 'pt-BR'
@@ -82,12 +83,12 @@ export class UsersService {
     return this.userRepository.save(adminUser);
   }
 
-  async findOrCreateUser(phoneNumber: string, name?: string): Promise<User> {
+  async findOrCreateUser(phoneNumber: string, name?: string, origin: string = 'whatsapp'): Promise<User> {
     let user = await this.findByPhone(phoneNumber);
     
     if (!user) {
-      console.log(`👤 Criando novo usuário: ${phoneNumber} (${name || 'Nome não informado'})`);
-      user = await this.createUser(phoneNumber, name);
+      console.log(`👤 Criando novo usuário: ${phoneNumber} (${name || 'Nome não informado'}) - Origem: ${origin}`);
+      user = await this.createUser(phoneNumber, name, origin);
     } else {
       // Atualizar nome se foi fornecido e não existe
       if (name && !user.name) {

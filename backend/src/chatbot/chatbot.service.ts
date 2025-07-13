@@ -48,12 +48,15 @@ export class ChatbotService {
     private botConfigService: BotConfigService,
   ) {}
 
-  async processMessage(phoneNumber: string, message: string, pushName?: string): Promise<string> {
+  async processMessage(phoneNumber: string, message: string, pushName?: string, origin?: string): Promise<string> {
     try {
       console.log(`📱 Mensagem recebida de ${phoneNumber}: "${message}"`);
 
+      // Detectar origem baseado no phoneNumber ou parâmetro explícito
+      const userOrigin = origin || (phoneNumber.startsWith('site-') ? 'site' : 'whatsapp');
+      
       // Criar ou atualizar usuário no banco de dados
-      const user = await this.usersService.findOrCreateUser(phoneNumber, pushName);
+      const user = await this.usersService.findOrCreateUser(phoneNumber, pushName, userOrigin);
       
       // Atualizar última interação
       await this.usersService.updateLastInteraction(phoneNumber);
@@ -145,9 +148,14 @@ export class ChatbotService {
           break;
 
         default:
-          // Enviar menu de boas-vindas como botões de lista
-          await this.sendWelcomeMenu(phoneNumber);
-          return '';
+          // Para usuários do site, retornar menu de texto simples
+          if (userOrigin === 'site') {
+            response = await this.getTextWelcomeMenu();
+          } else {
+            // Para usuários do WhatsApp, enviar menu de boas-vindas como botões de lista
+            await this.sendWelcomeMenu(phoneNumber);
+            return '';
+          }
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
@@ -816,8 +824,8 @@ export class ChatbotService {
         return `❌ Time "${teamName}" não encontrado.`;
       }
 
-      // Buscar último jogo
-      const lastMatch = await this.matchesRepository
+      // Buscar últimos 3 jogos
+      const lastMatches = await this.matchesRepository
         .createQueryBuilder('match')
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.home_team', 'homeTeam')
@@ -827,42 +835,47 @@ export class ChatbotService {
         .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
         .andWhere('match.status = :status', { status: 'finished' })
         .orderBy('match.match_date', 'DESC')
-        .getOne();
+        .limit(3)
+        .getMany();
 
-      if (!lastMatch) {
+      if (lastMatches.length === 0) {
         return `😔 Não encontrei jogos finalizados para o ${team.name}.`;
       }
 
-      const date = new Date(lastMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
+      let response = `⚽ ÚLTIMOS JOGOS DO ${team.name.toUpperCase()} ⚽\n\n`;
+
+      lastMatches.forEach((match, index) => {
+        const date = new Date(match.match_date);
+        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const formattedTime = date.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo'
+        });
+
+        const isHome = match.home_team.id === team.id;
+        const teamScore = isHome ? (match.home_score ?? 0) : (match.away_score ?? 0);
+        const opponentScore = isHome ? (match.away_score ?? 0) : (match.home_score ?? 0);
+        const opponentName = isHome ? match.away_team.name : match.home_team.name;
+        
+        const result = teamScore > opponentScore ? '✅ VITÓRIA' : 
+                      teamScore < opponentScore ? '❌ DERROTA' : '🟡 EMPATE';
+
+        response += `${index + 1}. ${match.home_team.name} ${match.home_score ?? 0} x ${match.away_score ?? 0} ${match.away_team.name}
+📅 ${formattedDate} - ${formattedTime}
+🏆 ${match.competition.name}
+📍 ${match.round?.name || 'A definir'}
+🏟️ ${match.stadium?.name || 'A definir'}
+${result}
+
+`;
       });
 
-      const teamScore = lastMatch.home_score ?? 0;
-      const opponentScore = lastMatch.away_score ?? 0;
-      
-      const result = teamScore > opponentScore ? '✅ VITÓRIA' : 
-                    teamScore < opponentScore ? '❌ DERROTA' : '🟡 EMPATE';
-
-      return `⚽ ÚLTIMO JOGO DO ${team.name.toUpperCase()} ⚽
-${lastMatch.home_team.name} x ${lastMatch.away_team.name}
-📅 Data: ${formattedDate}
-⏰ Hora: ${formattedTime}
-
-🏆 Competição: ${lastMatch.competition.name}
-📍 Rodada: ${lastMatch.round?.name || 'A definir'}
-🏟️ Estádio: ${lastMatch.stadium?.name || 'A definir'}
-
-🆚 Placar: ${lastMatch.home_team.name} ${teamScore} x ${opponentScore} ${lastMatch.away_team.name}
-
-${result}`;
+      return response.trim();
 
     } catch (error) {
-      console.error('Erro ao buscar último jogo:', error);
-      return '❌ Erro ao buscar último jogo.';
+      console.error('Erro ao buscar últimos jogos:', error);
+      return '❌ Erro ao buscar últimos jogos.';
     }
   }
 
@@ -971,17 +984,50 @@ ${result}`;
 
   private async getWelcomeMessage(): Promise<string> {
     try {
-      // Tenta obter a mensagem do banco de dados
-      const welcomeConfig = await this.botConfigService.getConfig('MENSAGEM_BEM_VINDO');
-      this.logger.log(`Mensagem de boas-vindas do DB: ${welcomeConfig}`);
-      if (welcomeConfig) {
-        return welcomeConfig;
-      }
+      const welcomeMessage = await this.botConfigService.getConfig('welcome_message');
+      return welcomeMessage || 'Posso te ajudar com informações sobre futebol. Digite "oi" para ver as opções ou faça uma pergunta diretamente!';
     } catch (error) {
-      this.logger.error('Erro ao buscar mensagem de boas-vindas do banco de dados. Usando fallback.', error);
+      console.error('Erro ao buscar mensagem de boas-vindas:', error);
+      return 'Posso te ajudar com informações sobre futebol. Digite "oi" para ver as opções ou faça uma pergunta diretamente!';
     }
-    // Fallback se não encontrar no banco
-    return 'Futebot Kmiza27 ⚽\n\nComo posso te ajudar com informações sobre futebol? Selecione uma categoria:';
+  }
+
+  private async getTextWelcomeMenu(): Promise<string> {
+    const welcomeMessage = await this.getWelcomeMessage();
+    const botName = await this.getBotName();
+
+    return `🤖 *${botName}*
+
+${welcomeMessage}
+
+⚡ *Ações Rápidas:*
+• Digite "jogos hoje" - Jogos de hoje
+• Digite "jogos amanhã" - Jogos de amanhã  
+• Digite "jogos semana" - Jogos da semana
+• Digite "tabela" - Classificação das competições
+
+⚽ *Informações de Partidas:*
+• Digite "próximo jogo [time]" - Próximo jogo de um time
+• Digite "último jogo [time]" - Últimos jogos de um time
+• Digite "transmissão [time]" - Onde passa o jogo
+
+👥 *Times e Jogadores:*
+• Digite "info [time]" - Informações do time
+• Digite "elenco [time]" - Elenco do time
+• Digite "jogador [nome]" - Informações do jogador
+• Digite "posição [time]" - Posição na tabela
+
+🏆 *Competições:*
+• Digite "artilheiros" - Maiores goleadores
+• Digite "canais" - Canais de transmissão
+
+💡 *Exemplos:*
+• "próximo jogo Flamengo"
+• "tabela brasileirão"
+• "jogador Neymar"
+• "jogos hoje"
+
+Digite sua pergunta ou comando! ⚽`;
   }
 
   private async sendWelcomeMenu(phoneNumber: string): Promise<boolean> {
@@ -989,7 +1035,7 @@ ${result}`;
     const botName = await this.getBotName();
 
     const payload = {
-      buttonText: 'MENU INTERATIVO',
+      buttonText: 'VER OPÇÕES',
       description: welcomeMessage,
       title: botName, // Título da lista
       footer: 'Selecione uma das opções abaixo',
@@ -1028,14 +1074,9 @@ ${result}`;
               description: 'Próximo jogo de um time'
             },
             {
-              id: 'CMD_JOGOS_AO_VIVO',
-              title: '🔴 Jogos ao Vivo',
-              description: 'Jogo atual de um time'
-            },
-            {
               id: 'CMD_ULTIMO_JOGO',
               title: '🏁 Últimos Jogos',
-              description: 'Último jogo de um time'
+              description: 'Últimos 3 jogos de um time'
             },
             {
               id: 'CMD_TRANSMISSAO',
@@ -1266,13 +1307,9 @@ ${result}`;
           await this.setUserConversationState(phoneNumber, 'waiting_team_for_next_match');
           return '⚽ Para qual time você gostaria de saber os próximos jogos?\n\nPor favor, digite o nome do time (ex: Flamengo, Palmeiras, Corinthians):';
 
-        case 'CMD_JOGOS_AO_VIVO':
-          await this.setUserConversationState(phoneNumber, 'waiting_team_for_current_match');
-          return '🔴 Para qual time você gostaria de saber se está jogando agora?\n\nPor favor, digite o nome do time:';
-
         case 'CMD_ULTIMO_JOGO':
           await this.setUserConversationState(phoneNumber, 'waiting_team_for_last_match');
-          return '🏁 Para qual time você gostaria de saber o último jogo?\n\nPor favor, digite o nome do time:';
+          return '🏁 Para qual time você gostaria de saber os últimos jogos?\n\nPor favor, digite o nome do time:';
 
         case 'CMD_TRANSMISSAO':
           await this.setUserConversationState(phoneNumber, 'waiting_team_for_broadcast');

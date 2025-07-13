@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ClientOnly from "@/components/ClientOnly";
+import FutebotChat from "@/components/FutebotChat";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,6 +22,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <ErrorBoundary>
           {children}
+          
+          {/* Widget do Futebot - aparece em todas as páginas */}
+          <ClientOnly>
+            <FutebotChat 
+              isWidget={true} 
+              apiUrl={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'} 
+            />
+          </ClientOnly>
         </ErrorBoundary>
       </body>
     </html>

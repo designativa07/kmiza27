@@ -225,6 +225,13 @@ export default function TopScorersTable() {
   }
 
   const applyFilters = () => {
+    // Verificar se playerStats é um array válido antes de fazer spread
+    if (!Array.isArray(playerStats)) {
+      console.warn('playerStats não é um array válido:', playerStats)
+      setFilteredStats([])
+      return
+    }
+
     let filtered = [...playerStats]
 
     if (filters.competition_id) {
@@ -353,6 +360,7 @@ export default function TopScorersTable() {
                 value={filters.competition_id}
                 onChange={(e) => setFilters({ ...filters, competition_id: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                aria-label="Filtrar por competição"
               >
                 <option value="">Todas</option>
                 {competitions.map((comp) => (
@@ -367,6 +375,7 @@ export default function TopScorersTable() {
                 value={filters.season}
                 onChange={(e) => setFilters({ ...filters, season: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                aria-label="Filtrar por temporada"
               >
                 <option value="">Todas</option>
                 {seasons.map((season) => (
@@ -381,6 +390,7 @@ export default function TopScorersTable() {
                 value={filters.team_id}
                 onChange={(e) => setFilters({ ...filters, team_id: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                aria-label="Filtrar por time"
               >
                 <option value="">Todos</option>
                 {teams.map((team) => (
@@ -395,6 +405,7 @@ export default function TopScorersTable() {
                 value={filters.position}
                 onChange={(e) => setFilters({ ...filters, position: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                aria-label="Filtrar por posição"
               >
                 <option value="">Todas</option>
                 {positions.map((position) => (
