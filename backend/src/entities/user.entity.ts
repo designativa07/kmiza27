@@ -36,6 +36,9 @@ export class User {
   @Column({ type: 'varchar', length: 50, default: 'active' })
   whatsapp_status: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'whatsapp' })
+  origin: string; // 'whatsapp' ou 'site'
+
   @CreateDateColumn()
   created_at: Date;
 

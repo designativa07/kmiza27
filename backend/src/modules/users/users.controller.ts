@@ -46,8 +46,8 @@ export class UsersController {
   }
 
   @Post('find-or-create')
-  findOrCreateUser(@Body() userData: { phoneNumber: string; name?: string }) {
-    return this.usersService.findOrCreateUser(userData.phoneNumber, userData.name);
+  findOrCreateUser(@Body() userData: { phoneNumber: string; name?: string; origin?: string }) {
+    return this.usersService.findOrCreateUser(userData.phoneNumber, userData.name, userData.origin);
   }
 
   @Patch(':id/favorite-team')

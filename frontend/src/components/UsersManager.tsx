@@ -20,6 +20,7 @@ interface User {
   preferences?: any
   whatsapp_status: string
   created_at: string
+  origin: string
 }
 
 export default function UsersManager() {
@@ -353,6 +354,9 @@ export default function UsersManager() {
                       Tipo
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Origem
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status WhatsApp
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -418,6 +422,15 @@ export default function UsersManager() {
                           </span>
                         </button>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.origin === 'site' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {user.origin === 'site' ? '🌐 Site' : '📱 WhatsApp'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {user.whatsapp_status}
                       </td>
@@ -428,12 +441,14 @@ export default function UsersManager() {
                         <button
                           onClick={() => handleEdit(user)}
                           className="text-indigo-600 hover:text-indigo-900 mr-3"
+                          aria-label="Editar usuário"
                         >
                           <PencilIcon className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="text-red-600 hover:text-red-900"
+                          aria-label="Excluir usuário"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>

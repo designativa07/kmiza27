@@ -155,6 +155,20 @@ export default function Home() {
                   </div>
                 </div>
               </a>
+
+              <Link href="/futebot" className="group block">
+                 <div className="flex flex-col items-center p-1.5 rounded-lg bg-blue-50 transition-colors lg:flex-row lg:space-x-4 lg:p-4 text-center lg:text-left hover:bg-blue-100">
+                  <div className="p-1.5 bg-blue-100 rounded-full">
+                     <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                     </svg>
+                  </div>
+                  <div className="mt-1">
+                    <h4 className="font-bold text-gray-900 text-xs lg:text-base">Futebot Chat</h4>
+                    <p className="hidden lg:block text-sm text-gray-600">Converse pelo site</p>
+                  </div>
+                </div>
+              </Link>
             </div>
           </div>
         </div>

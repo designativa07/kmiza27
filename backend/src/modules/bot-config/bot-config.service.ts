@@ -30,32 +30,10 @@ export class BotConfigService {
 
       const defaultConfigs = [
         {
-          key: 'openai_prompt',
-          value: `Você é um assistente especializado em futebol brasileiro. Sua função é ajudar usuários com informações sobre:
-
-- Próximos jogos dos times
-- Resultados de partidas
-- Classificações de campeonatos
-- Notícias do futebol
-- Escalações dos times
-
-Responda sempre de forma amigável, usando emojis relacionados ao futebol. Quando o usuário mencionar apenas o nome de um time (como "Flamengo"), assuma que ele quer saber sobre o próximo jogo desse time.
-
-Mantenha as respostas concisas e informativas.`,
-          description: 'Prompt principal para o OpenAI processar mensagens',
-          type: 'text' as const
-        },
-        {
-          key: 'auto_response_enabled',
-          value: 'true',
-          description: 'Habilitar respostas automáticas do bot',
-          type: 'boolean' as const
-        },
-        {
-          key: 'confidence_threshold',
-          value: '0.7',
-          description: 'Limite mínimo de confiança para responder automaticamente',
-          type: 'number' as const
+          key: 'BOT_NOME',
+          value: 'Kmiza27 Bot',
+          description: 'Nome do bot exibido nos menus e mensagens',
+          type: 'string' as const
         },
         {
           key: 'welcome_message',
@@ -74,16 +52,10 @@ Mantenha as respostas concisas e informativas.`,
           type: 'text' as const
         },
         {
-          key: 'venue_home_phrase',
-          value: 'em casa',
-          description: 'Frase para jogos com mando de campo do time',
-          type: 'text' as const
-        },
-        {
-          key: 'venue_away_phrase',
-          value: 'fora de casa',
-          description: 'Frase para jogos com mando de campo do adversário',
-          type: 'text' as const
+          key: 'auto_response_enabled',
+          value: 'true',
+          description: 'Habilitar respostas automáticas do bot',
+          type: 'boolean' as const
         }
       ];
 

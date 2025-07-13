@@ -46,19 +46,9 @@ export class BotConfigController {
     // Recriar configurações padrão
     const defaultConfigs = [
       {
-        key: 'openai_prompt',
-        value: `Você é um assistente especializado em futebol brasileiro. Sua função é ajudar usuários com informações sobre:
-
-- Próximos jogos dos times
-- Resultados de partidas
-- Classificações de campeonatos
-- Notícias do futebol
-- Escalações dos times
-
-Responda sempre de forma amigável, usando emojis relacionados ao futebol. Quando o usuário mencionar apenas o nome de um time (como "Flamengo"), assuma que ele quer saber sobre o próximo jogo desse time.
-
-Mantenha as respostas concisas e informativas.`,
-        description: 'Prompt principal para o OpenAI processar mensagens'
+        key: 'BOT_NOME',
+        value: 'Kmiza27 Bot',
+        description: 'Nome do bot exibido nos menus e mensagens'
       },
       {
         key: 'welcome_message',
@@ -74,6 +64,11 @@ Mantenha as respostas concisas e informativas.`,
 
 💬 **O que você gostaria de saber?**`,
         description: 'Mensagem de boas-vindas do bot'
+      },
+      {
+        key: 'auto_response_enabled',
+        value: 'true',
+        description: 'Habilitar respostas automáticas do bot'
       }
     ];
 

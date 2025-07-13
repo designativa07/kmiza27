@@ -256,17 +256,17 @@ export class ChatbotController {
   }
 
   @Post('simulate-whatsapp')
-  async simulateWhatsApp(@Body() body: { phoneNumber: string; message: string }) {
+  async simulateWhatsApp(@Body() body: { phoneNumber: string; message: string; origin?: string }) {
     try {
-      const { phoneNumber, message } = body;
+      const { phoneNumber, message, origin } = body;
       
       if (!phoneNumber || !message) {
         return { error: 'phoneNumber and message are required' };
       }
 
-      console.log(`📱 Simulando mensagem do WhatsApp de ${phoneNumber}: "${message}"`);
+      console.log(`📱 Simulando mensagem ${origin || 'WhatsApp'} de ${phoneNumber}: "${message}"`);
       
-      const response = await this.chatbotService.processMessage(phoneNumber, message);
+      const response = await this.chatbotService.processMessage(phoneNumber, message, undefined, origin);
       
       // Simular envio da resposta
       console.log(`🤖 Resposta que seria enviada: "${response}"`);
@@ -274,7 +274,7 @@ export class ChatbotController {
       return { 
         success: true, 
         simulation: true,
-        received: { phoneNumber, message },
+        received: { phoneNumber, message, origin: origin || 'whatsapp' },
         response: response
       };
     } catch (error) {
