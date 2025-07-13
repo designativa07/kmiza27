@@ -11,6 +11,20 @@ export class BotConfigController {
     return await this.botConfigService.getAllConfigs();
   }
 
+  @Get('welcome-message')
+  async getWelcomeMessage(): Promise<{ message: string }> {
+    // Retornar a mensagem completa configurada no campo "Mensagem de Boas-vindas"
+    const fullMessage = await this.botConfigService.getConfig('welcome_message');
+    
+    if (fullMessage) {
+      // Retornar a mensagem completa, apenas removendo formatação markdown excessiva se necessário
+      return { message: fullMessage };
+    }
+    
+    // Fallback para mensagem simples
+    return { message: 'Olá! Sou o Kmiza27 Bot 🤖⚽\n\nPosso te ajudar com informações sobre futebol!' };
+  }
+
   @Get(':key')
   async getConfig(@Param('key') key: string): Promise<{ value: string | null }> {
     const value = await this.botConfigService.getConfig(key);

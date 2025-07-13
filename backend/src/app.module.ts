@@ -30,6 +30,7 @@ import {
 } from './entities';
 import { SystemSetting } from './entities/system-setting.entity';
 import { BotConfig } from './entities/bot-config.entity';
+import { WhatsAppMenuConfig } from './entities/whatsapp-menu-config.entity';
 
 // Import modules
 import { ChatbotModule } from './chatbot/chatbot.module';
@@ -43,6 +44,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { StandingsModule } from './modules/standings/standings.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { BotConfigModule } from './modules/bot-config/bot-config.module';
+import { WhatsAppMenuModule } from './modules/whatsapp-menu/whatsapp-menu.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { StadiumsModule } from './modules/stadiums/stadiums.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
@@ -76,6 +78,7 @@ import { RoundsModule } from './modules/rounds/rounds.module';
     SystemSettingsModule,
     NotificationsModule,
     BotConfigModule,
+    WhatsAppMenuModule,
     UploadModule,
     WhatsAppModule,
     StadiumsModule,
