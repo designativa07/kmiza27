@@ -17,7 +17,6 @@ export class CreateWhatsAppMenuConfig1737835470000 implements MigrationInterface
             name: 'section_id',
             type: 'varchar',
             length: '50',
-            isUnique: true,
           },
           {
             name: 'section_title',
