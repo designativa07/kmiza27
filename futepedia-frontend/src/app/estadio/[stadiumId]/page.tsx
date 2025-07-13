@@ -25,6 +25,26 @@ type Props = {
 
 const API_URL = getApiUrl();
 
+// Função helper para converter coordenadas de forma segura
+function safeCoordinates(lat: any, lng: any): { latitude: number; longitude: number } | null {
+  try {
+    const latitude = typeof lat === 'string' ? parseFloat(lat) : lat;
+    const longitude = typeof lng === 'string' ? parseFloat(lng) : lng;
+    
+    if (typeof latitude === 'number' && typeof longitude === 'number' && 
+        !isNaN(latitude) && !isNaN(longitude) && 
+        latitude >= -90 && latitude <= 90 && 
+        longitude >= -180 && longitude <= 180) {
+      return { latitude, longitude };
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Erro ao converter coordenadas:', error);
+    return null;
+  }
+}
+
 async function getStadiumData(stadiumId: string): Promise<Stadium | null> {
   try {
     const res = await fetch(`${API_URL}/stadiums/${stadiumId}`, { 
@@ -49,7 +69,8 @@ export default async function StadiumPage({ params }: Props) {
     notFound();
   }
 
-
+  // Converter coordenadas de forma segura
+  const coordinates = safeCoordinates(stadium.latitude, stadium.longitude);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -100,11 +121,11 @@ export default async function StadiumPage({ params }: Props) {
                   </div>
                 )}
                 
-                {(stadium.latitude && stadium.longitude) && (
+                {coordinates && (
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-5 w-5 text-gray-400" />
                     <span className="text-gray-700">
-                      {stadium.latitude.toFixed(6)}, {stadium.longitude.toFixed(6)}
+                      {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
                     </span>
                   </div>
                 )}
@@ -129,7 +150,7 @@ export default async function StadiumPage({ params }: Props) {
         )}
 
         {/* Mapa (se houver coordenadas) */}
-        {(stadium.latitude && stadium.longitude) && (
+        {coordinates && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
               <MapPin className="h-6 w-6 mr-2 text-gray-400" />
@@ -137,7 +158,7 @@ export default async function StadiumPage({ params }: Props) {
             </h2>
             <div className="h-64 bg-gray-200 rounded-lg flex items-center justify-center">
               <p className="text-gray-500">
-                Mapa: {stadium.latitude.toFixed(6)}, {stadium.longitude.toFixed(6)}
+                Mapa: {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
               </p>
               {/* Aqui você pode integrar um mapa real como Google Maps ou OpenStreetMap */}
             </div>
