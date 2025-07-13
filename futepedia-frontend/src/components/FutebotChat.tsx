@@ -30,20 +30,38 @@ export default function FutebotChat({
   const [userName, setUserName] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Inicializar ID do usuário
+  // Inicializar ID do usuário e carregar mensagem de boas-vindas
   useEffect(() => {
     const id = getOrCreateSiteUserId()
     setUserId(id)
     setUserName(generateDisplayName(id))
     
-    // Adicionar mensagem de boas-vindas
-    setMessages([{
-      id: 'welcome',
-      text: 'Olá! Sou o Futebot 🤖⚽\n\nPosso te ajudar com informações sobre futebol. Digite "oi" para ver as opções ou faça uma pergunta diretamente!',
-      isBot: true,
-      timestamp: new Date()
-    }])
-  }, [])
+    // Carregar mensagem de boas-vindas do backend
+    const loadWelcomeMessage = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/bot-config/welcome-message`)
+        const data = await response.json()
+        
+        setMessages([{
+          id: 'welcome',
+          text: data.message || 'Olá! Sou o Futebot 🤖⚽\n\nPosso te ajudar com informações sobre futebol!',
+          isBot: true,
+          timestamp: new Date()
+        }])
+      } catch (error) {
+        console.error('Erro ao carregar mensagem de boas-vindas:', error)
+        // Fallback para mensagem padrão
+        setMessages([{
+          id: 'welcome',
+          text: 'Olá! Sou o Futebot 🤖⚽\n\nPosso te ajudar com informações sobre futebol!',
+          isBot: true,
+          timestamp: new Date()
+        }])
+      }
+    }
+    
+    loadWelcomeMessage()
+  }, [apiUrl])
 
   // Scroll automático para a última mensagem
   useEffect(() => {
@@ -116,12 +134,38 @@ export default function FutebotChat({
   }
 
   const formatMessage = (text: string) => {
-    return text.split('\n').map((line, index) => (
-      <span key={index}>
-        {line}
-        {index < text.split('\n').length - 1 && <br />}
-      </span>
-    ))
+    // Regex para detectar URLs (http, https, www)
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+    
+    return text.split('\n').map((line, lineIndex) => {
+      // Dividir a linha em partes (texto e URLs)
+      const parts = line.split(urlRegex);
+      
+      return (
+        <span key={lineIndex}>
+          {parts.map((part, partIndex) => {
+            // Verificar se é uma URL
+            if (urlRegex.test(part)) {
+              // Garantir que tenha protocolo
+              const url = part.startsWith('http') ? part : `https://${part}`;
+              return (
+                <a
+                  key={partIndex}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  {part}
+                </a>
+              );
+            }
+            return part;
+          })}
+          {lineIndex < text.split('\n').length - 1 && <br />}
+        </span>
+      );
+    });
   }
 
   const formatTime = (date: Date) => {

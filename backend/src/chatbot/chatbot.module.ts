@@ -20,6 +20,7 @@ import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
 import { TeamsModule } from '../modules/teams/teams.module';
+import { WhatsAppMenuModule } from '../modules/whatsapp-menu/whatsapp-menu.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TeamsModule } from '../modules/teams/teams.module';
     ]),
     UsersModule,
     BotConfigModule,
+    WhatsAppMenuModule,
     TeamsModule,
   ],
   controllers: [ChatbotController],

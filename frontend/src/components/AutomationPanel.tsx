@@ -10,7 +10,7 @@ import {
   Cog6ToothIcon,
   DevicePhoneMobileIcon
 } from '@heroicons/react/24/outline'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS, apiUrl } from '../config/api'
 
 interface BotConfig {
   id: number
@@ -93,31 +93,67 @@ export default function AutomationPanel() {
           }
         ]
       },
-      {
-        title: '👥 Times e Jogadores',
-        rows: [
-          {
-            id: 'CMD_INFO_TIME',
-            title: 'ℹ️ Informações do Time',
-            description: 'Dados completos de um time'
-          },
-          {
-            id: 'CMD_ELENCO_TIME',
-            title: '👥 Elenco do Time',
-            description: 'Jogadores de um time'
-          },
-          {
-            id: 'CMD_INFO_JOGADOR',
-            title: '👤 Informações do Jogador',
-            description: 'Dados de um jogador específico'
-          }
-        ]
-      }
+              {
+          title: '👥 Times, Jogadores e Estádios',
+          rows: [
+            {
+              id: 'CMD_INFO_TIME',
+              title: 'ℹ️ Informações do Time',
+              description: 'Dados gerais de um time'
+            },
+            {
+              id: 'CMD_ELENCO_TIME',
+              title: '👥 Elenco do Time',
+              description: 'Ver elenco de um time'
+            },
+            {
+              id: 'CMD_INFO_JOGADOR',
+              title: '👤 Informações do Jogador',
+              description: 'Dados de um jogador'
+            },
+            {
+              id: 'CMD_POSICAO_TIME',
+              title: '📍 Posição na Tabela',
+              description: 'Posição do time na competição'
+            },
+            {
+              id: 'CMD_ESTATISTICAS_TIME',
+              title: '📈 Estatísticas do Time',
+              description: 'Estatísticas detalhadas de um time'
+            },
+            {
+              id: 'CMD_ESTADIOS',
+              title: '🏟️ Estádios',
+              description: 'Informações sobre estádios'
+            }
+          ]
+        },
+        {
+          title: '🏆 Competições e Outros',
+          rows: [
+            {
+              id: 'CMD_ARTILHEIROS',
+              title: '🥇 Artilheiros',
+              description: 'Maiores goleadores de uma competição'
+            },
+            {
+              id: 'CMD_CANAIS',
+              title: '📡 Canais',
+              description: 'Canais de transmissão'
+            },
+            {
+              id: 'CMD_INFO_COMPETICOES',
+              title: '🏆 Informações de Competições',
+              description: 'Dados gerais de uma competição'
+            }
+          ]
+        }
     ]
   })
 
   useEffect(() => {
     fetchConfigs()
+    loadWhatsAppMenu()
   }, [])
 
   const fetchConfigs = async () => {
@@ -132,6 +168,28 @@ export default function AutomationPanel() {
       setMessage({ type: 'error', text: 'Erro ao carregar configurações' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadWhatsAppMenu = async () => {
+    try {
+      const response = await fetch(apiUrl('whatsapp-menu/sections'))
+      if (response.ok) {
+        const sections = await response.json()
+        
+        // Converter o formato da API para o formato do frontend
+        const menuConfig = {
+          title: 'Kmiza27 Bot',
+          description: 'Selecione uma das opções abaixo',
+          footer: 'Kmiza27 Bot ⚽',
+          sections: sections
+        }
+        
+        setWhatsappMenu(menuConfig)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar menu do WhatsApp:', error)
+      // Manter o menu padrão em caso de erro
     }
   }
 
@@ -211,11 +269,50 @@ export default function AutomationPanel() {
   const saveWhatsAppMenu = async () => {
     setSaving(true)
     try {
-      // Aqui você implementaria a lógica para salvar o menu do WhatsApp
-      // Por enquanto, apenas simular o salvamento
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setMessage({ type: 'success', text: 'Menu WhatsApp salvo com sucesso!' })
+      // Primeiro, limpar todas as configurações existentes
+      const existingConfigs = await fetch(apiUrl('whatsapp-menu/configs'))
+      const configs = await existingConfigs.json()
+      
+      // Desativar todas as configurações existentes
+      for (const config of configs) {
+        await fetch(apiUrl(`whatsapp-menu/configs/${config.id}`), {
+          method: 'DELETE'
+        })
+      }
+      
+      // Salvar novas configurações
+      let itemOrder = 1
+      for (let sectionIndex = 0; sectionIndex < whatsappMenu.sections.length; sectionIndex++) {
+        const section = whatsappMenu.sections[sectionIndex]
+        const sectionId = `section_${sectionIndex + 1}`
+        
+        for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex++) {
+          const row = section.rows[rowIndex]
+          
+          const menuConfig = {
+            section_id: sectionId,
+            section_title: section.title,
+            section_order: sectionIndex + 1,
+            item_id: row.id,
+            item_title: row.title,
+            item_description: row.description,
+            item_order: rowIndex + 1,
+            active: true
+          }
+          
+          await fetch(apiUrl('whatsapp-menu/configs'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(menuConfig)
+          })
+        }
+      }
+      
+      setMessage({ type: 'success', text: 'Menu WhatsApp salvo com sucesso! As alterações já estão ativas.' })
     } catch (error: any) {
+      console.error('Erro ao salvar menu WhatsApp:', error)
       setMessage({ type: 'error', text: 'Erro ao salvar menu WhatsApp' })
     } finally {
       setSaving(false)
@@ -483,11 +580,13 @@ export default function AutomationPanel() {
 
         {activeTab === 'whatsapp-menu' && (
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">📱 Configuração do Menu WhatsApp</h4>
-              <p className="text-sm text-blue-700">
-                Configure o menu interativo que será exibido aos usuários do WhatsApp. 
-                Este menu aparece quando o usuário envia mensagens que não são reconhecidas pelo bot.
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-green-900 mb-2">✅ Configuração Funcional</h4>
+              <p className="text-sm text-green-700 mb-2">
+                <strong>Esta página está totalmente funcional!</strong> As alterações feitas aqui afetam diretamente o menu real do WhatsApp.
+              </p>
+              <p className="text-sm text-green-700">
+                Configure o menu interativo que será exibido aos usuários do WhatsApp. Submenus dinâmicos (como competições) são gerados automaticamente pelo sistema.
               </p>
             </div>
 

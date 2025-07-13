@@ -18,6 +18,7 @@ import { FootballDataService } from './football-data.service';
 import { UsersService } from '../modules/users/users.service';
 import { StandingsService, StandingEntry } from '../modules/standings/standings.service';
 import { BotConfigService } from '../modules/bot-config/bot-config.service';
+import { WhatsAppMenuService } from '../modules/whatsapp-menu/whatsapp-menu.service';
 
 @Injectable()
 export class ChatbotService {
@@ -46,6 +47,7 @@ export class ChatbotService {
     private usersService: UsersService,
     private standingsService: StandingsService,
     private botConfigService: BotConfigService,
+    private whatsAppMenuService: WhatsAppMenuService,
   ) {}
 
   async processMessage(phoneNumber: string, message: string, pushName?: string, origin?: string): Promise<string> {
@@ -148,9 +150,9 @@ export class ChatbotService {
           break;
 
         default:
-          // Para usuários do site, retornar menu de texto simples
+          // Para usuários do site, retornar apenas a mensagem de boas-vindas
           if (userOrigin === 'site') {
-            response = await this.getTextWelcomeMenu();
+            response = await this.getWelcomeMessage();
           } else {
             // Para usuários do WhatsApp, enviar menu de boas-vindas como botões de lista
             await this.sendWelcomeMenu(phoneNumber);
@@ -1034,113 +1036,15 @@ Digite sua pergunta ou comando! ⚽`;
     const welcomeMessage = await this.getWelcomeMessage();
     const botName = await this.getBotName();
 
+    // Buscar configurações do menu do banco de dados
+    const menuSections = await this.whatsAppMenuService.getMenuSections();
+
     const payload = {
       buttonText: 'VER OPÇÕES',
       description: welcomeMessage,
       title: botName, // Título da lista
       footer: 'Selecione uma das opções abaixo',
-      sections: [
-        {
-          title: '⚡ Ações Rápidas',
-          rows: [
-            {
-              id: 'MENU_TABELAS_CLASSIFICACAO',
-              title: '📊 Tabelas de Classificação',
-              description: 'Ver classificação das competições'
-            },
-            {
-              id: 'CMD_JOGOS_HOJE',
-              title: '📅 Jogos de Hoje',
-              description: 'Todos os jogos de hoje'
-            },
-            {
-              id: 'CMD_JOGOS_AMANHA',
-              title: '📆 Jogos de Amanhã',
-              description: 'Todos os jogos de amanhã'
-            },
-            {
-              id: 'CMD_JOGOS_SEMANA',
-              title: '🗓️ Jogos da Semana',
-              description: 'Jogos desta semana'
-            }
-          ]
-        },
-        {
-          title: '⚽ Informações de Partidas',
-          rows: [
-            {
-              id: 'CMD_PROXIMOS_JOGOS',
-              title: '⚽ Próximos Jogos',
-              description: 'Próximo jogo de um time'
-            },
-            {
-              id: 'CMD_ULTIMO_JOGO',
-              title: '🏁 Últimos Jogos',
-              description: 'Últimos 3 jogos de um time'
-            },
-            {
-              id: 'CMD_TRANSMISSAO',
-              title: '📺 Transmissão',
-              description: 'Onde passa o jogo de um time'
-            }
-          ]
-        },
-        {
-          title: '👥 Times, Jogadores e Estádios',
-          rows: [
-            {
-              id: 'CMD_INFO_TIME',
-              title: 'ℹ️ Informações do Time',
-              description: 'Dados gerais de um time'
-            },
-            {
-              id: 'CMD_ELENCO_TIME',
-              title: '👥 Elenco do Time',
-              description: 'Ver elenco de um time'
-            },
-            {
-              id: 'CMD_INFO_JOGADOR',
-              title: '👤 Informações do Jogador',
-              description: 'Dados de um jogador'
-            },
-            {
-              id: 'CMD_POSICAO_TIME',
-              title: '📍 Posição na Tabela',
-              description: 'Posição do time na competição'
-            },
-            {
-              id: 'CMD_ESTATISTICAS_TIME',
-              title: '📈 Estatísticas do Time',
-              description: 'Estatísticas detalhadas de um time'
-            },
-            {
-              id: 'CMD_ESTADIOS',
-              title: '🏟️ Estádios',
-              description: 'Informações sobre estádios'
-            }
-          ]
-        },
-        {
-          title: '🏆 Competições e Outros',
-          rows: [
-            {
-              id: 'CMD_ARTILHEIROS',
-              title: '🥇 Artilheiros',
-              description: 'Maiores goleadores de uma competição'
-            },
-            {
-              id: 'CMD_CANAIS',
-              title: '📡 Canais',
-              description: 'Canais de transmissão'
-            },
-            {
-              id: 'CMD_INFO_COMPETICOES',
-              title: '🏆 Informações de Competições',
-              description: 'Dados gerais de uma competição'
-            }
-          ]
-        }
-      ]
+      sections: menuSections
     };
 
     return await this.evolutionService.sendListMessage(
@@ -1172,8 +1076,10 @@ Digite sua pergunta ou comando! ⚽`;
       // Dividir competições em seções para melhor organização
       const nationalCompetitions = competitions.filter(c => 
         c.name.toLowerCase().includes('brasileiro') || 
+        c.name.toLowerCase().includes('brasileirão') ||
         c.name.toLowerCase().includes('copa do brasil') ||
-        c.name.toLowerCase().includes('série')
+        c.name.toLowerCase().includes('série') ||
+        c.name.toLowerCase().includes('serie')
       );
 
       const internationalCompetitions = competitions.filter(c => 
