@@ -19,6 +19,26 @@ interface Match {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
+// Função helper para converter coordenadas de forma segura
+function safeCoordinates(lat: any, lng: any): { latitude: number; longitude: number } | null {
+  try {
+    const latitude = typeof lat === 'string' ? parseFloat(lat) : lat;
+    const longitude = typeof lng === 'string' ? parseFloat(lng) : lng;
+    
+    if (typeof latitude === 'number' && typeof longitude === 'number' && 
+        !isNaN(latitude) && !isNaN(longitude) && 
+        latitude >= -90 && latitude <= 90 && 
+        longitude >= -180 && longitude <= 180) {
+      return { latitude, longitude };
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Erro ao converter coordenadas:', error);
+    return null;
+  }
+}
+
 async function getCompetitionStadiums(slug: string): Promise<Stadium[]> {
   try {
     // 1. Buscar informações da competição
@@ -72,9 +92,18 @@ export default async function StadiumsPage({ params }: Props) {
   const stadiums = await getCompetitionStadiums(params.competitionSlug);
 
   const stadiumsWithCoords = stadiums.filter(
-    (s: Stadium): s is Stadium & { latitude: number; longitude: number } =>
-      s.latitude != null && s.longitude != null,
-  );
+    (s: Stadium): s is Stadium & { latitude: number; longitude: number } => {
+      const coords = safeCoordinates(s.latitude, s.longitude);
+      return coords !== null;
+    }
+  ).map(s => {
+    const coords = safeCoordinates(s.latitude, s.longitude)!;
+    return {
+      ...s,
+      latitude: coords.latitude,
+      longitude: coords.longitude
+    };
+  });
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden p-4 sm:p-6">
