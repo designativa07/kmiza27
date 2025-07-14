@@ -136,6 +136,16 @@ export class TeamsController {
     return this.teamsService.getTeamActivePlayers(+teamId);
   }
 
+  @Get(':teamId/recent-matches')
+  async getTeamRecentMatches(@Param('teamId') teamId: string) {
+    return this.teamsService.getTeamRecentMatches(+teamId);
+  }
+
+  @Get(':teamId/upcoming-matches')
+  async getTeamUpcomingMatches(@Param('teamId') teamId: string) {
+    return this.teamsService.getTeamUpcomingMatches(+teamId);
+  }
+
   @Get('filters/states')
   async getUniqueStates(@Query('country') country?: string): Promise<string[]> {
     return this.teamsService.getUniqueStates(country);

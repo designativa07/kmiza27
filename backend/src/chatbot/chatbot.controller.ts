@@ -165,7 +165,7 @@ export class ChatbotController {
         console.log(`👤 Nome: ${pushName || 'Não informado'}`);
         
         try {
-          const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName || undefined);
+          const response = await this.chatbotService.processMessage(phoneNumber, messageText, pushName || undefined, 'whatsapp');
           
           console.log(`🤖 Resposta gerada: "${response.substring(0, 100)}..."`);
           

@@ -161,6 +161,21 @@ export class ChatbotService {
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
+      
+      // Para usuários do WhatsApp, enviar menu após a resposta (exceto quando a resposta está vazia)
+      if (userOrigin === 'whatsapp' && response && response.trim() !== '') {
+        console.log(`📋 Agendando envio do menu para usuário WhatsApp: ${phoneNumber}`);
+        // Agendar envio do menu após a resposta principal
+        setTimeout(async () => {
+          try {
+            await this.sendWelcomeMenu(phoneNumber);
+            console.log(`✅ Menu enviado com sucesso para ${phoneNumber}`);
+          } catch (error) {
+            console.error(`❌ Erro ao enviar menu para ${phoneNumber}:`, error);
+          }
+        }, 1500); // Aguardar 1.5 segundos antes de enviar o menu
+      }
+      
       return response;
 
     } catch (error) {
@@ -423,6 +438,8 @@ export class ChatbotService {
 🗺️ Estado: ${team.state || 'A definir'}
 🌍 País: ${team.country || 'A definir'}
 📅 Fundação: ${team.founded_year || 'A definir'}
+
+🌐 *Página do time:* https://futepedia.kmiza27.com/time/${team.id}
 
 ⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
 
@@ -1197,16 +1214,24 @@ Digite sua pergunta ou comando! ⚽`;
 
         // Comandos diretos (sem necessidade de entrada adicional)
         case 'CMD_JOGOS_HOJE':
-          return await this.getTodayMatches();
+          const todayResponse = await this.getTodayMatches();
+          this.scheduleMenuSend(phoneNumber);
+          return todayResponse;
 
         case 'CMD_JOGOS_AMANHA':
-          return await this.getTomorrowMatches();
+          const tomorrowResponse = await this.getTomorrowMatches();
+          this.scheduleMenuSend(phoneNumber);
+          return tomorrowResponse;
 
         case 'CMD_JOGOS_SEMANA':
-          return await this.getWeekMatches();
+          const weekResponse = await this.getWeekMatches();
+          this.scheduleMenuSend(phoneNumber);
+          return weekResponse;
 
         case 'CMD_CANAIS':
-          return await this.footballDataService.getChannelInfo();
+          const channelsResponse = await this.footballDataService.getChannelInfo();
+          this.scheduleMenuSend(phoneNumber);
+          return channelsResponse;
 
         // Comandos que requerem entrada adicional
         case 'CMD_PROXIMOS_JOGOS':
@@ -1275,46 +1300,73 @@ Digite sua pergunta ou comando! ⚽`;
       // Limpar estado da conversa após processar
       await this.clearUserConversationState(phoneNumber);
 
+      let response: string;
+
       switch (state) {
         case 'waiting_team_for_next_match':
-          return await this.findNextMatch(message);
+          response = await this.findNextMatch(message);
+          break;
 
         case 'waiting_team_for_current_match':
-          return await this.getCurrentMatch(message);
+          response = await this.getCurrentMatch(message);
+          break;
 
         case 'waiting_team_for_last_match':
-          return await this.getLastMatch(message);
+          response = await this.getLastMatch(message);
+          break;
 
         case 'waiting_team_for_broadcast':
-          return await this.getBroadcastInfo(message);
+          response = await this.getBroadcastInfo(message);
+          break;
 
         case 'waiting_team_for_info':
-          return await this.getTeamInfo(message);
+          response = await this.getTeamInfo(message);
+          break;
 
         case 'waiting_team_for_squad':
-          return await this.getTeamSquad(message);
+          response = await this.getTeamSquad(message);
+          break;
 
         case 'waiting_player_for_info':
-          return await this.getPlayerInfo(message);
+          response = await this.getPlayerInfo(message);
+          break;
 
         case 'waiting_team_for_position':
-          return await this.getTeamPosition(message);
+          response = await this.getTeamPosition(message);
+          break;
 
         case 'waiting_team_for_statistics':
-          return await this.footballDataService.getTeamStatistics(message);
+          response = await this.footballDataService.getTeamStatistics(message);
+          break;
 
         case 'waiting_stadium_for_info':
-          return await this.getStadiumInfo(message);
+          response = await this.getStadiumInfo(message);
+          break;
 
         case 'waiting_competition_for_scorers':
-          return await this.getTopScorers(message);
+          response = await this.getTopScorers(message);
+          break;
 
         case 'waiting_competition_for_info':
-          return await this.getCompetitionInfo(message);
+          response = await this.getCompetitionInfo(message);
+          break;
 
         default:
-          return '❌ Estado da conversa não reconhecido. Tente novamente.';
+          response = '❌ Estado da conversa não reconhecido. Tente novamente.';
       }
+
+      // Para estados de conversa no WhatsApp, também enviar o menu após a resposta
+      console.log(`📋 Agendando envio do menu para estado de conversa: ${phoneNumber}`);
+      setTimeout(async () => {
+        try {
+          await this.sendWelcomeMenu(phoneNumber);
+          console.log(`✅ Menu enviado com sucesso após estado de conversa para ${phoneNumber}`);
+        } catch (error) {
+          console.error(`❌ Erro ao enviar menu após estado de conversa para ${phoneNumber}:`, error);
+        }
+      }, 1500); // Aguardar 1.5 segundos antes de enviar o menu
+
+      return response;
     } catch (error) {
       console.error('Erro ao processar estado da conversa:', error);
       return '❌ Erro ao processar sua resposta. Tente novamente.';
@@ -1386,6 +1438,21 @@ Digite sua pergunta ou comando! ⚽`;
         timestamp: new Date().toISOString()
       };
     }
+  }
+
+  /**
+   * Agendar envio do menu principal com delay
+   */
+  private scheduleMenuSend(phoneNumber: string): void {
+    console.log(`📋 Agendando envio do menu para: ${phoneNumber}`);
+    setTimeout(async () => {
+      try {
+        await this.sendWelcomeMenu(phoneNumber);
+        console.log(`✅ Menu enviado com sucesso para ${phoneNumber}`);
+      } catch (error) {
+        console.error(`❌ Erro ao enviar menu para ${phoneNumber}:`, error);
+      }
+    }, 1500); // Aguardar 1.5 segundos antes de enviar o menu
   }
 
   /**
