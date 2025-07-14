@@ -74,22 +74,22 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all ${resultClass}`}>
+    <div className={`bg-white p-3 hover:bg-gray-50 transition-colors ${resultClass}`}>
       {/* Cabeçalho com data e local */}
-      <div className="flex items-center justify-center mb-3 space-x-4">
+              <div className="flex items-center justify-center mb-2 space-x-4">
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <Calendar className="h-4 w-4" />
           <span>{formattedDate}</span>
-          <Clock className="h-4 w-4" />
+          <Clock className="h-4 w-4 ml-2" />
           <span>{formattedTime}</span>
         </div>
         {isHome ? (
-          <div className="flex items-center space-x-1 text-xs">
+          <div className="flex items-center space-x-2 text-xs">
             <Home className="h-4 w-4 text-blue-500" />
             <span className="text-blue-600 font-medium">Em Casa</span>
           </div>
         ) : (
-          <div className="flex items-center space-x-1 text-xs">
+          <div className="flex items-center space-x-2 text-xs">
             <Plane className="h-4 w-4 text-orange-500" />
             <span className="text-orange-600 font-medium">Visitante</span>
           </div>
@@ -97,9 +97,9 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
       </div>
 
       {/* Confronto */}
-      <div className="flex items-center justify-center mb-3 space-x-2 sm:space-x-3">
+      <div className="flex items-center justify-center mb-2 space-x-3 sm:space-x-4">
         {/* Time da Casa: Nome + Escudo */}
-        <div className={`flex items-center space-x-2 ${match.home_team.id === teamId ? 'font-bold' : ''}`}>
+        <div className={`flex items-center space-x-3 ${match.home_team.id === teamId ? 'font-bold' : ''}`}>
           <span className={`text-sm ${match.home_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-right`} title={match.home_team.name}>
             {match.home_team.name.length > 12 ? `${match.home_team.name.substring(0, 12)}...` : match.home_team.name}
           </span>
@@ -113,20 +113,20 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
         </div>
 
         {/* Placar ou VS */}
-        <div className="text-center px-2 flex-shrink-0">
+        <div className="text-center px-3 flex-shrink-0">
           {isFinished && match.home_score !== undefined && match.away_score !== undefined ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <span className="text-lg font-bold text-gray-900">{match.home_score}</span>
               <span className="text-gray-400 font-medium">×</span>
               <span className="text-lg font-bold text-gray-900">{match.away_score}</span>
             </div>
           ) : (
-            <div className="text-gray-500 font-medium text-sm px-2">×</div>
+            <div className="text-gray-500 font-medium text-sm px-3">×</div>
           )}
         </div>
 
         {/* Time Visitante: Escudo + Nome */}
-        <div className={`flex items-center space-x-2 ${match.away_team.id === teamId ? 'font-bold' : ''}`}>
+        <div className={`flex items-center space-x-3 ${match.away_team.id === teamId ? 'font-bold' : ''}`}>
           {match.away_team.logo_url && (
             <img 
               src={getTeamLogoUrl(match.away_team.logo_url)} 
@@ -140,16 +140,26 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
         </div>
       </div>
       
-      {/* Informações adicionais */}
-      <div className="text-xs text-gray-500 space-y-1 text-center">
-        <div className="font-medium">{match.competition.name}</div>
-        {match.round && <div>{match.round.name}</div>}
-        {match.stadium && (
-          <div className="flex items-center justify-center space-x-1">
-            <MapPin className="h-3 w-3" />
-            <span>{match.stadium.name}{match.stadium.city && `, ${match.stadium.city}`}</span>
-          </div>
-        )}
+      {/* Informações adicionais - tudo na mesma linha */}
+      <div className="text-xs text-gray-500 text-center">
+        <div className="flex items-center justify-center space-x-3 flex-wrap">
+          <span className="font-medium">{match.competition.name}</span>
+          {match.round && (
+            <>
+              <span>•</span>
+              <span>{match.round.name}</span>
+            </>
+          )}
+          {match.stadium && (
+            <>
+              <span>•</span>
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-3 w-3" />
+                <span>{match.stadium.name}{match.stadium.city && `, ${match.stadium.city}`}</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -195,9 +205,8 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Jogos</h2>
-        <div className="text-center py-8">
+      <div className="bg-white px-6 py-4 border-t border-gray-300">
+        <div className="text-center py-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-2 text-gray-500">Carregando jogos...</p>
         </div>
@@ -207,9 +216,8 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
 
   if (error) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Jogos</h2>
-        <div className="text-center py-8">
+      <div className="bg-white px-6 py-4 border-t border-gray-300">
+        <div className="text-center py-6">
           <p className="text-red-500">{error}</p>
         </div>
       </div>
@@ -217,21 +225,21 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Jogos</h2>
-      
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div className="bg-white px-6 py-4 border-t border-gray-300">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Últimos Jogos */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Últimos Jogos</h3>
+          <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Últimos Jogos</h3>
           {recentMatches.length > 0 ? (
-            <div className="space-y-3">
-              {recentMatches.map((match) => (
-                <MatchCard key={match.id} match={match} teamId={teamId} />
+            <div>
+              {recentMatches.map((match, index) => (
+                <div key={match.id} className={index > 0 ? 'border-t border-gray-100 pt-1' : ''}>
+                  <MatchCard match={match} teamId={teamId} />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-6 text-gray-500">
               <p>Nenhum jogo recente encontrado</p>
             </div>
           )}
@@ -239,15 +247,17 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
 
         {/* Próximos Jogos */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Próximos Jogos</h3>
+          <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Próximos Jogos</h3>
           {upcomingMatches.length > 0 ? (
-            <div className="space-y-3">
-              {upcomingMatches.map((match) => (
-                <MatchCard key={match.id} match={match} teamId={teamId} />
+            <div>
+              {upcomingMatches.map((match, index) => (
+                <div key={match.id} className={index > 0 ? 'border-t border-gray-100 pt-1' : ''}>
+                  <MatchCard match={match} teamId={teamId} />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-6 text-gray-500">
               <p>Nenhum jogo agendado encontrado</p>
             </div>
           )}
