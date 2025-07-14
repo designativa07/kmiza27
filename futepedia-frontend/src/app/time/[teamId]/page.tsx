@@ -2,6 +2,19 @@ import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt, MapPin, Users } from 'lucide-react';
 import { getTeamLogoUrl, getPlayerImageUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { Header } from '@/components/Header';
+import dynamic from 'next/dynamic';
+
+// Importar o mapa dinamicamente para evitar problemas de SSR
+const SingleStadiumMap = dynamic(() => import('@/components/SingleStadiumMap'), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center"><p className="text-gray-500">Carregando mapa...</p></div>
+});
+
+// Importar o componente de jogos dinamicamente
+const TeamMatches = dynamic(() => import('@/components/TeamMatches'), { 
+  ssr: false,
+  loading: () => <div className="bg-white p-6 rounded-lg shadow-lg"><h2 className="text-2xl font-bold text-gray-800 mb-4">Jogos</h2><div className="text-center py-8"><p className="text-gray-500">Carregando jogos...</p></div></div>
+});
 
 // Tipos (poderiam ser movidos para @/types)
 interface Player {
@@ -27,6 +40,8 @@ interface Stadium {
   opened_year?: number;
   image_url?: string;
   history?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Team {
@@ -134,6 +149,12 @@ const SocialLinks = ({ team }: { team: Team }) => {
 };
 
 const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
+  // Verificar se o estádio tem coordenadas válidas para mostrar o mapa
+  const hasValidCoordinates = stadium.latitude && stadium.longitude &&
+    !isNaN(Number(stadium.latitude)) && !isNaN(Number(stadium.longitude)) &&
+    Number(stadium.latitude) >= -90 && Number(stadium.latitude) <= 90 &&
+    Number(stadium.longitude) >= -180 && Number(stadium.longitude) <= 180;
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
@@ -193,6 +214,28 @@ const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
           )}
         </div>
       </div>
+      
+      {/* Mapa do estádio (se tiver coordenadas) */}
+      {hasValidCoordinates && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <MapPin className="h-5 w-5 mr-2" />
+            Localização
+          </h4>
+          <SingleStadiumMap 
+            stadium={{
+              id: stadium.id,
+              name: stadium.name,
+              city: stadium.city,
+              state: stadium.state,
+              latitude: Number(stadium.latitude),
+              longitude: Number(stadium.longitude),
+              capacity: stadium.capacity
+            }}
+            height="h-64"
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -220,6 +263,11 @@ export default async function TeamPage({ params }: Props) {
           <p className="text-md text-gray-500">{team.city}, {team.country}</p>
           <SocialLinks team={team} />
         </div>
+      </div>
+
+      {/* Seção de Jogos */}
+      <div className="mb-8">
+        <TeamMatches teamId={team.id} />
       </div>
 
       {team.history && (

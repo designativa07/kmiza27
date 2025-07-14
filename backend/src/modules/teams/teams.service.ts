@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Like, FindManyOptions } from 'typeorm';
 import { Team, Match, CompetitionTeam, Player, PlayerTeamHistory } from '../../entities';
+import { MatchStatus } from '../../entities/match.entity';
 
 export interface PaginatedTeamsResult {
   data: Team[];
@@ -419,5 +420,45 @@ export class TeamsService {
       .getRawMany();
     
     return result.map(item => item.country).filter(Boolean);
+  }
+
+  /**
+   * Busca os últimos 3 jogos finalizados de um time
+   */
+  async getTeamRecentMatches(teamId: number): Promise<Match[]> {
+    const team = await this.teamRepository.findOneBy({ id: teamId });
+    if (!team) {
+      throw new NotFoundException('Time não encontrado');
+    }
+
+    return this.matchRepository.find({
+      where: [
+        { home_team: { id: teamId }, status: MatchStatus.FINISHED },
+        { away_team: { id: teamId }, status: MatchStatus.FINISHED },
+      ],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium'],
+      order: { match_date: 'DESC' },
+      take: 3,
+    });
+  }
+
+  /**
+   * Busca os próximos 3 jogos agendados de um time
+   */
+  async getTeamUpcomingMatches(teamId: number): Promise<Match[]> {
+    const team = await this.teamRepository.findOneBy({ id: teamId });
+    if (!team) {
+      throw new NotFoundException('Time não encontrado');
+    }
+
+    return this.matchRepository.find({
+      where: [
+        { home_team: { id: teamId }, status: MatchStatus.SCHEDULED },
+        { away_team: { id: teamId }, status: MatchStatus.SCHEDULED },
+      ],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium'],
+      order: { match_date: 'ASC' },
+      take: 3,
+    });
   }
 } 
