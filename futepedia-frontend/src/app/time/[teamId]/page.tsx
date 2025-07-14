@@ -1,8 +1,11 @@
+'use client';
+
 import { notFound } from 'next/navigation';
-import { Shield, User, Calendar, Shirt, MapPin, Users } from 'lucide-react';
+import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building } from 'lucide-react';
 import { getTeamLogoUrl, getPlayerImageUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { Header } from '@/components/Header';
 import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 
 // Importar o mapa dinamicamente para evitar problemas de SSR
 const SingleStadiumMap = dynamic(() => import('@/components/SingleStadiumMap'), { 
@@ -70,12 +73,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 async function getTeamData(teamId: string) {
   const [teamRes, playersRes] = await Promise.all([
-    fetch(`${API_URL}/teams/${teamId}`, { next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/teams/${teamId}/players`, { next: { revalidate: 3600 } }),
+    fetch(`${API_URL}/teams/${teamId}`),
+    fetch(`${API_URL}/teams/${teamId}/players`),
   ]);
 
   if (!teamRes.ok) {
-    notFound();
+    throw new Error('Time não encontrado');
   }
 
   const team: Team = await teamRes.json();
@@ -148,169 +151,286 @@ const SocialLinks = ({ team }: { team: Team }) => {
   );
 };
 
-const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
-  // Verificar se o estádio tem coordenadas válidas para mostrar o mapa
-  const hasValidCoordinates = stadium.latitude && stadium.longitude &&
-    !isNaN(Number(stadium.latitude)) && !isNaN(Number(stadium.longitude)) &&
-    Number(stadium.latitude) >= -90 && Number(stadium.latitude) <= 90 &&
-    Number(stadium.longitude) >= -180 && Number(stadium.longitude) <= 180;
+const TabButton = ({ active, onClick, children, icon: Icon }: { 
+  active: boolean; 
+  onClick: () => void; 
+  children: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+      active 
+        ? 'border-indigo-500 text-indigo-600' 
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+    }`}
+  >
+    <Icon className="h-4 w-4" />
+    <span>{children}</span>
+  </button>
+);
 
-  return (
-    <div className="bg-white p-6 border-t border-gray-300">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-        <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
-        Estádio
-      </h2>
+const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) => {
+  const [activeTab, setActiveTab] = useState<'jogos' | 'elenco' | 'historia' | 'titulos' | 'estadio' | 'informacoes'>('jogos');
+
+  const tabs = [
+    { id: 'jogos' as const, label: 'Jogos', icon: PlayCircle },
+    { id: 'elenco' as const, label: 'Elenco', icon: UserCheck },
+    { id: 'historia' as const, label: 'História', icon: BookOpen },
+    { id: 'titulos' as const, label: 'Títulos', icon: Trophy },
+    { id: 'estadio' as const, label: 'Estádio', icon: Building },
+    { id: 'informacoes' as const, label: 'Informações', icon: Info },
+  ];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'jogos':
+        return (
+          <div>
+            <TeamMatches teamId={team.id} />
+          </div>
+        );
       
-      <div className="flex flex-col md:flex-row md:space-x-6">
-        {/* Imagem do estádio */}
-        <div className="md:w-1/3 mb-4 md:mb-0">
-          {stadium.image_url ? (
-                          <img 
-                src={getStadiumImageUrl(stadium.image_url)} 
-                alt={`${stadium.name}`} 
-                className="w-full h-36 object-cover"
-              />
+      case 'elenco':
+        return (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Elenco Principal</h2>
+            {players.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+                {players.map((item) => (
+                  <PlayerCard key={item.player.id} item={item} />
+                ))}
+              </div>
             ) : (
-              <div className="w-full h-36 bg-gray-200 flex items-center justify-center">
-              <MapPin className="h-12 w-12 text-gray-400" />
-            </div>
-          )}
-        </div>
-        
-        {/* Informações do estádio */}
-        <div className="md:w-2/3">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">{stadium.name}</h3>
-          
-          <div className="space-y-2 text-sm text-gray-600">
-            {(stadium.city || stadium.state) && (
-              <p className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                {stadium.city}{stadium.city && stadium.state ? ', ' : ''}{stadium.state}
-                {stadium.country && stadium.country !== 'Brasil' && `, ${stadium.country}`}
-              </p>
-            )}
-            
-            {stadium.capacity && (
-              <p className="flex items-center">
-                <Users className="h-4 w-4 mr-1" />
-                Capacidade: {stadium.capacity.toLocaleString()} pessoas
-              </p>
-            )}
-            
-            {stadium.opened_year && (
-              <p className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1" />
-                Inaugurado em: {stadium.opened_year}
-              </p>
+              <div className="text-center py-8">
+                <h3 className="text-xl font-medium text-gray-900">Elenco Indisponível</h3>
+                <p className="mt-2 text-md text-gray-500">
+                  Não foi possível carregar o elenco deste time no momento.
+                </p>
+              </div>
             )}
           </div>
-          
-          {stadium.history && (
-            <div className="mt-4">
-              <h4 className="font-semibold text-gray-800 mb-2">História</h4>
-              <p className="text-sm text-gray-600 line-clamp-3">{stadium.history}</p>
-            </div>
-          )}
-        </div>
-      </div>
+        );
       
-      {/* Mapa do estádio (se tiver coordenadas) */}
-      {hasValidCoordinates && (
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-            <MapPin className="h-5 w-5 mr-2" />
-            Localização
-          </h4>
-          <SingleStadiumMap 
-            stadium={{
-              id: stadium.id,
-              name: stadium.name,
-              city: stadium.city,
-              state: stadium.state,
-              latitude: Number(stadium.latitude),
-              longitude: Number(stadium.longitude),
-              capacity: stadium.capacity
-            }}
-            height="h-48"
-          />
-        </div>
-      )}
+      case 'historia':
+        return team.history ? (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">História</h2>
+            <p className="text-gray-600 whitespace-pre-wrap">{team.history}</p>
+          </div>
+        ) : (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">História</h2>
+            <p className="text-gray-500 text-center">Informações sobre a história do time não estão disponíveis no momento.</p>
+          </div>
+        );
+      
+      case 'titulos':
+        return (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Títulos</h2>
+            <p className="text-gray-500 text-center">Informações sobre títulos serão adicionadas em breve.</p>
+          </div>
+        );
+      
+      case 'estadio':
+        return team.stadium ? (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
+              Estádio
+            </h2>
+            
+            <div className="flex flex-col md:flex-row md:space-x-6">
+              {/* Imagem do estádio */}
+              <div className="md:w-1/3 mb-4 md:mb-0">
+                {team.stadium.image_url ? (
+                  <img 
+                    src={getStadiumImageUrl(team.stadium.image_url)} 
+                    alt={`${team.stadium.name}`} 
+                    className="w-full h-36 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-36 bg-gray-200 flex items-center justify-center">
+                    <MapPin className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Informações do estádio */}
+              <div className="md:w-2/3">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{team.stadium.name}</h3>
+                
+                <div className="space-y-2 text-sm text-gray-600">
+                  {(team.stadium.city || team.stadium.state) && (
+                    <p className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {team.stadium.city}{team.stadium.city && team.stadium.state ? ', ' : ''}{team.stadium.state}
+                      {team.stadium.country && team.stadium.country !== 'Brasil' && `, ${team.stadium.country}`}
+                    </p>
+                  )}
+                  
+                  {team.stadium.capacity && (
+                    <p className="flex items-center">
+                      <Users className="h-4 w-4 mr-1" />
+                      Capacidade: {team.stadium.capacity.toLocaleString()} pessoas
+                    </p>
+                  )}
+                  
+                  {team.stadium.opened_year && (
+                    <p className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Inaugurado em: {team.stadium.opened_year}
+                    </p>
+                  )}
+                </div>
+                
+                {team.stadium.history && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">História</h4>
+                    <p className="text-sm text-gray-600 line-clamp-3">{team.stadium.history}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Mapa do estádio (se tiver coordenadas) */}
+            {team.stadium.latitude && team.stadium.longitude &&
+              !isNaN(Number(team.stadium.latitude)) && !isNaN(Number(team.stadium.longitude)) &&
+              Number(team.stadium.latitude) >= -90 && Number(team.stadium.latitude) <= 90 &&
+              Number(team.stadium.longitude) >= -180 && Number(team.stadium.longitude) <= 180 && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Localização
+                </h4>
+                <SingleStadiumMap 
+                  stadium={{
+                    id: team.stadium.id,
+                    name: team.stadium.name,
+                    city: team.stadium.city,
+                    state: team.stadium.state,
+                    latitude: Number(team.stadium.latitude),
+                    longitude: Number(team.stadium.longitude),
+                    capacity: team.stadium.capacity
+                  }}
+                  height="h-48"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
+              Estádio
+            </h2>
+            <p className="text-gray-500 text-center">Informações sobre o estádio não estão disponíveis no momento.</p>
+          </div>
+        );
+      
+      case 'informacoes':
+        return team.information ? (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
+            <p className="text-gray-600 whitespace-pre-wrap">{team.information}</p>
+          </div>
+        ) : (
+          <div className="bg-white p-6 border-t border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
+            <p className="text-gray-500 text-center">Informações adicionais sobre o time não estão disponíveis no momento.</p>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex space-x-1 border-b border-gray-200 bg-white px-6 overflow-x-auto">
+        {tabs.map((tab) => (
+          <TabButton
+            key={tab.id}
+            active={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            icon={tab.icon}
+          >
+            {tab.label}
+          </TabButton>
+        ))}
+      </div>
+      {renderTabContent()}
     </div>
   );
 };
 
-export default async function TeamPage({ params }: Props) {
-  const { team, players } = await getTeamData(params.teamId);
+export default function TeamPage({ params }: { params: { teamId: string } }) {
+  const [team, setTeam] = useState<Team | null>(null);
+  const [players, setPlayers] = useState<PlayerHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getTeamData(params.teamId);
+        setTeam(data.team);
+        setPlayers(data.players);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [params.teamId]);
+
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen">
+        <Header showBackToHome={true} />
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-gray-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!team) {
+    notFound();
+  }
 
   return (
     <div className="bg-white min-h-screen">
       <Header showBackToHome={true} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between bg-white p-6 border-t border-gray-300">
-        <div className="flex items-center space-x-4">
-          {team.logo_url ? (
-            <img 
-              src={getTeamLogoUrl(team.logo_url)} 
-              alt={`${team.name} logo`} 
-              className="h-16 w-16 object-contain"
-            />
-          ) : (
-            <Shield className="h-16 w-16 text-gray-300" />
-          )}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
-            <p className="text-md text-gray-500">{team.city}, {team.country}</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="flex items-center justify-between bg-white p-6">
+          <div className="flex items-center space-x-4">
+            {team.logo_url ? (
+              <img 
+                src={getTeamLogoUrl(team.logo_url)} 
+                alt={`${team.name} logo`} 
+                className="h-16 w-16 object-contain"
+              />
+            ) : (
+              <Shield className="h-16 w-16 text-gray-300" />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
+              <p className="text-md text-gray-500">{team.city}, {team.country}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <SocialLinks team={team} />
           </div>
         </div>
-        
-        <SocialLinks team={team} />
-      </div>
 
-      {/* Seção de Jogos */}
-      <div>
-        <TeamMatches teamId={team.id} />
-      </div>
-
-      {team.history && (
-        <div className="bg-white p-6 border-t border-gray-300">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">História</h2>
-          <p className="text-gray-600 whitespace-pre-wrap">{team.history}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {team.information && (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
-            <p className="text-gray-600 whitespace-pre-wrap">{team.information}</p>
-          </div>
-        )}
-
-        {team.stadium && (
-          <StadiumCard stadium={team.stadium} />
-        )}
-      </div>
-      
-      <div className="bg-white p-6 border-t border-b border-gray-300">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Elenco Principal</h2>
-
-        {players.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-            {players.map((item) => (
-              <PlayerCard key={item.player.id} item={item} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <h3 className="text-xl font-medium text-gray-900">Elenco Indisponível</h3>
-            <p className="mt-2 text-md text-gray-500">
-              Não foi possível carregar o elenco deste time no momento.
-            </p>
-          </div>
-        )}
-      </div>
+        {/* Sistema de Abas */}
+        <TeamTabs team={team} players={players} />
       </main>
     </div>
   );
