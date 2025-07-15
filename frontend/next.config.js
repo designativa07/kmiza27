@@ -9,6 +9,29 @@ const nextConfig = {
     cpus: 1
   },
   
+  // ✅ CORREÇÃO UTF-8: Forçar encoding correto
+  webpack: (config, { isServer }) => {
+    // Configurar encoding UTF-8 para todos os loaders
+    config.module.rules.forEach(rule => {
+      if (rule.test && rule.test.toString().includes('tsx?')) {
+        if (rule.use) {
+          rule.use.forEach(use => {
+            if (use.loader && use.loader.includes('babel-loader')) {
+              use.options = use.options || {};
+              use.options.compact = false;
+            }
+          });
+        }
+      }
+    });
+
+    // Garantir que strings sejam tratadas como UTF-8
+    config.optimization = config.optimization || {};
+    config.optimization.minimize = process.env.NODE_ENV === 'production';
+    
+    return config;
+  },
+  
   // Configurações de otimização
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'

@@ -1137,7 +1137,7 @@ Digite sua pergunta ou comando! ⚽`;
     const menuSections = await this.whatsAppMenuService.getMenuSections();
 
     const payload = {
-      buttonText: 'VER OPÇÕES',
+      buttonText: generalConfig.buttonText,
       description: generalConfig.description,
       title: generalConfig.title,
       footer: generalConfig.footer,
@@ -1149,7 +1149,8 @@ Digite sua pergunta ou comando! ⚽`;
       payload.title,
       payload.description,
       payload.buttonText,
-      payload.sections
+      payload.sections,
+      payload.footer
     );
   }
 
@@ -1228,12 +1229,15 @@ Digite sua pergunta ou comando! ⚽`;
         });
       }
 
+      const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
+      
       return await this.evolutionService.sendListMessage(
         phoneNumber,
         '📊 Tabelas de Classificação',
         'Selecione a competição para ver a classificação:',
-        'Ver Competições',
-        sections
+        generalConfig.buttonText,
+        sections,
+        generalConfig.footer
       );
     } catch (error) {
       console.error('Erro ao enviar menu de competições:', error);

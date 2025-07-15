@@ -25,6 +25,7 @@ interface WhatsAppMenuConfig {
   title: string
   description: string
   footer: string
+  buttonText: string
   sections: {
     title: string
     rows: {
@@ -46,7 +47,8 @@ export default function AutomationPanel() {
   const [whatsappMenu, setWhatsappMenu] = useState<WhatsAppMenuConfig>({
     title: 'Kmiza27 Bot',
     description: 'Escolha uma das opções abaixo para começar:',
-    footer: 'Selecione uma das opções',
+    footer: 'Kmiza27 Bot ⚽',
+    buttonText: 'VER OPÇÕES',
     sections: [
       {
         title: '⚡ Ações Rápidas',
@@ -186,6 +188,7 @@ export default function AutomationPanel() {
         title: generalConfig.title || 'Kmiza27 Bot',
         description: generalConfig.description || 'Selecione uma das opções abaixo',
         footer: generalConfig.footer || 'Kmiza27 Bot ⚽',
+        buttonText: generalConfig.buttonText || 'VER OPÇÕES',
         sections: sections
       }
       
@@ -281,7 +284,8 @@ export default function AutomationPanel() {
         body: JSON.stringify({
           title: whatsappMenu.title,
           description: whatsappMenu.description,
-          footer: whatsappMenu.footer
+          footer: whatsappMenu.footer,
+          buttonText: whatsappMenu.buttonText
         })
       })
 
@@ -516,7 +520,87 @@ export default function AutomationPanel() {
       <div className="p-6">
         {activeTab === 'general' && (
           <div className="space-y-6">
-            {usedConfigs.map((config) => (
+            {/* Configurações Básicas - Lado a Lado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {usedConfigs.filter(config => ['auto_response_enabled', 'BOT_NOME'].includes(config.key)).map((config) => (
+                <div key={config.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      {config.key === 'BOT_NOME' ? 'Nome do Bot' :
+                       config.key === 'welcome_message' ? 'Mensagem de Boas-vindas' :
+                       config.key === 'auto_response_enabled' ? 'Resposta Automática' :
+                       config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </h4>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {config.type}
+                    </span>
+                  </div>
+                  
+                  {config.description && (
+                    <p className="text-sm text-gray-600 mb-3">{config.description}</p>
+                  )}
+
+                  <div className="space-y-3">
+                    {config.type === 'text' ? (
+                      config.key === 'welcome_message' ? (
+                        <textarea
+                          value={config.value}
+                          onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                          rows={8}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Digite a mensagem de boas-vindas..."
+                        />
+                      ) : config.key === 'menu_description' ? (
+                        <textarea
+                          value={config.value}
+                          onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Digite a descrição do menu..."
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={config.value}
+                          onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Digite o valor..."
+                        />
+                      )
+                    ) : config.type === 'boolean' ? (
+                      <select
+                        value={config.value}
+                        onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                        aria-label={`Configuração ${config.key}`}
+                      >
+                        <option value="true">Habilitado</option>
+                        <option value="false">Desabilitado</option>
+                      </select>
+                    ) : (
+                      <input
+                        type={config.type === 'number' ? 'number' : 'text'}
+                        value={config.value}
+                        onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Digite o valor..."
+                      />
+                    )}
+
+                    <button
+                      onClick={() => handleSave(config.id, config.value)}
+                      disabled={saving}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                    >
+                      {saving ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Outras Configurações - Empilhadas */}
+            {usedConfigs.filter(config => !['auto_response_enabled', 'BOT_NOME'].includes(config.key)).map((config) => (
               <div key={config.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium text-gray-900">
@@ -606,59 +690,73 @@ export default function AutomationPanel() {
 
         {activeTab === 'whatsapp-menu' && (
           <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-green-900 mb-2">✅ Configuração Funcional</h4>
-              <p className="text-sm text-green-700 mb-2">
-                <strong>Esta página está totalmente funcional!</strong> As alterações feitas aqui afetam diretamente o menu real do WhatsApp.
-              </p>
-              <p className="text-sm text-green-700">
-                Configure o menu interativo que será exibido aos usuários do WhatsApp. Submenus dinâmicos (como competições) são gerados automaticamente pelo sistema.
-              </p>
-            </div>
 
             {/* Configurações Gerais do Menu */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-4">Configurações Gerais</h4>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-900">📱 Configurações do Menu WhatsApp</h4>
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                  ✅ Funcionais no WhatsApp
+                </span>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Título do Menu
+                    🤖 Título do Menu (Cabeçalho)
                   </label>
                   <input
                     type="text"
                     value={whatsappMenu.title}
                     onChange={(e) => setWhatsappMenu(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Nome do bot..."
+                    placeholder="Ex: Kmiza27 Bot, FuteBot..."
                   />
+                  <p className="text-xs text-gray-500 mt-1">Aparece no topo do menu do WhatsApp</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rodapé do Menu
+                    🔘 Texto do Botão
                   </label>
                   <input
                     type="text"
-                    value={whatsappMenu.footer}
-                    onChange={(e) => setWhatsappMenu(prev => ({ ...prev, footer: e.target.value }))}
+                    value={whatsappMenu.buttonText}
+                    onChange={(e) => setWhatsappMenu(prev => ({ ...prev, buttonText: e.target.value }))}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Texto do rodapé..."
+                    placeholder="Ex: VER OPÇÕES, MENU, ESCOLHER..."
                   />
+                  <p className="text-xs text-gray-500 mt-1">Texto do botão que abre o menu</p>
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição do Menu
+                  📝 Descrição do Menu
                 </label>
                 <textarea
                   value={whatsappMenu.description}
                   onChange={(e) => setWhatsappMenu(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Descrição que aparece no topo do menu..."
+                  placeholder="Ex: Selecione uma das opções abaixo para começar..."
                 />
+                <p className="text-xs text-gray-500 mt-1">Aparece abaixo do título, antes das opções</p>
+              </div>
+
+              {/* Campo Footer - Oculto mas mantido para compatibilidade */}
+              <input
+                type="hidden"
+                value={whatsappMenu.footer}
+                onChange={(e) => setWhatsappMenu(prev => ({ ...prev, footer: e.target.value }))}
+              />
+
+              {/* Aviso sobre Rodapé */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  ⚠️ <strong>Nota:</strong> O campo "Rodapé" foi removido pois não funcionava corretamente no WhatsApp. 
+                  O sistema agora usa apenas os campos funcionais: Título, Descrição e Texto do Botão.
+                </p>
               </div>
             </div>
 
@@ -746,30 +844,51 @@ export default function AutomationPanel() {
 
             {/* Preview do Menu */}
             <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-4">📱 Preview do Menu</h4>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md">
+              <h4 className="text-sm font-medium text-gray-900 mb-4">📱 Preview do Menu WhatsApp</h4>
+              <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-md">
                 <div className="text-sm">
-                  <div className="font-medium text-green-900">{whatsappMenu.title}</div>
-                  <div className="text-green-700 mt-1">{whatsappMenu.description}</div>
+                  {/* Cabeçalho do Menu */}
+                  <div className="font-bold text-gray-900 text-center border-b border-gray-200 pb-2">
+                    {whatsappMenu.title}
+                  </div>
                   
-                  <div className="mt-3 space-y-2">
+                  {/* Descrição */}
+                  <div className="text-gray-700 mt-2 text-center text-xs">
+                    {whatsappMenu.description}
+                  </div>
+                  
+                  {/* Seções */}
+                  <div className="mt-4 space-y-3">
                     {whatsappMenu.sections.map((section, index) => (
-                      <div key={index}>
-                        <div className="font-medium text-green-800 text-xs">{section.title}</div>
-                        {section.rows.map((row, rowIndex) => (
-                          <div key={rowIndex} className="ml-2 text-xs text-green-700">
+                      <div key={index} className="bg-gray-50 rounded p-2">
+                        <div className="font-medium text-gray-800 text-xs mb-1">{section.title}</div>
+                        {section.rows.slice(0, 3).map((row, rowIndex) => (
+                          <div key={rowIndex} className="ml-2 text-xs text-gray-600 truncate">
                             • {row.title}
                           </div>
                         ))}
+                        {section.rows.length > 3 && (
+                          <div className="ml-2 text-xs text-gray-500">
+                            ... e mais {section.rows.length - 3} opções
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                   
-                  <div className="text-xs text-green-600 mt-3 border-t border-green-200 pt-2">
-                    {whatsappMenu.footer}
+                  {/* Botão */}
+                  <div className="mt-4 text-center">
+                    <div className="inline-block bg-green-500 text-white text-xs px-3 py-1 rounded">
+                      {whatsappMenu.buttonText}
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              <p className="text-xs text-gray-500 mt-2">
+                ✅ Este preview mostra como o menu aparecerá no WhatsApp. 
+                Note que o rodapé foi removido pois não era compatível com a Evolution API.
+              </p>
             </div>
 
             {/* Botão Salvar */}

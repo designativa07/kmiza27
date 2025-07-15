@@ -88,6 +88,7 @@ export class EvolutionService {
       title: string;
       rows: { id: string; title: string; description: string }[];
     }[],
+    footerText?: string,
   ): Promise<boolean> {
     try {
       // Verificar e reconectar a instância se necessário
@@ -119,7 +120,7 @@ export class EvolutionService {
         title: title,
         description: description,
         buttonText: buttonText,
-        footerText: 'Kmiza27 Bot ⚽', // Evolution API requer footerText
+        footerText: footerText || 'Kmiza27 Bot ⚽', // Evolution API requer footerText
         sections: formattedSections,
       };
 
