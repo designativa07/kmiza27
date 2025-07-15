@@ -741,19 +741,18 @@ export default function AutomationPanel() {
                 <p className="text-xs text-gray-500 mt-1">Aparece abaixo do título, antes das opções</p>
               </div>
 
-              {/* Campo Footer - Oculto mas mantido para compatibilidade */}
-              <input
-                type="hidden"
-                value={whatsappMenu.footer}
-                onChange={(e) => setWhatsappMenu(prev => ({ ...prev, footer: e.target.value }))}
-              />
-
-              {/* Aviso sobre Rodapé */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
-                  ⚠️ <strong>Nota:</strong> O campo "Rodapé" foi removido pois não funcionava corretamente no WhatsApp. 
-                  O sistema agora usa apenas os campos funcionais: Título, Descrição e Texto do Botão.
-                </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🦶 Rodapé do Menu
+                </label>
+                <input
+                  type="text"
+                  value={whatsappMenu.footer}
+                  onChange={(e) => setWhatsappMenu(prev => ({ ...prev, footer: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Ex: Kmiza27.com, Para mais informações..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Texto que aparece no final do menu do WhatsApp</p>
               </div>
             </div>
 
