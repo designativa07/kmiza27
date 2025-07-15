@@ -90,14 +90,23 @@ export class ChatbotService {
    */
   private async addMatchShortLinks(response: string, match: Match): Promise<string> {
     try {
+      console.log(`🔗 Criando URL curta para jogo ${match.id}: ${match.home_team.name} vs ${match.away_team.name}`);
+      
       const matchUrl = await this.createMatchShortUrl(match);
+      console.log(`🔗 URL criada: ${matchUrl}`);
+      
       if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
-        return `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
+        const finalResponse = `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
+        console.log(`✅ Link adicionado à resposta`);
+        return finalResponse;
+      } else {
+        console.log(`❌ URL inválida: ${matchUrl}`);
       }
     } catch (error) {
-      this.logger.warn(`Não foi possível criar URL curta para jogo ${match.id}, continuando sem link`);
+      console.error(`❌ Erro ao criar URL curta para jogo ${match.id}:`, error);
     }
-    // Se não conseguiu criar URL curta, retornar resposta sem link
+    
+    console.log(`⚠️ Retornando resposta sem link para jogo ${match.id}`);
     return response;
   }
 
