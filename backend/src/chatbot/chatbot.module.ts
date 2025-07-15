@@ -21,6 +21,7 @@ import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
 import { TeamsModule } from '../modules/teams/teams.module';
 import { WhatsAppMenuModule } from '../modules/whatsapp-menu/whatsapp-menu.module';
+import { UrlShortenerModule } from '../modules/url-shortener/url-shortener.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { WhatsAppMenuModule } from '../modules/whatsapp-menu/whatsapp-menu.modul
     BotConfigModule,
     WhatsAppMenuModule,
     TeamsModule,
+    UrlShortenerModule,
   ],
   controllers: [ChatbotController],
   providers: [
