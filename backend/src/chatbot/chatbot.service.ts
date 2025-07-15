@@ -19,6 +19,7 @@ import { UsersService } from '../modules/users/users.service';
 import { StandingsService, StandingEntry } from '../modules/standings/standings.service';
 import { BotConfigService } from '../modules/bot-config/bot-config.service';
 import { WhatsAppMenuService } from '../modules/whatsapp-menu/whatsapp-menu.service';
+import { UrlShortenerService } from '../modules/url-shortener/url-shortener.service';
 
 @Injectable()
 export class ChatbotService {
@@ -48,7 +49,49 @@ export class ChatbotService {
     private standingsService: StandingsService,
     private botConfigService: BotConfigService,
     private whatsAppMenuService: WhatsAppMenuService,
+    private urlShortenerService: UrlShortenerService,
   ) {}
+
+  /**
+   * Cria uma URL curta para um jogo específico
+   */
+  private async createMatchShortUrl(match: Match): Promise<string> {
+    try {
+      const shortUrl = await this.urlShortenerService.createMatchShortUrl(
+        match.id,
+        match.home_team.name,
+        match.away_team.name
+      );
+      return shortUrl.shortUrl;
+    } catch (error) {
+      this.logger.error(`❌ Erro ao criar URL curta para jogo ${match.id}:`, error);
+      // Fallback para URL normal
+      const baseUrl = process.env.FRONTEND_URL || 'https://kmiza27.com';
+      return `${baseUrl}/jogos/${match.id}`;
+    }
+  }
+
+  /**
+   * Cria uma URL curta para transmissão ao vivo
+   */
+  private async createStreamShortUrl(streamUrl: string, matchTitle: string): Promise<string> {
+    try {
+      const shortUrl = await this.urlShortenerService.createStreamShortUrl(streamUrl, matchTitle);
+      return shortUrl.shortUrl;
+    } catch (error) {
+      this.logger.error(`❌ Erro ao criar URL curta para stream:`, error);
+      // Fallback para URL original
+      return streamUrl;
+    }
+  }
+
+  /**
+   * Adiciona links curtos nas respostas sobre jogos
+   */
+  private async addMatchShortLinks(response: string, match: Match): Promise<string> {
+    const matchUrl = await this.createMatchShortUrl(match);
+    return `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
+  }
 
   async processMessage(phoneNumber: string, message: string, pushName?: string, origin?: string): Promise<string> {
     try {
@@ -408,7 +451,8 @@ export class ChatbotService {
 
       response += `\n\nBora torcer! 🔥⚽`;
 
-      return response;
+      // Adicionar URL curta do jogo
+      return await this.addMatchShortLinks(response, nextMatch);
 
     } catch (error) {
       console.error('Erro ao buscar próximo jogo:', error);
@@ -1966,7 +2010,8 @@ Digite sua pergunta ou comando! ⚽`;
       response += `\n\n🔴 JOGO EM ANDAMENTO!
 ⚽ Acompanhe o placar ao vivo!`;
 
-      return response;
+      // Adicionar URL curta do jogo
+      return await this.addMatchShortLinks(response, currentMatch);
 
     } catch (error) {
       console.error('Erro ao buscar jogo atual:', error);

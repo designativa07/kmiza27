@@ -54,6 +54,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { CdnTransformInterceptor } from './interceptors/cdn-transform.interceptor';
 import { SearchModule } from './modules/search/search.module';
 import { RoundsModule } from './modules/rounds/rounds.module';
+import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { RoundsModule } from './modules/rounds/rounds.module';
     CompetitionsModule,
     SearchModule,
     RoundsModule,
+    UrlShortenerModule,
   ],
   controllers: [AppController],
   providers: [
