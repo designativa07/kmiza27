@@ -695,9 +695,6 @@ export default function AutomationPanel() {
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-gray-900">📱 Configurações do Menu WhatsApp</h4>
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                  ✅ Funcionais no WhatsApp
-                </span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

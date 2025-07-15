@@ -1131,27 +1131,71 @@ Digite sua pergunta ou comando! ⚽`;
   }
 
   private async sendWelcomeMenu(phoneNumber: string): Promise<boolean> {
-    const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
-    
-    // Buscar configurações do menu do banco de dados
-    const menuSections = await this.whatsAppMenuService.getMenuSections();
+    try {
+      console.log(`📋 Preparando menu para ${phoneNumber}...`);
+      
+      const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
+      console.log(`🔧 Configurações gerais:`, generalConfig);
+      
+      // Buscar configurações do menu do banco de dados
+      const menuSections = await this.whatsAppMenuService.getMenuSections();
+      console.log(`📋 Seções do menu:`, JSON.stringify(menuSections, null, 2));
 
-    const payload = {
-      buttonText: generalConfig.buttonText,
-      description: generalConfig.description,
-      title: generalConfig.title,
-      footer: generalConfig.footer,
-      sections: menuSections
-    };
+      // Validações
+      if (!generalConfig.title || generalConfig.title.trim() === '') {
+        console.error(`❌ Título vazio: "${generalConfig.title}"`);
+        generalConfig.title = 'Kmiza27 Bot'; // Fallback
+      }
+      
+      if (!generalConfig.description || generalConfig.description.trim() === '') {
+        console.error(`❌ Descrição vazia: "${generalConfig.description}"`);
+        generalConfig.description = 'Selecione uma das opções abaixo para começar:'; // Fallback
+      }
+      
+      if (!generalConfig.buttonText || generalConfig.buttonText.trim() === '') {
+        console.error(`❌ Texto do botão vazio: "${generalConfig.buttonText}"`);
+        generalConfig.buttonText = 'VER OPÇÕES'; // Fallback
+      }
 
-    return await this.evolutionService.sendListMessage(
-      phoneNumber,
-      payload.title,
-      payload.description,
-      payload.buttonText,
-      payload.sections,
-      payload.footer
-    );
+      // Verificar se há seções válidas
+      if (!menuSections || menuSections.length === 0) {
+        console.error(`❌ Nenhuma seção encontrada no menu`);
+        return false;
+      }
+
+      // Verificar se há itens duplicados
+      const allRowIds = new Set<string>();
+      for (const section of menuSections) {
+        for (const row of section.rows) {
+          if (allRowIds.has(row.id)) {
+            console.error(`❌ Item duplicado encontrado: ${row.id}`);
+          }
+          allRowIds.add(row.id);
+        }
+      }
+
+      const payload = {
+        buttonText: generalConfig.buttonText,
+        description: generalConfig.description,
+        title: generalConfig.title,
+        footer: generalConfig.footer,
+        sections: menuSections
+      };
+
+      console.log(`📤 Enviando menu com payload:`, JSON.stringify(payload, null, 2));
+
+      return await this.evolutionService.sendListMessage(
+        phoneNumber,
+        payload.title,
+        payload.description,
+        payload.buttonText,
+        payload.sections,
+        payload.footer
+      );
+    } catch (error) {
+      console.error(`❌ Erro ao enviar menu para ${phoneNumber}:`, error);
+      return false;
+    }
   }
 
   private async sendCompetitionsMenu(phoneNumber: string): Promise<boolean> {

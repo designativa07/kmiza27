@@ -75,21 +75,24 @@ export class WhatsAppMenuService {
     let config = await this.menuConfigRepository.findOne({ where: { item_id: itemId } });
     
     if (config) {
+      // Atualizar configuração existente
       config.item_title = value;
+      await this.menuConfigRepository.save(config);
     } else {
-      config = this.menuConfigRepository.create({
+      // Criar nova configuração
+      const newConfig = this.menuConfigRepository.create({
         section_id: 'general_config',
         section_title: 'Configurações Gerais',
         section_order: 0,
         item_id: itemId,
-        item_title: value,
+        item_title: value, // Garantir que não seja null
         item_description: `Configuração: ${itemId}`,
         item_order: 1,
         active: true
       });
+      
+      await this.menuConfigRepository.save(newConfig);
     }
-    
-    await this.menuConfigRepository.save(config);
   }
 
   async getMenuSections(): Promise<MenuSection[]> {
@@ -97,9 +100,12 @@ export class WhatsAppMenuService {
       const configs = await this.menuConfigRepository
         .createQueryBuilder('config')
         .where('config.active = :active', { active: true })
+        .andWhere('config.section_id != :generalConfig', { generalConfig: 'general_config' }) // Excluir configurações gerais
         .orderBy('config.section_order', 'ASC')
         .addOrderBy('config.item_order', 'ASC')
         .getMany();
+
+      console.log(`📋 Configurações encontradas: ${configs.length}`);
 
       // Agrupar por seção
       const sectionsMap = new Map<string, MenuSection>();
@@ -112,14 +118,31 @@ export class WhatsAppMenuService {
           });
         }
 
-        sectionsMap.get(config.section_id)!.rows.push({
-          id: config.item_id,
-          title: config.item_title,
-          description: config.item_description
-        });
+        // Verificar se o item já existe para evitar duplicatas
+        const existingSection = sectionsMap.get(config.section_id)!;
+        const existingRow = existingSection.rows.find(row => row.id === config.item_id);
+        
+        if (!existingRow) {
+          existingSection.rows.push({
+            id: config.item_id,
+            title: config.item_title,
+            description: config.item_description
+          });
+        } else {
+          console.warn(`⚠️ Item duplicado ignorado: ${config.item_id}`);
+        }
       });
 
-      return Array.from(sectionsMap.values());
+      const sections = Array.from(sectionsMap.values());
+      console.log(`📋 Seções processadas: ${sections.length}`);
+      
+      // Se não há seções, retornar menu padrão
+      if (sections.length === 0) {
+        console.log(`📋 Nenhuma seção encontrada, usando menu padrão`);
+        return this.getDefaultMenuSections();
+      }
+
+      return sections;
     } catch (error) {
       this.logger.error('Erro ao buscar seções do menu:', error);
       // Retornar menu padrão em caso de erro
