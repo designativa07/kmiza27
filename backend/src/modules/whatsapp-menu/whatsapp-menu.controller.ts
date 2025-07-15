@@ -11,6 +11,17 @@ export class WhatsAppMenuController {
     return await this.menuService.getMenuSections();
   }
 
+  @Get('general-config')
+  async getGeneralConfig(): Promise<{ title: string; description: string; footer: string }> {
+    return await this.menuService.getGeneralConfig();
+  }
+
+  @Post('general-config')
+  async updateGeneralConfig(@Body() config: { title: string; description: string; footer: string }): Promise<{ success: boolean }> {
+    const success = await this.menuService.updateGeneralConfig(config);
+    return { success };
+  }
+
   @Get('configs')
   async getAllConfigs(): Promise<WhatsAppMenuConfig[]> {
     return await this.menuService.getAllMenuConfigs();

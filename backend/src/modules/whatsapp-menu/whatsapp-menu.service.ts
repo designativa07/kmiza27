@@ -23,6 +23,70 @@ export class WhatsAppMenuService {
     private menuConfigRepository: Repository<WhatsAppMenuConfig>,
   ) {}
 
+  async getGeneralConfig(): Promise<{ title: string; description: string; footer: string }> {
+    try {
+      // Buscar configurações gerais (podem estar armazenadas como itens especiais ou usar valores padrão)
+      const titleConfig = await this.menuConfigRepository.findOne({
+        where: { item_id: 'MENU_GENERAL_TITLE' }
+      });
+      const descriptionConfig = await this.menuConfigRepository.findOne({
+        where: { item_id: 'MENU_GENERAL_DESCRIPTION' }
+      });
+      const footerConfig = await this.menuConfigRepository.findOne({
+        where: { item_id: 'MENU_GENERAL_FOOTER' }
+      });
+
+      return {
+        title: titleConfig?.item_title || 'Kmiza27 Bot',
+        description: descriptionConfig?.item_description || 'Selecione uma das opções abaixo para começar:',
+        footer: footerConfig?.item_description || 'Selecione uma das opções'
+      };
+    } catch (error) {
+      this.logger.error('Erro ao buscar configurações gerais do menu:', error);
+      return {
+        title: 'Kmiza27 Bot',
+        description: 'Selecione uma das opções abaixo para começar:',
+        footer: 'Selecione uma das opções'
+      };
+    }
+  }
+
+  async updateGeneralConfig(config: { title: string; description: string; footer: string }): Promise<boolean> {
+    try {
+      // Salvar ou atualizar configurações gerais
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_TITLE', config.title, 'Título do menu');
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_DESCRIPTION', config.description, 'Descrição do menu');
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_FOOTER', config.footer, 'Rodapé do menu');
+      
+      return true;
+    } catch (error) {
+      this.logger.error('Erro ao atualizar configurações gerais do menu:', error);
+      return false;
+    }
+  }
+
+  private async saveOrUpdateGeneralConfig(itemId: string, value: string, description: string): Promise<void> {
+    let config = await this.menuConfigRepository.findOne({ where: { item_id: itemId } });
+    
+    if (config) {
+      config.item_title = value;
+      config.item_description = description;
+    } else {
+      config = this.menuConfigRepository.create({
+        section_id: 'general_config',
+        section_title: 'Configurações Gerais',
+        section_order: 0,
+        item_id: itemId,
+        item_title: value,
+        item_description: description,
+        item_order: 1,
+        active: true
+      });
+    }
+    
+    await this.menuConfigRepository.save(config);
+  }
+
   async getMenuSections(): Promise<MenuSection[]> {
     try {
       const configs = await this.menuConfigRepository

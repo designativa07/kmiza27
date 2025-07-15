@@ -1094,12 +1094,11 @@ ${result}
   }
 
   private async getTextWelcomeMenu(): Promise<string> {
-    const welcomeMessage = await this.getWelcomeMessage();
-    const botName = await this.getBotName();
+    const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
 
-    return `🤖 *${botName}*
+    return `🤖 *${generalConfig.title}*
 
-${welcomeMessage}
+${generalConfig.description}
 
 ⚡ *Ações Rápidas:*
 • Digite "jogos hoje" - Jogos de hoje
@@ -1132,17 +1131,16 @@ Digite sua pergunta ou comando! ⚽`;
   }
 
   private async sendWelcomeMenu(phoneNumber: string): Promise<boolean> {
-    const welcomeMessage = await this.getWelcomeMessage();
-    const botName = await this.getBotName();
-
+    const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
+    
     // Buscar configurações do menu do banco de dados
     const menuSections = await this.whatsAppMenuService.getMenuSections();
 
     const payload = {
       buttonText: 'VER OPÇÕES',
-      description: welcomeMessage,
-      title: botName, // Título da lista
-      footer: 'Selecione uma das opções abaixo',
+      description: generalConfig.description,
+      title: generalConfig.title,
+      footer: generalConfig.footer,
       sections: menuSections
     };
 
