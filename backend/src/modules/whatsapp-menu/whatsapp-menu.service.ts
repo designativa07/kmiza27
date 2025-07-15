@@ -97,31 +97,56 @@ export class WhatsAppMenuService {
 
   async getMenuSections(): Promise<MenuSection[]> {
     try {
+      // ✅ DEBUG: Verificar todas as configurações primeiro
+      const allConfigs = await this.menuConfigRepository
+        .createQueryBuilder('config')
+        .where('config.active = :active', { active: true })
+        .getMany();
+      
+      console.log(`🔍 Total de configurações ativas: ${allConfigs.length}`);
+      allConfigs.forEach(config => {
+        console.log(`  - ${config.section_id}: ${config.item_id} (${config.item_title})`);
+      });
+
+      // ✅ FILTRO CORRIGIDO: Excluir configurações gerais
       const configs = await this.menuConfigRepository
         .createQueryBuilder('config')
         .where('config.active = :active', { active: true })
-        .andWhere('config.section_id != :generalConfig', { generalConfig: 'general_config' }) // Excluir configurações gerais
+        .andWhere('config.section_id != :generalConfig', { generalConfig: 'general_config' })
         .orderBy('config.section_order', 'ASC')
         .addOrderBy('config.item_order', 'ASC')
         .getMany();
 
-      console.log(`📋 Configurações encontradas: ${configs.length}`);
+      console.log(`📋 Configurações após filtro: ${configs.length}`);
+      configs.forEach(config => {
+        console.log(`  ✅ ${config.section_id}: ${config.item_id}`);
+      });
 
       // Agrupar por seção
       const sectionsMap = new Map<string, MenuSection>();
 
+      // Lista de item_ids que nunca devem aparecer como opção
+      const idsProibidos = [
+        'MENU_GENERAL_TITLE',
+        'MENU_GENERAL_DESCRIPTION',
+        'MENU_GENERAL_FOOTER'
+      ];
+
       configs.forEach(config => {
+        // Filtro extra: não incluir itens proibidos
+        if (idsProibidos.includes(config.item_id)) {
+          console.log(`🚫 Ignorando item de configuração geral: ${config.item_id}`);
+          return;
+        }
         if (!sectionsMap.has(config.section_id)) {
           sectionsMap.set(config.section_id, {
             title: config.section_title,
             rows: []
           });
         }
-
         // Verificar se o item já existe para evitar duplicatas
         const existingSection = sectionsMap.get(config.section_id)!;
         const existingRow = existingSection.rows.find(row => row.id === config.item_id);
-        
         if (!existingRow) {
           existingSection.rows.push({
             id: config.item_id,
@@ -134,7 +159,10 @@ export class WhatsAppMenuService {
       });
 
       const sections = Array.from(sectionsMap.values());
-      console.log(`📋 Seções processadas: ${sections.length}`);
+      console.log(`📋 Seções finais: ${sections.length}`);
+      sections.forEach(section => {
+        console.log(`  - ${section.title}: ${section.rows.length} itens`);
+      });
       
       // Se não há seções, retornar menu padrão
       if (sections.length === 0) {
