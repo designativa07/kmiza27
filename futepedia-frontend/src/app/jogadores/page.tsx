@@ -2,43 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { getApiUrl } from '@/lib/config';
-import { Search, User, Shirt, Calendar, MapPin } from 'lucide-react';
-import { getPlayerImageUrl } from '@/lib/cdn-simple';
+import { Search, User } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Header } from '@/components/Header';
+import { PlayerCard } from '@/components/PlayerCard';
 
 // Tipos
 interface Player {
   id: number;
-  name: string; // Alterado de 'nickname' para 'name'
+  name: string;
   image_url?: string;
   position: string;
-  state: string; // Alterado de 'status' para 'state'
+  state: string;
+  date_of_birth?: string;
+  current_team?: {
+    id: number;
+    name: string;
+  };
 }
-
-// Componente do card, para organização
-const PlayerCard = ({ player }: { player: Player }) => {
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden group transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-      <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center relative">
-        {player.image_url ? (
-          <img src={getPlayerImageUrl(player.image_url)} alt={player.name} className="h-full w-full object-cover" />
-        ) : (
-          <User className="h-12 w-12 text-gray-300" />
-        )}
-          <span className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full capitalize">{player.state}</span>
-      </div>
-      <div className="p-2 md:p-3">
-        <h3 className="font-bold text-xs md:text-sm truncate group-hover:text-indigo-600">{player.name}</h3>
-        <div className="flex items-center text-xs text-gray-500 mt-0.5 md:mt-1">
-          <Shirt className="h-3 w-3 mr-1" />
-          <span>{player.position}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -106,7 +87,12 @@ export default function PlayersPage() {
         ) : players.length > 0 ? (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
             {players.map(player => (
-              <PlayerCard key={player.id} player={player} />
+              <PlayerCard 
+                key={player.id} 
+                player={player} 
+                teamName={player.current_team?.name}
+                showTeamName={true}
+              />
             ))}
           </div>
         ) : (
