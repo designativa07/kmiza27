@@ -38,8 +38,8 @@ export class WhatsAppMenuService {
 
       return {
         title: titleConfig?.item_title || 'Kmiza27 Bot',
-        description: descriptionConfig?.item_description || 'Selecione uma das opções abaixo para começar:',
-        footer: footerConfig?.item_description || 'Selecione uma das opções'
+        description: descriptionConfig?.item_title || 'Selecione uma das opções abaixo para começar:',
+        footer: footerConfig?.item_title || 'Selecione uma das opções'
       };
     } catch (error) {
       this.logger.error('Erro ao buscar configurações gerais do menu:', error);
@@ -54,9 +54,9 @@ export class WhatsAppMenuService {
   async updateGeneralConfig(config: { title: string; description: string; footer: string }): Promise<boolean> {
     try {
       // Salvar ou atualizar configurações gerais
-      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_TITLE', config.title, 'Título do menu');
-      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_DESCRIPTION', config.description, 'Descrição do menu');
-      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_FOOTER', config.footer, 'Rodapé do menu');
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_TITLE', config.title);
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_DESCRIPTION', config.description);
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_FOOTER', config.footer);
       
       return true;
     } catch (error) {
@@ -65,12 +65,11 @@ export class WhatsAppMenuService {
     }
   }
 
-  private async saveOrUpdateGeneralConfig(itemId: string, value: string, description: string): Promise<void> {
+  private async saveOrUpdateGeneralConfig(itemId: string, value: string): Promise<void> {
     let config = await this.menuConfigRepository.findOne({ where: { item_id: itemId } });
     
     if (config) {
       config.item_title = value;
-      config.item_description = description;
     } else {
       config = this.menuConfigRepository.create({
         section_id: 'general_config',
@@ -78,7 +77,7 @@ export class WhatsAppMenuService {
         section_order: 0,
         item_id: itemId,
         item_title: value,
-        item_description: description,
+        item_description: `Configuração: ${itemId}`,
         item_order: 1,
         active: true
       });
