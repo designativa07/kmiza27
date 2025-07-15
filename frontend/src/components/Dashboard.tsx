@@ -46,7 +46,7 @@ import TopScorersTable from './TopScorersTable'
 import AutomationPanel from './AutomationPanel'
 import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
-import UserStats from './UserStats'
+
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
@@ -73,6 +73,7 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState('Dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['Usuários'])
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
@@ -108,7 +109,6 @@ export default function Dashboard() {
         'artilharia': 'Artilharia',
         'canais': 'Canais',
         'usuarios': 'Usuários',
-        'estatisticas-usuarios': 'Estatísticas de Usuários',
         'administradores': 'Administradores',
         'conversas': 'Conversas WhatsApp',
         'automacao': 'Automação IA',
@@ -493,7 +493,7 @@ export default function Dashboard() {
               {/* Card Usuários com Time Favorito */}
               <div 
                 className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setCurrentPage('Estatísticas de Usuários')}
+                onClick={() => setCurrentPage('Usuários')}
               >
                 <dt>
                   <div className="absolute rounded-md bg-yellow-500 p-3">
@@ -506,7 +506,7 @@ export default function Dashboard() {
                   <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
                     <div className="text-sm">
                       <span className="font-medium text-yellow-600 hover:text-yellow-500">
-                        Ver estatísticas de usuários →
+                        Gerenciar usuários →
                       </span>
                     </div>
                   </div>
@@ -564,8 +564,6 @@ export default function Dashboard() {
         return <ChannelsManager />
       case 'Usuários':
         return <UsersManager />
-      case 'Estatísticas de Usuários':
-        return <UserStats />
       case 'Administradores':
         return <AdminsManager />
       case 'Configurações do Bot':
@@ -598,9 +596,15 @@ export default function Dashboard() {
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
     { name: 'Artilharia', icon: TrophyIcon, page: 'Artilharia' },
     { name: 'Canais', icon: TvIcon, page: 'Canais' },
-    { name: 'Usuários', icon: UsersIcon, page: 'Usuários' },
-    { name: 'Estatísticas de Usuários', icon: ChartBarIcon, page: 'Estatísticas de Usuários' },
-    { name: 'Administradores', icon: WrenchScrewdriverIcon, page: 'Administradores' },
+    { 
+      name: 'Usuários', 
+      icon: UsersIcon, 
+      page: 'Usuários',
+      subItems: [
+        { name: 'Gerenciar Usuários', page: 'Usuários' },
+        { name: 'Administradores', page: 'Administradores' }
+      ]
+    },
     { name: 'Chatwoot', icon: ChatBubbleLeftRightIcon, page: 'Chatwoot', isExternalLink: true },
     { name: 'Configurações do Bot', icon: CpuChipIcon, page: 'Configurações do Bot' },
     { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
@@ -609,12 +613,24 @@ export default function Dashboard() {
     { name: 'Configurações', icon: CogIcon, page: 'Configurações' }
   ]
 
+  // Função para gerenciar expansão de menus
+  const toggleMenuExpansion = (menuName: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuName) 
+        ? prev.filter(name => name !== menuName)
+        : [...prev, menuName]
+    )
+  }
+
   // Função para lidar com cliques no menu
   const handleMenuClick = (item: any) => {
     if (item.isExternalLink && item.page === 'Chatwoot') {
       // Abrir Chatwoot em nova aba
       window.open('https://chat.kmiza27.com', '_blank', 'noopener,noreferrer')
       setSidebarOpen(false) // Fechar sidebar mobile
+    } else if (item.subItems) {
+      // Se tem subitens, expandir/contrair
+      toggleMenuExpansion(item.name)
     } else {
       setCurrentPage(item.page)
       setSidebarOpen(false) // Fechar sidebar mobile
@@ -638,19 +654,58 @@ export default function Dashboard() {
           <nav className="mt-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
             {menuItems.map((item) => {
               const isActive = currentPage === item.page
+              const isExpanded = expandedMenus.includes(item.name)
               return (
-                <button
-                  key={item.name}
-                  onClick={() => handleMenuClick(item)}
-                  className={`flex w-full items-center px-4 py-3 text-sm font-medium ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  <item.icon className="mr-3 h-5 w-5" />
-                  {item.name}
-                </button>
+                <div key={item.name}>
+                  <button
+                    onClick={() => handleMenuClick(item)}
+                    className={`flex w-full items-center px-4 py-3 text-sm font-medium ${
+                      isActive || (item.subItems && item.subItems.some((sub: any) => sub.page === currentPage))
+                        ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                    {item.subItems && (
+                      <svg
+                        className={`ml-auto h-4 w-4 transition-transform ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    )}
+                  </button>
+                  {item.subItems && isExpanded && (
+                    <div className="bg-gray-50 dark:bg-slate-700/50">
+                      {item.subItems.map((subItem: any) => {
+                        const isSubActive = currentPage === subItem.page
+                        return (
+                          <button
+                            key={subItem.name}
+                            onClick={() => {
+                              setCurrentPage(subItem.page)
+                              setSidebarOpen(false)
+                            }}
+                            className={`flex w-full items-center px-8 py-2 text-sm font-medium ${
+                              isSubActive
+                                ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-800/20 dark:text-blue-300'
+                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            <span className="mr-3 w-5 flex justify-center text-xs">•</span>
+                            {subItem.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               )
             })}
           </nav>
@@ -669,19 +724,58 @@ export default function Dashboard() {
                 <ul role="list" className="-mx-2 space-y-1">
                   {menuItems.map((item) => {
                     const isActive = currentPage === item.page
+                    const isExpanded = expandedMenus.includes(item.name)
                     return (
                       <li key={item.name}>
                         <button
                           onClick={() => handleMenuClick(item)}
                           className={`group flex w-full gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
-                            isActive
+                            isActive || (item.subItems && item.subItems.some((sub: any) => sub.page === currentPage))
                               ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
                               : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-blue-900/20'
                           }`}
                         >
                           <item.icon className="h-6 w-6 shrink-0" />
                           {item.name}
+                          {item.subItems && (
+                            <svg
+                              className={`ml-auto h-4 w-4 transition-transform ${
+                                isExpanded ? 'rotate-180' : ''
+                              }`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                          )}
                         </button>
+                        {item.subItems && isExpanded && (
+                          <ul className="ml-6 mt-1 space-y-1">
+                            {item.subItems.map((subItem: any) => {
+                              const isSubActive = currentPage === subItem.page
+                              return (
+                                <li key={subItem.name}>
+                                  <button
+                                    onClick={() => {
+                                      setCurrentPage(subItem.page)
+                                      setSidebarOpen(false)
+                                    }}
+                                    className={`group flex w-full gap-x-3 rounded-md p-2 text-sm leading-6 font-medium ${
+                                      isSubActive
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-800/20 dark:text-blue-300'
+                                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/10'
+                                    }`}
+                                  >
+                                    <span className="w-6 flex justify-center">•</span>
+                                    {subItem.name}
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
                       </li>
                     )
                   })}
