@@ -89,8 +89,16 @@ export class ChatbotService {
    * Adiciona links curtos nas respostas sobre jogos
    */
   private async addMatchShortLinks(response: string, match: Match): Promise<string> {
-    const matchUrl = await this.createMatchShortUrl(match);
-    return `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
+    try {
+      const matchUrl = await this.createMatchShortUrl(match);
+      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+        return `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
+      }
+    } catch (error) {
+      this.logger.warn(`Não foi possível criar URL curta para jogo ${match.id}, continuando sem link`);
+    }
+    // Se não conseguiu criar URL curta, retornar resposta sem link
+    return response;
   }
 
   async processMessage(phoneNumber: string, message: string, pushName?: string, origin?: string): Promise<string> {
@@ -145,9 +153,10 @@ export class ChatbotService {
             return '❓ Como posso te ajudar? Digite sua pergunta sobre futebol!';
           }
         } else {
-          // Para WhatsApp: enviar mensagem de boas-vindas + menu
+          // Para WhatsApp: APENAS enviar mensagem de boas-vindas
+          // O menu será enviado automaticamente após um pequeno delay
           const welcomeMessage = await this.getWelcomeMessage();
-          await this.sendWelcomeMenu(phoneNumber);
+          this.scheduleMenuSend(phoneNumber);
           return welcomeMessage;
         }
       }

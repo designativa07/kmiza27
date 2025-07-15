@@ -1,8 +1,15 @@
 import { notFound } from 'next/navigation';
-import { MapPin, Users, Calendar, Clock } from 'lucide-react';
+import { MapPin, Users, Calendar, Building } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { StadiumImage } from '@/components/StadiumImage';
 import { getApiUrl } from '@/lib/config';
+import dynamic from 'next/dynamic';
+
+// Importar o mapa dinamicamente para evitar problemas de SSR
+const SingleStadiumMap = dynamic(() => import('@/components/SingleStadiumMap'), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200"><p className="text-gray-500">Carregando mapa...</p></div>
+});
 
 // Tipos
 interface Stadium {
@@ -17,33 +24,27 @@ interface Stadium {
   longitude?: number;
   history?: string;
   image_url?: string;
+  url?: string;
 }
 
 type Props = {
   params: { stadiumId: string };
 };
 
-const API_URL = getApiUrl();
-
-// Função helper para converter coordenadas de forma segura
 function safeCoordinates(lat: any, lng: any): { latitude: number; longitude: number } | null {
-  try {
-    const latitude = typeof lat === 'string' ? parseFloat(lat) : lat;
-    const longitude = typeof lng === 'string' ? parseFloat(lng) : lng;
-    
-    if (typeof latitude === 'number' && typeof longitude === 'number' && 
-        !isNaN(latitude) && !isNaN(longitude) && 
-        latitude >= -90 && latitude <= 90 && 
-        longitude >= -180 && longitude <= 180) {
-      return { latitude, longitude };
-    }
-    
-    return null;
-  } catch (error) {
-    console.warn('Erro ao converter coordenadas:', error);
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  
+  if (isNaN(latitude) || isNaN(longitude) ||
+      latitude < -90 || latitude > 90 ||
+      longitude < -180 || longitude > 180) {
     return null;
   }
+  
+  return { latitude, longitude };
 }
+
+const API_URL = getApiUrl();
 
 async function getStadiumData(stadiumId: string): Promise<Stadium | null> {
   try {
@@ -69,9 +70,6 @@ export default async function StadiumPage({ params }: Props) {
     notFound();
   }
 
-  // Converter coordenadas de forma segura
-  const coordinates = safeCoordinates(stadium.latitude, stadium.longitude);
-
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header showBackToHome={true} />
@@ -79,33 +77,37 @@ export default async function StadiumPage({ params }: Props) {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header do estádio */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-                     <div className="h-64 md:h-80 bg-gray-200 relative">
-             <StadiumImage 
-               imageUrl={stadium.image_url} 
-               name={stadium.name}
-             />
-           </div>
+          <div className="h-64 md:h-80 bg-gray-200 relative">
+            <StadiumImage 
+              imageUrl={stadium.image_url} 
+              name={stadium.name}
+            />
+          </div>
           
           <div className="p-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{stadium.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4 flex items-center">
+              <Building className="h-8 w-8 mr-3 text-indigo-600" />
+              {stadium.name}
+            </h1>
             
-            {/* Informações básicas */}
+            {/* Informações básicas em grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-700">
-                    {stadium.city}
-                    {stadium.state && `, ${stadium.state}`}
-                    {stadium.country && `, ${stadium.country}`}
-                  </span>
-                </div>
+                {(stadium.city || stadium.state) && (
+                  <div className="flex items-center space-x-3">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                    <span className="text-gray-700">
+                      {stadium.city}{stadium.city && stadium.state ? ', ' : ''}{stadium.state}
+                      {stadium.country && stadium.country !== 'Brasil' && `, ${stadium.country}`}
+                    </span>
+                  </div>
+                )}
                 
                 {stadium.capacity && (
                   <div className="flex items-center space-x-3">
                     <Users className="h-5 w-5 text-gray-400" />
                     <span className="text-gray-700">
-                      Capacidade: {stadium.capacity.toLocaleString()} lugares
+                      Capacidade: {stadium.capacity.toLocaleString()} pessoas
                     </span>
                   </div>
                 )}
@@ -121,14 +123,7 @@ export default async function StadiumPage({ params }: Props) {
                   </div>
                 )}
                 
-                {coordinates && (
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <span className="text-gray-700">
-                      {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
-                    </span>
-                  </div>
-                )}
+
               </div>
             </div>
           </div>
@@ -137,10 +132,7 @@ export default async function StadiumPage({ params }: Props) {
         {/* História do estádio */}
         {stadium.history && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-              <Clock className="h-6 w-6 mr-2 text-gray-400" />
-              História
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">História</h2>
             <div className="prose prose-gray max-w-none">
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {stadium.history}
@@ -150,18 +142,27 @@ export default async function StadiumPage({ params }: Props) {
         )}
 
         {/* Mapa (se houver coordenadas) */}
-        {coordinates && (
+        {stadium.latitude && stadium.longitude &&
+          !isNaN(Number(stadium.latitude)) && !isNaN(Number(stadium.longitude)) &&
+          Number(stadium.latitude) >= -90 && Number(stadium.latitude) <= 90 &&
+          Number(stadium.longitude) >= -180 && Number(stadium.longitude) <= 180 && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
               <MapPin className="h-6 w-6 mr-2 text-gray-400" />
               Localização
             </h2>
-            <div className="h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500">
-                Mapa: {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
-              </p>
-              {/* Aqui você pode integrar um mapa real como Google Maps ou OpenStreetMap */}
-            </div>
+            <SingleStadiumMap 
+              stadium={{
+                id: stadium.id,
+                name: stadium.name,
+                city: stadium.city,
+                state: stadium.state,
+                latitude: Number(stadium.latitude),
+                longitude: Number(stadium.longitude),
+                capacity: stadium.capacity
+              }}
+              height="h-64"
+            />
           </div>
         )}
       </main>

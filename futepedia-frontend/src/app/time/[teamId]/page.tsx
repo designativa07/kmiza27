@@ -1,7 +1,7 @@
 'use client';
 
 import { notFound } from 'next/navigation';
-import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building } from 'lucide-react';
+import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink } from 'lucide-react';
 import { getTeamLogoUrl, getPlayerImageUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { Header } from '@/components/Header';
 import dynamic from 'next/dynamic';
@@ -45,6 +45,7 @@ interface Stadium {
   history?: string;
   latitude?: number;
   longitude?: number;
+  url?: string;
 }
 
 interface Team {
@@ -294,6 +295,8 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
                       Inaugurado em: {team.stadium.opened_year}
                     </p>
                   )}
+                  
+
                 </div>
                 
                 {team.stadium.history && (
