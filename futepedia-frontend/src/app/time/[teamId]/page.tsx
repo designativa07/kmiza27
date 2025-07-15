@@ -2,8 +2,9 @@
 
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink } from 'lucide-react';
-import { getTeamLogoUrl, getPlayerImageUrl, getStadiumImageUrl } from '@/lib/cdn';
+import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { Header } from '@/components/Header';
+import { PlayerCard } from '@/components/PlayerCard';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
@@ -26,6 +27,7 @@ interface Player {
   position?: string;
   date_of_birth?: string;
   image_url?: string;
+  state?: string;
 }
 
 interface PlayerHistory {
@@ -87,39 +89,6 @@ async function getTeamData(teamId: string) {
   
   return { team, players };
 }
-
-const PlayerCard = ({ item }: { item: PlayerHistory }) => {
-  const player = item.player;
-  const age = player.date_of_birth ? new Date().getFullYear() - new Date(player.date_of_birth).getFullYear() : null;
-
-  return (
-    <div className="bg-white border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden flex flex-col">
-      <div className="bg-gray-100 h-20 md:h-24 flex items-center justify-center relative">
-        {player.image_url ? (
-          <img 
-            src={getPlayerImageUrl(player.image_url)} 
-            alt={player.name} 
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <User className="h-8 w-8 md:h-12 md:w-12 text-gray-400" />
-        )}
-        {item.jersey_number && (
-          <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs font-bold w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full">
-            {item.jersey_number}
-          </div>
-        )}
-      </div>
-      <div className="p-2 md:p-3 flex-grow">
-        <h3 className="text-xs md:text-sm font-bold text-gray-900 leading-tight">{player.name}</h3>
-        <p className="text-xs text-gray-600 mt-0.5">{player.position || 'Não especificada'}</p>
-        {age && (
-           <p className="text-xs text-gray-500 mt-0.5">{age} anos</p>
-        )}
-      </div>
-    </div>
-  );
-};
 
 const SocialLinks = ({ team }: { team: Team }) => {
   if (!team.social_media || Object.values(team.social_media).every(url => !url)) {
@@ -198,7 +167,14 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
             {players.length > 0 ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
                 {players.map((item) => (
-                  <PlayerCard key={item.player.id} item={item} />
+                  <PlayerCard 
+                    key={item.player.id} 
+                    player={{
+                      ...item.player,
+                      state: 'active' // Assumindo que jogadores no elenco estão ativos
+                    }}
+                    jerseyNumber={item.jersey_number}
+                  />
                 ))}
               </div>
             ) : (
@@ -295,8 +271,6 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
                       Inaugurado em: {team.stadium.opened_year}
                     </p>
                   )}
-                  
-
                 </div>
                 
                 {team.stadium.history && (
