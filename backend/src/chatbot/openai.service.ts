@@ -289,11 +289,20 @@ export class OpenAIService implements OnModuleInit {
         };
       }
       
-      // Saudação padrão
-      console.log(`❓ Nenhuma intenção específica detectada, retornando greeting`);
+      // Detectar saudações explícitas
+      if (this.isGreeting(lowerMessage)) {
+        console.log(`👋 Saudação detectada: "${message}"`);
+        return {
+          intent: 'greeting',
+          confidence: 0.95
+        };
+      }
+
+      // Mensagem não reconhecida
+      console.log(`❓ Nenhuma intenção específica detectada para: "${message}"`);
       return {
-        intent: 'greeting',
-        confidence: 0.50
+        intent: 'unknown',
+        confidence: 0.30
       };
       
     } catch (error) {
@@ -391,5 +400,30 @@ export class OpenAIService implements OnModuleInit {
     }
     
     return undefined;
+  }
+
+  /**
+   * Verificar se a mensagem é uma saudação
+   */
+  private isGreeting(message: string): boolean {
+    const lowerMessage = message.toLowerCase().trim();
+    const greetings = [
+      'oi', 'olá', 'ola', 'oie', 'opa', 'opa!',
+      'bom dia', 'boa tarde', 'boa noite',
+      'e aí', 'e ai', 'eai', 'salve', 'fala', 'fala aí', 'fala ai',
+      'hello', 'hi', 'hey', 'hola',
+      'menu', 'inicio', 'começar', 'comecar', 'start',
+      'oi bot', 'ola bot', 'oi kmiza', 'ola kmiza',
+      'tchau', 'valeu', 'obrigado', 'obrigada', 'brigado'
+    ];
+    
+    // Verificar correspondência exata ou com espaços
+    return greetings.some(greeting => {
+      return lowerMessage === greeting || 
+             lowerMessage === greeting + '!' ||
+             lowerMessage.startsWith(greeting + ' ') ||
+             lowerMessage.endsWith(' ' + greeting) ||
+             (lowerMessage.length <= 15 && lowerMessage.includes(greeting));
+    });
   }
 } 

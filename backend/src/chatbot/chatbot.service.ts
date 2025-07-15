@@ -103,6 +103,9 @@ export class ChatbotService {
       // Criar ou atualizar usuário no banco de dados
       const user = await this.usersService.findOrCreateUser(phoneNumber, pushName, userOrigin);
       
+      // Verificar se é primeira interação (usuário criado há menos de 1 minuto)
+      const isFirstInteraction = this.isFirstInteraction(user);
+      
       // Atualizar última interação
       await this.usersService.updateLastInteraction(phoneNumber);
 
@@ -122,101 +125,127 @@ export class ChatbotService {
       console.log(`🧠 Intenção detectada: ${analysis.intent} (${(analysis.confidence * 100).toFixed(0)}%)`);
 
       let response: string;
+      let shouldSendMenu = false;
 
+      // Verificar se é saudação ou primeira interação
+      const isGreeting = analysis.intent === 'greeting' || this.isExplicitGreeting(message);
+      const shouldSendWelcome = isFirstInteraction || isGreeting;
+
+      if (shouldSendWelcome) {
+        console.log(`👋 ${isFirstInteraction ? 'Primeira interação' : 'Saudação'} detectada para ${phoneNumber}`);
+        
+        if (userOrigin === 'site') {
+          // Para o site, verificar se já enviou boas-vindas
+          const alreadySent = await this.hasWelcomeBeenSent(phoneNumber);
+          if (!alreadySent) {
+            await this.markWelcomeSent(phoneNumber);
+            return await this.getWelcomeMessage();
+          } else {
+            // Se já enviou boas-vindas, enviar mensagem mais simples
+            return '❓ Como posso te ajudar? Digite sua pergunta sobre futebol!';
+          }
+        } else {
+          // Para WhatsApp: enviar mensagem de boas-vindas + menu
+          const welcomeMessage = await this.getWelcomeMessage();
+          await this.sendWelcomeMenu(phoneNumber);
+          return welcomeMessage;
+        }
+      }
+
+      // Processar intenções específicas
       switch (analysis.intent) {
         case 'next_match':
           response = await this.findNextMatch(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'current_match':
           response = await this.getCurrentMatch(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'team_info':
           response = await this.getTeamInfo(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'table':
           response = await this.getCompetitionTable(analysis.competition ?? 'brasileirao');
+          shouldSendMenu = true;
           break;
 
         case 'matches_today':
           response = await this.getTodayMatches();
+          shouldSendMenu = true;
           break;
 
         case 'matches_week':
           response = await this.getWeekMatches();
+          shouldSendMenu = true;
           break;
 
         case 'competition_info':
           response = await this.getCompetitionInfo(analysis.competition ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'team_position':
           response = await this.getTeamPosition(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'last_match':
           response = await this.getLastMatch(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'broadcast_info':
           response = await this.getBroadcastInfo(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'team_statistics':
           response = await this.footballDataService.getTeamStatistics(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'top_scorers':
           response = await this.getTopScorers(analysis.competition);
+          shouldSendMenu = true;
           break;
 
         case 'channels_info':
           response = await this.footballDataService.getChannelInfo();
+          shouldSendMenu = true;
           break;
 
         case 'competition_stats':
           response = await this.footballDataService.getCompetitionStats(analysis.competition ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'team_squad':
           response = await this.getTeamSquad(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         case 'player_info':
           response = await this.getPlayerInfo(analysis.player ?? '');
-          break;
-
-        case 'team_info':
-          response = await this.getTeamInfo(analysis.team ?? '');
+          shouldSendMenu = true;
           break;
 
         default:
-          // Para usuários do site, retornar apenas a mensagem de boas-vindas
-          if (userOrigin === 'site') {
-            response = await this.getWelcomeMessage();
-          } else {
-            // Para usuários do WhatsApp, enviar menu de boas-vindas como botões de lista
-            await this.sendWelcomeMenu(phoneNumber);
-            return '';
-          }
+          // Mensagem não reconhecida - enviar ajuda básica
+          response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+          shouldSendMenu = true;
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
       
-      // Para usuários do WhatsApp, enviar menu após a resposta (exceto quando a resposta está vazia)
-      if (userOrigin === 'whatsapp' && response && response.trim() !== '') {
+      // Para usuários do WhatsApp, enviar menu após respostas específicas
+      if (userOrigin === 'whatsapp' && shouldSendMenu && response && response.trim() !== '') {
         console.log(`📋 Agendando envio do menu para usuário WhatsApp: ${phoneNumber}`);
-        // Agendar envio do menu após a resposta principal
-        setTimeout(async () => {
-          try {
-            await this.sendWelcomeMenu(phoneNumber);
-            console.log(`✅ Menu enviado com sucesso para ${phoneNumber}`);
-          } catch (error) {
-            console.error(`❌ Erro ao enviar menu para ${phoneNumber}:`, error);
-          }
-        }, 1500); // Aguardar 1.5 segundos antes de enviar o menu
+        this.scheduleMenuSend(phoneNumber);
       }
       
       return response;
@@ -1401,14 +1430,7 @@ Digite sua pergunta ou comando! ⚽`;
 
       // Para estados de conversa no WhatsApp, também enviar o menu após a resposta
       console.log(`📋 Agendando envio do menu para estado de conversa: ${phoneNumber}`);
-      setTimeout(async () => {
-        try {
-          await this.sendWelcomeMenu(phoneNumber);
-          console.log(`✅ Menu enviado com sucesso após estado de conversa para ${phoneNumber}`);
-        } catch (error) {
-          console.error(`❌ Erro ao enviar menu após estado de conversa para ${phoneNumber}:`, error);
-        }
-      }, 1500); // Aguardar 1.5 segundos antes de enviar o menu
+      this.scheduleMenuSend(phoneNumber);
 
       return response;
     } catch (error) {
@@ -2426,6 +2448,68 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
           }
         }
       }
+    }
+  }
+
+  /**
+   * Verificar se é a primeira interação do usuário (criado há menos de 2 minutos)
+   */
+  private isFirstInteraction(user: any): boolean {
+    if (!user || !user.created_at) return false;
+    
+    const now = new Date();
+    const userCreated = new Date(user.created_at);
+    const diffMinutes = (now.getTime() - userCreated.getTime()) / (1000 * 60);
+    
+    return diffMinutes <= 2; // Considera primeira interação se criado há menos de 2 minutos
+  }
+
+  /**
+   * Verificar se a mensagem é uma saudação explícita
+   */
+  private isExplicitGreeting(message: string): boolean {
+    const lowerMessage = message.toLowerCase().trim();
+    const greetings = [
+      'oi', 'olá', 'ola', 'oie', 'opa',
+      'bom dia', 'boa tarde', 'boa noite',
+      'e aí', 'e ai', 'eai', 'salve', 'fala',
+      'hello', 'hi', 'hey', 'hola',
+      'tchau', 'valeu', 'obrigado', 'obrigada',
+      'menu', 'inicio', 'começar', 'comecar', 'start'
+    ];
+    
+    return greetings.some(greeting => 
+      lowerMessage === greeting || 
+      lowerMessage.startsWith(greeting + ' ') ||
+      lowerMessage.endsWith(' ' + greeting)
+    );
+  }
+
+  /**
+   * Marcar que já enviou mensagem de boas-vindas para usuário do site
+   */
+  private async markWelcomeSent(phoneNumber: string): Promise<void> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      const preferences = user.preferences || {};
+      preferences.welcomeSent = true;
+      preferences.welcomeSentAt = new Date().toISOString();
+      await this.usersService.updateUser(user.id, { preferences });
+    } catch (error) {
+      console.error('Erro ao marcar mensagem de boas-vindas enviada:', error);
+    }
+  }
+
+  /**
+   * Verificar se já enviou mensagem de boas-vindas para usuário do site
+   */
+  private async hasWelcomeBeenSent(phoneNumber: string): Promise<boolean> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      return user.preferences?.welcomeSent === true;
+    } catch (error) {
+      console.error('Erro ao verificar se mensagem de boas-vindas foi enviada:', error);
+      return false;
     }
   }
 } 
