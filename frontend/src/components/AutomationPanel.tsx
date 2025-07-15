@@ -173,20 +173,23 @@ export default function AutomationPanel() {
 
   const loadWhatsAppMenu = async () => {
     try {
-      const response = await fetch(apiUrl('whatsapp-menu/sections'))
-      if (response.ok) {
-        const sections = await response.json()
-        
-        // Converter o formato da API para o formato do frontend
-        const menuConfig = {
-          title: 'Kmiza27 Bot',
-          description: 'Selecione uma das opções abaixo',
-          footer: 'Kmiza27 Bot ⚽',
-          sections: sections
-        }
-        
-        setWhatsappMenu(menuConfig)
+      // Carregar seções do menu
+      const sectionsResponse = await fetch(apiUrl('whatsapp-menu/sections'))
+      const sections = await sectionsResponse.json()
+      
+      // Carregar configurações gerais do menu
+      const generalResponse = await fetch(apiUrl('whatsapp-menu/general-config'))
+      const generalConfig = await generalResponse.json()
+      
+      // Converter o formato da API para o formato do frontend
+      const menuConfig = {
+        title: generalConfig.title || 'Kmiza27 Bot',
+        description: generalConfig.description || 'Selecione uma das opções abaixo',
+        footer: generalConfig.footer || 'Kmiza27 Bot ⚽',
+        sections: sections
       }
+      
+      setWhatsappMenu(menuConfig)
     } catch (error) {
       console.error('Erro ao carregar menu do WhatsApp:', error)
       // Manter o menu padrão em caso de erro
@@ -269,18 +272,33 @@ export default function AutomationPanel() {
   const saveWhatsAppMenu = async () => {
     setSaving(true)
     try {
+      // Salvar configurações gerais do menu
+      await fetch(apiUrl('whatsapp-menu/general-config'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: whatsappMenu.title,
+          description: whatsappMenu.description,
+          footer: whatsappMenu.footer
+        })
+      })
+
       // Primeiro, limpar todas as configurações existentes
       const existingConfigs = await fetch(apiUrl('whatsapp-menu/configs'))
       const configs = await existingConfigs.json()
       
-      // Desativar todas as configurações existentes
+      // Desativar todas as configurações existentes (exceto as configurações gerais)
       for (const config of configs) {
-        await fetch(apiUrl(`whatsapp-menu/configs/${config.id}`), {
-          method: 'DELETE'
-        })
+        if (!config.item_id.startsWith('MENU_GENERAL_')) {
+          await fetch(apiUrl(`whatsapp-menu/configs/${config.id}`), {
+            method: 'DELETE'
+          })
+        }
       }
       
-      // Salvar novas configurações
+      // Salvar novas configurações das seções
       let itemOrder = 1
       for (let sectionIndex = 0; sectionIndex < whatsappMenu.sections.length; sectionIndex++) {
         const section = whatsappMenu.sections[sectionIndex]
@@ -525,6 +543,14 @@ export default function AutomationPanel() {
                         rows={8}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="Digite a mensagem de boas-vindas..."
+                      />
+                    ) : config.key === 'menu_description' ? (
+                      <textarea
+                        value={config.value}
+                        onChange={(e) => handleConfigChange(config.id, e.target.value)}
+                        rows={3}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Digite a descrição do menu..."
                       />
                     ) : (
                       <input

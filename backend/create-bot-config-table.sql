@@ -38,6 +38,8 @@ Mantenha as respostas concisas e informativas.', 'Prompt principal para o OpenAI
 📅 **Jogos hoje** - "Jogos de hoje"
 🏆 **Competições** - "Copa Libertadores"
 
-💬 **O que você gostaria de saber?**', 'Mensagem de boas-vindas do bot', 'text')
+💬 **O que você gostaria de saber?**', 'Mensagem de boas-vindas do bot', 'text'),
+
+('menu_description', 'Selecione uma das opções abaixo para começar:', 'Descrição exibida no menu interativo do WhatsApp', 'text')
 
 ON CONFLICT (key) DO NOTHING; 

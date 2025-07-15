@@ -80,6 +80,11 @@ export class BotConfigController {
         description: 'Mensagem de boas-vindas do bot'
       },
       {
+        key: 'menu_description',
+        value: 'Selecione uma das opções abaixo para começar:',
+        description: 'Descrição exibida no menu interativo do WhatsApp'
+      },
+      {
         key: 'auto_response_enabled',
         value: 'true',
         description: 'Habilitar respostas automáticas do bot'

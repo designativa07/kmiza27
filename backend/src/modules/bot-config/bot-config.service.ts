@@ -52,6 +52,12 @@ export class BotConfigService {
           type: 'text' as const
         },
         {
+          key: 'menu_description',
+          value: 'Selecione uma das opções abaixo para começar:',
+          description: 'Descrição exibida no menu interativo do WhatsApp',
+          type: 'text' as const
+        },
+        {
           key: 'auto_response_enabled',
           value: 'true',
           description: 'Habilitar respostas automáticas do bot',
