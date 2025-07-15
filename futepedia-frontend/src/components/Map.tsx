@@ -4,17 +4,10 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import 'leaflet-defaulticon-compatibility';
-
-interface Stadium {
-  id: number;
-  name: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-}
+import { Stadium } from '@/types/stadium';
 
 interface MapProps {
-  stadiums: Stadium[];
+  stadiums: (Stadium & { latitude: number; longitude: number })[];
 }
 
 export default function Map({ stadiums }: MapProps) {
@@ -37,7 +30,7 @@ export default function Map({ stadiums }: MapProps) {
         <Marker key={stadium.id} position={[stadium.latitude, stadium.longitude]}>
           <Popup>
             <div className="font-bold">{stadium.name}</div>
-            <div>{stadium.city}</div>
+            <div>{stadium.city || 'Cidade não informada'}</div>
           </Popup>
         </Marker>
       ))}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, UserIcon, ChatBubbleLeftRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, UserIcon, ChatBubbleLeftRightIcon, UserGroupIcon, HeartIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { authService } from '@/services/authService'
 
@@ -28,6 +28,11 @@ export default function UsersManager() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [userStats, setUserStats] = useState({
+    total: 0,
+    active: 0,
+    withFavoriteTeam: 0
+  })
   const [formData, setFormData] = useState({
     phone_number: '',
     name: '',
@@ -36,6 +41,7 @@ export default function UsersManager() {
 
   useEffect(() => {
     fetchUsers()
+    fetchUserStats()
   }, [])
 
   const fetchUsers = async () => {
@@ -61,6 +67,30 @@ export default function UsersManager() {
     }
   }
 
+  const fetchUserStats = async () => {
+    try {
+      console.log('🔄 UsersManager: Carregando estatísticas de usuários...')
+      
+      const response = await fetch(API_ENDPOINTS.users.stats(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar estatísticas: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      console.log('✅ UsersManager: Estatísticas recebidas:', data)
+      setUserStats(data)
+    } catch (error) {
+      console.error('❌ UsersManager: Erro ao carregar estatísticas:', error)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -76,6 +106,7 @@ export default function UsersManager() {
         
         if (response.ok) {
           fetchUsers() // Recarregar lista
+          fetchUserStats() // Recarregar estatísticas
         }
       } else {
         // Criar novo usuário
@@ -92,6 +123,7 @@ export default function UsersManager() {
         
         if (response.ok) {
           fetchUsers() // Recarregar lista
+          fetchUserStats() // Recarregar estatísticas
         }
       }
 
@@ -139,6 +171,7 @@ export default function UsersManager() {
           console.log('✅ UsersManager: Usuário excluído com sucesso')
           // Remover da interface apenas após confirmação da API
           setUsers(users.filter(user => user.id !== id))
+          fetchUserStats() // Recarregar estatísticas
         } else {
           throw new Error(`Erro ao excluir usuário: ${response.status}`)
         }
@@ -316,13 +349,13 @@ export default function UsersManager() {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <ChatBubbleLeftRightIcon className="h-6 w-6 text-blue-400" />
+                <HeartIcon className="h-6 w-6 text-yellow-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total de Usuários</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Com Time Favorito</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users.length}
+                    {userStats.withFavoriteTeam}
                   </dd>
                 </dl>
               </div>
