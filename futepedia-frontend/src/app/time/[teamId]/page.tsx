@@ -93,7 +93,7 @@ const PlayerCard = ({ item }: { item: PlayerHistory }) => {
 
   return (
     <div className="bg-white border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden flex flex-col">
-      <div className="bg-gray-100 h-32 flex items-center justify-center relative">
+      <div className="bg-gray-100 h-20 md:h-24 flex items-center justify-center relative">
         {player.image_url ? (
           <img 
             src={getPlayerImageUrl(player.image_url)} 
@@ -101,19 +101,19 @@ const PlayerCard = ({ item }: { item: PlayerHistory }) => {
             className="h-full w-full object-cover"
           />
         ) : (
-          <User className="h-16 w-16 text-gray-400" />
+          <User className="h-8 w-8 md:h-12 md:w-12 text-gray-400" />
         )}
         {item.jersey_number && (
-          <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full">
+          <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs font-bold w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full">
             {item.jersey_number}
           </div>
         )}
       </div>
-      <div className="p-4 flex-grow">
-        <h3 className="text-base font-bold text-gray-900">{player.name}</h3>
-        <p className="text-sm text-gray-600">{player.position || 'Não especificada'}</p>
+      <div className="p-2 md:p-3 flex-grow">
+        <h3 className="text-xs md:text-sm font-bold text-gray-900 leading-tight">{player.name}</h3>
+        <p className="text-xs text-gray-600 mt-0.5">{player.position || 'Não especificada'}</p>
         {age && (
-           <p className="text-xs text-gray-500 mt-1">{age} anos</p>
+           <p className="text-xs text-gray-500 mt-0.5">{age} anos</p>
         )}
       </div>
     </div>
@@ -159,27 +159,26 @@ const TabButton = ({ active, onClick, children, icon: Icon }: {
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+    className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
       active 
         ? 'border-indigo-500 text-indigo-600' 
         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
     }`}
   >
-    <Icon className="h-4 w-4" />
+    <Icon className="h-3 w-3 md:h-4 md:w-4" />
     <span>{children}</span>
   </button>
 );
 
 const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) => {
-  const [activeTab, setActiveTab] = useState<'jogos' | 'elenco' | 'historia' | 'titulos' | 'estadio' | 'informacoes'>('jogos');
+  const [activeTab, setActiveTab] = useState<'jogos' | 'elenco' | 'info' | 'titulos' | 'estadio'>('jogos');
 
   const tabs = [
     { id: 'jogos' as const, label: 'Jogos', icon: PlayCircle },
     { id: 'elenco' as const, label: 'Elenco', icon: UserCheck },
-    { id: 'historia' as const, label: 'História', icon: BookOpen },
+    { id: 'info' as const, label: 'Info', icon: Info },
     { id: 'titulos' as const, label: 'Títulos', icon: Trophy },
     { id: 'estadio' as const, label: 'Estádio', icon: Building },
-    { id: 'informacoes' as const, label: 'Informações', icon: Info },
   ];
 
   const renderTabContent = () => {
@@ -193,18 +192,18 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
       
       case 'elenco':
         return (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Elenco Principal</h2>
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-2 md:mb-4">Elenco Principal</h2>
             {players.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
                 {players.map((item) => (
                   <PlayerCard key={item.player.id} item={item} />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <h3 className="text-xl font-medium text-gray-900">Elenco Indisponível</h3>
-                <p className="mt-2 text-md text-gray-500">
+              <div className="text-center py-6 md:py-8">
+                <h3 className="text-lg md:text-xl font-medium text-gray-900">Elenco Indisponível</h3>
+                <p className="mt-2 text-sm md:text-md text-gray-500">
                   Não foi possível carregar o elenco deste time no momento.
                 </p>
               </div>
@@ -212,32 +211,44 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
           </div>
         );
       
-      case 'historia':
-        return team.history ? (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">História</h2>
-            <p className="text-gray-600 whitespace-pre-wrap">{team.history}</p>
-          </div>
-        ) : (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">História</h2>
-            <p className="text-gray-500 text-center">Informações sobre a história do time não estão disponíveis no momento.</p>
+      case 'info':
+        return (
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            {/* História */}
+            <div className="mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">História</h2>
+              {team.history ? (
+                <p className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">{team.history}</p>
+              ) : (
+                <p className="text-gray-500 text-center text-sm md:text-base">Informações sobre a história do time não estão disponíveis no momento.</p>
+              )}
+            </div>
+            
+            {/* Informações */}
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">Informações</h2>
+              {team.information ? (
+                <p className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">{team.information}</p>
+              ) : (
+                <p className="text-gray-500 text-center text-sm md:text-base">Informações adicionais sobre o time não estão disponíveis no momento.</p>
+              )}
+            </div>
           </div>
         );
       
       case 'titulos':
         return (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Títulos</h2>
-            <p className="text-gray-500 text-center">Informações sobre títulos serão adicionadas em breve.</p>
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">Títulos</h2>
+            <p className="text-gray-500 text-center text-sm md:text-base">Informações sobre títulos serão adicionadas em breve.</p>
           </div>
         );
       
       case 'estadio':
         return team.stadium ? (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 flex items-center">
+              <MapPin className="h-5 w-5 md:h-6 md:w-6 mr-2 text-indigo-600" />
               Estádio
             </h2>
             
@@ -320,25 +331,12 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
             )}
           </div>
         ) : (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <MapPin className="h-6 w-6 mr-2 text-indigo-600" />
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4 flex items-center">
+              <MapPin className="h-5 w-5 md:h-6 md:w-6 mr-2 text-indigo-600" />
               Estádio
             </h2>
-            <p className="text-gray-500 text-center">Informações sobre o estádio não estão disponíveis no momento.</p>
-          </div>
-        );
-      
-      case 'informacoes':
-        return team.information ? (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
-            <p className="text-gray-600 whitespace-pre-wrap">{team.information}</p>
-          </div>
-        ) : (
-          <div className="bg-white p-6 border-t border-gray-300">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações</h2>
-            <p className="text-gray-500 text-center">Informações adicionais sobre o time não estão disponíveis no momento.</p>
+            <p className="text-gray-500 text-center text-sm md:text-base">Informações sobre o estádio não estão disponíveis no momento.</p>
           </div>
         );
       
@@ -349,7 +347,7 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
 
   return (
     <div>
-      <div className="flex space-x-1 border-b border-gray-200 bg-white px-6 overflow-x-auto">
+      <div className="flex space-x-0 md:space-x-1 border-b border-gray-200 bg-white px-2 md:px-6 overflow-x-auto">
         {tabs.map((tab) => (
           <TabButton
             key={tab.id}
@@ -406,25 +404,25 @@ export default function TeamPage({ params }: { params: { teamId: string } }) {
     <div className="bg-white min-h-screen">
       <Header showBackToHome={true} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center justify-between bg-white p-6">
-          <div className="flex items-center space-x-4">
+      <main className="max-w-7xl mx-auto px-2 md:px-4 lg:px-8 py-1 md:py-2">
+        <div className="flex items-center justify-between bg-white p-3 md:p-6">
+          <div className="flex items-center space-x-3 md:space-x-4">
             {team.logo_url ? (
               <img 
                 src={getTeamLogoUrl(team.logo_url)} 
                 alt={`${team.name} logo`} 
-                className="h-16 w-16 object-contain"
+                className="h-12 w-12 md:h-16 md:w-16 object-contain"
               />
             ) : (
-              <Shield className="h-16 w-16 text-gray-300" />
+              <Shield className="h-12 w-12 md:h-16 md:w-16 text-gray-300" />
             )}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
-              <p className="text-md text-gray-500">{team.city}, {team.country}</p>
+              <h1 className="text-xl md:text-3xl font-bold text-gray-900">{team.name}</h1>
+              <p className="text-sm md:text-md text-gray-500">{team.city}, {team.country}</p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             <SocialLinks team={team} />
           </div>
         </div>

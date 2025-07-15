@@ -74,75 +74,75 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
   }
 
   return (
-    <div className={`bg-white p-3 hover:bg-gray-50 transition-colors ${resultClass}`}>
+    <div className={`bg-white p-2 md:p-3 hover:bg-gray-50 transition-colors ${resultClass}`}>
       {/* Cabeçalho com data e local */}
-              <div className="flex items-center justify-center mb-2 space-x-4">
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <Calendar className="h-4 w-4" />
+      <div className="flex items-center justify-center mb-1 md:mb-2 space-x-2 md:space-x-4">
+        <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-gray-600">
+          <Calendar className="h-3 w-3 md:h-4 md:w-4" />
           <span>{formattedDate}</span>
-          <Clock className="h-4 w-4 ml-2" />
+          <Clock className="h-3 w-3 md:h-4 md:w-4 ml-1 md:ml-2" />
           <span>{formattedTime}</span>
         </div>
         {isHome ? (
-          <div className="flex items-center space-x-2 text-xs">
-            <Home className="h-4 w-4 text-blue-500" />
+          <div className="flex items-center space-x-1 text-xs">
+            <Home className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
             <span className="text-blue-600 font-medium">Em Casa</span>
           </div>
         ) : (
-          <div className="flex items-center space-x-2 text-xs">
-            <Plane className="h-4 w-4 text-orange-500" />
+          <div className="flex items-center space-x-1 text-xs">
+            <Plane className="h-3 w-3 md:h-4 md:w-4 text-orange-500" />
             <span className="text-orange-600 font-medium">Visitante</span>
           </div>
         )}
       </div>
 
       {/* Confronto */}
-      <div className="flex items-center justify-center mb-2 space-x-3 sm:space-x-4">
+      <div className="flex items-center justify-center mb-1 md:mb-2 space-x-2 md:space-x-4">
         {/* Time da Casa: Nome + Escudo */}
-        <div className={`flex items-center space-x-3 ${match.home_team.id === teamId ? 'font-bold' : ''}`}>
-          <span className={`text-sm ${match.home_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-right`} title={match.home_team.name}>
-            {match.home_team.name.length > 12 ? `${match.home_team.name.substring(0, 12)}...` : match.home_team.name}
+        <div className={`flex items-center space-x-2 md:space-x-3 ${match.home_team.id === teamId ? 'font-bold' : ''}`}>
+          <span className={`text-xs md:text-sm ${match.home_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-right`} title={match.home_team.name}>
+            {match.home_team.name.length > 10 ? `${match.home_team.name.substring(0, 10)}...` : match.home_team.name}
           </span>
           {match.home_team.logo_url && (
             <img 
               src={getTeamLogoUrl(match.home_team.logo_url)} 
               alt={match.home_team.name}
-              className="h-7 w-7 object-contain flex-shrink-0"
+              className="h-6 w-6 md:h-7 md:w-7 object-contain flex-shrink-0"
             />
           )}
         </div>
 
         {/* Placar ou VS */}
-        <div className="text-center px-3 flex-shrink-0">
+        <div className="text-center px-2 md:px-3 flex-shrink-0">
           {isFinished && match.home_score !== undefined && match.away_score !== undefined ? (
-            <div className="flex items-center space-x-3">
-              <span className="text-lg font-bold text-gray-900">{match.home_score}</span>
-              <span className="text-gray-400 font-medium">×</span>
-              <span className="text-lg font-bold text-gray-900">{match.away_score}</span>
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <span className="text-base md:text-lg font-bold text-gray-900">{match.home_score}</span>
+              <span className="text-gray-400 font-medium text-sm md:text-base">×</span>
+              <span className="text-base md:text-lg font-bold text-gray-900">{match.away_score}</span>
             </div>
           ) : (
-            <div className="text-gray-500 font-medium text-sm px-3">×</div>
+            <div className="text-gray-500 font-medium text-sm px-2 md:px-3">×</div>
           )}
         </div>
 
         {/* Time Visitante: Escudo + Nome */}
-        <div className={`flex items-center space-x-3 ${match.away_team.id === teamId ? 'font-bold' : ''}`}>
+        <div className={`flex items-center space-x-2 md:space-x-3 ${match.away_team.id === teamId ? 'font-bold' : ''}`}>
           {match.away_team.logo_url && (
             <img 
               src={getTeamLogoUrl(match.away_team.logo_url)} 
               alt={match.away_team.name}
-              className="h-7 w-7 object-contain flex-shrink-0"
+              className="h-6 w-6 md:h-7 md:w-7 object-contain flex-shrink-0"
             />
           )}
-          <span className={`text-sm ${match.away_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-left`} title={match.away_team.name}>
-            {match.away_team.name.length > 12 ? `${match.away_team.name.substring(0, 12)}...` : match.away_team.name}
+          <span className={`text-xs md:text-sm ${match.away_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-left`} title={match.away_team.name}>
+            {match.away_team.name.length > 10 ? `${match.away_team.name.substring(0, 10)}...` : match.away_team.name}
           </span>
         </div>
       </div>
       
       {/* Informações adicionais - tudo na mesma linha */}
       <div className="text-xs text-gray-500 text-center">
-        <div className="flex items-center justify-center space-x-3 flex-wrap">
+        <div className="flex items-center justify-center space-x-2 md:space-x-3 flex-wrap">
           <span className="font-medium">{match.competition.name}</span>
           {match.round && (
             <>
@@ -153,7 +153,7 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
           {match.stadium && (
             <>
               <span>•</span>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <MapPin className="h-3 w-3" />
                 <span>{match.stadium.name}{match.stadium.city && `, ${match.stadium.city}`}</span>
               </div>
@@ -205,10 +205,10 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
 
   if (loading) {
     return (
-      <div className="bg-white px-6 py-4 border-t border-gray-300">
-        <div className="text-center py-6">
+      <div className="bg-white px-3 md:px-6 py-3 md:py-4 border-t border-gray-300">
+        <div className="text-center py-4 md:py-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-2 text-gray-500">Carregando jogos...</p>
+          <p className="mt-2 text-gray-500 text-sm md:text-base">Carregando jogos...</p>
         </div>
       </div>
     );
@@ -216,20 +216,20 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
 
   if (error) {
     return (
-      <div className="bg-white px-6 py-4 border-t border-gray-300">
-        <div className="text-center py-6">
-          <p className="text-red-500">{error}</p>
+      <div className="bg-white px-3 md:px-6 py-3 md:py-4 border-t border-gray-300">
+        <div className="text-center py-4 md:py-6">
+          <p className="text-red-500 text-sm md:text-base">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white px-6 py-4 border-t border-gray-300">
+    <div className="bg-white px-3 md:px-6 py-3 md:py-4 border-t border-gray-300">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Últimos Jogos */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Últimos Jogos</h3>
+          <h3 className="text-base md:text-lg font-semibold text-gray-700 mb-2 md:mb-3 text-center">Últimos Jogos</h3>
           {recentMatches.length > 0 ? (
             <div>
               {recentMatches.map((match, index) => (
@@ -239,15 +239,15 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 text-gray-500">
-              <p>Nenhum jogo recente encontrado</p>
+            <div className="text-center py-4 md:py-6 text-gray-500">
+              <p className="text-sm md:text-base">Nenhum jogo recente encontrado</p>
             </div>
           )}
         </div>
 
         {/* Próximos Jogos */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Próximos Jogos</h3>
+          <h3 className="text-base md:text-lg font-semibold text-gray-700 mb-2 md:mb-3 text-center">Próximos Jogos</h3>
           {upcomingMatches.length > 0 ? (
             <div>
               {upcomingMatches.map((match, index) => (
@@ -257,8 +257,8 @@ export default function TeamMatches({ teamId }: TeamMatchesProps) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 text-gray-500">
-              <p>Nenhum jogo agendado encontrado</p>
+            <div className="text-center py-4 md:py-6 text-gray-500">
+              <p className="text-sm md:text-base">Nenhum jogo agendado encontrado</p>
             </div>
           )}
         </div>
