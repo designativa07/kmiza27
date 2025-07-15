@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MapPin, Users, Calendar, Search } from 'lucide-react';
+import { MapPin, Users, Calendar, Search, FileText } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { getApiUrl } from '@/lib/config';
 import { getStadiumImageUrl } from '@/lib/cdn'; // Usar a função do CDN
@@ -18,37 +18,22 @@ interface Stadium {
   capacity?: number;
   opened_year?: number;
   image_url?: string;
+  history?: string;
+  url?: string;
 }
 
-interface PaginatedStadiums {
+interface PaginatedStadiumsResult {
   data: Stadium[];
   total: number;
 }
 
-const API_URL = getApiUrl();
-
-async function getStadiums(page: number, limit: number, search: string): Promise<PaginatedStadiums> {
-  try {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      search,
-    });
-    const res = await fetch(`${API_URL}/stadiums?${params.toString()}`);
-    
-    if (!res.ok) {
-      console.error(`Error fetching stadiums: ${res.statusText}`);
-      return { data: [], total: 0 };
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Failed to fetch stadiums:', error);
-    return { data: [], total: 0 };
-  }
-}
-
 const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
+  // Função para truncar texto de história
+  const truncateHistory = (text: string, maxLength: number = 120) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
   return (
     <Link href={`/estadio/${stadium.id}`} className="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
       <div className="bg-gray-100 h-48 flex items-center justify-center relative">
@@ -63,11 +48,11 @@ const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
         )}
       </div>
       <div className="p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{stadium.name}</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-3">{stadium.name}</h3>
         
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-600 mb-4">
           <div className="flex items-center space-x-2">
-            <MapPin className="h-4 w-4" />
+            <MapPin className="h-4 w-4 flex-shrink-0" />
             <span>
               {stadium.city}
               {stadium.state && `, ${stadium.state}`}
@@ -77,18 +62,31 @@ const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
           
           {stadium.capacity && (
             <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4" />
-              <span>{stadium.capacity.toLocaleString()} lugares</span>
+              <Users className="h-4 w-4 flex-shrink-0" />
+              <span>{stadium.capacity.toLocaleString()} pessoas</span>
             </div>
           )}
           
           {stadium.opened_year && (
             <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-4 w-4 flex-shrink-0" />
               <span>Inaugurado em {stadium.opened_year}</span>
             </div>
           )}
+          
+
         </div>
+        
+        {stadium.history && (
+          <div className="border-t border-gray-100 pt-3">
+            <div className="flex items-start space-x-2">
+              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {truncateHistory(stadium.history)}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   );
@@ -96,26 +94,31 @@ const StadiumCard = ({ stadium }: { stadium: Stadium }) => {
 
 export default function StadiumsPage() {
   const [stadiums, setStadiums] = useState<Stadium[]>([]);
-  const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
-
-  const ITEMS_PER_PAGE = 12;
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     const fetchStadiums = async () => {
       setLoading(true);
-      const result = await getStadiums(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm);
-      setStadiums(result.data);
-      setTotal(result.total);
-      setLoading(false);
+      try {
+        const res = await fetch(`${getApiUrl()}/stadiums?page=${currentPage}&limit=12&search=${debouncedSearchTerm}`);
+        const data: PaginatedStadiumsResult = await res.json();
+        
+        setStadiums(data.data || []);
+        setTotalPages(Math.ceil((data.total || 0) / 12));
+      } catch (error) {
+        console.error("Failed to fetch stadiums:", error);
+        setStadiums([]);
+        setTotalPages(1);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStadiums();
   }, [currentPage, debouncedSearchTerm]);
-
-  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   return (
     <div className="bg-gray-50 min-h-screen">
