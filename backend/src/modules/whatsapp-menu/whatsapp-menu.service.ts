@@ -23,7 +23,7 @@ export class WhatsAppMenuService {
     private menuConfigRepository: Repository<WhatsAppMenuConfig>,
   ) {}
 
-  async getGeneralConfig(): Promise<{ title: string; description: string; footer: string }> {
+  async getGeneralConfig(): Promise<{ title: string; description: string; footer: string; buttonText: string }> {
     try {
       // Buscar configurações gerais (podem estar armazenadas como itens especiais ou usar valores padrão)
       const titleConfig = await this.menuConfigRepository.findOne({
@@ -35,28 +35,34 @@ export class WhatsAppMenuService {
       const footerConfig = await this.menuConfigRepository.findOne({
         where: { item_id: 'MENU_GENERAL_FOOTER' }
       });
+      const buttonTextConfig = await this.menuConfigRepository.findOne({
+        where: { item_id: 'MENU_GENERAL_BUTTON_TEXT' }
+      });
 
       return {
         title: titleConfig?.item_title || 'Kmiza27 Bot',
         description: descriptionConfig?.item_title || 'Selecione uma das opções abaixo para começar:',
-        footer: footerConfig?.item_title || 'Selecione uma das opções'
+        footer: footerConfig?.item_title || 'Kmiza27 Bot ⚽',
+        buttonText: buttonTextConfig?.item_title || 'VER OPÇÕES'
       };
     } catch (error) {
       this.logger.error('Erro ao buscar configurações gerais do menu:', error);
       return {
         title: 'Kmiza27 Bot',
         description: 'Selecione uma das opções abaixo para começar:',
-        footer: 'Selecione uma das opções'
+        footer: 'Kmiza27 Bot ⚽',
+        buttonText: 'VER OPÇÕES'
       };
     }
   }
 
-  async updateGeneralConfig(config: { title: string; description: string; footer: string }): Promise<boolean> {
+  async updateGeneralConfig(config: { title: string; description: string; footer: string; buttonText: string }): Promise<boolean> {
     try {
       // Salvar ou atualizar configurações gerais
       await this.saveOrUpdateGeneralConfig('MENU_GENERAL_TITLE', config.title);
       await this.saveOrUpdateGeneralConfig('MENU_GENERAL_DESCRIPTION', config.description);
       await this.saveOrUpdateGeneralConfig('MENU_GENERAL_FOOTER', config.footer);
+      await this.saveOrUpdateGeneralConfig('MENU_GENERAL_BUTTON_TEXT', config.buttonText);
       
       return true;
     } catch (error) {

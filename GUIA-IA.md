@@ -50,6 +50,80 @@
   - **Detecção de Origem:** Sistema diferencia usuários do WhatsApp (`origin: 'whatsapp'`) de usuários do site (`origin: 'site'`).
   - **Menus Adaptativos:** Menu interativo com botões para WhatsApp, menu de texto simples para site.
   - **Endpoints:** `/chatbot/simulate-whatsapp` para testes e integração com chat público.
+
+### 2.1. Sistema de Menu WhatsApp - ESTRUTURA REFORMULADA
+- **Localização Backend:** `src/modules/whatsapp-menu/`
+- **Entidade:** `src/entities/whatsapp-menu-config.entity.ts`
+- **Tabela:** `whatsapp_menu_configs`
+
+#### Campos de Configuração do Menu (Funcionais no WhatsApp):
+```typescript
+interface MenuGeneralConfig {
+  title: string;        // 🤖 Título do menu (cabeçalho)
+  description: string;  // 📝 Descrição abaixo do título
+  buttonText: string;   // 🔘 Texto do botão que abre o menu
+  footer: string;       // Mantido para compatibilidade, mas passado corretamente para Evolution API
+}
+```
+
+#### Endpoints da API:
+- **GET** `/whatsapp-menu/general-config` - Buscar configurações gerais
+- **POST** `/whatsapp-menu/general-config` - Salvar configurações gerais
+- **GET** `/whatsapp-menu/sections` - Buscar seções do menu
+- **POST** `/whatsapp-menu/configs` - Criar itens do menu
+
+#### Estrutura da Evolution API:
+```typescript
+// Payload enviado para Evolution API
+const payload = {
+  number: phoneNumber,
+  title: config.title,           // Título principal
+  description: config.description, // Descrição do menu
+  buttonText: config.buttonText,   // Texto do botão
+  footerText: config.footer,       // Rodapé (agora configurável)
+  sections: menuSections           // Seções organizadas
+}
+```
+
+#### Fluxo de Configuração:
+1. **Painel Admin:** Frontend salva configurações via `/whatsapp-menu/general-config`
+2. **Armazenamento:** Dados salvos na tabela `whatsapp_menu_configs` com IDs especiais:
+   - `MENU_GENERAL_TITLE`
+   - `MENU_GENERAL_DESCRIPTION` 
+   - `MENU_GENERAL_BUTTON_TEXT`
+   - `MENU_GENERAL_FOOTER`
+3. **Chatbot:** `ChatbotService.sendWelcomeMenu()` busca configurações e envia via Evolution API
+4. **Evolution API:** Processa e envia menu formatado para WhatsApp
+
+#### Comandos do Menu:
+- **Prefixos de Comando:**
+  - `CMD_`: Comandos diretos (ex: `CMD_JOGOS_HOJE`)
+  - `MENU_`: Submenus (ex: `MENU_TABELAS_CLASSIFICACAO`)
+  - `COMP_`: Competições dinâmicas (ex: `COMP_123`)
+
+- **Processamento:** `ChatbotService.processButtonListId()` detecta e roteia comandos
+- **Detecção:** `ChatbotService.isButtonListId()` identifica IDs por prefixo
+
+#### Interface do Painel Admin:
+- **Campos Visíveis:** Título, Descrição, Texto do Botão
+- **Campo Oculto:** Footer (mantido para compatibilidade)
+- **Preview:** Mostra como aparece no WhatsApp real
+- **Validação:** Apenas campos funcionais são expostos
+
+- **Sistema de Comandos do Chatbot:**
+  - **Arquitetura de Comandos:** Sistema baseado em identificadores únicos (`CMD_`, `MENU_`, `COMP_`) que conectam interface visual com funcionalidades do backend.
+  - **Fluxo de Processamento:**
+    1. **Configuração:** Comandos definidos na tabela `whatsapp_menu_configs` com metadados (título, descrição, ordem)
+    2. **Detecção:** Método `isButtonListId()` identifica comandos por prefixos específicos
+    3. **Roteamento:** `ChatbotService.processButtonListId()` direciona para funções específicas
+  - **Tipos de Comando:**
+    - `CMD_`: Comandos diretos (ex: `CMD_ARTILHEIROS`, `CMD_JOGOS_HOJE`)
+    - `MENU_`: Submenus (ex: `MENU_TABELAS_CLASSIFICACAO`)
+    - `COMP_`: Competições dinâmicas (ex: `COMP_123`)
+  - **Adição de Novas Funcionalidades:**
+    1. **Criar comando** na tabela `whatsapp_menu_configs`
+    2. **Implementar lógica** no `ChatbotService`
+    3. **Adicionar ao menu** via painel admin
 - **CDN e Upload de Arquivos:**
   - **CDN Oficial:** `https://cdn.kmiza27.com` - Todas as URLs de imagem são automaticamente convertidas para CDN via interceptador global.
   - **MinIO Storage:** Integração com MinIO (S3-compatible) hospedado no EasyPanel para armazenamento de arquivos.
@@ -175,12 +249,31 @@ ORDER BY column_name;
 - **Compatibilidade SSR:** Todas as funções CDN são compatíveis com Server-Side Rendering
 
 ## 7. Como Executar o Projeto
+
+### 7.1. Desenvolvimento (Recomendado para IA)
+- **Hot Reload Automático:** Em modo desenvolvimento, as mudanças são aplicadas automaticamente sem necessidade de build
 - **Geral (Todos os Serviços):**
   - `npm run dev` (executa backend, admin e futepédia simultaneamente)
 - **Serviços Individuais:**
   - **Backend:** `npm run dev:backend` (na raiz) ou `npm run start:dev` (em `backend/`) - Porta 3000
   - **Painel Administrativo:** `npm run dev:frontend` (na raiz) ou `npm run dev` (em `frontend/`) - Porta 3002
   - **Futepédia:** `npm run dev:futepedia` (na raiz) ou `npm run dev` (em `futepedia-frontend/`) - Porta 3003
+
+### 7.2. Produção (Apenas quando necessário)
+- **Build só é necessário para:**
+  - ✅ **Deploy em produção**
+  - ✅ **Testar versão otimizada**
+  - ✅ **Gerar arquivos estáticos**
+- **Comandos de Build:**
+  - **Backend:** `npm run build` (em `backend/`)
+  - **Frontend:** `npm run build` (em `frontend/`)
+  - **Futepédia:** `npm run build` (em `futepedia-frontend/`)
+
+### 7.3. Regra para IA: Evitar Builds Desnecessários
+- **❌ NÃO fazer build** durante desenvolvimento
+- **✅ Usar modo dev** que aplica mudanças automaticamente
+- **✅ Hot reload** funciona instantaneamente
+- **✅ Watch mode** reinicia servidores automaticamente
 
 ## 8. Funcionalidades do Chat Público
 - **Widget Flutuante:** Disponível em todas as páginas da Futepédia
