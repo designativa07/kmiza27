@@ -28,9 +28,9 @@ const PlayerCard = ({ player }: { player: Player }) => {
         )}
           <span className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full capitalize">{player.state}</span>
       </div>
-      <div className="p-3">
-        <h3 className="font-bold text-sm truncate group-hover:text-indigo-600">{player.name}</h3>
-        <div className="flex items-center text-xs text-gray-500 mt-1">
+      <div className="p-2 md:p-3">
+        <h3 className="font-bold text-xs md:text-sm truncate group-hover:text-indigo-600">{player.name}</h3>
+        <div className="flex items-center text-xs text-gray-500 mt-0.5 md:mt-1">
           <Shirt className="h-3 w-3 mr-1" />
           <span>{player.position}</span>
         </div>
@@ -92,11 +92,11 @@ export default function PlayersPage() {
         </div>
         
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mt-6">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
             {[...Array(12)].map((_, i) => (
               <div key={i} className="bg-white rounded-lg shadow-sm animate-pulse">
                 <div className="aspect-[3/4] bg-gray-200 rounded-t-lg"></div>
-                <div className="p-3">
+                <div className="p-2 md:p-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-3 bg-gray-200 rounded w-1/4 mt-2"></div>
                 </div>
@@ -104,7 +104,7 @@ export default function PlayersPage() {
             ))}
           </div>
         ) : players.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mt-6">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
             {players.map(player => (
               <PlayerCard key={player.id} player={player} />
             ))}
