@@ -8,7 +8,7 @@ export class SystemSetting {
   @Column({ type: 'varchar', length: 100, unique: true })
   key: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'text' })
   value: any;
 
   @Column({ type: 'text', nullable: true })

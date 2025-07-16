@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { MapPin, Users, Calendar, Building } from 'lucide-react';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { StadiumImage } from '@/components/StadiumImage';
 import { getApiUrl } from '@/lib/config';
 import dynamic from 'next/dynamic';
@@ -72,7 +72,7 @@ export default async function StadiumPage({ params }: Props) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header showBackToHome={true} />
+      <HeaderWithLogo showBackToHome={true} />
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header do estádio */}

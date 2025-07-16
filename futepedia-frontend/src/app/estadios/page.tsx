@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Users, Calendar, Search, FileText } from 'lucide-react';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
 import { getStadiumImageUrl } from '@/lib/cdn'; // Usar a função do CDN
 import { useDebounce } from 'use-debounce';
@@ -122,7 +122,7 @@ export default function StadiumsPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header showBackToHome={true} />
+      <HeaderWithLogo showBackToHome={true} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">

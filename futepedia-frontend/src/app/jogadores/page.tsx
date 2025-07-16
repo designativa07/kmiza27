@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { getApiUrl } from '@/lib/config';
 import { Search, User } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
 
 // Tipos
@@ -51,7 +51,7 @@ export default function PlayersPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header />
+      <HeaderWithLogo />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
