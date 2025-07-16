@@ -319,17 +319,13 @@ export class ChatbotService {
       });
   
       if (broadcasts && broadcasts.length > 0) {
-        const matchTitle = `${nextMatch.home_team.name} vs ${nextMatch.away_team.name}`;
-        const streamDetails = await Promise.all(
-          broadcasts.map(async (b) => {
-            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
-              return `📺 ${b.channel.name}: ${shortLink}`;
-            } else {
-              return `📺 ${b.channel.name}`;
-            }
-          })
-        );
+        const streamDetails = broadcasts.map((b) => {
+          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
+          } else {
+            return `📺 ${b.channel.name}`;
+          }
+        });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
@@ -789,17 +785,13 @@ export class ChatbotService {
       });
   
       if (broadcasts && broadcasts.length > 0) {
-        const matchTitle = `${lastMatch.home_team.name} vs ${lastMatch.away_team.name}`;
-        const streamDetails = await Promise.all(
-          broadcasts.map(async (b) => {
-            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
-              return `📺 ${b.channel.name}: ${shortLink}`;
-            } else {
-              return `📺 ${b.channel.name}`;
-            }
-          })
-        );
+        const streamDetails = broadcasts.map((b) => {
+          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
+          } else {
+            return `📺 ${b.channel.name}`;
+          }
+        });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
@@ -1827,17 +1819,13 @@ Digite sua pergunta ou comando! ⚽`;
       });
   
       if (broadcasts && broadcasts.length > 0) {
-        const matchTitle = `${currentMatch.home_team.name} vs ${currentMatch.away_team.name}`;
-        const streamDetails = await Promise.all(
-          broadcasts.map(async (b) => {
-            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
-              return `📺 ${b.channel.name}: ${shortLink}`;
-            } else {
-              return `📺 ${b.channel.name}`;
-            }
-          })
-        );
+        const streamDetails = broadcasts.map((b) => {
+          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
+          } else {
+            return `📺 ${b.channel.name}`;
+          }
+        });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
