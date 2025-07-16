@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Clock, Users, TrendingUp } from 'lucide-react';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { getApiUrl } from '@/lib/config';
 import dynamic from 'next/dynamic';
@@ -197,7 +197,7 @@ export default function MatchPage({ params }: Props) {
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen">
-        <Header showBackToHome={true} />
+        <HeaderWithLogo showBackToHome={true} />
         <div className="flex justify-center items-center min-h-screen">
           <p className="text-gray-500">Carregando detalhes do jogo...</p>
         </div>
@@ -215,7 +215,7 @@ export default function MatchPage({ params }: Props) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header showBackToHome={true} />
+      <HeaderWithLogo showBackToHome={true} />
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cabeçalho do Jogo */}

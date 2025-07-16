@@ -21,14 +21,13 @@ import {
   ChatbotConversation, 
   Notification, 
   NotificationDelivery,
-  SystemSettings,
+  SystemSetting,
   Channel,
   MatchBroadcast,
   Player,
   PlayerTeamHistory,
   Card
 } from './entities';
-import { SystemSetting } from './entities/system-setting.entity';
 import { BotConfig } from './entities/bot-config.entity';
 import { WhatsAppMenuConfig } from './entities/whatsapp-menu-config.entity';
 

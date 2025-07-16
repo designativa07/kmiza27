@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { NavLinks } from '@/components/NavLinks';
 import { getApiUrl } from '@/lib/config';
 import { ListOrdered, CalendarDays, Star, Building } from 'lucide-react';
@@ -64,7 +64,7 @@ export default async function CompetitionLayout({
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header 
+      <HeaderWithLogo 
         currentCompetition={{
           name: competition.name,
           slug: competition.slug

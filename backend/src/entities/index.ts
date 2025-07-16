@@ -9,7 +9,7 @@ export * from './user.entity';
 export * from './chatbot-conversation.entity';
 export * from './notification.entity';
 export * from './notification-delivery.entity';
-export * from './system-settings.entity';
+export * from './system-setting.entity';
 export * from './channel.entity';
 export * from './match-broadcast.entity';
 export * from './bot-config.entity';

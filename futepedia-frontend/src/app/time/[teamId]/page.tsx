@@ -3,7 +3,7 @@
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink } from 'lucide-react';
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
@@ -365,7 +365,7 @@ export default function TeamPage({ params }: { params: { teamId: string } }) {
   if (loading) {
     return (
       <div className="bg-white min-h-screen">
-        <Header showBackToHome={true} />
+        <HeaderWithLogo showBackToHome={true} />
         <div className="flex justify-center items-center min-h-screen">
           <p className="text-gray-500">Carregando...</p>
         </div>
@@ -379,7 +379,7 @@ export default function TeamPage({ params }: { params: { teamId: string } }) {
 
   return (
     <div className="bg-white min-h-screen">
-      <Header showBackToHome={true} />
+      <HeaderWithLogo showBackToHome={true} />
       
       <main className="max-w-7xl mx-auto px-2 md:px-4 lg:px-8 py-1 md:py-2">
         <div className="flex items-center justify-between bg-white p-3 md:p-6">

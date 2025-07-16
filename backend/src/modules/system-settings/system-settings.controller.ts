@@ -1,9 +1,39 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemSettingsService } from './system-settings.service';
+import { UploadCloudService } from '../upload/upload-cloud.service';
 
 @Controller('system-settings')
 export class SystemSettingsController {
-  constructor(private readonly systemSettingsService: SystemSettingsService) {}
+  constructor(
+    private readonly systemSettingsService: SystemSettingsService,
+    private readonly uploadCloudService: UploadCloudService,
+  ) {}
+
+  @Post('upload-image')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('folder') folder: string,
+    @Body('fileName') fileName: string,
+  ) {
+    if (!file) {
+      throw new Error('Nenhum arquivo enviado.');
+    }
+    if (!folder) {
+      throw new Error('A pasta de destino (folder) é obrigatória.');
+    }
+    if (!fileName) {
+      throw new Error('O nome do arquivo (fileName) é obrigatório.');
+    }
+
+    try {
+      const uploadedUrl = await this.uploadCloudService.uploadFile(file, folder, fileName);
+      return { url: uploadedUrl };
+    } catch (error) {
+      throw new Error(`Erro ao fazer upload da imagem: ${error.message}`);
+    }
+  }
 
   @Get()
   async getAllSettings() {
@@ -28,6 +58,22 @@ export class SystemSettingsController {
   @Post('evolution-api/test')
   async testEvolutionApiConnection() {
     return this.systemSettingsService.testEvolutionApiConnection();
+  }
+
+  @Get('futepedia-images')
+  async getFutepediaImagesSettings() {
+    return this.systemSettingsService.getFutepediaImagesSettings();
+  }
+
+  @Put('futepedia-images')
+  async updateFutepediaImagesSettings(
+    @Body('ogImageUrl') ogImageUrl: string,
+    @Body('headerLogoUrl') headerLogoUrl: string,
+    @Body('futepediaLogoUrl') futepediaLogoUrl: string, // Compatibilidade com versão anterior
+  ) {
+    // Usar headerLogoUrl se disponível, senão futepediaLogoUrl para compatibilidade
+    const logoUrl = headerLogoUrl || futepediaLogoUrl;
+    return this.systemSettingsService.updateFutepediaImagesSettings(ogImageUrl, logoUrl);
   }
 
   @Get(':key')

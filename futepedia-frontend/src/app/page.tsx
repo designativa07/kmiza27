@@ -5,7 +5,7 @@ import { Shield, ListOrdered, CalendarDays, Users, Building, Target } from 'luci
 import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/Header';
+import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { TeamsCard } from '@/components/TeamsCard';
 
 interface Competition {
@@ -89,7 +89,7 @@ export default function Home() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header />
+      <HeaderWithLogo />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4">
           {/* Coluna Principal: Competições */}
