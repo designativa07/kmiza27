@@ -313,13 +313,17 @@ export class ChatbotService {
   
       if (broadcasts && broadcasts.length > 0) {
         const matchTitle = `${nextMatch.home_team.name} vs ${nextMatch.away_team.name}`;
-        const streamLinks = await Promise.all(
-          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        const streamDetails = await Promise.all(
+          broadcasts.map(async (b) => {
+            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
+              return `📺 ${b.channel.name}: ${shortLink}`;
+            } else {
+              return `📺 ${b.channel.name}`;
+            }
+          })
         );
-        const streamDetails = broadcasts
-          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
-          .join('\n');
-        response += `\n\nOnde assistir:\n${streamDetails}`;
+        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
       response += `\n\nBora torcer! 🔥⚽`;
@@ -772,13 +776,17 @@ export class ChatbotService {
   
       if (broadcasts && broadcasts.length > 0) {
         const matchTitle = `${lastMatch.home_team.name} vs ${lastMatch.away_team.name}`;
-        const streamLinks = await Promise.all(
-          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        const streamDetails = await Promise.all(
+          broadcasts.map(async (b) => {
+            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
+              return `📺 ${b.channel.name}: ${shortLink}`;
+            } else {
+              return `📺 ${b.channel.name}`;
+            }
+          })
         );
-        const streamDetails = broadcasts
-          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
-          .join('\n');
-        response += `\n\nOnde assistir:\n${streamDetails}`;
+        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
       return await this.addMatchShortLinks(response, lastMatch);
@@ -1799,13 +1807,17 @@ Digite sua pergunta ou comando! ⚽`;
   
       if (broadcasts && broadcasts.length > 0) {
         const matchTitle = `${currentMatch.home_team.name} vs ${currentMatch.away_team.name}`;
-        const streamLinks = await Promise.all(
-          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        const streamDetails = await Promise.all(
+          broadcasts.map(async (b) => {
+            if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
+              const shortLink = await this.createStreamShortUrl(b.channel.channel_link, matchTitle);
+              return `📺 ${b.channel.name}: ${shortLink}`;
+            } else {
+              return `📺 ${b.channel.name}`;
+            }
+          })
         );
-        const streamDetails = broadcasts
-          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
-          .join('\n');
-        response += `\n\nOnde assistir:\n${streamDetails}`;
+        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
       response += `\n\n🔴 JOGO EM ANDAMENTO!\n⚽ Acompanhe o placar ao vivo!`;
