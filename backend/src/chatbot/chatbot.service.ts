@@ -90,23 +90,23 @@ export class ChatbotService {
    */
   private async addMatchShortLinks(response: string, match: Match): Promise<string> {
     try {
-      console.log(`🔗 Criando URL curta para jogo ${match.id}: ${match.home_team.name} vs ${match.away_team.name}`);
+      this.logger.log(`🔗 Tentando criar URL curta para jogo ${match.id}: ${match.home_team.name} vs ${match.away_team.name}`);
       
       const matchUrl = await this.createMatchShortUrl(match);
-      console.log(`🔗 URL criada: ${matchUrl}`);
+      this.logger.log(`🔗 URL recebida do encurtador: ${matchUrl}`);
       
       if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
         const finalResponse = `${response}\n\n🔗 Mais detalhes: ${matchUrl}`;
-        console.log(`✅ Link adicionado à resposta`);
+        this.logger.log(`✅ Link curto adicionado com sucesso à resposta.`);
         return finalResponse;
       } else {
-        console.log(`❌ URL inválida: ${matchUrl}`);
+        this.logger.warn(`❌ URL inválida ou indefinida recebida do encurtador: ${matchUrl}. Retornando resposta sem o link curto.`);
       }
     } catch (error) {
-      console.error(`❌ Erro ao criar URL curta para jogo ${match.id}:`, error);
+      this.logger.error(`❌ Erro crítico ao criar ou adicionar URL curta para jogo ${match.id}:`, error);
     }
     
-    console.log(`⚠️ Retornando resposta sem link para jogo ${match.id}`);
+    this.logger.warn(`⚠️ Retornando resposta sem link curto para jogo ${match.id}`);
     return response;
   }
 
@@ -275,234 +275,45 @@ export class ChatbotService {
   }
 
   private async findNextMatch(teamName: string): Promise<string> {
-    this.logger.log(`🔍 Procurando próximo jogo para o time: ${teamName}`);
+    if (!teamName) {
+      return 'Por favor, especifique um time para que eu possa encontrar a próxima partida.';
+    }
+
+    const team = await this.findTeam(teamName);
+    if (!team) {
+      return `Time "${teamName}" não encontrado.`;
+    }
+
+    const nextMatch = await this.findNextMatchByTeam(team);
+    if (!nextMatch) {
+      return `Não foi possível encontrar a próxima partida para ${team.name}.`;
+    }
+
     try {
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .getOne();
-
-      if (!team) {
-        this.logger.warn(`Time "${teamName}" não encontrado no banco de dados.`);
-        return `❌ Time "${teamName}" não encontrado.\n\n🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, etc.`;
-      }
-
-      this.logger.log(`Time encontrado: ${team.name} (ID: ${team.id})`);
-
-      // Primeiro, verificar se há jogo ao vivo
-      const liveMatch = await this.matchesRepository
-        .createQueryBuilder('match')
-        .leftJoinAndSelect('match.competition', 'competition')
-        .leftJoinAndSelect('match.home_team', 'homeTeam')
-        .leftJoinAndSelect('match.away_team', 'awayTeam')
-        .leftJoinAndSelect('match.stadium', 'stadium')
-        .leftJoinAndSelect('match.round', 'round')
-        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: 'live' })
-        .getOne();
-
-      if (liveMatch) {
-        // Se há jogo ao vivo, usar o método getCurrentMatch
-        return this.getCurrentMatch(teamName);
-      }
-
-      // Verificar se há jogo hoje que pode estar ao vivo (mesmo que marcado como scheduled)
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-
-      const todayMatch = await this.matchesRepository
-        .createQueryBuilder('match')
-        .leftJoinAndSelect('match.competition', 'competition')
-        .leftJoinAndSelect('match.home_team', 'homeTeam')
-        .leftJoinAndSelect('match.away_team', 'awayTeam')
-        .leftJoinAndSelect('match.stadium', 'stadium')
-        .leftJoinAndSelect('match.round', 'round')
-        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: 'scheduled' })
-        .andWhere('match.match_date >= :start', { start: startOfDay })
-        .andWhere('match.match_date < :end', { end: endOfDay })
-        .getOne();
-
-      if (todayMatch) {
-        // Verificar se o jogo pode estar acontecendo agora
-        const matchTime = new Date(todayMatch.match_date);
-        const now = new Date();
-        const timeDiff = (now.getTime() - matchTime.getTime()) / (1000 * 60 * 60); // diferença em horas
-
-        // Se o jogo foi há menos de 3 horas e mais de -1 hora, pode estar ao vivo
-        if (timeDiff >= -1 && timeDiff <= 3) {
-          const date = new Date(todayMatch.match_date);
-          const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-          const formattedTime = date.toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            timeZone: 'America/Sao_Paulo'
-          });
-
-          // Buscar canais de transmissão
-          const broadcasts = await this.matchBroadcastRepository
-            .createQueryBuilder('broadcast')
-            .leftJoinAndSelect('broadcast.channel', 'channel')
-            .where('broadcast.match_id = :matchId', { matchId: todayMatch.id })
-            .andWhere('channel.active = :active', { active: true })
-            .getMany();
-
-          let transmissionText = 'A definir';
-          let streamingLinks = '';
-
-                     // Processar canais da tabela match_broadcasts
-           if (broadcasts && broadcasts.length > 0) {
-             const channelsList = broadcasts.map(broadcast => {
-               const channel = broadcast.channel;
-               if (channel.channel_link) {
-                 return `${channel.name} (${channel.channel_link})`;
-               }
-               return channel.name;
-             }).join(', ');
-             transmissionText = channelsList;
-           } else if (todayMatch.broadcast_channels) {
-             // Processar broadcast_channels (pode ser array ou string)
-             if (Array.isArray(todayMatch.broadcast_channels) && todayMatch.broadcast_channels.length > 0) {
-               transmissionText = todayMatch.broadcast_channels.join(', ');
-             } else if (typeof todayMatch.broadcast_channels === 'string' && todayMatch.broadcast_channels.trim()) {
-               transmissionText = todayMatch.broadcast_channels.trim();
-             }
-           }
-
-
-
-          let response = `🔴 POSSIVELMENTE AO VIVO - ${team.name.toUpperCase()}
-⚽ *${todayMatch.home_team.name} x ${todayMatch.away_team.name}*
-📅 Data: ${formattedDate}
-⏰ Início: ${formattedTime}
-
-🏆 Competição: ${todayMatch.competition.name}
-📅 ${todayMatch.round?.name || 'A definir'}
-🏟️ Estádio: ${todayMatch.stadium?.name || 'A definir'}
-
-📺 Transmissão: ${transmissionText}`;
-
-          if (streamingLinks) {
-            response += `\n🔗 ${streamingLinks}`;
-          }
-
-          response += `\n\n🔴 JOGO POSSIVELMENTE EM ANDAMENTO!
-⚽ Acompanhe o placar ao vivo!`;
-
-          return response;
-        }
-      }
-
-      // Se não há jogo ao vivo nem hoje, buscar próximo jogo agendado
-      const nextMatch = await this.matchesRepository
-        .createQueryBuilder('match')
-        .leftJoinAndSelect('match.competition', 'competition')
-        .leftJoinAndSelect('match.home_team', 'homeTeam')
-        .leftJoinAndSelect('match.away_team', 'awayTeam')
-        .leftJoinAndSelect('match.stadium', 'stadium')
-        .leftJoinAndSelect('match.round', 'round')
-        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: 'scheduled' })
-        .andWhere('match.match_date >= :now', { now: new Date() })
-        .orderBy('match.match_date', 'ASC')
-        .getOne();
-
-      if (!nextMatch) {
-        return `😔 Não encontrei jogos futuros agendados para o ${team.name}.
-
-🔍 Verifique novamente em breve ou pergunte sobre outro time!`;
-      }
-
-      // Usar formatação simples de data (dados já estão no horário correto)
-      const date = new Date(nextMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
+      let response = this.formatMatchDetails(nextMatch);
+  
+      const broadcasts = await this.matchBroadcastRepository.find({
+        where: { match: { id: nextMatch.id } },
+        relations: ['channel'],
       });
-
-      // Buscar canais de transmissão da nova tabela match_broadcasts
-      const broadcasts = await this.matchBroadcastRepository
-        .createQueryBuilder('broadcast')
-        .leftJoinAndSelect('broadcast.channel', 'channel')
-        .where('broadcast.match_id = :matchId', { matchId: nextMatch.id })
-        .andWhere('channel.active = :active', { active: true })
-        .getMany();
-
-      // Determinar transmissão
-      let transmissionText = 'A definir';
-      let streamingLinks = '';
-      let allChannels: string[] = [];
-
-      // Processar canais da tabela match_broadcasts
+  
       if (broadcasts && broadcasts.length > 0) {
-        const channelsList = broadcasts.map(broadcast => {
-          const channel = broadcast.channel;
-          if (channel.channel_link) {
-            return `${channel.name} (${channel.channel_link})`;
-          }
-          return channel.name;
-        });
-        allChannels = [...channelsList];
+        const matchTitle = `${nextMatch.home_team.name} vs ${nextMatch.away_team.name}`;
+        const streamLinks = await Promise.all(
+          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        );
+        const streamDetails = broadcasts
+          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
+          .join('\n');
+        response += `\n\nOnde assistir:\n${streamDetails}`;
       }
-
-      // Processar broadcast_channels adicionais (pode ser array, string ou JSON)
-      if (nextMatch.broadcast_channels) {
-        let processedChannels = nextMatch.broadcast_channels;
-        
-        // Se for string, tentar fazer parse JSON primeiro (para compatibilidade com dados antigos)
-        if (typeof nextMatch.broadcast_channels === 'string') {
-          try {
-            // Tentar fazer parse JSON se a string começar com " ou [
-            if (nextMatch.broadcast_channels.startsWith('"') || nextMatch.broadcast_channels.startsWith('[')) {
-              processedChannels = JSON.parse(nextMatch.broadcast_channels);
-            }
-          } catch (e) {
-            // Se falhar o parse, usar a string original
-            processedChannels = nextMatch.broadcast_channels;
-          }
-        }
-        
-        // Processar os canais baseado no tipo final
-        if (Array.isArray(processedChannels) && processedChannels.length > 0) {
-          allChannels = [...allChannels, ...processedChannels];
-        } else if (typeof processedChannels === 'string' && processedChannels.trim()) {
-          allChannels = [...allChannels, processedChannels.trim()];
-        }
-      }
-
-      // Definir texto de transmissão
-      if (allChannels.length > 0) {
-        transmissionText = allChannels.join(', ');
-      }
-
-
-
-      let response = `PRÓXIMO JOGO DO ${team.name.toUpperCase()}
-⚽ *${nextMatch.home_team.name} x ${nextMatch.away_team.name}*
-📅 Data: ${formattedDate}
-⏰ Hora: ${formattedTime}
-
-🏆 Competição: ${nextMatch.competition.name}
-📅 ${nextMatch.round?.name || 'A definir'}
-🏟️ Estádio: ${nextMatch.stadium?.name || 'A definir'}
-
-📺 Transmissão: ${transmissionText}`;
-
-      if (streamingLinks) {
-        response += `\n🔗 ${streamingLinks}`;
-      }
-
+      
       response += `\n\nBora torcer! 🔥⚽`;
-
-      // Adicionar URL curta do jogo
+      
       return await this.addMatchShortLinks(response, nextMatch);
-
+  
     } catch (error) {
-      console.error('Erro ao buscar próximo jogo:', error);
+      this.logger.error('Erro ao buscar próximo jogo:', error);
       return '❌ Erro ao buscar informações do jogo. Tente novamente.';
     }
   }
@@ -923,69 +734,44 @@ export class ChatbotService {
   }
 
   private async getLastMatch(teamName: string): Promise<string> {
+    if (!teamName) {
+      return 'Por favor, especifique um time para que eu possa encontrar a última partida.';
+    }
+
+    const team = await this.findTeam(teamName);
+    if (!team) {
+      return `Time "${teamName}" não encontrado.`;
+    }
+
+    const lastMatch = await this.findLastMatchByTeam(team);
+    if (!lastMatch) {
+      return `Não foi possível encontrar a última partida de ${team.name}.`;
+    }
+
     try {
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .getOne();
-
-      if (!team) {
-        return `❌ Time "${teamName}" não encontrado.`;
-      }
-
-      // Buscar últimos 3 jogos
-      const lastMatches = await this.matchesRepository
-        .createQueryBuilder('match')
-        .leftJoinAndSelect('match.competition', 'competition')
-        .leftJoinAndSelect('match.home_team', 'homeTeam')
-        .leftJoinAndSelect('match.away_team', 'awayTeam')
-        .leftJoinAndSelect('match.stadium', 'stadium')
-        .leftJoinAndSelect('match.round', 'round')
-        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: 'finished' })
-        .orderBy('match.match_date', 'DESC')
-        .limit(3)
-        .getMany();
-
-      if (lastMatches.length === 0) {
-        return `😔 Não encontrei jogos finalizados para o ${team.name}.`;
-      }
-
-      let response = `⚽ ÚLTIMOS JOGOS DO ${team.name.toUpperCase()} ⚽\n\n`;
-
-      lastMatches.forEach((match, index) => {
-        const date = new Date(match.match_date);
-        const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-        const formattedTime = date.toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'America/Sao_Paulo'
-        });
-
-        const isHome = match.home_team.id === team.id;
-        const teamScore = isHome ? (match.home_score ?? 0) : (match.away_score ?? 0);
-        const opponentScore = isHome ? (match.away_score ?? 0) : (match.home_score ?? 0);
-        const opponentName = isHome ? match.away_team.name : match.home_team.name;
-        
-        const result = teamScore > opponentScore ? '✅ VITÓRIA' : 
-                      teamScore < opponentScore ? '❌ DERROTA' : '🟡 EMPATE';
-
-        response += `${index + 1}. ${match.home_team.name} ${match.home_score ?? 0} x ${match.away_score ?? 0} ${match.away_team.name}
-📅 ${formattedDate} - ${formattedTime}
-🏆 ${match.competition.name}
-📍 ${match.round?.name || 'A definir'}
-🏟️ ${match.stadium?.name || 'A definir'}
-${result}
-
-`;
+      let response = this.formatMatchDetails(lastMatch);
+  
+      const broadcasts = await this.matchBroadcastRepository.find({
+        where: { match: { id: lastMatch.id } },
+        relations: ['channel'],
       });
-
-      return response.trim();
+  
+      if (broadcasts && broadcasts.length > 0) {
+        const matchTitle = `${lastMatch.home_team.name} vs ${lastMatch.away_team.name}`;
+        const streamLinks = await Promise.all(
+          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        );
+        const streamDetails = broadcasts
+          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
+          .join('\n');
+        response += `\n\nOnde assistir:\n${streamDetails}`;
+      }
+      
+      return await this.addMatchShortLinks(response, lastMatch);
 
     } catch (error) {
-      console.error('Erro ao buscar últimos jogos:', error);
-      return '❌ Erro ao buscar últimos jogos.';
+      this.logger.error(`❌ Erro ao formatar detalhes da partida ${lastMatch.id}:`, error);
+      return `Ocorreu um erro ao buscar os detalhes da última partida de ${team.name}.`;
     }
   }
 
@@ -1975,133 +1761,46 @@ Digite sua pergunta ou comando! ⚽`;
   }
 
   private async getCurrentMatch(teamName: string): Promise<string> {
+    if (!teamName) {
+      return 'Por favor, especifique um time para que eu possa encontrar a partida atual.';
+    }
+
+    const team = await this.findTeam(teamName);
+    if (!team) {
+      return `Time "${teamName}" não encontrado.`;
+    }
+
+    const currentMatch = await this.findCurrentMatchByTeam(team);
+    if (!currentMatch) {
+      return `Nenhuma partida de ${team.name} está acontecendo agora.`;
+    }
+
     try {
-      if (!teamName) {
-        return '❌ Por favor, especifique o nome do time. Ex: "Jogo atual do Avaí"';
-      }
-
-      // Buscar o time no banco
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .getOne();
-
-      if (!team) {
-        return `❌ Time "${teamName}" não encontrado. 
-
-🔍 Tente com: Flamengo, Palmeiras, Corinthians, São Paulo, Santos, Botafogo, etc.`;
-      }
-
-      // Buscar jogo em andamento
-      const currentMatch = await this.matchesRepository
-        .createQueryBuilder('match')
-        .leftJoinAndSelect('match.competition', 'competition')
-        .leftJoinAndSelect('match.home_team', 'homeTeam')
-        .leftJoinAndSelect('match.away_team', 'awayTeam')
-        .leftJoinAndSelect('match.stadium', 'stadium')
-        .leftJoinAndSelect('match.round', 'round')
-        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: 'live' })
-        .getOne();
-
-      if (!currentMatch) {
-        return `😔 O ${team.name} não está jogando no momento.
-
-⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
-      }
-
-      const date = new Date(currentMatch.match_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      const formattedTime = date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
+      let response = this.formatMatchDetails(currentMatch);
+  
+      const broadcasts = await this.matchBroadcastRepository.find({
+        where: { match: { id: currentMatch.id } },
+        relations: ['channel'],
       });
-
-      const homeScore = currentMatch.home_score ?? 0;
-      const awayScore = currentMatch.away_score ?? 0;
-
-      // Buscar canais de transmissão
-      const broadcasts = await this.matchBroadcastRepository
-        .createQueryBuilder('broadcast')
-        .leftJoinAndSelect('broadcast.channel', 'channel')
-        .where('broadcast.match_id = :matchId', { matchId: currentMatch.id })
-        .andWhere('channel.active = :active', { active: true })
-        .getMany();
-
-      let transmissionText = 'A definir';
-      let streamingLinks = '';
-      let allChannels: string[] = [];
-
-      // Processar canais da tabela match_broadcasts
+  
       if (broadcasts && broadcasts.length > 0) {
-        const channelsList = broadcasts.map(broadcast => {
-          const channel = broadcast.channel;
-          if (channel.channel_link) {
-            return `${channel.name} (${channel.channel_link})`;
-          }
-          return channel.name;
-        });
-        allChannels = [...channelsList];
+        const matchTitle = `${currentMatch.home_team.name} vs ${currentMatch.away_team.name}`;
+        const streamLinks = await Promise.all(
+          broadcasts.map(b => this.createStreamShortUrl(b.channel.channel_link, matchTitle))
+        );
+        const streamDetails = broadcasts
+          .map((b, index) => `📺 ${b.channel.name}: ${streamLinks[index]}`)
+          .join('\n');
+        response += `\n\nOnde assistir:\n${streamDetails}`;
       }
-
-      // Processar broadcast_channels adicionais (pode ser array, string ou JSON)
-      if (currentMatch.broadcast_channels) {
-        let processedChannels = currentMatch.broadcast_channels;
-        
-        // Se for string, tentar fazer parse JSON primeiro (para compatibilidade com dados antigos)
-        if (typeof currentMatch.broadcast_channels === 'string') {
-          try {
-            // Tentar fazer parse JSON se a string começar com " ou [
-            if (currentMatch.broadcast_channels.startsWith('"') || currentMatch.broadcast_channels.startsWith('[')) {
-              processedChannels = JSON.parse(currentMatch.broadcast_channels);
-            }
-          } catch (e) {
-            // Se falhar o parse, usar a string original
-            processedChannels = currentMatch.broadcast_channels;
-          }
-        }
-        
-        // Processar os canais baseado no tipo final
-        if (Array.isArray(processedChannels) && processedChannels.length > 0) {
-          allChannels = [...allChannels, ...processedChannels];
-        } else if (typeof processedChannels === 'string' && processedChannels.trim()) {
-          allChannels = [...allChannels, processedChannels.trim()];
-        }
-      }
-
-      // Definir texto de transmissão
-      if (allChannels.length > 0) {
-        transmissionText = allChannels.join(', ');
-      }
-
-
-
-      let response = `🔴 JOGO AO VIVO - ${team.name.toUpperCase()}
-⚽ *${currentMatch.home_team.name} ${homeScore} x ${awayScore} ${currentMatch.away_team.name}*
-📅 Data: ${formattedDate}
-⏰ Início: ${formattedTime}
-
-🏆 Competição: ${currentMatch.competition.name}
-📅 ${currentMatch.round?.name || 'A definir'}
-🏟️ Estádio: ${currentMatch.stadium?.name || 'A definir'}
-
-📺 Transmissão: ${transmissionText}`;
-
-      if (streamingLinks) {
-        response += `\n🔗 ${streamingLinks}`;
-      }
-
-      response += `\n\n🔴 JOGO EM ANDAMENTO!
-⚽ Acompanhe o placar ao vivo!`;
-
-      // Adicionar URL curta do jogo
+      
+      response += `\n\n🔴 JOGO EM ANDAMENTO!\n⚽ Acompanhe o placar ao vivo!`;
+      
       return await this.addMatchShortLinks(response, currentMatch);
 
     } catch (error) {
-      console.error('Erro ao buscar jogo atual:', error);
-      return '❌ Erro ao buscar informações do jogo atual. Tente novamente.';
+      this.logger.error(`❌ Erro ao formatar detalhes da partida ${currentMatch.id}:`, error);
+      return `Ocorreu um erro ao buscar os detalhes da partida atual de ${team.name}.`;
     }
   }
 
@@ -2568,12 +2267,87 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
    * Verificar se já enviou mensagem de boas-vindas para usuário do site
    */
   private async hasWelcomeBeenSent(phoneNumber: string): Promise<boolean> {
+    const user = await this.usersService.findByPhone(phoneNumber);
+    return user?.welcome_sent || false;
+  }
+
+  private async findNextMatchByTeam(team: Team): Promise<Match | null> {
     try {
-      const user = await this.usersService.findOrCreateUser(phoneNumber);
-      return user.preferences?.welcomeSent === true;
+      const nextMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.round', 'round')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.status = :status', { status: MatchStatus.SCHEDULED })
+        .andWhere('match.match_date > :now', { now: new Date() })
+        .orderBy('match.match_date', 'ASC')
+        .getOne();
+
+      return nextMatch;
     } catch (error) {
-      console.error('Erro ao verificar se mensagem de boas-vindas foi enviada:', error);
-      return false;
+      this.logger.error('Erro ao buscar próximo jogo:', error);
+      return null;
     }
+  }
+
+  private formatMatchDetails(match: Match, includeIntro: boolean = true): string {
+    const date = new Date(match.match_date);
+    const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const formattedTime = date.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
+    });
+
+    let intro = '';
+    if (includeIntro) {
+        const teamName = match.home_team.name || 'Time da Casa';
+        intro = `PRÓXIMO JOGO - ${teamName.toUpperCase()}\n`;
+    }
+
+    return `${intro}⚽ *${match.home_team.name} x ${match.away_team.name}*
+📅 Data: ${formattedDate}
+⏰ Hora: ${formattedTime}
+🏆 Competição: ${match.competition.name}
+ዙ Rodada: ${match.round?.name || 'A definir'}
+🏟️ Estádio: ${match.stadium?.name || 'A definir'}`;
+  }
+
+  private async findTeam(name: string): Promise<Team | null> {
+    return await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${name}%` })
+        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${name}%` })
+        .getOne();
+  }
+
+  private async findCurrentMatchByTeam(team: Team): Promise<Match | null> {
+    return this.matchesRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.competition', 'competition')
+      .leftJoinAndSelect('match.home_team', 'home_team')
+      .leftJoinAndSelect('match.away_team', 'away_team')
+      .leftJoinAndSelect('match.stadium', 'stadium')
+      .leftJoinAndSelect('match.round', 'round')
+      .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+      .andWhere('match.status = :status', { status: MatchStatus.LIVE })
+      .getOne();
+  }
+
+  private async findLastMatchByTeam(team: Team): Promise<Match | null> {
+    return this.matchesRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.competition', 'competition')
+      .leftJoinAndSelect('match.home_team', 'home_team')
+      .leftJoinAndSelect('match.away_team', 'away_team')
+      .leftJoinAndSelect('match.stadium', 'stadium')
+      .leftJoinAndSelect('match.round', 'round')
+      .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+      .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
+      .orderBy('match.match_date', 'DESC')
+      .getOne();
   }
 } 

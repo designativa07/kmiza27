@@ -87,6 +87,14 @@ export class CompetitionsService {
     });
   }
 
+  async getTeamsByCompetitionSlug(slug: string): Promise<CompetitionTeam[]> {
+    const competition = await this.findBySlug(slug);
+    if (!competition) {
+      return []; // ou lançar um erro, se preferir
+    }
+    return this.getTeams(competition.id);
+  }
+
   async removeTeam(competitionId: number, competitionTeamId: number): Promise<void> {
     await this.competitionTeamRepository.delete({
       id: competitionTeamId,

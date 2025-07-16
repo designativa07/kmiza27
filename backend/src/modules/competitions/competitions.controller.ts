@@ -35,6 +35,11 @@ export class CompetitionsController {
     return this.competitionsService.findBySlug(slug);
   }
 
+  @Get('slug/:slug/teams')
+  getTeamsBySlug(@Param('slug') slug:string) {
+    return this.competitionsService.getTeamsByCompetitionSlug(slug);
+  }
+
   @Get(':id/top-scorers')
   getTopScorers(@Param('id') id: string): Promise<TopScorer[]> {
     return this.competitionsService.getTopScorers(+id);
