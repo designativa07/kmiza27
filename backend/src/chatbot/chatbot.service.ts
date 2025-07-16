@@ -305,7 +305,14 @@ export class ChatbotService {
 
     try {
       let response = this.formatMatchDetails(nextMatch);
+      
+      // 1. Adicionar link do confronto PRIMEIRO
+      const matchUrl = await this.createMatchShortUrl(nextMatch);
+      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+        response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+      }
   
+      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: nextMatch.id } },
         relations: ['channel'],
@@ -328,7 +335,7 @@ export class ChatbotService {
       
       response += `\n\nBora torcer! 🔥⚽`;
       
-      return await this.addMatchShortLinks(response, nextMatch);
+      return response;
   
     } catch (error) {
       this.logger.error('Erro ao buscar próximo jogo:', error);
@@ -768,7 +775,14 @@ export class ChatbotService {
 
     try {
       let response = this.formatMatchDetails(lastMatch);
+      
+      // 1. Adicionar link do confronto PRIMEIRO
+      const matchUrl = await this.createMatchShortUrl(lastMatch);
+      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+        response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+      }
   
+      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: lastMatch.id } },
         relations: ['channel'],
@@ -789,7 +803,7 @@ export class ChatbotService {
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
       
-      return await this.addMatchShortLinks(response, lastMatch);
+      return response;
 
     } catch (error) {
       this.logger.error(`❌ Erro ao formatar detalhes da partida ${lastMatch.id}:`, error);
@@ -1799,7 +1813,14 @@ Digite sua pergunta ou comando! ⚽`;
 
     try {
       let response = this.formatMatchDetails(currentMatch);
+      
+      // 1. Adicionar link do confronto PRIMEIRO
+      const matchUrl = await this.createMatchShortUrl(currentMatch);
+      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+        response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+      }
   
+      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: currentMatch.id } },
         relations: ['channel'],
@@ -1822,7 +1843,7 @@ Digite sua pergunta ou comando! ⚽`;
       
       response += `\n\n🔴 JOGO EM ANDAMENTO!\n⚽ Acompanhe o placar ao vivo!`;
       
-      return await this.addMatchShortLinks(response, currentMatch);
+      return response;
 
     } catch (error) {
       this.logger.error(`❌ Erro ao formatar detalhes da partida ${currentMatch.id}:`, error);
