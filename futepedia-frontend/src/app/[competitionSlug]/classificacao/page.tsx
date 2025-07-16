@@ -534,7 +534,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
       {/* Link para Detalhes */}
       <div className="text-center mt-2">
         <Link href={`/jogos/${match.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
-          Ver Detalhes da Partida
+          VER DETALHES
         </Link>
       </div>
     </div>

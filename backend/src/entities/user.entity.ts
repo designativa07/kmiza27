@@ -30,6 +30,9 @@ export class User {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  welcome_sent: boolean;
+
   @Column({ type: 'jsonb', nullable: true })
   preferences: any;
 

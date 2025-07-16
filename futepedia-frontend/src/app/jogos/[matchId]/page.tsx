@@ -76,22 +76,28 @@ interface MatchBroadcast {
   };
 }
 
+interface MatchData extends Match {
+  broadcasts: MatchBroadcast[];
+}
+
 interface Props {
   params: { matchId: string };
 }
 
-// Função para buscar dados do jogo
-async function getMatchData(matchId: string): Promise<Match | null> {
+// Função para buscar dados do jogo e da transmissão
+async function getMatchData(matchId: string): Promise<MatchData | null> {
   try {
-    const response = await fetch(`${getApiUrl()}/matches/${matchId}`, {
-      cache: 'no-store'
-    });
+    const [matchResponse, broadcastResponse] = await Promise.all([
+      fetch(`${getApiUrl()}/matches/${matchId}`, { cache: 'no-store' }),
+      fetch(`${getApiUrl()}/matches/${matchId}/broadcasts`, { cache: 'no-store' })
+    ]);
     
-    if (!response.ok) {
-      return null;
-    }
+    if (!matchResponse.ok) return null;
     
-    return await response.json();
+    const match: Match = await matchResponse.json();
+    const broadcasts: MatchBroadcast[] = broadcastResponse.ok ? await broadcastResponse.json() : [];
+    
+    return { ...match, broadcasts };
   } catch (error) {
     console.error('Erro ao carregar dados do jogo:', error);
     return null;
@@ -175,7 +181,7 @@ const MatchStatus = ({ status, homeScore, awayScore }: {
 
 // Componente principal da página
 export default function MatchPage({ params }: Props) {
-  const [match, setMatch] = useState<Match | null>(null);
+  const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -204,7 +210,6 @@ export default function MatchPage({ params }: Props) {
   }
 
   const { date, time } = formatMatchDate(match.match_date);
-  const channels = processBroadcastChannels(match.broadcast_channels);
   const hasScore = match.home_score !== null && match.away_score !== null;
   const hasPenalties = match.home_score_penalties !== null && match.away_score_penalties !== null;
 
@@ -325,15 +330,21 @@ export default function MatchPage({ params }: Props) {
               <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
               Transmissão
             </h3>
-            {channels.length > 0 ? (
-              <div className="space-y-2">
-                {channels.map((channel, index) => (
-                  <span
-                    key={index}
-                    className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full mr-2 mb-2"
+            {match.broadcasts && match.broadcasts.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {match.broadcasts.map(({ channel }) => (
+                  <a
+                    key={channel.id}
+                    href={channel.channel_link || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-block px-4 py-2 rounded-md text-sm font-semibold transition-colors
+                      ${channel.channel_link 
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                        : 'bg-gray-200 text-gray-700 cursor-not-allowed'}`}
                   >
-                    {channel}
-                  </span>
+                    {channel.name}
+                  </a>
                 ))}
               </div>
             ) : (
