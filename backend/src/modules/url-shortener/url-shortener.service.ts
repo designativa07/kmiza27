@@ -77,7 +77,7 @@ export class UrlShortenerService {
       }
 
       const data: ShlinkApiResponse = await response.json();
-      
+      this.logger.log(`🔍 DEBUG (UrlShortenerService): Resposta completa da API Shlink: ${JSON.stringify(data)}`);
       this.logger.log(`✅ URL curta criada: ${data.shortUrl.shortUrl}`);
       
       return data.shortUrl;
