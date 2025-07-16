@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, Menu, X, Home, Trophy, MapPin, Users, Shield, Building, User, MessageCircle, ListOrdered, Star } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { getApiUrl } from '@/lib/config';
+import { getFutepediaLogoUrl } from '@/lib/cdn';
 import React from 'react';
 
 interface HeaderProps {
@@ -245,7 +246,7 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
               </div>
               <Link href="/" className="flex items-center space-x-3" aria-label="Ir para página inicial">
                 <img 
-                  src={futepediaLogoUrl || "/kmiza27_logo30px.gif"} 
+                  src={getFutepediaLogoUrl(futepediaLogoUrl)}
                   alt="Kmiza27 Logo" 
                   className="max-h-5"
                 />

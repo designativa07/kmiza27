@@ -9,6 +9,104 @@ const CDN_BASE_URL = 'https://cdn.kmiza27.com';
 const isServer = typeof window === 'undefined';
 
 /**
+ * Gera URL da logo da Futepédia (cabeçalho)
+ * @param logoUrl - URL original da logo (pode ser relativa ou completa)
+ * @returns URL completa do CDN ou fallback
+ */
+export function getFutepediaLogoUrl(logoUrl: string | null | undefined): string {
+  try {
+    if (!logoUrl) {
+      return '/kmiza27_logo30px.gif'; // Fallback padrão
+    }
+
+    // Se já é uma URL completa do CDN, usar diretamente
+    if (logoUrl.startsWith('https://cdn.kmiza27.com') || logoUrl.startsWith('http')) {
+      return logoUrl;
+    }
+
+    // Se é uma URL relativa (/img/...), converter para CDN
+    if (logoUrl.startsWith('/img/')) {
+      return `${CDN_BASE_URL}${logoUrl}`;
+    }
+
+    // Se é uma URL relativa local (/uploads/...), converter para CDN
+    if (logoUrl.startsWith('/uploads/')) {
+      const filename = logoUrl.replace('/uploads/', '');
+      return `${CDN_BASE_URL}/img/${filename}`;
+    }
+
+    // Se é uma URL relativa simples (como /kmiza27_logo30px.gif), 
+    // assumir que está na raiz do CDN
+    if (logoUrl.startsWith('/')) {
+      return `${CDN_BASE_URL}/img${logoUrl}`;
+    }
+
+    // Se é apenas o nome do arquivo
+    if (!logoUrl.includes('/')) {
+      return `${CDN_BASE_URL}/img/${logoUrl}`;
+    }
+
+    // Fallback para casos não cobertos
+    return logoUrl;
+  } catch (error) {
+    // Em caso de erro, retornar fallback
+    if (isServer) {
+      console.warn('Erro na função getFutepediaLogoUrl:', error);
+    }
+    return '/kmiza27_logo30px.gif';
+  }
+}
+
+/**
+ * Gera URL da OG Image da Futepédia
+ * @param imageUrl - URL original da OG Image (pode ser relativa ou completa)
+ * @returns URL completa do CDN ou fallback
+ */
+export function getFutepediaOgImageUrl(imageUrl: string | null | undefined): string {
+  try {
+    if (!imageUrl) {
+      return '/kmiza27_logo30px.gif'; // Fallback padrão
+    }
+
+    // Se já é uma URL completa do CDN, usar diretamente
+    if (imageUrl.startsWith('https://cdn.kmiza27.com') || imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+
+    // Se é uma URL relativa (/img/...), converter para CDN
+    if (imageUrl.startsWith('/img/')) {
+      return `${CDN_BASE_URL}${imageUrl}`;
+    }
+
+    // Se é uma URL relativa local (/uploads/...), converter para CDN
+    if (imageUrl.startsWith('/uploads/')) {
+      const filename = imageUrl.replace('/uploads/', '');
+      return `${CDN_BASE_URL}/img/${filename}`;
+    }
+
+    // Se é uma URL relativa simples (como /og-image.jpg), 
+    // assumir que está na pasta og-images do CDN
+    if (imageUrl.startsWith('/')) {
+      return `${CDN_BASE_URL}/img/og-images${imageUrl}`;
+    }
+
+    // Se é apenas o nome do arquivo, assumir que está em og-images
+    if (!imageUrl.includes('/')) {
+      return `${CDN_BASE_URL}/img/og-images/${imageUrl}`;
+    }
+
+    // Fallback para casos não cobertos
+    return imageUrl;
+  } catch (error) {
+    // Em caso de erro, retornar fallback
+    if (isServer) {
+      console.warn('Erro na função getFutepediaOgImageUrl:', error);
+    }
+    return '/kmiza27_logo30px.gif';
+  }
+}
+
+/**
  * Gera URL do escudo do time
  * @param logoUrl - URL original do logo (pode ser relativa ou completa)
  * @returns URL completa do CDN ou fallback

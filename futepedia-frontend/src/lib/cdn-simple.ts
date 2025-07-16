@@ -54,3 +54,17 @@ export function getPlayerImageUrl(imagePath: string): string {
   if (!imagePath) return `${CDN_BASE}/img/players/default-player-photo.svg`;
   return getCdnImageUrl(imagePath);
 }
+
+export function getFutepediaLogoUrl(logoPath: string | null | undefined): string {
+  if (!logoPath) return '/kmiza27_logo30px.gif';
+  return getCdnImageUrl(logoPath);
+}
+
+export function getFutepediaOgImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) return '/kmiza27_logo30px.gif';
+  // Para OG Images, assumir pasta og-images
+  if (imagePath.startsWith('/') && !imagePath.startsWith('/img/')) {
+    return `${CDN_BASE}/img/og-images${imagePath}`;
+  }
+  return getCdnImageUrl(imagePath);
+}
