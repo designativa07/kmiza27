@@ -8,8 +8,11 @@ import FutebotChat from "@/components/FutebotChat";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Futepédia - Kmiza27",
-  description: "Tabelas e Jogos dos seus campeonatos favoritos",
+  title: "Kmiza27 Futepédia",
+  description: "Acompanhe seus campeonatos favoritos em tempo real.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
