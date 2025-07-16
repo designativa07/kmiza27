@@ -113,31 +113,42 @@ export class ChatbotService {
   async processMessage(phoneNumber: string, message: string, pushName?: string, origin?: string): Promise<string> {
     try {
       console.log(`📱 Mensagem recebida de ${phoneNumber}: "${message}"`);
+      console.log(`🔍 DEBUG: Iniciando processamento da mensagem`);
 
       // Detectar origem baseado no phoneNumber ou parâmetro explícito
       const userOrigin = origin || (phoneNumber.startsWith('site-') ? 'site' : 'whatsapp');
+      console.log(`🔍 DEBUG: Origem detectada: ${userOrigin}`);
       
       // Criar ou atualizar usuário no banco de dados
+      console.log(`🔍 DEBUG: Buscando/criando usuário no banco`);
       const user = await this.usersService.findOrCreateUser(phoneNumber, pushName, userOrigin);
+      console.log(`🔍 DEBUG: Usuário processado: ${user?.id}`);
       
       // Verificar se é primeira interação (usuário criado há menos de 1 minuto)
       const isFirstInteraction = this.isFirstInteraction(user);
+      console.log(`🔍 DEBUG: Primeira interação? ${isFirstInteraction}`);
       
       // Atualizar última interação
+      console.log(`🔍 DEBUG: Atualizando última interação`);
       await this.usersService.updateLastInteraction(phoneNumber);
 
       // Verificar se é um ID de botão de lista (IDs começam com prefixos específicos)
+      console.log(`🔍 DEBUG: Verificando se é botão de lista`);
       if (this.isButtonListId(message)) {
+        console.log(`🔍 DEBUG: É botão de lista, processando...`);
         return await this.processButtonListId(phoneNumber, message);
       }
 
       // Verificar estado da conversa para comandos que requerem entrada adicional
+      console.log(`🔍 DEBUG: Verificando estado da conversa`);
       const conversationState = await this.getUserConversationState(phoneNumber);
       if (conversationState) {
+        console.log(`🔍 DEBUG: Estado da conversa encontrado: ${conversationState}`);
         return await this.processConversationState(phoneNumber, message, conversationState);
       }
 
       // Analisar intenção usando OpenAI
+      console.log(`🔍 DEBUG: Analisando intenção da mensagem`);
       const analysis = await this.openAIService.analyzeMessage(message);
       console.log(`🧠 Intenção detectada: ${analysis.intent} (${(analysis.confidence * 100).toFixed(0)}%)`);
 
@@ -270,6 +281,9 @@ export class ChatbotService {
 
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);
+      console.error('Stack trace completo:', error.stack);
+      console.error('Tipo do erro:', error.constructor.name);
+      console.error('Mensagem do erro:', error.message);
       return '❌ Desculpe, ocorreu um erro interno. Tente novamente em alguns instantes.';
     }
   }
