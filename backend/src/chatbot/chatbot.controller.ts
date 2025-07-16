@@ -9,6 +9,8 @@ export class ChatbotController {
   async handleWebhook(@Body() body: any) {
     try {
       console.log('📨 Webhook recebido:', JSON.stringify(body, null, 2));
+      console.log('🔍 DEBUG WEBHOOK: Evento recebido:', body.event);
+      console.log('🔍 DEBUG WEBHOOK: Dados disponíveis:', !!body.data);
       
       // 🛡️ FILTROS ANTI-LOOP - Verificar se a mensagem é do próprio bot
       
@@ -35,6 +37,8 @@ export class ChatbotController {
         console.log(`⚠️ Evento ${body.event} ignorado - só processamos messages.upsert`);
         return { success: true, message: 'Evento ignorado' };
       }
+
+      console.log('🔍 DEBUG WEBHOOK: Evento messages.upsert detectado - processando...');
       
       // Verificar se as respostas automáticas estão habilitadas
       const autoResponseEnabled = await this.chatbotService.isAutoResponseEnabled();
@@ -291,5 +295,36 @@ export class ChatbotController {
   @Get('debug/matches-today')
   async debugMatchesToday() {
     return await this.chatbotService.debugMatchesToday();
+  }
+
+  @Post('debug-test')
+  async debugTest(@Body() body: { message: string; phoneNumber?: string }) {
+    try {
+      console.log('🧪 DEBUG TEST: Iniciando teste de debug');
+      const phoneNumber = body.phoneNumber || '5511999999999';
+      const message = body.message || 'teste';
+      
+      console.log(`🧪 DEBUG TEST: Processando mensagem "${message}" para ${phoneNumber}`);
+      
+      const response = await this.chatbotService.processMessage(phoneNumber, message, 'Teste Debug', 'whatsapp');
+      
+      console.log(`🧪 DEBUG TEST: Resposta gerada: "${response}"`);
+      
+      return {
+        success: true,
+        input: { phoneNumber, message },
+        output: { response },
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('🧪 DEBUG TEST: Erro capturado:', error);
+      console.error('🧪 DEBUG TEST: Stack trace:', error.stack);
+      return {
+        success: false,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 } 
