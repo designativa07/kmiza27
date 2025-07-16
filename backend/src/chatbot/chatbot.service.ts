@@ -306,25 +306,24 @@ export class ChatbotService {
     try {
       let response = this.formatMatchDetails(nextMatch);
       
-      // 1. Adicionar link do confronto PRIMEIRO
+      // Adicionar link do confronto (sempre primeiro)
       const matchUrl = await this.createMatchShortUrl(nextMatch);
-      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+      this.logger.log(`🔍 DEBUG (findNextMatch): URL curta do confronto gerada: ${matchUrl}`);
+      if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
       }
   
-      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: nextMatch.id } },
         relations: ['channel'],
       });
   
       if (broadcasts && broadcasts.length > 0) {
+        this.logger.log(`🔍 DEBUG (findNextMatch): Transmissões encontradas: ${broadcasts.length}`);
         const streamDetails = broadcasts.map((b) => {
-          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
-          } else {
-            return `📺 ${b.channel.name}`;
-          }
+          this.logger.log(`🔍 DEBUG (findNextMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
+          // Usar link puro do canal, sem encurtar
+          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
         });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
@@ -772,25 +771,24 @@ export class ChatbotService {
     try {
       let response = this.formatMatchDetails(lastMatch);
       
-      // 1. Adicionar link do confronto PRIMEIRO
+      // Adicionar link do confronto (sempre primeiro)
       const matchUrl = await this.createMatchShortUrl(lastMatch);
-      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+      this.logger.log(`🔍 DEBUG (getLastMatch): URL curta do confronto gerada: ${matchUrl}`);
+      if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
       }
   
-      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: lastMatch.id } },
         relations: ['channel'],
       });
   
       if (broadcasts && broadcasts.length > 0) {
+        this.logger.log(`🔍 DEBUG (getLastMatch): Transmissões encontradas: ${broadcasts.length}`);
         const streamDetails = broadcasts.map((b) => {
-          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
-          } else {
-            return `📺 ${b.channel.name}`;
-          }
+          this.logger.log(`🔍 DEBUG (getLastMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
+          // Usar link puro do canal, sem encurtar
+          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
         });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
@@ -1806,25 +1804,24 @@ Digite sua pergunta ou comando! ⚽`;
     try {
       let response = this.formatMatchDetails(currentMatch);
       
-      // 1. Adicionar link do confronto PRIMEIRO
+      // Adicionar link do confronto (sempre primeiro)
       const matchUrl = await this.createMatchShortUrl(currentMatch);
-      if (matchUrl && matchUrl !== 'undefined' && matchUrl.startsWith('http')) {
+      this.logger.log(`🔍 DEBUG (getCurrentMatch): URL curta do confronto gerada: ${matchUrl}`);
+      if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
       }
   
-      // 2. Buscar e adicionar canais de transmissão DEPOIS
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: currentMatch.id } },
         relations: ['channel'],
       });
   
       if (broadcasts && broadcasts.length > 0) {
+        this.logger.log(`🔍 DEBUG (getCurrentMatch): Transmissões encontradas: ${broadcasts.length}`);
         const streamDetails = broadcasts.map((b) => {
-          if (b.channel.channel_link && b.channel.channel_link.trim() !== '') {
-            return `📺 ${b.channel.name}: ${b.channel.channel_link}`;
-          } else {
-            return `📺 ${b.channel.name}`;
-          }
+          this.logger.log(`🔍 DEBUG (getCurrentMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
+          // Usar link puro do canal, sem encurtar
+          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
         });
         response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
       }
