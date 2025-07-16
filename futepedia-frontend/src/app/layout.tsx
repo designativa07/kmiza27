@@ -5,6 +5,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ClientOnly from "@/components/ClientOnly";
 import FutebotChat from "@/components/FutebotChat";
 import { getApiUrl } from "@/lib/config";
+import { getFutepediaOgImageUrl } from "@/lib/cdn";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: "/favicon.ico",
     },
     openGraph: {
-      images: ogImageUrl ? [ogImageUrl] : ['/kmiza27_logo30px.gif'], // Fallback para logo existente
+      images: [getFutepediaOgImageUrl(ogImageUrl)], // Usar função CDN para OG Image
     },
   };
 }
