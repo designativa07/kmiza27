@@ -546,6 +546,9 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
                 </div>
                 
                 <BroadcastButtons match={firstLeg} />
+                <Link href={`/jogos/${firstLeg.id}`} className="block mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+                  Detalhes da Ida
+                </Link>
               </div>
             )}
 
@@ -600,6 +603,9 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
                 )}
                 
                 <BroadcastButtons match={secondLeg} />
+                <Link href={`/jogos/${secondLeg.id}`} className="block mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+                  Detalhes da Volta
+                </Link>
               </div>
             )}
           </div>
@@ -661,6 +667,9 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             </div>
             
             <BroadcastButtons match={aggregate.firstLeg} />
+            <Link href={`/jogos/${aggregate.firstLeg.id}`} className="block mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+              Detalhes da Ida
+            </Link>
           </div>
 
           {/* Jogo de Volta */}
@@ -713,6 +722,9 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             )}
             
             <BroadcastButtons match={aggregate.secondLeg} />
+            <Link href={`/jogos/${aggregate.secondLeg.id}`} className="block mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+              Detalhes da Volta
+            </Link>
           </div>
         </div>
 
@@ -832,9 +844,12 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             </div>
           )}
           
-          {/* Botões de transmissão */}
-          <div className="mt-3">
+          {/* Botões de transmissão e Detalhes */}
+          <div className="flex flex-col items-center space-y-2 mt-3">
             <BroadcastButtons match={match} />
+            <Link href={`/jogos/${match.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+              Ver Detalhes da Partida
+            </Link>
           </div>
         </div>
       ))}
@@ -957,6 +972,12 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           )}
         </div>
       )}
+      {/* Link para Detalhes */}
+      <div className="text-center mt-2">
+        <Link href={`/jogos/${match.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+          Ver Detalhes da Partida
+        </Link>
+      </div>
     </div>
   );
 };

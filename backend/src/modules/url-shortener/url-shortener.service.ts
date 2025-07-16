@@ -91,7 +91,7 @@ export class UrlShortenerService {
    * Cria URL curta para jogos com padrão específico
    */
   async createMatchShortUrl(matchId: number, homeTeam: string, awayTeam: string): Promise<ShortUrlResponse> {
-    const baseUrl = process.env.FRONTEND_URL || 'https://kmiza27.com';
+    const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/jogos/${matchId}`;
     
     // Criar slug personalizado para o jogo
@@ -125,7 +125,7 @@ export class UrlShortenerService {
    * Cria URL curta para times
    */
   async createTeamShortUrl(teamId: number, teamName: string): Promise<ShortUrlResponse> {
-    const baseUrl = process.env.FRONTEND_URL || 'https://kmiza27.com';
+    const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/times/${teamId}`;
     
     const customSlug = `${shlinkConfig.slugPatterns.team}-${teamId}`;
@@ -143,7 +143,7 @@ export class UrlShortenerService {
    * Cria URL curta para competições
    */
   async createCompetitionShortUrl(competitionSlug: string, competitionName: string): Promise<ShortUrlResponse> {
-    const baseUrl = process.env.FRONTEND_URL || 'https://kmiza27.com';
+    const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/${competitionSlug}`;
     
     const customSlug = `${shlinkConfig.slugPatterns.competition}-${competitionSlug}`;

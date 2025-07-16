@@ -66,7 +66,7 @@ export class ChatbotService {
     } catch (error) {
       this.logger.error(`❌ Erro ao criar URL curta para jogo ${match.id}:`, error);
       // Fallback para URL normal
-      const baseUrl = process.env.FRONTEND_URL || 'https://kmiza27.com';
+      const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
       return `${baseUrl}/jogos/${match.id}`;
     }
   }

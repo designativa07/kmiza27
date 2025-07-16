@@ -6,6 +6,7 @@ import { getTeamLogoUrl } from '@/lib/cdn';
 import { RoundNavigator } from '@/components/RoundNavigator';
 import { createKnockoutTies, isKnockoutCompetition, shouldShowBracket } from '@/lib/competition-utils';
 import { Match } from '@/types/match';
+import Link from 'next/link';
 
 // Interfaces
 interface Competition {
@@ -529,6 +530,13 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
           )}
         </div>
       )}
+      
+      {/* Link para Detalhes */}
+      <div className="text-center mt-2">
+        <Link href={`/jogos/${match.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+          Ver Detalhes da Partida
+        </Link>
+      </div>
     </div>
   );
 };
