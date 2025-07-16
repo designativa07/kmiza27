@@ -307,10 +307,15 @@ export class ChatbotService {
       let response = this.formatMatchDetails(nextMatch);
       
       // Adicionar link do confronto (sempre primeiro)
+      this.logger.log(`🔍 DEBUG (findNextMatch): Chamando createMatchShortUrl para jogo ${nextMatch.id}`);
       const matchUrl = await this.createMatchShortUrl(nextMatch);
-      this.logger.log(`🔍 DEBUG (findNextMatch): URL curta do confronto gerada: ${matchUrl}`);
+      this.logger.log(`🔍 DEBUG (findNextMatch): URL curta do confronto gerada: "${matchUrl}"`);
+      
       if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+        this.logger.log(`🔍 DEBUG (findNextMatch): Link 'Mais detalhes' adicionado à resposta.`);
+      } else {
+        this.logger.warn(`⚠️ DEBUG (findNextMatch): Link do confronto inválido ou vazio: "${matchUrl}". Não adicionando o link.`);
       }
   
       const broadcasts = await this.matchBroadcastRepository.find({
@@ -772,12 +777,17 @@ export class ChatbotService {
       let response = this.formatMatchDetails(lastMatch);
       
       // Adicionar link do confronto (sempre primeiro)
+      this.logger.log(`🔍 DEBUG (getLastMatch): Chamando createMatchShortUrl para jogo ${lastMatch.id}`);
       const matchUrl = await this.createMatchShortUrl(lastMatch);
-      this.logger.log(`🔍 DEBUG (getLastMatch): URL curta do confronto gerada: ${matchUrl}`);
+      this.logger.log(`🔍 DEBUG (getLastMatch): URL curta do confronto gerada: "${matchUrl}"`);
+      
       if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+        this.logger.log(`🔍 DEBUG (getLastMatch): Link 'Mais detalhes' adicionado à resposta.`);
+      } else {
+        this.logger.warn(`⚠️ DEBUG (getLastMatch): Link do confronto inválido ou vazio: "${matchUrl}". Não adicionando o link.`);
       }
-  
+    
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: lastMatch.id } },
         relations: ['channel'],
@@ -1805,12 +1815,17 @@ Digite sua pergunta ou comando! ⚽`;
       let response = this.formatMatchDetails(currentMatch);
       
       // Adicionar link do confronto (sempre primeiro)
+      this.logger.log(`🔍 DEBUG (getCurrentMatch): Chamando createMatchShortUrl para jogo ${currentMatch.id}`);
       const matchUrl = await this.createMatchShortUrl(currentMatch);
-      this.logger.log(`🔍 DEBUG (getCurrentMatch): URL curta do confronto gerada: ${matchUrl}`);
+      this.logger.log(`🔍 DEBUG (getCurrentMatch): URL curta do confronto gerada: "${matchUrl}"`);
+      
       if (matchUrl && matchUrl.startsWith('http')) {
         response += `\n\n🔗 Mais detalhes: ${matchUrl}`;
+        this.logger.log(`🔍 DEBUG (getCurrentMatch): Link 'Mais detalhes' adicionado à resposta.`);
+      } else {
+        this.logger.warn(`⚠️ DEBUG (getCurrentMatch): Link do confronto inválido ou vazio: "${matchUrl}". Não adicionando o link.`);
       }
-  
+    
       const broadcasts = await this.matchBroadcastRepository.find({
         where: { match: { id: currentMatch.id } },
         relations: ['channel'],
