@@ -76,11 +76,11 @@ export class UrlShortenerService {
         throw new HttpException('Erro ao criar URL curta', HttpStatus.BAD_REQUEST);
       }
 
-      const data: ShlinkApiResponse = await response.json();
+      const data: ShortUrlResponse = await response.json();
       this.logger.log(`🔍 DEBUG (UrlShortenerService): Resposta completa da API Shlink: ${JSON.stringify(data)}`);
-      this.logger.log(`✅ URL curta criada: ${data.shortUrl.shortUrl}`);
+      this.logger.log(`✅ URL curta criada: ${data.shortUrl}`);
       
-      return data.shortUrl;
+      return data;
     } catch (error) {
       this.logger.error(`❌ Erro ao criar URL curta: ${error.message}`);
       throw new HttpException('Erro interno ao criar URL curta', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -90,7 +90,7 @@ export class UrlShortenerService {
   /**
    * Cria URL curta para jogos com padrão específico
    */
-  async createMatchShortUrl(matchId: number, homeTeam: string, awayTeam: string): Promise<ShortUrlResponse> {
+  async createMatchShortUrl(matchId: number, homeTeam: string, awayTeam: string): Promise<string> {
     const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/jogos/${matchId}`;
     
@@ -98,63 +98,71 @@ export class UrlShortenerService {
     const customSlug = `${shlinkConfig.slugPatterns.match}-${matchId}`;
     const title = `${homeTeam} vs ${awayTeam}`;
 
-    return this.createShortUrl({
+    const shortUrlResponse = await this.createShortUrl({
       longUrl,
       customSlug,
       title,
       tags: ['jogo', 'partida', 'kmiza27-bot'],
     });
+
+    return shortUrlResponse.shortUrl;
   }
 
   /**
    * Cria URL curta para transmissões ao vivo
    */
-  async createStreamShortUrl(streamUrl: string, matchTitle: string): Promise<ShortUrlResponse> {
+  async createStreamShortUrl(streamUrl: string, matchTitle: string): Promise<string> {
     const customSlug = `${shlinkConfig.slugPatterns.stream}-${Date.now()}`;
     const title = `🔴 AO VIVO: ${matchTitle}`;
 
-    return this.createShortUrl({
+    const shortUrlResponse = await this.createShortUrl({
       longUrl: streamUrl,
       customSlug,
       title,
       tags: ['transmissao', 'ao-vivo', 'kmiza27-bot'],
     });
+
+    return shortUrlResponse.shortUrl;
   }
 
   /**
    * Cria URL curta para times
    */
-  async createTeamShortUrl(teamId: number, teamName: string): Promise<ShortUrlResponse> {
+  async createTeamShortUrl(teamId: number, teamName: string): Promise<string> {
     const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/times/${teamId}`;
     
     const customSlug = `${shlinkConfig.slugPatterns.team}-${teamId}`;
     const title = `⚽ ${teamName}`;
 
-    return this.createShortUrl({
+    const shortUrlResponse = await this.createShortUrl({
       longUrl,
       customSlug,
       title,
       tags: ['time', 'equipe', 'kmiza27-bot'],
     });
+
+    return shortUrlResponse.shortUrl;
   }
 
   /**
    * Cria URL curta para competições
    */
-  async createCompetitionShortUrl(competitionSlug: string, competitionName: string): Promise<ShortUrlResponse> {
+  async createCompetitionShortUrl(competitionSlug: string, competitionName: string): Promise<string> {
     const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
     const longUrl = `${baseUrl}/${competitionSlug}`;
     
     const customSlug = `${shlinkConfig.slugPatterns.competition}-${competitionSlug}`;
     const title = `🏆 ${competitionName}`;
 
-    return this.createShortUrl({
+    const shortUrlResponse = await this.createShortUrl({
       longUrl,
       customSlug,
       title,
       tags: ['competicao', 'campeonato', 'kmiza27-bot'],
     });
+
+    return shortUrlResponse.shortUrl;
   }
 
   /**
@@ -231,4 +239,4 @@ export class UrlShortenerService {
       return false;
     }
   }
-} 
+}
