@@ -62,7 +62,7 @@ export class ChatbotService {
         match.home_team.name,
         match.away_team.name
       );
-      return shortUrl.shortUrl;
+      return shortUrl;
     } catch (error) {
       this.logger.error(`❌ Erro ao criar URL curta para jogo ${match.id}:`, error);
       // Fallback para URL normal
@@ -77,7 +77,7 @@ export class ChatbotService {
   private async createStreamShortUrl(streamUrl: string, matchTitle: string): Promise<string> {
     try {
       const shortUrl = await this.urlShortenerService.createStreamShortUrl(streamUrl, matchTitle);
-      return shortUrl.shortUrl;
+      return shortUrl;
     } catch (error) {
       this.logger.error(`❌ Erro ao criar URL curta para stream:`, error);
       // Fallback para URL original
