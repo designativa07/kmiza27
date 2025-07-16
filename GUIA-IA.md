@@ -131,6 +131,14 @@ const payload = {
   - **Conversão Automática:** Interceptador global converte URLs antigas (`/uploads/escudos/`) para CDN (`https://cdn.kmiza27.com/img/escudos/`).
 - **Testes:** Utiliza-se Jest para testes unitários e de integração. Os scripts de teste estão definidos no `package.json` do backend.
 
+### 2.2. Encurtamento de URLs com Shlink
+- **Integração:** O sistema é integrado com uma instância auto-hospedada do Shlink para criar URLs curtas e amigáveis.
+- **Localização da Lógica:** `backend/src/modules/url-shortener/url-shortener.service.ts`
+- **Geração de Links para Partidas:**
+  - **Função Responsável:** `createMatchShortUrl`
+  - **URL de Destino:** O link longo aponta para a página de detalhes da partida no Futepédia (ex: `https://kmiza27.com/jogos/[ID_DA_PARTIDA]`).
+  - **Reutilização de Links:** O sistema utiliza um **slug personalizado e determinístico** (ex: `j-123`) e a opção `findIfExists: true`. Isso garante que **o mesmo link encurtado seja gerado apenas uma vez por partida** e reutilizado em todas as solicitações subsequentes, garantindo consistência e eficiência.
+
 ## 3. Frontend - Painel Administrativo (`/frontend`)
 - **Finalidade:** Interface para administradores gerenciarem todos os aspectos do sistema (times, jogadores, campeonatos, notificações, etc.).
 - **Tecnologias Principais:**
