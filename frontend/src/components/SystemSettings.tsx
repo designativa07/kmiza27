@@ -14,6 +14,7 @@ import {
   CheckCircle,
   TestTube
 } from 'lucide-react'
+import { apiUrl } from '@/config/api'
 
 export default function SystemSettings() {
   const [settings, setSettings] = useState({
@@ -80,14 +81,14 @@ export default function SystemSettings() {
     const loadConfigurations = async () => {
       try {
         // Carregar configurações da Evolution API
-        const evolutionResponse = await fetch('http://localhost:3000/system-settings/evolution-api');
+        const evolutionResponse = await fetch(apiUrl('system-settings/evolution-api'));
         if (evolutionResponse.ok) {
           const evolutionData = await evolutionResponse.json();
           setEvolutionSettings(evolutionData);
         }
 
         // Carregar configurações de imagens da Futepédia
-        const futepediaResponse = await fetch('http://localhost:3000/system-settings/futepedia-images');
+        const futepediaResponse = await fetch(apiUrl('system-settings/futepedia-images'));
         if (futepediaResponse.ok) {
           const futepediaData = await futepediaResponse.json();
           console.log('🖼️ Dados carregados da API:', futepediaData);
@@ -169,7 +170,7 @@ export default function SystemSettings() {
     setEvolutionMessage(null);
 
     try {
-      const response = await fetch('http://localhost:3000/system-settings/evolution-api', {
+      const response = await fetch(apiUrl('system-settings/evolution-api'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +197,7 @@ export default function SystemSettings() {
     setTestResult(null);
 
     try {
-      const response = await fetch('http://localhost:3000/system-settings/evolution-api/test', {
+      const response = await fetch(apiUrl('system-settings/evolution-api/test'), {
         method: 'POST',
       });
 
@@ -238,7 +239,7 @@ export default function SystemSettings() {
         ogFormData.append('folder', 'og-images');
         ogFormData.append('fileName', `og-image-${Date.now()}`);
 
-        const ogResponse = await fetch('http://localhost:3000/system-settings/upload-image', {
+        const ogResponse = await fetch(apiUrl('system-settings/upload-image'), {
           method: 'POST',
           body: ogFormData,
         });
@@ -258,7 +259,7 @@ export default function SystemSettings() {
         logoFormData.append('folder', 'futepedia-logos');
         logoFormData.append('fileName', `futepedia-logo-${Date.now()}`);
 
-        const logoResponse = await fetch('http://localhost:3000/system-settings/upload-image', {
+        const logoResponse = await fetch(apiUrl('system-settings/upload-image'), {
           method: 'POST',
           body: logoFormData,
         });
@@ -286,7 +287,7 @@ export default function SystemSettings() {
         'será enviado headerLogoUrl': futepediaLogoUrl
       });
 
-      const saveResponse = await fetch('http://localhost:3000/system-settings/futepedia-images', {
+      const saveResponse = await fetch(apiUrl('system-settings/futepedia-images'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -302,7 +303,7 @@ export default function SystemSettings() {
         
         // Recarregar dados do servidor para garantir sincronização
         try {
-          const reloadResponse = await fetch('http://localhost:3000/system-settings/futepedia-images');
+          const reloadResponse = await fetch(apiUrl('system-settings/futepedia-images'));
           if (reloadResponse.ok) {
             const reloadedData = await reloadResponse.json();
             console.log('🔄 Dados recarregados do servidor:', reloadedData);
