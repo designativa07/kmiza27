@@ -2350,12 +2350,25 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
     });
 
     let intro = '';
+    let scoreInfo = '';
+    
     if (includeIntro) {
         const teamName = match.home_team.name || 'Time da Casa';
-        intro = `PRÓXIMO JOGO - ${teamName.toUpperCase()}\n`;
+        
+        // Determinar o tipo de jogo baseado no status
+        if (match.status === MatchStatus.FINISHED) {
+            intro = `🏁 ÚLTIMO JOGO - ${teamName.toUpperCase()}\n`;
+            // Adicionar placar para jogos finalizados
+            scoreInfo = `\n⚽ Resultado: ${match.home_score ?? 0} x ${match.away_score ?? 0}`;
+        } else if (match.status === MatchStatus.LIVE) {
+            intro = `🔴 JOGO AO VIVO - ${teamName.toUpperCase()}\n`;
+            scoreInfo = `\n⚽ Placar: ${match.home_score ?? 0} x ${match.away_score ?? 0}`;
+        } else {
+            intro = `📅 PRÓXIMO JOGO - ${teamName.toUpperCase()}\n`;
+        }
     }
 
-    return `${intro}⚽ *${match.home_team.name} x ${match.away_team.name}*
+    return `${intro}⚽ *${match.home_team.name} x ${match.away_team.name}*${scoreInfo}
 📅 Data: ${formattedDate}
 ⏰ Hora: ${formattedTime}
 🏆 Competição: ${match.competition.name}
