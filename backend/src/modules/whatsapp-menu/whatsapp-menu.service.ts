@@ -287,7 +287,7 @@ export class WhatsAppMenuService {
         rows: [
           { id: 'CMD_ARTILHEIROS', title: '🥇 Artilheiros', description: 'Maiores goleadores de uma competição' },
           { id: 'CMD_CANAIS', title: '📡 Canais', description: 'Canais de transmissão' },
-          { id: 'CMD_INFO_COMPETICOES', title: '🏆 Informações de Competições', description: 'Dados gerais de uma competição' }
+          { id: 'CMD_ESTATISTICAS_COMPETICOES', title: '📊 Estatísticas de Competições', description: 'Estatísticas detalhadas de uma competição' }
         ]
       }
     ];
@@ -317,7 +317,7 @@ export class WhatsAppMenuService {
       // Seção 4: Competições e Outros
       { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_ARTILHEIROS', item_title: '🥇 Artilheiros', item_description: 'Maiores goleadores de uma competição', item_order: 1 },
       { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_CANAIS', item_title: '📡 Canais', item_description: 'Canais de transmissão', item_order: 2 },
-      { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_INFO_COMPETICOES', item_title: '🏆 Informações de Competições', item_description: 'Dados gerais de uma competição', item_order: 3 }
+      { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_ESTATISTICAS_COMPETICOES', item_title: '📊 Estatísticas de Competições', item_description: 'Estatísticas detalhadas de uma competição', item_order: 3 }
     ];
   }
 } 
