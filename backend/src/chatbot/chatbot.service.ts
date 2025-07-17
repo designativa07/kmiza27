@@ -1071,13 +1071,14 @@ Digite sua pergunta ou comando! ⚽`;
         rows: { id: string; title: string; description: string }[];
       }[] = [];
 
+      // Construir seções da mesma forma...
       if (nationalCompetitions.length > 0) {
         sections.push({
           title: '🇧🇷 Competições Nacionais',
-          rows: nationalCompetitions.slice(0, 5).map(comp => ({
-            id: `COMP_${comp.id}`,
-            title: comp.name,
-            description: `Ver classificação - ${comp.season}`
+          rows: nationalCompetitions.map(c => ({
+            id: `COMP_${c.id}`,
+            title: c.name,
+            description: `Ver tabela da ${c.name}`
           }))
         });
       }
@@ -1085,10 +1086,10 @@ Digite sua pergunta ou comando! ⚽`;
       if (internationalCompetitions.length > 0) {
         sections.push({
           title: '🌎 Competições Internacionais',
-          rows: internationalCompetitions.slice(0, 5).map(comp => ({
-            id: `COMP_${comp.id}`,
-            title: comp.name,
-            description: `Ver classificação - ${comp.season}`
+          rows: internationalCompetitions.map(c => ({
+            id: `COMP_${c.id}`,
+            title: c.name,
+            description: `Ver tabela da ${c.name}`
           }))
         });
       }
@@ -1096,26 +1097,222 @@ Digite sua pergunta ou comando! ⚽`;
       if (otherCompetitions.length > 0) {
         sections.push({
           title: '🏆 Outras Competições',
-          rows: otherCompetitions.slice(0, 5).map(comp => ({
-            id: `COMP_${comp.id}`,
-            title: comp.name,
-            description: `Ver classificação - ${comp.season}`
+          rows: otherCompetitions.map(c => ({
+            id: `COMP_${c.id}`,
+            title: c.name,
+            description: `Ver tabela da ${c.name}`
           }))
         });
       }
 
-      const generalConfig = await this.whatsAppMenuService.getGeneralConfig();
-      
+      // Enviar menu de lista
       return await this.evolutionService.sendListMessage(
         phoneNumber,
-        '📊 Tabelas de Classificação',
-        'Selecione a competição para ver a classificação:',
-        generalConfig.buttonText,
+        '📊 TABELAS DE CLASSIFICAÇÃO',
+        'Selecione a competição que deseja ver a classificação:',
+        'Selecionar Competição',
         sections,
-        generalConfig.footer
+        'Kmiza27 ⚽'
       );
+
     } catch (error) {
       console.error('Erro ao enviar menu de competições:', error);
+      await this.evolutionService.sendMessage(
+        phoneNumber,
+        '❌ Erro ao carregar competições. Tente novamente.\n\nPara mais informações acesse Kmiza27.com'
+      );
+      return false;
+    }
+  }
+
+  private async sendCompetitionsMenuForScorers(phoneNumber: string): Promise<boolean> {
+    try {
+      // Buscar competições ativas do banco de dados
+      const competitions = await this.competitionsRepository
+        .createQueryBuilder('competition')
+        .where('competition.is_active = :active', { active: true })
+        .orderBy('competition.name', 'ASC')
+        .getMany();
+
+      if (competitions.length === 0) {
+        await this.evolutionService.sendMessage(
+          phoneNumber,
+          '❌ Nenhuma competição ativa encontrada no momento.\n\nPara mais informações acesse Kmiza27.com'
+        );
+        return true;
+      }
+
+      // Dividir competições em seções para melhor organização
+      const nationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('brasileiro') || 
+        c.name.toLowerCase().includes('brasileirão') ||
+        c.name.toLowerCase().includes('copa do brasil') ||
+        c.name.toLowerCase().includes('série') ||
+        c.name.toLowerCase().includes('serie')
+      );
+
+      const internationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('libertadores') || 
+        c.name.toLowerCase().includes('sul-americana') ||
+        c.name.toLowerCase().includes('copa américa') ||
+        c.name.toLowerCase().includes('mundial')
+      );
+
+      const otherCompetitions = competitions.filter(c => 
+        !nationalCompetitions.includes(c) && !internationalCompetitions.includes(c)
+      );
+
+      const sections: {
+        title: string;
+        rows: { id: string; title: string; description: string }[];
+      }[] = [];
+
+      // Construir seções com IDs específicos para artilheiros
+      if (nationalCompetitions.length > 0) {
+        sections.push({
+          title: '🇧🇷 Competições Nacionais',
+          rows: nationalCompetitions.map(c => ({
+            id: `SCORERS_${c.id}`,
+            title: c.name,
+            description: `Ver artilheiros da ${c.name}`
+          }))
+        });
+      }
+
+      if (internationalCompetitions.length > 0) {
+        sections.push({
+          title: '🌎 Competições Internacionais',
+          rows: internationalCompetitions.map(c => ({
+            id: `SCORERS_${c.id}`,
+            title: c.name,
+            description: `Ver artilheiros da ${c.name}`
+          }))
+        });
+      }
+
+      if (otherCompetitions.length > 0) {
+        sections.push({
+          title: '🏆 Outras Competições',
+          rows: otherCompetitions.map(c => ({
+            id: `SCORERS_${c.id}`,
+            title: c.name,
+            description: `Ver artilheiros da ${c.name}`
+          }))
+        });
+      }
+
+      // Enviar menu de lista
+      return await this.evolutionService.sendListMessage(
+        phoneNumber,
+        '🥇 ARTILHEIROS',
+        'Selecione a competição que deseja ver os artilheiros:',
+        'Selecionar Competição',
+        sections,
+        'Kmiza27 ⚽'
+      );
+
+    } catch (error) {
+      console.error('Erro ao enviar menu de artilheiros:', error);
+      await this.evolutionService.sendMessage(
+        phoneNumber,
+        '❌ Erro ao carregar competições. Tente novamente.\n\nPara mais informações acesse Kmiza27.com'
+      );
+      return false;
+    }
+  }
+
+  private async sendCompetitionsMenuForStats(phoneNumber: string): Promise<boolean> {
+    try {
+      // Buscar competições ativas do banco de dados
+      const competitions = await this.competitionsRepository
+        .createQueryBuilder('competition')
+        .where('competition.is_active = :active', { active: true })
+        .orderBy('competition.name', 'ASC')
+        .getMany();
+
+      if (competitions.length === 0) {
+        await this.evolutionService.sendMessage(
+          phoneNumber,
+          '❌ Nenhuma competição ativa encontrada no momento.\n\nPara mais informações acesse Kmiza27.com'
+        );
+        return true;
+      }
+
+      // Dividir competições em seções para melhor organização
+      const nationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('brasileiro') || 
+        c.name.toLowerCase().includes('brasileirão') ||
+        c.name.toLowerCase().includes('copa do brasil') ||
+        c.name.toLowerCase().includes('série') ||
+        c.name.toLowerCase().includes('serie')
+      );
+
+      const internationalCompetitions = competitions.filter(c => 
+        c.name.toLowerCase().includes('libertadores') || 
+        c.name.toLowerCase().includes('sul-americana') ||
+        c.name.toLowerCase().includes('copa américa') ||
+        c.name.toLowerCase().includes('mundial')
+      );
+
+      const otherCompetitions = competitions.filter(c => 
+        !nationalCompetitions.includes(c) && !internationalCompetitions.includes(c)
+      );
+
+      const sections: {
+        title: string;
+        rows: { id: string; title: string; description: string }[];
+      }[] = [];
+
+      // Construir seções com IDs específicos para estatísticas
+      if (nationalCompetitions.length > 0) {
+        sections.push({
+          title: '🇧🇷 Competições Nacionais',
+          rows: nationalCompetitions.map(c => ({
+            id: `STATS_${c.id}`,
+            title: c.name,
+            description: `Ver estatísticas da ${c.name}`
+          }))
+        });
+      }
+
+      if (internationalCompetitions.length > 0) {
+        sections.push({
+          title: '🌎 Competições Internacionais',
+          rows: internationalCompetitions.map(c => ({
+            id: `STATS_${c.id}`,
+            title: c.name,
+            description: `Ver estatísticas da ${c.name}`
+          }))
+        });
+      }
+
+      if (otherCompetitions.length > 0) {
+        sections.push({
+          title: '🏆 Outras Competições',
+          rows: otherCompetitions.map(c => ({
+            id: `STATS_${c.id}`,
+            title: c.name,
+            description: `Ver estatísticas da ${c.name}`
+          }))
+        });
+      }
+
+      // Enviar menu de lista
+      return await this.evolutionService.sendListMessage(
+        phoneNumber,
+        '📊 ESTATÍSTICAS DE COMPETIÇÕES',
+        'Selecione a competição que deseja ver as estatísticas:',
+        'Selecionar Competição',
+        sections,
+        'Kmiza27 ⚽'
+      );
+
+    } catch (error) {
+      console.error('Erro ao enviar menu de estatísticas:', error);
+      await this.evolutionService.sendMessage(
+        phoneNumber,
+        '❌ Erro ao carregar competições. Tente novamente.\n\nPara mais informações acesse Kmiza27.com'
+      );
       return false;
     }
   }
@@ -1230,18 +1427,30 @@ Digite sua pergunta ou comando! ⚽`;
           return '🏟️ Para qual estádio você gostaria de ver as informações?\n\nPor favor, digite o nome do estádio:';
 
         case 'CMD_ARTILHEIROS':
-          await this.setUserConversationState(phoneNumber, 'waiting_competition_for_scorers');
-          return '🥇 Para qual competição você gostaria de ver os artilheiros?\n\nPor favor, digite o nome da competição (ex: Brasileirão, Libertadores):';
+          await this.sendCompetitionsMenuForScorers(phoneNumber);
+          return 'Selecione a competição para ver os artilheiros:';
 
-        case 'CMD_INFO_COMPETICOES':
-          await this.setUserConversationState(phoneNumber, 'waiting_competition_for_info');
-          return '🏆 Para qual competição você gostaria de ver as informações?\n\nPor favor, digite o nome da competição:';
+        case 'CMD_ESTATISTICAS_COMPETICOES':
+          await this.sendCompetitionsMenuForStats(phoneNumber);
+          return 'Selecione a competição para ver as estatísticas:';
 
         default:
           // Verificar se é um ID de competição (COMP_X)
           if (buttonId.startsWith('COMP_')) {
             const competitionId = parseInt(buttonId.replace('COMP_', ''));
             return await this.getCompetitionTableById(competitionId);
+          }
+
+          // Verificar se é um ID de artilheiros (SCORERS_X)
+          if (buttonId.startsWith('SCORERS_')) {
+            const competitionId = parseInt(buttonId.replace('SCORERS_', ''));
+            return await this.getCompetitionScorersById(competitionId);
+          }
+
+          // Verificar se é um ID de estatísticas (STATS_X)
+          if (buttonId.startsWith('STATS_')) {
+            const competitionId = parseInt(buttonId.replace('STATS_', ''));
+            return await this.getCompetitionStatsById(competitionId);
           }
 
           return '❌ Opção não reconhecida. Tente novamente ou digite "menu" para ver as opções.';
@@ -1306,10 +1515,6 @@ Digite sua pergunta ou comando! ⚽`;
           response = await this.getTopScorers(message);
           break;
 
-        case 'waiting_competition_for_info':
-          response = await this.getCompetitionInfo(message);
-          break;
-
         default:
           response = '❌ Estado da conversa não reconhecido. Tente novamente.';
       }
@@ -1340,6 +1545,42 @@ Digite sua pergunta ou comando! ⚽`;
     } catch (error) {
       console.error('Erro ao buscar tabela da competição por ID:', error);
       return '❌ Erro ao buscar tabela da competição.\n\nPara mais informações acesse Kmiza27.com';
+    }
+  }
+
+  private async getCompetitionScorersById(competitionId: number): Promise<string> {
+    try {
+      const competition = await this.competitionsRepository.findOne({
+        where: { id: competitionId }
+      });
+
+      if (!competition) {
+        return '❌ Competição não encontrada.\n\nPara mais informações acesse Kmiza27.com';
+      }
+
+      // Usar o método existente getTopScorers com o nome da competição
+      return await this.getTopScorers(competition.name);
+    } catch (error) {
+      console.error('Erro ao buscar artilheiros da competição por ID:', error);
+      return '❌ Erro ao buscar artilheiros da competição.\n\nPara mais informações acesse Kmiza27.com';
+    }
+  }
+
+  private async getCompetitionStatsById(competitionId: number): Promise<string> {
+    try {
+      const competition = await this.competitionsRepository.findOne({
+        where: { id: competitionId }
+      });
+
+      if (!competition) {
+        return '❌ Competição não encontrada.\n\nPara mais informações acesse Kmiza27.com';
+      }
+
+      // Usar o método existente getCompetitionStats com o nome da competição
+      return await this.footballDataService.getCompetitionStats(competition.name);
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas da competição por ID:', error);
+      return '❌ Erro ao buscar estatísticas da competição.\n\nPara mais informações acesse Kmiza27.com';
     }
   }
 
