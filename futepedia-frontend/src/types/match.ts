@@ -10,6 +10,13 @@ interface Stadium {
   city?: string;
 }
 
+export interface Competition {
+  id: number;
+  name: string;
+  slug?: string;
+  logo_url?: string;
+}
+
 export interface Match {
   id: number;
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'POSTPONED' | 'scheduled' | 'in_progress' | 'finished' | 'postponed';
@@ -24,6 +31,7 @@ export interface Match {
   is_knockout?: boolean;
   tie_id?: string;
   leg?: 'first_leg' | 'second_leg' | 'single_match';
+  competition?: Competition;
 
   broadcasts?: {
     channel: {

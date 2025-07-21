@@ -1078,7 +1078,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: nationalCompetitions.map(c => ({
             id: `COMP_${c.id}`,
             title: c.name,
-            description: `Ver tabela da ${c.name}`
+            description: `Ver classificação do ${c.name}`
           }))
         });
       }
@@ -1089,7 +1089,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: internationalCompetitions.map(c => ({
             id: `COMP_${c.id}`,
             title: c.name,
-            description: `Ver tabela da ${c.name}`
+            description: `Ver classificação do ${c.name}`
           }))
         });
       }
@@ -1100,7 +1100,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: otherCompetitions.map(c => ({
             id: `COMP_${c.id}`,
             title: c.name,
-            description: `Ver tabela da ${c.name}`
+            description: `Ver classificação do ${c.name}`
           }))
         });
       }
@@ -1174,7 +1174,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: nationalCompetitions.map(c => ({
             id: `SCORERS_${c.id}`,
             title: `Artilheiros do ${c.name}`,
-            description: `Ver ranking dos goleadores`
+            description: `Ver artilheiros do ${c.name}`
           }))
         });
       }
@@ -1185,7 +1185,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: internationalCompetitions.map(c => ({
             id: `SCORERS_${c.id}`,
             title: `Artilheiros do ${c.name}`,
-            description: `Ver ranking dos goleadores`
+            description: `Ver artilheiros do ${c.name}`
           }))
         });
       }
@@ -1196,7 +1196,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: otherCompetitions.map(c => ({
             id: `SCORERS_${c.id}`,
             title: `Artilheiros do ${c.name}`,
-            description: `Ver ranking dos goleadores`
+            description: `Ver artilheiros do ${c.name}`
           }))
         });
       }
@@ -1270,7 +1270,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: nationalCompetitions.map(c => ({
             id: `STATS_${c.id}`,
             title: `Estatísticas do ${c.name}`,
-            description: `Ver dados gerais da competição`
+            description: `Ver estatísticas do ${c.name}`
           }))
         });
       }
@@ -1281,7 +1281,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: internationalCompetitions.map(c => ({
             id: `STATS_${c.id}`,
             title: `Estatísticas do ${c.name}`,
-            description: `Ver dados gerais da competição`
+            description: `Ver estatísticas do ${c.name}`
           }))
         });
       }
@@ -1292,7 +1292,7 @@ Digite sua pergunta ou comando! ⚽`;
           rows: otherCompetitions.map(c => ({
             id: `STATS_${c.id}`,
             title: `Estatísticas do ${c.name}`,
-            description: `Ver dados gerais da competição`
+            description: `Ver estatísticas do ${c.name}`
           }))
         });
       }

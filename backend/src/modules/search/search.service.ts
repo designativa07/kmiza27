@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { Team } from '../../entities/team.entity';
 import { Player } from '../../entities/player.entity';
 import { Stadium } from '../../entities/stadium.entity';
@@ -23,18 +23,22 @@ export class SearchService {
   ) {}
 
   private async searchWithUnaccent(repository: Repository<any>, fields: string[], searchTerm: string, limit: number) {
-    const queryBuilder = repository.createQueryBuilder('entity');
-    const whereClauses = fields.map(field => `UNACCENT(entity.${field}) ILIKE UNACCENT(:searchTerm)`).join(' OR ');
-    
-    queryBuilder.where(whereClauses, { searchTerm: `%${searchTerm}%` }).take(limit);
-
     try {
+      // Primeiro, tentar com UNACCENT se disponível
+      const queryBuilder = repository.createQueryBuilder('entity');
+      const whereClauses = fields.map(field => `UNACCENT(entity.${field}) ILIKE UNACCENT(:searchTerm)`).join(' OR ');
+      
+      queryBuilder.where(whereClauses, { searchTerm: `%${searchTerm}%` }).take(limit);
+      
       return await queryBuilder.getMany();
     } catch (error) {
       console.warn(`Falha ao usar UNACCENT em ${repository.metadata.tableName}. Fallback para LIKE. Erro: ${error.message}`);
+      
+      // Fallback: usar LIKE simples
       const fallbackQueryBuilder = repository.createQueryBuilder('entity');
       const fallbackWhereClauses = fields.map(field => `LOWER(entity.${field}) LIKE LOWER(:searchTerm)`).join(' OR ');
       fallbackQueryBuilder.where(fallbackWhereClauses, { searchTerm: `%${searchTerm}%` }).take(limit);
+      
       return await fallbackQueryBuilder.getMany();
     }
   }
@@ -46,14 +50,19 @@ export class SearchService {
 
     const searchTerm = query.trim();
 
-    const [teams, players, stadiums, competitions, channels] = await Promise.all([
-      this.searchWithUnaccent(this.teamsRepository, ['name', 'short_name'], searchTerm, limit),
-      this.searchWithUnaccent(this.playersRepository, ['name', 'position'], searchTerm, limit),
-      this.searchWithUnaccent(this.stadiumsRepository, ['name', 'city', 'state'], searchTerm, limit),
-      this.searchWithUnaccent(this.competitionsRepository, ['name'], searchTerm, limit),
-      this.searchWithUnaccent(this.channelsRepository, ['name', 'description'], searchTerm, limit),
-    ]);
+    try {
+      const [teams, players, stadiums, competitions, channels] = await Promise.all([
+        this.searchWithUnaccent(this.teamsRepository, ['name', 'short_name'], searchTerm, limit),
+        this.searchWithUnaccent(this.playersRepository, ['name', 'position'], searchTerm, limit),
+        this.searchWithUnaccent(this.stadiumsRepository, ['name', 'city', 'state'], searchTerm, limit),
+        this.searchWithUnaccent(this.competitionsRepository, ['name'], searchTerm, limit),
+        this.searchWithUnaccent(this.channelsRepository, ['name'], searchTerm, limit), // Removido 'description'
+      ]);
 
-    return { teams, players, stadiums, competitions, channels };
+      return { teams, players, stadiums, competitions, channels };
+    } catch (error) {
+      console.error('❌ Erro na busca:', error);
+      return { teams: [], players: [], stadiums: [], competitions: [], channels: [] };
+    }
   }
 } 

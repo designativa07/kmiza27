@@ -75,6 +75,18 @@ export class Match {
   @Column({ type: 'int', nullable: true })
   away_score_penalties: number;
 
+  @Column({ type: 'int', nullable: true, default: 0 })
+  home_yellow_cards: number;
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  away_yellow_cards: number;
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  home_red_cards: number;
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  away_red_cards: number;
+
   @Column({ type: 'int', nullable: true })
   attendance: number;
 

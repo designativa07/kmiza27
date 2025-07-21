@@ -59,6 +59,45 @@ export class MatchesController {
     return res.json(rounds);
   }
 
+  @Get('test')
+  async testEndpoint() {
+    return { message: 'Teste funcionando!' };
+  }
+
+  @Get('today')
+  async getTodayMatches(@Res() res: Response) {
+    try {
+      const matches = await this.matchesService.getTodayMatches();
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': new Date().toUTCString()
+      });
+      return res.json(matches);
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar jogos de hoje:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  @Get('week')
+  async getWeekMatches(@Res() res: Response) {
+    try {
+      const matches = await this.matchesService.getWeekMatches();
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': new Date().toUTCString()
+      });
+      return res.json(matches);
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar jogos da semana:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
   @Get()
   async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
     const pageNumber = parseInt(page, 10);

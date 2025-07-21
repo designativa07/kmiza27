@@ -132,7 +132,6 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                   aria-label={isMenuOpen ? "Fechar menu de navegação" : "Abrir menu de navegação"}
-                  aria-expanded={isMenuOpen ? "true" : "false"}
                   aria-haspopup="true"
                 >
                   {isMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
@@ -260,17 +259,16 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
             
             {/* Search Section */}
             <div className="flex justify-end md:flex-none items-center md:ml-8">
-              {/* Mobile Search Button */}
+              {/* Mobile Search Button (único) */}
               <button
-                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                onClick={() => setIsMobileSearchOpen(true)}
                 className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                aria-label={isMobileSearchOpen ? "Fechar busca" : "Abrir busca"}
-                aria-expanded={isMobileSearchOpen ? "true" : "false"}
+                aria-label="Abrir busca"
               >
-                {isMobileSearchOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Search className="h-5 w-5" aria-hidden="true" />}
+                <Search className="h-5 w-5" aria-hidden="true" />
               </button>
 
-               {/* Desktop Search */}
+              {/* Desktop Search */}
               <div className="hidden md:block relative w-full max-w-md md:flex-none md:ml-8" ref={searchContainerRef}>
                 <SearchComponent 
                   ref={searchInputRef}
@@ -284,10 +282,50 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                       {Object.entries(results).map(([type, items]) => {
                         if (items.length === 0) return null;
                         const typeMap: any = {
-                          teams: { title: 'Times', icon: <Shield className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/time/${item.id}` },
-                          players: { title: 'Jogadores', icon: <User className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: () => '/jogadores' },
-                          stadiums: { title: 'Estádios', icon: <Building className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/estadio/${item.id}` },
-                          competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/${item.slug}/jogos` },
+                          teams: { 
+                            title: 'Times', 
+                            icon: null, // Removido o ícone Shield
+                            link: (item: any) => `/time/${item.id}`,
+                            renderItem: (item: any) => (
+                              <div className="flex items-center space-x-3">
+                                {item.logo_url && (
+                                  <img 
+                                    src={item.logo_url} 
+                                    alt={`Escudo do ${item.name}`}
+                                    className="w-6 h-6 object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                )}
+                                <span className="text-sm text-gray-800">{item.name}</span>
+                              </div>
+                            )
+                          },
+                          players: { 
+                            title: 'Jogadores', 
+                            icon: <User className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                            link: () => '/jogadores',
+                            renderItem: (item: any) => (
+                              <span className="text-sm text-gray-800">{item.name}</span>
+                            )
+                          },
+                          stadiums: { 
+                            title: 'Estádios', 
+                            icon: <Building className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                            link: (item: any) => `/estadio/${item.id}`,
+                            renderItem: (item: any) => (
+                              <span className="text-sm text-gray-800">{item.name}</span>
+                            )
+                          },
+                          competitions: { 
+                            title: 'Competições', 
+                            icon: <Trophy className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                            link: (item: any) => `/${item.slug}/jogos`,
+                            renderItem: (item: any) => (
+                              <span className="text-sm text-gray-800">{item.name}</span>
+                            )
+                          },
                         };
                         return (
                           <div key={type}>
@@ -296,8 +334,8 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                               {items.map((item: any) => (
                                 <li key={`${type}-${item.id}`}>
                                   <Link href={typeMap[type].link(item)} onClick={clearSearch} className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-100">
-                                    {typeMap[type].icon}
-                                    <span className="text-sm text-gray-800">{item.name}</span>
+                                    {typeMap[type].icon && typeMap[type].icon}
+                                    {typeMap[type].renderItem(item)}
                                   </Link>
                                 </li>
                               ))}
@@ -310,13 +348,6 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                        }
                     </div>
                 )}
-              </div>
-
-              {/* Mobile Search Icon */}
-              <div className="md:hidden">
-                <button onClick={() => setIsMobileSearchOpen(true)} className="p-2 text-gray-600" aria-label="Abrir busca">
-                  <Search className="h-5 w-5" aria-hidden="true" />
-                </button>
               </div>
             </div>
           </div>
@@ -346,10 +377,50 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                {Object.entries(results).map(([type, items]) => {
                 if (items.length === 0) return null;
                 const typeMap: any = {
-                  teams: { title: 'Times', icon: <Shield className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/time/${item.id}` },
-                  players: { title: 'Jogadores', icon: <User className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: () => '/jogadores' },
-                  stadiums: { title: 'Estádios', icon: <Building className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/estadio/${item.id}` },
-                  competitions: { title: 'Competições', icon: <Trophy className="h-4 w-4 text-gray-500" aria-hidden="true" />, link: (item: any) => `/${item.slug}/jogos` },
+                  teams: { 
+                    title: 'Times', 
+                    icon: null, // Removido o ícone Shield
+                    link: (item: any) => `/time/${item.id}`,
+                    renderItem: (item: any) => (
+                      <div className="flex items-center space-x-3">
+                        {item.logo_url && (
+                          <img 
+                            src={item.logo_url} 
+                            alt={`Escudo do ${item.name}`}
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <span className="text-sm text-gray-800">{item.name}</span>
+                      </div>
+                    )
+                  },
+                  players: { 
+                    title: 'Jogadores', 
+                    icon: <User className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                    link: () => '/jogadores',
+                    renderItem: (item: any) => (
+                      <span className="text-sm text-gray-800">{item.name}</span>
+                    )
+                  },
+                  stadiums: { 
+                    title: 'Estádios', 
+                    icon: <Building className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                    link: (item: any) => `/estadio/${item.id}`,
+                    renderItem: (item: any) => (
+                      <span className="text-sm text-gray-800">{item.name}</span>
+                    )
+                  },
+                  competitions: { 
+                    title: 'Competições', 
+                    icon: <Trophy className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                    link: (item: any) => `/${item.slug}/jogos`,
+                    renderItem: (item: any) => (
+                      <span className="text-sm text-gray-800">{item.name}</span>
+                    )
+                  },
                 };
                 return (
                   <div key={type}>
@@ -358,8 +429,8 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                       {items.map((item: any) => (
                         <li key={`${type}-${item.id}`}>
                           <Link href={typeMap[type].link(item)} onClick={() => { clearSearch(); setIsMobileSearchOpen(false); }} className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-100">
-                            {typeMap[type].icon}
-                            <span className="text-sm text-gray-800">{item.name}</span>
+                            {typeMap[type].icon && typeMap[type].icon}
+                            {typeMap[type].renderItem(item)}
                           </Link>
                         </li>
                       ))}
