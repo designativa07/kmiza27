@@ -308,6 +308,19 @@ export class MatchesService {
       if (updateMatchDto.away_score !== undefined) updateData.away_score = updateMatchDto.away_score;
       if (updateMatchDto.home_score_penalties !== undefined) updateData.home_score_penalties = updateMatchDto.home_score_penalties;
       if (updateMatchDto.away_score_penalties !== undefined) updateData.away_score_penalties = updateMatchDto.away_score_penalties;
+      if (updateMatchDto.home_yellow_cards !== undefined) updateData.home_yellow_cards = updateMatchDto.home_yellow_cards;
+      if (updateMatchDto.away_yellow_cards !== undefined) updateData.away_yellow_cards = updateMatchDto.away_yellow_cards;
+      if (updateMatchDto.home_red_cards !== undefined) updateData.home_red_cards = updateMatchDto.home_red_cards;
+      if (updateMatchDto.away_red_cards !== undefined) updateData.away_red_cards = updateMatchDto.away_red_cards;
+      if (updateMatchDto.stadium_id !== undefined) {
+        // Se stadium_id for null, remover o relacionamento
+        if (updateMatchDto.stadium_id === null) {
+          updateData.stadium = undefined;
+        } else {
+          // Criar um objeto Stadium com o ID para o TypeORM
+          updateData.stadium = { id: updateMatchDto.stadium_id } as any;
+        }
+      }
       if (updateMatchDto.attendance) updateData.attendance = updateMatchDto.attendance;
       if (updateMatchDto.referee) updateData.referee = updateMatchDto.referee;
       if (updateMatchDto.broadcast_channels) updateData.broadcast_channels = updateMatchDto.broadcast_channels;
@@ -688,6 +701,69 @@ export class MatchesService {
           }
         }
       }
+    }
+  }
+
+  async getTodayMatches(): Promise<Match[]> {
+    try {
+      console.log('🔍 Buscando jogos de hoje...');
+
+      // Usar query SQL direta com timezone do Brasil para maior precisão
+      // Converter a data atual para o timezone de São Paulo e buscar jogos desse dia
+      // Usar query SQL direta com timezone do Brasil para maior precisão
+      // Converter a data atual para o timezone de São Paulo e buscar jogos desse dia
+      const todayMatches = await this.matchRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
+        .orderBy('match.match_date', 'ASC')
+        .getMany();
+
+      console.log(`⚽ Encontrados ${todayMatches.length} jogos para hoje`);
+      return todayMatches;
+    } catch (error) {
+      console.error('❌ Erro ao buscar jogos de hoje:', error);
+      console.error('Stack trace:', error.stack);
+      return [];
+    }
+  }
+
+  async getWeekMatches(): Promise<Match[]> {
+    try {
+      console.log('🔍 Buscando jogos da semana...');
+      
+      const now = new Date();
+      const startOfTodaySaoPaulo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+      // End of next week in Sao Paulo local time (7 days from start of today)
+      const endOfNextWeekSaoPaulo = new Date(startOfTodaySaoPaulo.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 full days
+      endOfNextWeekSaoPaulo.setHours(23, 59, 59, 999); // Set to end of the day
+
+      const startQueryDate = startOfTodaySaoPaulo;
+      const endQueryDate = endOfNextWeekSaoPaulo;
+
+      const weekMatches = await this.matchRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('match.match_date >= :start', { start: startQueryDate })
+        .andWhere('match.match_date <= :end', { end: endQueryDate })
+        .andWhere('match.status = :status', { status: 'scheduled' })
+        .orderBy('match.match_date', 'ASC')
+        .limit(15)
+        .getMany();
+
+      console.log(`⚽ Encontrados ${weekMatches.length} jogos para a semana`);
+      return weekMatches;
+    } catch (error) {
+      console.error('❌ Erro ao buscar jogos da semana:', error);
+      console.error('Stack trace:', error.stack);
+      return [];
     }
   }
 } 

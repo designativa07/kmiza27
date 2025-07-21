@@ -120,6 +120,32 @@ export default function Home() {
             <div className="space-y-4">
               <TeamsCard />
 
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <Link href="/jogos-hoje" className="group block p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <CalendarDays className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="font-bold text-gray-900">Jogos de Hoje</h4>
+                      <p className="text-sm text-gray-600">Confira</p>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href="/jogos-semana" className="group block p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <CalendarDays className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="font-bold text-gray-900">Jogos da Semana</h4>
+                      <p className="text-sm text-gray-600">Veja</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <Link href="/jogadores" className="group block p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
                   <div className="flex flex-col items-center text-center">

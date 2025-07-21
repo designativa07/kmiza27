@@ -829,6 +829,7 @@ export default function MatchesManager() {
         group_name: formData.group_name || undefined,
         phase: formData.phase || undefined,
         status: formData.status,
+        match_date: new Date(formData.match_date).toISOString(),
         broadcast_channels: formData.broadcast_channels || null,
         channel_ids: formData.channel_ids,
         home_score: formData.home_score !== undefined ? formData.home_score : null,
@@ -885,7 +886,6 @@ export default function MatchesManager() {
         payload = {
           home_team_id: parseInt(String(formData.home_team_id || '')),
           away_team_id: parseInt(String(formData.away_team_id || '')),
-          match_date: new Date(formData.match_date).toISOString(),
           stadium_id: formData.stadium_id === null || formData.stadium_id === ''
             ? null
             : parseInt(String(formData.stadium_id)),

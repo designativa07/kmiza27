@@ -91,6 +91,22 @@ export class CreateMatchDto {
 
   @IsOptional()
   @IsNumber()
+  home_yellow_cards?: number;
+
+  @IsOptional()
+  @IsNumber()
+  away_yellow_cards?: number;
+
+  @IsOptional()
+  @IsNumber()
+  home_red_cards?: number;
+
+  @IsOptional()
+  @IsNumber()
+  away_red_cards?: number;
+
+  @IsOptional()
+  @IsNumber()
   attendance?: number;
 
   @IsOptional()

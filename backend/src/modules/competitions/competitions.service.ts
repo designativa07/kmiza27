@@ -92,7 +92,13 @@ export class CompetitionsService {
     if (!competition) {
       return []; // ou lançar um erro, se preferir
     }
-    return this.getTeams(competition.id);
+    
+    // Buscar times da competição ordenados alfabeticamente pelo nome
+    return this.competitionTeamRepository.find({
+      where: { competition: { id: competition.id } },
+      relations: ['team', 'competition'],
+      order: { team: { name: 'ASC' } }
+    });
   }
 
   async removeTeam(competitionId: number, competitionTeamId: number): Promise<void> {
