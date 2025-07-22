@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Menu, X, Home, Trophy, MapPin, Users, Shield, Building, User, MessageCircle, ListOrdered, Star } from 'lucide-react';
+import { Search, Menu, X, Home, Trophy, MapPin, Users, Shield, Building, User, MessageCircle, ListOrdered, Star, Tv } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { getApiUrl } from '@/lib/config';
 import { getFutepediaLogoUrl } from '@/lib/cdn';
@@ -22,6 +22,7 @@ interface SearchResult {
   players: any[];
   stadiums: any[];
   competitions: any[];
+  channels: any[];
 }
 
 const SearchComponent = React.forwardRef<HTMLInputElement, {
@@ -80,7 +81,7 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
       } catch (error) {
         console.error("Failed to fetch search results:", error);
         // Apresenta um estado de erro ou "nenhum resultado" para o usuário.
-        setResults({ teams: [], players: [], stadiums: [], competitions: [] });
+        setResults({ teams: [], players: [], stadiums: [], competitions: [], channels: [] });
       } finally {
         setLoading(false);
       }
@@ -326,6 +327,14 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                               <span className="text-sm text-gray-800">{item.name}</span>
                             )
                           },
+                          channels: { 
+                            title: 'Canais', 
+                            icon: <Tv className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                            link: () => '/',
+                            renderItem: (item: any) => (
+                              <span className="text-sm text-gray-800">{item.name}</span>
+                            )
+                          },
                         };
                         return (
                           <div key={type}>
@@ -343,7 +352,7 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                           </div>
                         );
                       })}
-                       {(results.teams.length + results.players.length + results.stadiums.length + results.competitions.length) === 0 && !loading &&
+                       {(results.teams.length + results.players.length + results.stadiums.length + results.competitions.length + results.channels.length) === 0 && !loading &&
                           <div className="p-4 text-center text-sm text-gray-500">Nenhum resultado encontrado.</div>
                        }
                     </div>
@@ -421,6 +430,14 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                       <span className="text-sm text-gray-800">{item.name}</span>
                     )
                   },
+                  channels: { 
+                    title: 'Canais', 
+                    icon: <Tv className="h-4 w-4 text-gray-500" aria-hidden="true" />, 
+                    link: () => '/',
+                    renderItem: (item: any) => (
+                      <span className="text-sm text-gray-800">{item.name}</span>
+                    )
+                  },
                 };
                 return (
                   <div key={type}>
@@ -438,7 +455,7 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                   </div>
                 );
               })}
-               {(results.teams.length + results.players.length + results.stadiums.length + results.competitions.length) === 0 && !loading &&
+               {(results.teams.length + results.players.length + results.stadiums.length + results.competitions.length + results.channels.length) === 0 && !loading &&
                   <div className="p-4 text-center text-sm text-gray-500">Nenhum resultado encontrado.</div>
                }
             </div>
