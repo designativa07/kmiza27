@@ -100,9 +100,14 @@ export class MatchesController {
 
   @Get()
   async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    return this.matchesService.findAll(pageNumber, limitNumber);
+    try {
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      return this.matchesService.findAll(pageNumber, limitNumber);
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar matches:', error);
+      throw error;
+    }
   }
 
   @Get(':id')
