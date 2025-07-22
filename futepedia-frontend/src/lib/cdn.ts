@@ -16,7 +16,7 @@ const isServer = typeof window === 'undefined';
 export function getFutepediaLogoUrl(logoUrl: string | null | undefined): string {
   try {
     if (!logoUrl) {
-      return '/kmiza27_logo30px.gif'; // Fallback padrão
+      return `${CDN_BASE_URL}/img/kmiza27_logo30px.gif`; // Fallback padrão
     }
 
     // Se já é uma URL completa do CDN, usar diretamente
@@ -53,7 +53,7 @@ export function getFutepediaLogoUrl(logoUrl: string | null | undefined): string 
     if (isServer) {
       console.warn('Erro na função getFutepediaLogoUrl:', error);
     }
-    return '/kmiza27_logo30px.gif';
+    return `${CDN_BASE_URL}/img/kmiza27_logo30px.gif`;
   }
 }
 
@@ -65,7 +65,7 @@ export function getFutepediaLogoUrl(logoUrl: string | null | undefined): string 
 export function getFutepediaOgImageUrl(imageUrl: string | null | undefined): string {
   try {
     if (!imageUrl) {
-      return '/kmiza27_logo30px.gif'; // Fallback padrão
+      return `${CDN_BASE_URL}/img/kmiza27_logo30px.gif`; // Fallback padrão
     }
 
     // Se já é uma URL completa do CDN, usar diretamente
@@ -102,7 +102,7 @@ export function getFutepediaOgImageUrl(imageUrl: string | null | undefined): str
     if (isServer) {
       console.warn('Erro na função getFutepediaOgImageUrl:', error);
     }
-    return '/kmiza27_logo30px.gif';
+    return `${CDN_BASE_URL}/img/kmiza27_logo30px.gif`;
   }
 }
 
