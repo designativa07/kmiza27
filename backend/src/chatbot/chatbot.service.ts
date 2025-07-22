@@ -860,7 +860,7 @@ export class ChatbotService {
         response += `🆚 ${team.name} vs ${opponent}\n`;
         response += `🏆 ${match.competition.name}\n`;
         
-        // Buscar canais de transmissão da nova tabela match_broadcasts
+        // Buscar canais de transmissão da tabela match_broadcasts
         const broadcasts = await this.matchBroadcastRepository
           .createQueryBuilder('broadcast')
           .leftJoinAndSelect('broadcast.channel', 'channel')
