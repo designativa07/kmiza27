@@ -7,7 +7,7 @@ export class MatchBroadcast {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Match, match => match.broadcasts)
+  @ManyToOne(() => Match)
   @JoinColumn({ name: 'match_id' })
   match: Match;
 

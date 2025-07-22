@@ -717,9 +717,21 @@ export class MatchesService {
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.home_team', 'homeTeam')
         .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
         .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE(NOW() AT TIME ZONE 'America/Sao_Paulo')`)
         .orderBy('match.match_date', 'ASC')
         .getMany();
+
+      // Carregar broadcasts separadamente para evitar problemas de relação
+      for (const match of todayMatches) {
+        const broadcasts = await this.matchRepository.manager
+          .createQueryBuilder('MatchBroadcast', 'broadcast')
+          .leftJoinAndSelect('broadcast.channel', 'channel')
+          .where('broadcast.match_id = :matchId', { matchId: match.id })
+          .getMany();
+        
+        (match as any).broadcasts = broadcasts;
+      }
 
       console.log(`⚽ Encontrados ${todayMatches.length} jogos para hoje`);
       return todayMatches;
@@ -757,6 +769,17 @@ export class MatchesService {
         .orderBy('match.match_date', 'ASC')
         .limit(15)
         .getMany();
+
+      // Carregar broadcasts separadamente para evitar problemas de relação
+      for (const match of weekMatches) {
+        const broadcasts = await this.matchRepository.manager
+          .createQueryBuilder('MatchBroadcast', 'broadcast')
+          .leftJoinAndSelect('broadcast.channel', 'channel')
+          .where('broadcast.match_id = :matchId', { matchId: match.id })
+          .getMany();
+        
+        (match as any).broadcasts = broadcasts;
+      }
 
       console.log(`⚽ Encontrados ${weekMatches.length} jogos para a semana`);
       return weekMatches;

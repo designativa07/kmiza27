@@ -144,8 +144,8 @@ export class Match {
   @OneToMany(() => Goal, goal => goal.match)
   goals: Goal[];
 
-  @OneToMany(() => MatchBroadcast, broadcast => broadcast.match)
-  broadcasts: MatchBroadcast[];
+  // @OneToMany(() => MatchBroadcast, broadcast => broadcast.match)
+  // broadcasts: MatchBroadcast[];
 
   @OneToMany(() => Card, card => card.match)
   cards: Card[];
