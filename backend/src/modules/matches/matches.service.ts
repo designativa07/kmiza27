@@ -270,16 +270,32 @@ export class MatchesService {
   async findOne(id: number): Promise<Match | null> {
     return this.matchRepository.findOne({
       where: { id },
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium'],
     });
   }
 
   async findByCompetitionId(competitionId: number): Promise<Match[]> {
     return this.matchRepository.find({
       where: { competition: { id: competitionId } },
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
+      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium'],
       order: { match_date: 'ASC' }, // Opcional: ordenar por data da partida
     });
+  }
+
+  async getMatchBroadcasts(matchId: number): Promise<any[]> {
+    try {
+      const broadcasts = await this.matchBroadcastRepository
+        .createQueryBuilder('broadcast')
+        .leftJoinAndSelect('broadcast.channel', 'channel')
+        .where('broadcast.match_id = :matchId', { matchId })
+        .andWhere('channel.active = :active', { active: true })
+        .getMany();
+
+      return broadcasts;
+    } catch (error) {
+      console.error('❌ Erro ao buscar broadcasts da partida:', error);
+      return [];
+    }
   }
 
   async getRoundsByCompetition(competitionId: number): Promise<Round[]> {
