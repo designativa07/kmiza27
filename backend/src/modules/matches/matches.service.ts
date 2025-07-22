@@ -256,15 +256,20 @@ export class MatchesService {
   }
 
   async findAll(page: number = 1, limit: number = 20): Promise<{ data: Match[], total: number }> {
-    const [data, total] = await this.matchRepository.findAndCount({
-      relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
-      order: {
-        match_date: 'DESC'
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-    return { data, total };
+    try {
+      const [data, total] = await this.matchRepository.findAndCount({
+        relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
+        order: {
+          match_date: 'DESC'
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      return { data, total };
+    } catch (error) {
+      console.error('❌ Erro no MatchesService.findAll:', error);
+      throw error;
+    }
   }
 
   async findOne(id: number): Promise<Match | null> {
