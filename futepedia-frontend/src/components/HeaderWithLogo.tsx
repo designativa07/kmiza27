@@ -67,7 +67,7 @@ export function HeaderWithLogo({ currentCompetition, showBackToHome = true }: He
     <Header
       currentCompetition={currentCompetition}
       showBackToHome={showBackToHome}
-      futepediaLogoUrl={futepediaLogoUrl}
+      futepediaLogoUrl={loading ? null : futepediaLogoUrl}
     />
   );
 } 

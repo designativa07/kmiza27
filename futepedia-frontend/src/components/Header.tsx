@@ -245,11 +245,15 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                 )}
               </div>
               <Link href="/" className="flex items-center space-x-3" aria-label="Ir para página inicial">
-                <img 
-                  src={getFutepediaLogoUrl(futepediaLogoUrl)}
-                  alt="Kmiza27 Logo" 
-                  className="max-h-5"
-                />
+                {futepediaLogoUrl ? (
+                  <img 
+                    src={getFutepediaLogoUrl(futepediaLogoUrl)}
+                    alt="Kmiza27 Logo" 
+                    className="max-h-5"
+                  />
+                ) : (
+                  <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                )}
                 <div>
                   <h1 className="text-lg font-bold text-gray-900">
                     {currentCompetition ? currentCompetition.name : 'Futepédia'}
