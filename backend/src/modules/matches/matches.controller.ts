@@ -110,6 +110,11 @@ export class MatchesController {
     return this.matchesService.findOne(+id);
   }
 
+  @Get(':id/broadcasts')
+  async getMatchBroadcasts(@Param('id') id: string) {
+    return this.matchesService.getMatchBroadcasts(+id);
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateMatchDto: UpdateMatchDto, @Res() res: Response) {
     console.log('🔍 PATCH /matches/:id - Dados recebidos:', {
