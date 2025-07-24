@@ -105,10 +105,15 @@ export class MatchesController {
 
   @Get()
   async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    const result = await this.matchesService.findAll(pageNumber, limitNumber);
-    return result.data; // Retornar apenas os dados, não o objeto com total
+    try {
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      const result = await this.matchesService.findAll(pageNumber, limitNumber);
+      return result.data; // Retornar apenas os dados, não o objeto com total
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar matches:', error);
+      throw error;
+    }
   }
 
   @Get(':id')
