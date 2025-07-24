@@ -30,6 +30,16 @@ export class PlayersService {
     private cardsRepository: Repository<Card>,
   ) {}
 
+  async testConnection(): Promise<number> {
+    try {
+      const count = await this.playersRepository.count();
+      return count;
+    } catch (error) {
+      console.error('❌ PlayersService: Erro ao testar conexão:', error);
+      throw error;
+    }
+  }
+
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
     const newPlayer = this.playersRepository.create(playerData);
     return this.playersRepository.save(newPlayer);
@@ -40,25 +50,23 @@ export class PlayersService {
     limit: number = 20,
     search?: string,
   ): Promise<PaginatedPlayersResult> {
-    const queryBuilder = this.playersRepository.createQueryBuilder('player')
-      .orderBy('player.name', 'ASC')
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    if (search) {
-      const searchTerm = search.trim();
+    try {
+      console.log('🔍 PlayersService.findAll: Iniciando busca...');
       
-      queryBuilder.where(
-        `UNACCENT(player.name) ILIKE UNACCENT(:searchTerm) OR 
-         UNACCENT(player.position) ILIKE UNACCENT(:searchTerm) OR
-         UNACCENT(player.nationality) ILIKE UNACCENT(:searchTerm) OR
-         UNACCENT(player.state) ILIKE UNACCENT(:searchTerm)`,
-        { searchTerm: `%${searchTerm}%` }
-      );
+      // Usar método mais simples sem relações
+      const [data, total] = await this.playersRepository.findAndCount({
+        select: ['id', 'name', 'position', 'nationality', 'state', 'date_of_birth', 'image_url'],
+        order: { name: 'ASC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      
+      console.log(`✅ PlayersService.findAll: ${total} jogadores encontrados`);
+      return { data, total };
+    } catch (error) {
+      console.error('❌ PlayersService.findAll: Erro:', error);
+      throw error;
     }
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-    return { data, total };
   }
 
   async searchPlayersByName(searchTerm: string): Promise<Player[]> {
@@ -68,7 +76,7 @@ export class PlayersService {
       
       const players = await this.playersRepository
         .createQueryBuilder('player')
-        .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:search))', { search })
+        .where('LOWER(player.name) LIKE LOWER(:search)', { search })
         .orderBy('player.name', 'ASC')
         .getMany();
       

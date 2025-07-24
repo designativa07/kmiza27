@@ -6,6 +6,11 @@ const getApiUrl = (): string => {
     return 'http://localhost:3000';
   }
   
+  // Para desenvolvimento sem window (Node.js), usar localhost
+  if (typeof window === 'undefined') {
+    return 'http://localhost:3000';
+  }
+  
   // Usar sempre a URL de produção (VPS) - SEM /api prefix
   return 'https://api.kmiza27.com';
 };
@@ -43,6 +48,7 @@ export const API_ENDPOINTS = {
   // Teams
   teams: {
     list: () => apiUrl('teams'),
+    all: () => apiUrl('teams/all'),
     byId: (id: number) => apiUrl(`teams/${id}`),
     uploadLogo: (id: number) => apiUrl(`teams/${id}/upload-escudo`),
   },
@@ -90,7 +96,16 @@ export const API_ENDPOINTS = {
     cancel: (id: number) => apiUrl(`notifications/${id}/cancel`),
   },
   
-  // Standings
+
+  
+  // Titles
+  titles: {
+    list: () => apiUrl('titles'),
+    byId: (id: number) => apiUrl(`titles/${id}`),
+    uploadImage: (id: number) => apiUrl(`titles/${id}/upload-image`),
+  },
+  
+  // Standings (continuação)
   standings: {
     byCompetition: (competitionId: number, group?: string) => {
       const url = apiUrl(`standings/competition/${competitionId}`);
@@ -147,11 +162,4 @@ export const API_ENDPOINTS = {
 };
 
 // Helper para URLs de imagens - agora usa CDN
-export { imageUrl } from '../lib/cdn';
-
-console.log('🔧 API Configuration HARDCODED:', {
-  baseUrl: API_BASE_URL,
-  hardcoded: true,
-  buildTimestamp: '2025-05-26T03:25:00Z',
-  finalFix: true
-}); 
+export { imageUrl } from '../lib/cdn'; 

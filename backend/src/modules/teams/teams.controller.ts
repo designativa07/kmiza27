@@ -59,6 +59,11 @@ export class TeamsController {
     );
   }
 
+  @Get('all')
+  findAllForAutocomplete(): Promise<Team[]> {
+    return this.teamsService.findAllForAutocomplete();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.teamsService.findOne(+id);

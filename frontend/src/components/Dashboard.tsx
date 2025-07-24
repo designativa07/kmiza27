@@ -46,6 +46,7 @@ import TopScorersTable from './TopScorersTable'
 import AutomationPanel from './AutomationPanel'
 import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
+import TitlesPage from '../app/titles/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -166,8 +167,6 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      console.log('🔄 Dashboard: Carregando estatísticas reais...')
-      
       // Buscar dados reais de múltiplas APIs
       const responses = await Promise.allSettled([
         fetch(API_ENDPOINTS.whatsapp.status()),
@@ -229,10 +228,6 @@ export default function Dashboard() {
       const totalChannels = channelsData?.total ?? (Array.isArray(channelsData) ? channelsData.length : 0);
       const totalStadiums = stadiumsData?.total ?? 0;
       const totalPlayers = playersData?.total ?? 0;
-
-      console.log('📊 Dashboard: Dados processados:', {
-        totalUsers, totalTeams, totalMatches, totalCompetitions, totalChannels, totalStadiums, totalPlayers
-      })
       
       setStats({
         totalUsers,
@@ -575,6 +570,8 @@ export default function Dashboard() {
 
       case 'Artilharia':
         return <TopScorersTable />
+      case 'Títulos':
+        return <TitlesPage />
       case 'Configurações':
         return <SystemSettings />
       default:
@@ -599,6 +596,7 @@ export default function Dashboard() {
       ]
     },
     { name: 'Estádios', icon: BuildingOfficeIcon, page: 'Estádios' },
+    { name: 'Títulos', icon: TrophyIcon, page: 'Títulos' },
     { name: 'Competições', icon: TrophyIcon, page: 'Competições' },
     { name: 'Jogos', icon: CalendarIcon, page: 'Jogos' },
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },

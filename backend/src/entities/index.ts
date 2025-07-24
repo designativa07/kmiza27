@@ -15,4 +15,5 @@ export * from './match-broadcast.entity';
 export * from './bot-config.entity';
 export * from './player.entity';
 export * from './player-team-history.entity';
-export * from './card.entity'; 
+export * from './card.entity';
+export * from './title.entity'; 

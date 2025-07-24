@@ -3,6 +3,7 @@ import { CompetitionTeam } from './competition-team.entity';
 import { Match } from './match.entity';
 import { Stadium } from './stadium.entity';
 import { PlayerTeamHistory } from './player-team-history.entity';
+import { Title } from './title.entity';
 
 @Entity('teams')
 export class Team {
@@ -75,4 +76,7 @@ export class Team {
 
   @OneToMany(() => PlayerTeamHistory, playerTeamHistory => playerTeamHistory.team)
   player_history: PlayerTeamHistory[];
+
+  @OneToMany(() => Title, title => title.team)
+  titles: Title[];
 } 

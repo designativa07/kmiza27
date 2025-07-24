@@ -46,19 +46,13 @@ export default function UsersManager() {
 
   const fetchUsers = async () => {
     try {
-      console.log('🔄 UsersManager: Carregando usuários da API...')
-      
       const response = await fetch(API_ENDPOINTS.users.list())
-      console.log('📊 UsersManager: Status da resposta:', response.status)
       
       if (!response.ok) {
         throw new Error('Erro ao carregar usuários')
       }
       
       const data = await response.json()
-      console.log('✅ UsersManager: Dados recebidos:', data)
-      console.log('📈 UsersManager: Total de usuários:', data.length)
-      
       setUsers(data)
     } catch (error) {
       console.error('❌ UsersManager: Erro ao carregar usuários:', error)
@@ -69,8 +63,6 @@ export default function UsersManager() {
 
   const fetchUserStats = async () => {
     try {
-      console.log('🔄 UsersManager: Carregando estatísticas de usuários...')
-      
       const response = await fetch(API_ENDPOINTS.users.stats(), {
         method: 'GET',
         headers: {
@@ -84,7 +76,6 @@ export default function UsersManager() {
       }
       
       const data = await response.json()
-      console.log('✅ UsersManager: Estatísticas recebidas:', data)
       setUserStats(data)
     } catch (error) {
       console.error('❌ UsersManager: Erro ao carregar estatísticas:', error)
@@ -156,8 +147,6 @@ export default function UsersManager() {
   const handleDelete = async (id: number) => {
     if (confirm('Tem certeza que deseja excluir este usuário?')) {
       try {
-        console.log('🗑️ UsersManager: Excluindo usuário ID:', id)
-        
         const response = await fetch(API_ENDPOINTS.users.byId(id), {
           method: 'DELETE',
           headers: {
@@ -165,10 +154,7 @@ export default function UsersManager() {
           },
         })
         
-        console.log('📊 UsersManager: Status da exclusão:', response.status)
-        
         if (response.ok) {
-          console.log('✅ UsersManager: Usuário excluído com sucesso')
           // Remover da interface apenas após confirmação da API
           setUsers(users.filter(user => user.id !== id))
           fetchUserStats() // Recarregar estatísticas
@@ -187,8 +173,6 @@ export default function UsersManager() {
       const user = users.find(u => u.id === id)
       if (!user) return
       
-      console.log('🔄 UsersManager: Alterando status do usuário ID:', id, 'para:', !user.is_active)
-      
       const response = await fetch(API_ENDPOINTS.users.byId(id), {
         method: 'PATCH',
         headers: {
@@ -199,10 +183,7 @@ export default function UsersManager() {
         }),
       })
       
-      console.log('📊 UsersManager: Status da atualização:', response.status)
-      
       if (response.ok) {
-        console.log('✅ UsersManager: Status alterado com sucesso')
         // Atualizar interface apenas após confirmação da API
         setUsers(users.map(user => 
           user.id === id ? { ...user, is_active: !user.is_active } : user
@@ -228,15 +209,11 @@ export default function UsersManager() {
       
       if (!confirm(confirmMessage)) return
       
-      console.log(`🔄 UsersManager: ${action} usuário ID:`, id)
-      
       if (user.is_admin) {
         await authService.demoteFromAdmin(id)
       } else {
         await authService.promoteToAdmin(id)
       }
-      
-      console.log(`✅ UsersManager: Usuário ${action}do com sucesso`)
       
       // Atualizar interface
       setUsers(users.map(u => 

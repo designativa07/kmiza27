@@ -1,7 +1,23 @@
 import axios from 'axios';
 import { LoginCredentials, LoginResponse, User, UserStats, CreateAdminData } from '@/types/auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.kmiza27.com';
+// Usar a mesma lógica de configuração da API
+const getApiUrl = (): string => {
+  // Para desenvolvimento local, usar a API local
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000';
+  }
+  
+  // Para desenvolvimento sem window (Node.js), usar localhost
+  if (typeof window === 'undefined') {
+    return 'http://localhost:3000';
+  }
+  
+  // Usar sempre a URL de produção (VPS) - SEM /api prefix
+  return 'https://api.kmiza27.com';
+};
+
+const API_BASE_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
