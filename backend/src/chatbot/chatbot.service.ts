@@ -464,7 +464,7 @@ export class ChatbotService {
           .limit(3)
           .getMany();
 
-        let response = `📅 JOGOS DE HOJE 📅\n\n😔 Não há jogos agendados para hoje.`;
+        let response = `📅 JOGOS DE HOJE 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n😔 Não há jogos agendados para hoje.`;
         
         if (nextMatches.length > 0) {
           response += `\n\n📅 PRÓXIMOS JOGOS:\n\n`;
@@ -483,11 +483,10 @@ export class ChatbotService {
         }
         
         response += `\n⚽ Quer saber sobre o próximo jogo de algum time específico?`;
-        response += `\n\n🌐 Ver mais detalhes: ${shortUrl}`;
         return response;
       }
 
-      let response = `📅 JOGOS DE HOJE 📅\n\n`;
+      let response = `📅 JOGOS DE HOJE 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n`;
 
       todayMatches.forEach(match => {
         const matchDate = new Date(match.match_date);
@@ -519,8 +518,6 @@ export class ChatbotService {
         response += `⚽ ${match.home_team.name} vs ${match.away_team.name}\n`;
         response += `🏟️ ${match.stadium?.name || 'A definir'}\n\n`;
       });
-
-      response += `🌐 Ver mais detalhes: ${shortUrl}`;
       return response;
 
     } catch (error) {
@@ -567,14 +564,14 @@ export class ChatbotService {
       if (weekMatches.length === 0) {
         return `📅 JOGOS DA SEMANA 📅
 
+🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}
+
 😔 Não há jogos agendados para os próximos 7 dias.
 
-⚽ Quer saber sobre algum time específico?
-
-🌐 Ver mais detalhes: ${shortUrl}`;
+⚽ Quer saber sobre algum time específico?`;
       }
 
-      let response = `📅 JOGOS DA SEMANA 📅\n\n`;
+      let response = `📅 JOGOS DA SEMANA 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n`;
 
       weekMatches.forEach(match => {
         const date = new Date(match.match_date);
@@ -598,8 +595,6 @@ export class ChatbotService {
         }
         response += `\n`;
       });
-
-      response += `🌐 Ver mais detalhes: ${shortUrl}`;
       return response;
 
     } catch (error) {
