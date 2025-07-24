@@ -147,32 +147,32 @@ async function getUniqueCountries(): Promise<string[]> {
 const TeamCard = ({ team }: { team: Team }) => {
   return (
     <Link href={`/time/${team.id}`} className="block">
-      <div className="bg-white rounded-lg transition-shadow duration-300 overflow-hidden border border-gray-200 hover:border-indigo-300">
-        <div className="p-4">
-          <div className="flex items-center space-x-3 mb-2">
+      <div className="bg-white rounded-lg transition-shadow duration-300 overflow-hidden shadow-sm hover:shadow-md">
+        <div className="p-2 sm:p-4">
+          <div className="flex flex-col items-center text-center space-y-2 sm:flex-row sm:space-x-3 sm:space-y-0 sm:mb-2">
             <div className="flex-shrink-0">
               {team.logo_url ? (
                 <img 
                   src={getTeamLogoUrl(team.logo_url)} 
                   alt={`${team.name} logo`} 
-                  className="h-12 w-12 object-contain"
+                  className="h-8 w-8 sm:h-12 sm:w-12 object-contain"
                 />
               ) : (
-                <div className="h-12 w-12 flex items-center justify-center bg-gray-100 rounded-full">
-                  <Shield className="h-6 w-6 text-gray-400" />
+                <div className="h-8 w-8 sm:h-12 sm:w-12 flex items-center justify-center bg-gray-100 rounded-full">
+                  <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-gray-400" />
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-gray-900 truncate">{team.name}</h3>
+              <h3 className="text-xs sm:text-sm text-gray-900 leading-tight break-words">{team.name}</h3>
               {team.short_name && team.short_name !== team.name && (
-                <p className="text-xs text-gray-500">{team.short_name}</p>
+                <p className="text-xs text-gray-500 hidden sm:block">{team.short_name}</p>
               )}
             </div>
           </div>
           
           {(team.city || team.state) && (
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-gray-600 hidden sm:block">
               <p>
                 {team.city && team.state ? `${team.city}, ${team.state}` : 
                  team.city ? team.city : 
@@ -212,7 +212,7 @@ function TeamsPageContent() {
   
   const [debouncedFilters] = useDebounce(filters, 500);
 
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 21;
 
   // Carregar filtros da URL na inicialização
   useEffect(() => {
@@ -501,7 +501,7 @@ function TeamsPageContent() {
           </div>
         ) : teams.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
               {teams.map((team) => (
                 <TeamCard key={team.id} team={team} />
               ))}

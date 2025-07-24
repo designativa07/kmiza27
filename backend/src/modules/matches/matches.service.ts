@@ -255,16 +255,40 @@ export class MatchesService {
     }
   }
 
-  async findAll(page: number = 1, limit: number = 20): Promise<{ data: Match[], total: number }> {
+  async findAll(
+    page: number = 1, 
+    limit: number = 20, 
+    fromDate?: string, 
+    toDate?: string, 
+    status?: string
+  ): Promise<{ data: Match[], total: number }> {
     try {
-      const [data, total] = await this.matchRepository.findAndCount({
-        relations: ['home_team', 'away_team', 'competition', 'round', 'stadium', 'broadcasts.channel'],
-        order: {
-          match_date: 'DESC'
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-      });
+      const queryBuilder = this.matchRepository.createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.round', 'round')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .leftJoinAndSelect('match.broadcasts', 'broadcasts')
+        .leftJoinAndSelect('broadcasts.channel', 'channel')
+        .orderBy('match.match_date', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit);
+
+      // Aplicar filtros
+      if (fromDate) {
+        queryBuilder.andWhere('match.match_date >= :fromDate', { fromDate });
+      }
+      
+      if (toDate) {
+        queryBuilder.andWhere('match.match_date <= :toDate', { toDate });
+      }
+      
+      if (status) {
+        queryBuilder.andWhere('match.status = :status', { status });
+      }
+
+      const [data, total] = await queryBuilder.getManyAndCount();
       return { data, total };
     } catch (error) {
       console.error('❌ Erro no MatchesService.findAll:', error);

@@ -201,6 +201,17 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                         <Users className="h-4 w-4" aria-hidden="true" />
                         <span>Jogadores</span>
                       </Link>
+
+                      <Link
+                        href="/titulos"
+                        className="flex items-center space-x-3 px-5 py-2.5 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                        onClick={() => setIsMenuOpen(false)}
+                        aria-label="Ir para Títulos"
+                        role="menuitem"
+                      >
+                        <Trophy className="h-4 w-4" aria-hidden="true" />
+                        <span>Títulos</span>
+                      </Link>
                       
                       {currentCompetition && (
                         <>

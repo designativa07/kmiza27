@@ -39,7 +39,20 @@ export function TeamsCard() {
   useEffect(() => {
     const loadTeams = async () => {
       setLoading(true);
-      const competitionSlug = activeTab === 'serie-a' ? 'brasileirao' : 'brasileiro-serie-b';
+      let competitionSlug;
+      if (activeTab === 'serie-a') {
+        competitionSlug = 'brasileirao';
+      } else if (activeTab === 'serie-b') {
+        competitionSlug = 'brasileiro-serie-b';
+      } else if (activeTab === 'serie-c') {
+        competitionSlug = 'brasileiro-serie-c';
+      }
+      
+      if (!competitionSlug) {
+        setLoading(false);
+        return;
+      }
+      
       const fetchedTeams = await fetchTeamsByCompetition(competitionSlug);
       setTeams(fetchedTeams);
       setLoading(false);
@@ -108,6 +121,16 @@ export function TeamsCard() {
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
               Série B
+            </button>
+            <button
+              onClick={() => setActiveTab('serie-c')}
+              className={`${
+                activeTab === 'serie-c'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+            >
+              Série C
             </button>
           </nav>
         </div>
