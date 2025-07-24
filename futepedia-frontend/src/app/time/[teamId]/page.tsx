@@ -5,6 +5,7 @@ import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserChe
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
+import { MarkdownText } from '@/lib/markdown';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
@@ -195,7 +196,9 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
             <div className="mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">História</h2>
               {team.history ? (
-                <p className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">{team.history}</p>
+                <MarkdownText className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">
+                  {team.history}
+                </MarkdownText>
               ) : (
                 <p className="text-gray-500 text-center text-sm md:text-base">Informações sobre a história do time não estão disponíveis no momento.</p>
               )}
@@ -205,7 +208,9 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">Informações</h2>
               {team.information ? (
-                <p className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">{team.information}</p>
+                <MarkdownText className="text-gray-600 whitespace-pre-wrap text-sm md:text-base">
+                  {team.information}
+                </MarkdownText>
               ) : (
                 <p className="text-gray-500 text-center text-sm md:text-base">Informações adicionais sobre o time não estão disponíveis no momento.</p>
               )}

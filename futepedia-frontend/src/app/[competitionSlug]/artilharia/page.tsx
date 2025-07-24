@@ -6,7 +6,7 @@ type Props = {
   params: { competitionSlug: string };
 };
 
-async function getTopScorersForCompetition(slug: string): Promise<TopScorer[]> {
+async function getTopScorersForCompetition(slug: string): Promise<{ topScorers: TopScorer[], competitionName: string }> {
   const API_URL = getApiUrl();
   
   try {
@@ -23,10 +23,10 @@ async function getTopScorersForCompetition(slug: string): Promise<TopScorer[]> {
 
     if (!allCompetitionsRes.ok || !allTopScorersRes.ok) {
       console.error('Failed to fetch data for top scorers page.');
-      return [];
+      return { topScorers: [], competitionName: '' };
     }
 
-    const allCompetitions: {id: number, slug: string}[] = await allCompetitionsRes.json();
+    const allCompetitions: {id: number, slug: string, name: string}[] = await allCompetitionsRes.json();
     const allTopScorers: any[] = await allTopScorersRes.json();
     
     const currentCompetition = allCompetitions.find(c => c.slug === slug);
@@ -43,30 +43,35 @@ async function getTopScorersForCompetition(slug: string): Promise<TopScorer[]> {
     // Ordenar por gols (a API já deve fazer isso, mas garantimos)
     competitionTopScorers.sort((a, b) => b.goals - a.goals);
     
-    return competitionTopScorers;
+    return { 
+      topScorers: competitionTopScorers,
+      competitionName: currentCompetition.name
+    };
   } catch (error) {
     console.error('Erro ao buscar dados dos artilheiros:', error);
-    return [];
+    return { topScorers: [], competitionName: '' };
   }
 }
 
 export default async function TopScorersPage({ params }: Props) {
   try {
-    const topScorers = await getTopScorersForCompetition(params.competitionSlug);
+    const { topScorers, competitionName } = await getTopScorersForCompetition(params.competitionSlug);
 
     return (
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <TopScorersTable topScorers={topScorers} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <TopScorersTable topScorers={topScorers} competitionName={competitionName} />
       </div>
     );
   } catch (error) {
     console.error('Erro na página de artilheiros:', error);
     return (
-      <div className="bg-white rounded-lg shadow-lg text-center py-16">
-        <h3 className="text-xl font-medium text-gray-900">Erro ao Carregar Artilheiros</h3>
-        <p className="mt-2 text-md text-gray-500">
-          Não foi possível carregar os dados dos artilheiros. Tente novamente mais tarde.
-        </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-lg text-center py-16">
+          <h3 className="text-xl font-medium text-gray-900">Erro ao Carregar Artilheiros</h3>
+          <p className="mt-2 text-md text-gray-500">
+            Não foi possível carregar os dados dos artilheiros. Tente novamente mais tarde.
+          </p>
+        </div>
       </div>
     );
   }

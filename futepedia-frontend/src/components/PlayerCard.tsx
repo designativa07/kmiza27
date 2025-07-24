@@ -1,5 +1,6 @@
 import { User, Shirt } from 'lucide-react';
 import { getPlayerImageUrl } from '@/lib/cdn';
+import Link from 'next/link';
 
 interface Player {
   id: number;
@@ -22,7 +23,8 @@ export const PlayerCard = ({ player, jerseyNumber, teamName, showTeamName = fals
   const isActive = player.state?.toLowerCase() === 'active';
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden group transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+    <Link href={`/jogadores/${player.id}`} className="block">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden group transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
       <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center relative">
         {player.image_url ? (
           <img src={getPlayerImageUrl(player.image_url)} alt={player.name} className="h-full w-full object-cover" />
@@ -65,5 +67,6 @@ export const PlayerCard = ({ player, jerseyNumber, teamName, showTeamName = fals
         )}
       </div>
     </div>
+    </Link>
   );
 }; 

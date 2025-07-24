@@ -5,6 +5,7 @@ import { useDebounce } from 'use-debounce'
 import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, apiUrl } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
+import RichTextEditor from './ui/rich-text-editor'
 
 interface Stadium {
   id: number;
@@ -874,127 +875,268 @@ export default function TeamsManager() {
       <PaginationControls />
 
       {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">{editingTeam ? 'Editar Time' : 'Adicionar Novo Time'}</h3>
-              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Nome" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  <input type="text" name="short_name" value={formData.short_name} onChange={handleInputChange} placeholder="Nome Curto" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required />
-                  <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="Cidade" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  <input type="text" name="state" value={formData.state} onChange={handleInputChange} placeholder="Estado" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  <input type="text" name="country" value={formData.country} onChange={handleInputChange} placeholder="País" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  <input type="number" name="founded_year" value={formData.founded_year} onChange={handleInputChange} placeholder="Ano de Fundação" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  <div>
-                    <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700">Estádio</label>
-                    <select id="stadium_id" name="stadium_id" value={formData.stadium_id} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                      <option value="">Selecione o Estádio</option>
-                      {stadiums.map(stadium => (
-                        <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Campos de Redes Sociais */}
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">Redes Sociais e Links</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <input type="url" name="instagram_url" value={formData.social_media.instagram_url} onChange={handleSocialMediaChange} placeholder="URL do Instagram" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                    <input type="url" name="tiktok_url" value={formData.social_media.tiktok_url} onChange={handleSocialMediaChange} placeholder="URL do TikTok" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                    <input type="url" name="youtube_url" value={formData.social_media.youtube_url} onChange={handleSocialMediaChange} placeholder="URL do YouTube" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                    <input type="url" name="official_site_url" value={formData.social_media.official_site_url} onChange={handleSocialMediaChange} placeholder="URL do Site Oficial" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                  </div>
-                </div>
-
-                {/* Campos de Texto Longo */}
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">Informações Adicionais</h4>
-                  <div className="space-y-6">
-                    <div>
-                      <label htmlFor="history" className="block text-sm font-medium text-gray-700">História</label>
-                      <textarea id="history" name="history" value={formData.history} onChange={(e) => handleInputChange(e as any)} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                    </div>
-                    <div>
-                      <label htmlFor="information" className="block text-sm font-medium text-gray-700">Informações</label>
-                      <textarea id="information" name="information" value={formData.information} onChange={(e) => handleInputChange(e as any)} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Escudo</label>
-                  <div className="mt-1 flex items-center space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setLogoInputType('upload')}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${logoInputType === 'upload' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      Upload
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogoInputType('url')}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${logoInputType === 'url' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      URL
-                    </button>
-                  </div>
-                  {logoInputType === 'upload' ? (
-                    <div className="mt-2 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
-                      <div className="space-y-1 text-center">
-                        <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
-                        <div className="flex text-sm text-gray-600">
-                          <label
-                            htmlFor="file-upload"
-                            className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
-                          >
-                            <span>Upload um arquivo</span>
-                            <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
-                          </label>
-                          <p className="pl-1">ou arraste e solte</p>
-                        </div>
-                        <p className="text-xs text-gray-500">PNG, JPG, GIF até 10MB</p>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="my-modal">
+          <div className="relative top-10 mx-auto p-6 border w-[90vw] max-w-7xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="mb-6">
+              <h3 className="text-xl font-medium text-gray-900">{editingTeam ? 'Editar Time' : 'Adicionar Novo Time'}</h3>
+              <p className="text-sm text-gray-600 mt-1">Preencha as informações do time</p>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Informações Básicas */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-gray-900 mb-4">Informações Básicas</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Coluna 1 e 2 - Campos de texto */}
+                  <div className="lg:col-span-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                        <input 
+                          type="text" 
+                          name="name" 
+                          value={formData.name} 
+                          onChange={handleInputChange} 
+                          placeholder="Nome do time" 
+                          required 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Curto</label>
+                        <input 
+                          type="text" 
+                          name="short_name" 
+                          value={formData.short_name} 
+                          onChange={handleInputChange} 
+                          placeholder="Abreviação" 
+                          required 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                        <input 
+                          type="text" 
+                          name="city" 
+                          value={formData.city} 
+                          onChange={handleInputChange} 
+                          placeholder="Cidade" 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <input 
+                          type="text" 
+                          name="state" 
+                          value={formData.state} 
+                          onChange={handleInputChange} 
+                          placeholder="Estado" 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+                        <input 
+                          type="text" 
+                          name="country" 
+                          value={formData.country} 
+                          onChange={handleInputChange} 
+                          placeholder="País" 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Ano de Fundação</label>
+                        <input 
+                          type="number" 
+                          name="founded_year" 
+                          value={formData.founded_year} 
+                          onChange={handleInputChange} 
+                          placeholder="Ex: 1895" 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                        />
                       </div>
                     </div>
-                  ) : (
-                    <input
-                      type="text"
-                      name="logo_url"
-                      id="logo_url"
-                      value={formData.logo_url}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      placeholder="https://exemplo.com/escudo.png"
-                    />
-                  )}
-                  {previewUrl && (
-                    <div className="mt-4">
-                      <p className="block text-sm font-medium text-gray-700 mb-2">Prévia do Escudo:</p>
-                      <img src={previewUrl} alt="Prévia do Escudo" className="h-20 w-20 object-contain" />
+                  </div>
+
+                  {/* Coluna 3 - Escudo e Estádio */}
+                  <div className="lg:col-span-1">
+                    <div className="space-y-4">
+                      {/* Escudo */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Escudo</label>
+                        <div className="flex items-center space-x-2 mb-3">
+                          <button
+                            type="button"
+                            onClick={() => setLogoInputType('upload')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md ${logoInputType === 'upload' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          >
+                            Upload
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLogoInputType('url')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md ${logoInputType === 'url' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                          >
+                            URL
+                          </button>
+                        </div>
+                        
+                        {logoInputType === 'upload' ? (
+                          <div className="flex justify-center rounded-md border-2 border-dashed border-gray-300 px-4 py-6">
+                            <div className="space-y-1 text-center">
+                              <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" aria-hidden="true" />
+                              <div className="flex text-xs text-gray-600">
+                                <label
+                                  htmlFor="file-upload"
+                                  className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
+                                >
+                                  <span>Upload</span>
+                                  <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
+                                </label>
+                                <p className="pl-1">ou arraste</p>
+                              </div>
+                              <p className="text-xs text-gray-500">PNG, JPG, GIF</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            name="logo_url"
+                            value={formData.logo_url}
+                            onChange={handleInputChange}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="https://exemplo.com/escudo.png"
+                          />
+                        )}
+                        
+                        {previewUrl && (
+                          <div className="mt-3">
+                            <p className="block text-xs font-medium text-gray-700 mb-1">Prévia:</p>
+                            <img src={previewUrl} alt="Prévia do Escudo" className="h-16 w-16 object-contain mx-auto" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Estádio */}
+                      <div>
+                        <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700 mb-1">Estádio</label>
+                        <select 
+                          id="stadium_id"
+                          name="stadium_id" 
+                          value={formData.stadium_id} 
+                          onChange={handleInputChange} 
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        >
+                          <option value="">Selecione o Estádio</option>
+                          {stadiums.map(stadium => (
+                            <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-                
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="mr-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    disabled={uploading}
-                  >
-                    {editingTeam ? 'Salvar Alterações' : 'Adicionar Time'}
-                  </button>
+              </div>
+
+              {/* Redes Sociais */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-gray-900 mb-4">Redes Sociais e Links</h4>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
+                    <input 
+                      type="url" 
+                      name="instagram_url" 
+                      value={formData.social_media.instagram_url} 
+                      onChange={handleSocialMediaChange} 
+                      placeholder="URL do Instagram" 
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">TikTok</label>
+                    <input 
+                      type="url" 
+                      name="tiktok_url" 
+                      value={formData.social_media.tiktok_url} 
+                      onChange={handleSocialMediaChange} 
+                      placeholder="URL do TikTok" 
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">YouTube</label>
+                    <input 
+                      type="url" 
+                      name="youtube_url" 
+                      value={formData.social_media.youtube_url} 
+                      onChange={handleSocialMediaChange} 
+                      placeholder="URL do YouTube" 
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Site Oficial</label>
+                    <input 
+                      type="url" 
+                      name="official_site_url" 
+                      value={formData.social_media.official_site_url} 
+                      onChange={handleSocialMediaChange} 
+                      placeholder="URL do Site Oficial" 
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                    />
+                  </div>
                 </div>
-              </form>
-            </div>
+              </div>
+
+              {/* Informações Adicionais - Lado a Lado */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-gray-900 mb-4">Informações Adicionais</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">História</label>
+                    <RichTextEditor
+                      value={formData.history}
+                      onChange={(value) => setFormData({ ...formData, history: value })}
+                      placeholder="Digite a história do time..."
+                      rows={8}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Informações</label>
+                    <RichTextEditor
+                      value={formData.information}
+                      onChange={(value) => setFormData({ ...formData, information: value })}
+                      placeholder="Digite informações adicionais..."
+                      rows={8}
+                    />
+                  </div>
+                </div>
+              </div>
+
+
+              
+              {/* Botões */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  disabled={uploading}
+                >
+                  {uploading ? 'Salvando...' : (editingTeam ? 'Salvar Alterações' : 'Adicionar Time')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

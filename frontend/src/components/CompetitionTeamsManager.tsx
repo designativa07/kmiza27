@@ -210,7 +210,7 @@ export default function CompetitionTeamsManager({ competitionId, onClose }: Comp
     if (!team.logo_url) {
       return (
         <div className="h-8 w-8 rounded-md bg-gray-200 flex items-center justify-center">
-          <span className="text-xs font-bold text-gray-600">{team.short_name?.substring(0, 3) || team.name.substring(0, 3)}</span>
+          <span className="text-xs font-bold text-gray-600">{team.short_name?.substring(0, 3) || team.name?.substring(0, 3) || 'TM'}</span>
         </div>
       )
     }

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { FunnelIcon, TrophyIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { FunnelIcon, TrophyIcon, UserIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import TopScorersChart from './TopScorersChart'
 import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
@@ -83,133 +83,33 @@ export default function TopScorersTable() {
     try {
       setLoading(true)
       
-      // Tentar buscar do endpoint otimizado primeiro
-      try {
-        const [competitionsRes, teamsRes, statsRes] = await Promise.all([
-          fetch(API_ENDPOINTS.competitions.list()),
-          fetch(API_ENDPOINTS.teams.list()),
-          fetch(`${API_ENDPOINTS.matches.list()}/top-scorers`)
-        ])
-
-        const [competitionsData, teamsData, statsData] = await Promise.all([
-          competitionsRes.json(),
-          teamsRes.json(),
-          statsRes.json()
-        ])
-
-        setCompetitions(competitionsData)
-        setTeams(teamsData)
-        setPlayerStats(statsData)
-
-        // Extrair temporadas únicas dos dados
-        const uniqueSeasons = [...new Set(statsData
-          .map((stat: PlayerStats) => stat.competition?.season)
-          .filter(Boolean)
-        )] as string[]
-        
-        setSeasons(uniqueSeasons.sort().reverse())
-
-      } catch (endpointError) {
-        console.log('Endpoint otimizado não disponível, calculando do frontend...')
-        await fetchStatsFromMatches()
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchStatsFromMatches = async () => {
-    try {
-      // Buscar todas as partidas e calcular estatísticas
-      const [matchesRes, competitionsRes, teamsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.matches.list()),
+      // Buscar dados básicos e artilheiros em paralelo
+      const [competitionsRes, teamsRes, topScorersRes] = await Promise.all([
         fetch(API_ENDPOINTS.competitions.list()),
-        fetch(API_ENDPOINTS.teams.list())
+        fetch(API_ENDPOINTS.teams.list()),
+        fetch(API_ENDPOINTS.matches.topScorers())
       ])
 
-      const [matches, competitionsData, teamsData] = await Promise.all([
-        matchesRes.json(),
+      // Verificar se as respostas são válidas
+      if (!competitionsRes.ok) {
+        throw new Error(`Erro ao buscar competições: ${competitionsRes.status}`)
+      }
+      if (!teamsRes.ok) {
+        throw new Error(`Erro ao buscar times: ${teamsRes.status}`)
+      }
+      if (!topScorersRes.ok) {
+        throw new Error(`Erro ao buscar artilheiros: ${topScorersRes.status}`)
+      }
+
+      const [competitionsData, teamsData, topScorersData] = await Promise.all([
         competitionsRes.json(),
-        teamsRes.json()
+        teamsRes.json(),
+        topScorersRes.json()
       ])
 
       setCompetitions(competitionsData)
       setTeams(teamsData)
-
-      // Calcular estatísticas dos jogadores baseado nas partidas
-      const playerStatsMap = new Map<string, PlayerStats>()
-      const playersCache = new Map<number, Player>()
-
-      // Função para buscar dados do jogador
-      const getPlayerData = async (playerId: number, teamId: number): Promise<Player | null> => {
-        if (playersCache.has(playerId)) {
-          return playersCache.get(playerId)!
-        }
-
-        try {
-          const playerRes = await fetch(`${API_ENDPOINTS.teams.list()}/${teamId}/players`)
-          const players = await playerRes.json()
-          const playerData = players.find((p: Player) => p.id === playerId)
-          
-          if (playerData) {
-            playersCache.set(playerId, playerData)
-            return playerData
-          }
-        } catch (error) {
-          console.error('Erro ao buscar jogador:', error)
-        }
-        return null
-      }
-
-      for (const match of matches) {
-        if (match.status === 'finished' && (match.home_team_player_stats || match.away_team_player_stats)) {
-          const processTeamStats = async (teamStats: any[], team: Team, competition: Competition) => {
-            for (const stat of teamStats) {
-              if (stat.goals && stat.goals > 0) {
-                const key = `${stat.player_id}-${competition.id}`
-                
-                const playerData = await getPlayerData(stat.player_id, team.id)
-
-                if (playerData) {
-                  if (playerStatsMap.has(key)) {
-                    const existing = playerStatsMap.get(key)!
-                    existing.goals += stat.goals
-                    existing.matches_played += 1
-                    existing.yellow_cards = (existing.yellow_cards || 0) + (stat.yellow_cards || 0)
-                    existing.red_cards = (existing.red_cards || 0) + (stat.red_cards || 0)
-                    existing.goals_per_match = existing.goals / existing.matches_played
-                  } else {
-                    playerStatsMap.set(key, {
-                      player: playerData,
-                      team: team,
-                      goals: stat.goals,
-                      matches_played: 1,
-                      yellow_cards: stat.yellow_cards || 0,
-                      red_cards: stat.red_cards || 0,
-                      goals_per_match: stat.goals,
-                      competition: competition
-                    })
-                  }
-                }
-              }
-            }
-          }
-
-          if (match.home_team_player_stats) {
-            await processTeamStats(match.home_team_player_stats, match.home_team, match.competition)
-          }
-          if (match.away_team_player_stats) {
-            await processTeamStats(match.away_team_player_stats, match.away_team, match.competition)
-          }
-        }
-      }
-
-      const statsArray = Array.from(playerStatsMap.values())
-        .sort((a, b) => b.goals - a.goals)
-
-      setPlayerStats(statsArray)
+      setPlayerStats(topScorersData)
 
       // Extrair temporadas das competições
       const uniqueSeasons = [...new Set(competitionsData
@@ -219,8 +119,13 @@ export default function TopScorersTable() {
       
       setSeasons(uniqueSeasons.sort().reverse())
 
+      console.log(`✅ Dados carregados: ${topScorersData.length} artilheiros encontrados`)
+
     } catch (error) {
-      console.error('Erro ao calcular estatísticas:', error)
+      console.error('Erro ao carregar dados:', error)
+      setPlayerStats([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -258,14 +163,6 @@ export default function TopScorersTable() {
       )
     }
 
-    // Ordenar por gols (decrescente) e depois por média de gols por partida
-    filtered.sort((a, b) => {
-      if (b.goals !== a.goals) {
-        return b.goals - a.goals
-      }
-      return b.goals_per_match - a.goals_per_match
-    })
-
     setFilteredStats(filtered)
   }
 
@@ -282,7 +179,7 @@ export default function TopScorersTable() {
     if (!player.image_url) {
       return (
         <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-          <UserIcon className="h-6 w-6 text-gray-500" />
+          <UserIcon className="h-6 w-6 text-gray-400" />
         </div>
       )
     }
@@ -415,13 +312,10 @@ export default function TopScorersTable() {
             </div>
           </div>
           
-          <div className="mt-3 flex justify-between items-center">
-            <span className="text-sm text-gray-600">
-              {filteredStats.length} jogadores encontrados
-            </span>
+          <div className="mt-4 flex justify-end">
             <button
               onClick={clearFilters}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+              className="text-sm text-gray-600 hover:text-gray-800"
             >
               Limpar filtros
             </button>
@@ -429,58 +323,66 @@ export default function TopScorersTable() {
         </div>
       )}
 
-      {/* Gráfico dos Top Artilheiros */}
-      {filteredStats.length > 0 && (
-        <div className="mt-6">
-          <TopScorersChart playerStats={filteredStats} maxPlayers={10} />
-        </div>
-      )}
+              {/* Gráfico de artilheiros */}
+        {filteredStats.length > 0 && (
+          <div className="mt-6">
+            <TopScorersChart playerStats={filteredStats} maxPlayers={10} />
+          </div>
+        )}
 
-      {/* Tabela de Artilharia */}
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Pos.
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Jogador
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gols
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Jogos
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Média
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cartões
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredStats.length === 0 ? (
+      {/* Tabela de artilheiros */}
+      <div className="mt-8">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <TrophyIcon className="h-5 w-5 mr-2 text-yellow-500" />
+              Top {filteredStats.length} Artilheiros
+            </h2>
+          </div>
+        </div>
+        
+        <div className="mt-4 flow-root">
+          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
-                        <TrophyIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        Nenhum artilheiro encontrado com os filtros selecionados.
-                      </td>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        POS.
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        JOGADOR
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        TIME
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        GOLS
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        JOGOS
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        MÉDIA
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        CARTÕES
+                      </th>
                     </tr>
-                  ) : (
-                    filteredStats.map((stat, index) => (
-                      <tr key={`${stat.player.id}-${stat.competition?.id || 'all'}`} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-sm font-bold ${
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredStats.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                          Nenhum artilheiro encontrado com os filtros aplicados.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStats.map((stat, index) => (
+                        <tr key={`${stat.player.id}-${stat.competition?.id || 'no-comp'}`} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold ${
                               index === 0 ? 'bg-yellow-100 text-yellow-800' :
                               index === 1 ? 'bg-gray-100 text-gray-800' :
                               index === 2 ? 'bg-orange-100 text-orange-800' :
@@ -488,76 +390,76 @@ export default function TopScorersTable() {
                             }`}>
                               {index + 1}
                             </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <PlayerPhoto player={stat.player} />
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {stat.player.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <PlayerPhoto player={stat.player} />
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {stat.player.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {stat.player.position && (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                                      {stat.player.position}
+                                    </span>
+                                  )}
+                                  {stat.player.jersey_number && (
+                                    <span className="text-gray-400">#{stat.player.jersey_number}</span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {stat.player.position && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                                    {stat.player.position}
-                                  </span>
-                                )}
-                                {stat.player.jersey_number && (
-                                  <span className="text-gray-400">#{stat.player.jersey_number}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <TeamLogo team={stat.team} />
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {stat.team.short_name || stat.team.name}
+                                </div>
+                                {stat.competition && (
+                                  <div className="text-xs text-gray-500">
+                                    {stat.competition.name}
+                                  </div>
                                 )}
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <TeamLogo team={stat.team} />
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">
-                                {stat.team.short_name || stat.team.name}
-                              </div>
-                              {stat.competition && (
-                                <div className="text-xs text-gray-500">
-                                  {stat.competition.name}
-                                </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                              {stat.goals}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {stat.matches_played}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {stat.goals_per_match.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              {(stat.yellow_cards || 0) > 0 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  {stat.yellow_cards} 🟨
+                                </span>
+                              )}
+                              {(stat.red_cards || 0) > 0 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  {stat.red_cards} 🟥
+                                </span>
+                              )}
+                              {!(stat.yellow_cards || 0) && !(stat.red_cards || 0) && (
+                                <span className="text-gray-400 text-xs">-</span>
                               )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
-                            {stat.goals}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                          {stat.matches_played}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                          {stat.goals_per_match.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            {(stat.yellow_cards || 0) > 0 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                {stat.yellow_cards} 🟨
-                              </span>
-                            )}
-                            {(stat.red_cards || 0) > 0 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
-                                {stat.red_cards} 🟥
-                              </span>
-                            )}
-                            {!(stat.yellow_cards || 0) && !(stat.red_cards || 0) && (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

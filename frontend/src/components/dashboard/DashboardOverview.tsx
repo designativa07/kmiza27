@@ -145,7 +145,7 @@ export default function DashboardOverview() {
                   <div key={user.id} className="flex items-center space-x-4">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                       <span className="text-sm font-medium text-white">
-                        {(user.name || user.username).charAt(0).toUpperCase()}
+                        {(user.name || user.username || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">

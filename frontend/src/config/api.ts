@@ -1,8 +1,7 @@
 // Configuração da API
 // Build timestamp: 2025-05-30T19:15:00Z - LOCAL DEVELOPMENT FIX
 const getApiUrl = (): string => {
-  // Para desenvolvimento local, usar a API da VPS diretamente
-  // Comentando a verificação de localhost para sempre usar a API da VPS
+  // Para desenvolvimento local, usar a API local
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     return 'http://localhost:3000';
   }
@@ -60,6 +59,7 @@ export const API_ENDPOINTS = {
     byId: (id: number) => apiUrl(`matches/${id}`),
     update: (id: number) => apiUrl(`matches/${id}`),
     createTwoLegTie: () => apiUrl('matches/two-leg-tie'),
+    topScorers: () => apiUrl('matches/top-scorers'),
   },
   
   // Competitions

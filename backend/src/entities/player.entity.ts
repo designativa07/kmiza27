@@ -26,6 +26,12 @@ export class Player {
   @Column({ length: 255, nullable: true })
   image_url: string; // URL da foto do jogador
 
+  @Column({ length: 255, nullable: true })
+  youtube_url: string; // URL do canal do YouTube
+
+  @Column({ length: 255, nullable: true })
+  instagram_url: string; // URL do perfil do Instagram
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
