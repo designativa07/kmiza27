@@ -441,15 +441,8 @@ export class ChatbotService {
 
       console.log(`⚽ Encontrados ${todayMatches.length} jogos para hoje`);
 
-      // Gerar link encurtado para jogos de hoje
-      let shortUrl = '';
-      try {
-        shortUrl = await this.urlShortenerService.createTodayMatchesShortUrl();
-        console.log(`🔗 Link encurtado para jogos de hoje: ${shortUrl}`);
-      } catch (error) {
-        console.error('❌ Erro ao gerar link encurtado para jogos de hoje:', error);
-        shortUrl = 'https://futepedia.kmiza27.com/jogos-hoje';
-      }
+      // Usar URL fixa para jogos de hoje (não precisa recriar toda vez)
+      const shortUrl = 'https://link.kmiza27.com/hoje';
 
       if (todayMatches.length === 0) {
         // Buscar próximos jogos para mostrar como alternativa
@@ -551,15 +544,8 @@ export class ChatbotService {
         .limit(15)
         .getMany();
 
-      // Gerar link encurtado para jogos da semana
-      let shortUrl = '';
-      try {
-        shortUrl = await this.urlShortenerService.createWeekMatchesShortUrl();
-        console.log(`🔗 Link encurtado para jogos da semana: ${shortUrl}`);
-      } catch (error) {
-        console.error('❌ Erro ao gerar link encurtado para jogos da semana:', error);
-        shortUrl = 'https://futepedia.kmiza27.com/jogos-semana';
-      }
+      // Usar URL fixa para jogos da semana (não precisa recriar toda vez)
+      const shortUrl = 'https://link.kmiza27.com/semana';
 
       if (weekMatches.length === 0) {
         return `📅 JOGOS DA SEMANA 📅
