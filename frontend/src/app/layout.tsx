@@ -3,6 +3,7 @@ import { Sora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 const sora = Sora({ 
   subsets: ["latin"],
@@ -35,6 +36,9 @@ export default function RootLayout({
             {children}
           </ProtectedRoute>
         </AuthProvider>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );
