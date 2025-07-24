@@ -6,6 +6,7 @@ import ClientOnly from "@/components/ClientOnly";
 import FutebotChat from "@/components/FutebotChat";
 import { getApiUrl } from "@/lib/config";
 import { getFutepediaOgImageUrl } from "@/lib/cdn";
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -58,6 +59,9 @@ export default function RootLayout({
             />
           </ClientOnly>
         </ErrorBoundary>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );
