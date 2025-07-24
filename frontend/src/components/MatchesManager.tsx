@@ -477,7 +477,7 @@ export default function MatchesManager() {
   const fetchData = async () => {
     try {
       const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.matches.list()),
+        fetch(API_ENDPOINTS.matches.list(1, 1000)),
         fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`),
         fetch(API_ENDPOINTS.competitions.list()),
         fetch(API_ENDPOINTS.channels.list())
@@ -531,7 +531,7 @@ export default function MatchesManager() {
     
     try {
       // Usar o novo endpoint do módulo de matches que retorna rodadas ordenadas por display_order
-      const response = await fetch(`${API_ENDPOINTS.matches.list().split('?')[0]}/competition/${competitionId}/rounds`)
+      const response = await fetch(`${API_ENDPOINTS.matches.list(1, 1).split('?')[0]}/competition/${competitionId}/rounds`)
       if (response.ok) {
         const rounds = await response.json()
         setAvailableRounds(rounds)

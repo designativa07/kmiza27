@@ -59,6 +59,8 @@ export const shlinkConfig = {
     competition: 'c',  // /c/abc123 para competições
     stadium: 's',      // /s/abc123 para estádios
     stream: 'tv',      // /tv/abc123 para transmissões
+    today: 'hoje',     // /hoje para jogos de hoje
+    week: 'semana',    // /semana para jogos da semana
   },
   
   // Método para validar se as configurações estão corretas

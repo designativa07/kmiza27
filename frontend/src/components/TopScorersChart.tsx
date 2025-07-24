@@ -96,7 +96,7 @@ export default function TopScorersChart({ playerStats, maxPlayers = 10 }: TopSco
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
                         <span className="text-xs font-bold text-gray-600">
-                          {stat.player.name.charAt(0).toUpperCase()}
+                          {stat.player.name ? stat.player.name.charAt(0).toUpperCase() : '?'}
                         </span>
                       </div>
                     )}

@@ -88,6 +88,42 @@ export class UrlShortenerService {
   }
 
   /**
+   * Cria URL curta para jogos de hoje
+   */
+  async createTodayMatchesShortUrl(): Promise<string> {
+    const longUrl = 'https://futepedia.kmiza27.com/jogos-hoje';
+    const customSlug = shlinkConfig.slugPatterns.today;
+    const title = '📅 Jogos de Hoje - Futepédia';
+
+    const shortUrlResponse = await this.createShortUrl({
+      longUrl,
+      customSlug,
+      title,
+      tags: ['jogos-hoje', 'futepedia', 'kmiza27-bot'],
+    });
+
+    return shortUrlResponse.shortUrl;
+  }
+
+  /**
+   * Cria URL curta para jogos da semana
+   */
+  async createWeekMatchesShortUrl(): Promise<string> {
+    const longUrl = 'https://futepedia.kmiza27.com/jogos-semana';
+    const customSlug = shlinkConfig.slugPatterns.week;
+    const title = '📅 Jogos da Semana - Futepédia';
+
+    const shortUrlResponse = await this.createShortUrl({
+      longUrl,
+      customSlug,
+      title,
+      tags: ['jogos-semana', 'futepedia', 'kmiza27-bot'],
+    });
+
+    return shortUrlResponse.shortUrl;
+  }
+
+  /**
    * Cria URL curta para jogos com padrão específico
    */
   async createMatchShortUrl(matchId: number, homeTeam: string, awayTeam: string): Promise<string> {

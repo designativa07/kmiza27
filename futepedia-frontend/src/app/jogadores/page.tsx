@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getApiUrl } from '@/lib/config';
-import { Search, User } from 'lucide-react';
+import { Search, User, Trophy } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
+import { TopScorersPage } from '@/components/TopScorersTable';
 
 // Tipos
 interface Player {
@@ -28,6 +29,7 @@ export default function PlayersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [activeTab, setActiveTab] = useState<'jogadores' | 'artilharia'>('jogadores');
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -53,78 +55,103 @@ export default function PlayersPage() {
     <div className="bg-gray-50 min-h-screen">
       <HeaderWithLogo />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Jogadores</h1>
-            <p className="mt-1 text-sm text-gray-500">Ficha técnica dos jogadores</p>
-          </div>
-          <div className="relative mt-4 sm:mt-0 sm:w-72">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Buscar por nome ou posição..."
-              className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        {/* Abas de navegação */}
+        <div className="flex border-b border-gray-200 mb-6">
+          <button
+            className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-200 focus:outline-none ${activeTab === 'jogadores' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}
+            onClick={() => setActiveTab('jogadores')}
+          >
+            <User className="inline-block w-4 h-4 mr-2" />
+            Jogadores
+          </button>
+          <button
+            className={`ml-4 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-200 focus:outline-none ${activeTab === 'artilharia' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}
+            onClick={() => setActiveTab('artilharia')}
+          >
+            <Trophy className="inline-block w-4 h-4 mr-2" />
+            Artilharia
+          </button>
         </div>
-        
-        {loading ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow-sm animate-pulse">
-                <div className="aspect-[3/4] bg-gray-200 rounded-t-lg"></div>
-                <div className="p-2 md:p-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/4 mt-2"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : players.length > 0 ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
-            {players.map(player => (
-              <PlayerCard 
-                key={player.id} 
-                player={player} 
-                teamName={player.current_team?.name}
-                showTeamName={true}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16 bg-white rounded-lg shadow mt-6">
-            <User className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum jogador encontrado</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Tente ajustar sua busca.
-            </p>
-          </div>
-        )}
 
-        {totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center space-x-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Anterior
-            </button>
-            <span className="text-sm text-gray-700">
-              Página {currentPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Próxima
-            </button>
-          </div>
+        {/* Conteúdo da aba selecionada */}
+        {activeTab === 'jogadores' ? (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Jogadores</h1>
+                <p className="mt-1 text-sm text-gray-500">Ficha técnica dos jogadores</p>
+              </div>
+              <div className="relative mt-4 sm:mt-0 sm:w-72">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar por nome ou posição..."
+                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            {loading ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-lg shadow-sm animate-pulse">
+                    <div className="aspect-[3/4] bg-gray-200 rounded-t-lg"></div>
+                    <div className="p-2 md:p-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/4 mt-2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : players.length > 0 ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3 mt-6">
+                {players.map(player => (
+                  <PlayerCard 
+                    key={player.id} 
+                    player={player} 
+                    teamName={player.current_team?.name}
+                    showTeamName={true}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white rounded-lg shadow mt-6">
+                <User className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum jogador encontrado</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Tente ajustar sua busca.
+                </p>
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="mt-8 flex justify-center items-center space-x-4">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-700">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <TopScorersPage />
         )}
       </main>
     </div>

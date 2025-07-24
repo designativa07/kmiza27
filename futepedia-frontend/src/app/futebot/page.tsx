@@ -1,3 +1,5 @@
+'use client';
+
 import FutebotChat from '../../components/FutebotChat'
 
 export default function FutebotPage() {

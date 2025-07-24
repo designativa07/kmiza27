@@ -441,6 +441,16 @@ export class ChatbotService {
 
       console.log(`⚽ Encontrados ${todayMatches.length} jogos para hoje`);
 
+      // Gerar link encurtado para jogos de hoje
+      let shortUrl = '';
+      try {
+        shortUrl = await this.urlShortenerService.createTodayMatchesShortUrl();
+        console.log(`🔗 Link encurtado para jogos de hoje: ${shortUrl}`);
+      } catch (error) {
+        console.error('❌ Erro ao gerar link encurtado para jogos de hoje:', error);
+        shortUrl = 'https://futepedia.kmiza27.com/jogos-hoje';
+      }
+
       if (todayMatches.length === 0) {
         // Buscar próximos jogos para mostrar como alternativa
         const nextMatches = await this.matchesRepository
@@ -473,6 +483,7 @@ export class ChatbotService {
         }
         
         response += `\n⚽ Quer saber sobre o próximo jogo de algum time específico?`;
+        response += `\n\n🌐 Ver mais detalhes: ${shortUrl}`;
         return response;
       }
 
@@ -509,6 +520,7 @@ export class ChatbotService {
         response += `🏟️ ${match.stadium?.name || 'A definir'}\n\n`;
       });
 
+      response += `🌐 Ver mais detalhes: ${shortUrl}`;
       return response;
 
     } catch (error) {
@@ -542,12 +554,24 @@ export class ChatbotService {
         .limit(15)
         .getMany();
 
+      // Gerar link encurtado para jogos da semana
+      let shortUrl = '';
+      try {
+        shortUrl = await this.urlShortenerService.createWeekMatchesShortUrl();
+        console.log(`🔗 Link encurtado para jogos da semana: ${shortUrl}`);
+      } catch (error) {
+        console.error('❌ Erro ao gerar link encurtado para jogos da semana:', error);
+        shortUrl = 'https://futepedia.kmiza27.com/jogos-semana';
+      }
+
       if (weekMatches.length === 0) {
         return `📅 JOGOS DA SEMANA 📅
 
 😔 Não há jogos agendados para os próximos 7 dias.
 
-⚽ Quer saber sobre algum time específico?`;
+⚽ Quer saber sobre algum time específico?
+
+🌐 Ver mais detalhes: ${shortUrl}`;
       }
 
       let response = `📅 JOGOS DA SEMANA 📅\n\n`;
@@ -575,6 +599,7 @@ export class ChatbotService {
         response += `\n`;
       });
 
+      response += `🌐 Ver mais detalhes: ${shortUrl}`;
       return response;
 
     } catch (error) {

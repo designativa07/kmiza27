@@ -101,7 +101,7 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
         {/* Time da Casa: Nome + Escudo */}
         <div className={`flex items-center space-x-2 md:space-x-3 ${match.home_team.id === teamId ? 'font-bold' : ''}`}>
           <span className={`text-xs md:text-sm ${match.home_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-right`} title={match.home_team.name}>
-            {match.home_team.name.length > 10 ? `${match.home_team.name.substring(0, 10)}...` : match.home_team.name}
+            {match.home_team.name && match.home_team.name.length > 10 ? `${match.home_team.name.substring(0, 10)}...` : match.home_team.name || 'Time Casa'}
           </span>
           {match.home_team.logo_url && (
             <img 
@@ -135,7 +135,7 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
             />
           )}
           <span className={`text-xs md:text-sm ${match.away_team.id === teamId ? 'text-blue-600' : 'text-gray-700'} text-left`} title={match.away_team.name}>
-            {match.away_team.name.length > 10 ? `${match.away_team.name.substring(0, 10)}...` : match.away_team.name}
+            {match.away_team.name && match.away_team.name.length > 10 ? `${match.away_team.name.substring(0, 10)}...` : match.away_team.name || 'Time Visitante'}
           </span>
         </div>
       </div>

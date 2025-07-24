@@ -7,6 +7,7 @@ import { API_ENDPOINTS, apiUrl } from '../config/api'
 import { getPlayerImageUrl, getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import { format, parseISO } from 'date-fns'
 import PlayerStatsCard from './PlayerStatsCard'
+import TopScorersTable from './TopScorersTable'
 
 interface Team {
   id: number
@@ -56,6 +57,8 @@ interface Player {
   nationality?: string
   state?: string
   image_url?: string
+  youtube_url?: string
+  instagram_url?: string
   team_history?: PlayerTeamHistory[]
   goals?: Goal[];
   cards?: Card[];
@@ -68,6 +71,8 @@ interface PlayerFormData {
   nationality: string
   state: string
   image_url: string
+  youtube_url: string
+  instagram_url: string
 }
 
 interface PlayerTeamHistoryFormData {
@@ -101,6 +106,8 @@ export default function PlayersManager() {
     nationality: 'Brasil',
     state: 'active',
     image_url: '',
+    youtube_url: '',
+    instagram_url: '',
   })
   const [historyFormData, setHistoryFormData] = useState<PlayerTeamHistoryFormData>({
     team_id: '',
@@ -116,6 +123,7 @@ export default function PlayersManager() {
   const [stateFilter, setStateFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15;
+  const [activeTab, setActiveTab] = useState<'jogadores' | 'artilharia'>('jogadores')
 
   useEffect(() => {
     fetchAllPlayers()
@@ -347,6 +355,8 @@ export default function PlayersManager() {
       nationality: player.nationality || 'Brasil',
       state: player.state || 'active',
       image_url: player.image_url || '',
+      youtube_url: player.youtube_url || '',
+      instagram_url: player.instagram_url || '',
     })
     setShowPlayerModal(true)
   }
@@ -397,6 +407,8 @@ export default function PlayersManager() {
       nationality: 'Brasil',
       state: 'active',
       image_url: '',
+      youtube_url: '',
+      instagram_url: '',
     })
     setSelectedFile(null)
     setPreviewUrl('')
@@ -527,528 +539,578 @@ export default function PlayersManager() {
 
   return (
     <div>
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-base font-semibold leading-6 text-gray-900">Jogadores</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Uma lista de todos os jogadores cadastrados, incluindo seus dados pessoais e históricos.
-          </p>
-        </div>
-        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-          <button
-            type="button"
-            onClick={() => setShowPlayerModal(true)}
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" aria-hidden="true" />
-            Adicionar Jogador
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-6">
-        <div className="relative lg:col-span-2">
-          <input
-            type="text"
-            name="search"
-            id="search"
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-            placeholder="Buscar jogadores..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-          </div>
-        </div>
-        
-        <div>
-          <label htmlFor="positionFilter" className="sr-only">Filtrar por Posição</label>
-          <select
-            id="positionFilter"
-            value={positionFilter}
-            onChange={(e) => {
-              setPositionFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-          >
-            <option value="">Posição</option>
-            {getUniquePositions().map(position => (
-              <option key={position} value={position}>{position}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="nationalityFilter" className="sr-only">Filtrar por Nacionalidade</label>
-          <select
-            id="nationalityFilter"
-            value={nationalityFilter}
-            onChange={(e) => {
-              setNationalityFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-          >
-            <option value="">Nacionalidade</option>
-            {getUniqueNationalities().map(nationality => (
-              <option key={nationality} value={nationality}>{nationality}</option>
-            ))}
-          </select>
-        </div>
-
-
-
-        <div>
-          <label htmlFor="stateFilter" className="sr-only">Filtrar por Estado</label>
-          <select
-            id="stateFilter"
-            value={stateFilter}
-            onChange={(e) => {
-              setStateFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-          >
-            <option value="">Estado</option>
-            {getUniqueStates().map(state => (
-              <option key={state} value={state}>
-                {state === 'active' ? 'Ativo' :
-                 state === 'retired' ? 'Aposentado' :
-                 state === 'injured' ? 'Lesionado' :
-                 state === 'inactive' ? 'Inativo' : state}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="mb-4 flex justify-between items-center">
-        <p className="text-sm text-gray-700">
-          Mostrando {paginatedPlayers.length} de {filteredPlayers.length} jogadores
-        </p>
+      {/* Abas de navegação */}
+      <div className="flex border-b border-gray-200 mb-6">
         <button
-          onClick={clearFilters}
-          className="inline-flex items-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300"
+          className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-200 focus:outline-none ${activeTab === 'jogadores' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}
+          onClick={() => setActiveTab('jogadores')}
         >
-          Limpar Filtros
+          Jogadores
+        </button>
+        <button
+          className={`ml-4 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-200 focus:outline-none ${activeTab === 'artilharia' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}
+          onClick={() => setActiveTab('artilharia')}
+        >
+          Artilharia
         </button>
       </div>
 
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                      Nome
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Posição
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Nacionalidade
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Estado
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Nascimento
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {paginatedPlayers.map((player) => (
-                    <tr key={player.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        <div className="flex items-center">
-                          {player.image_url && (
-                            <img src={getPlayerImageUrl(player.image_url)} alt={`${player.name} foto`} className="h-8 w-8 rounded-full object-cover mr-2" />
-                          )}
-                          {!player.image_url && (
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 mr-2">
-                              {player.name.substring(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          {player.name}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {player.position || 'N/A'}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {player.nationality || 'N/A'}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          player.state === 'active' ? 'bg-green-100 text-green-800' :
-                          player.state === 'retired' ? 'bg-gray-100 text-gray-800' :
-                          player.state === 'injured' ? 'bg-red-100 text-red-800' :
-                          player.state === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {player.state === 'active' ? 'Ativo' :
-                           player.state === 'retired' ? 'Aposentado' :
-                           player.state === 'injured' ? 'Lesionado' :
-                           player.state === 'inactive' ? 'Inativo' :
-                           'N/A'}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {formatDate(player.date_of_birth)}
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <button
-                          onClick={() => openStatsCard(player)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                          title="Ver Estatísticas"
-                        >
-                          <ChartBarIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEditPlayer(player)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          Editar<span className="sr-only">, {player.name}</span>
-                        </button>
-                        <button
-                          onClick={() => openHistoryModal(player)}
-                          className="text-teal-600 hover:text-teal-900 mr-3"
-                          title="Gerenciar Histórico de Time"
-                        >
-                          <LinkIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeletePlayer(player.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Excluir<span className="sr-only">, {player.name}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Conteúdo da aba selecionada */}
+      {activeTab === 'jogadores' ? (
+        <>
+          <div className="sm:flex sm:items-center">
+            <div className="sm:flex-auto">
+              <h1 className="text-base font-semibold leading-6 text-gray-900">Jogadores</h1>
+              <p className="mt-2 text-sm text-gray-700">
+                Uma lista de todos os jogadores cadastrados, incluindo seus dados pessoais e históricos.
+              </p>
+            </div>
+            <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+              <button
+                type="button"
+                onClick={() => setShowPlayerModal(true)}
+                className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" aria-hidden="true" />
+                Adicionar Jogador
+              </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Paginação */}
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-gray-700">
-          Página {currentPage} de {totalPages} (Total: {filteredPlayers.length} jogadores)
-        </p>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Primeira
-          </button>
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Anterior
-          </button>
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Próxima
-          </button>
-          <button
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Última
-          </button>
-        </div>
-      </div>
+          <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-6">
+            <div className="relative lg:col-span-2">
+              <input
+                type="text"
+                name="search"
+                id="search"
+                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Buscar jogadores..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="positionFilter" className="sr-only">Filtrar por Posição</label>
+              <select
+                id="positionFilter"
+                value={positionFilter}
+                onChange={(e) => {
+                  setPositionFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              >
+                <option value="">Posição</option>
+                {getUniquePositions().map(position => (
+                  <option key={position} value={position}>{position}</option>
+                ))}
+              </select>
+            </div>
 
-      {/* Modal para Adicionar/Editar Jogador */}
-      {showPlayerModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="player-modal">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">{editingPlayer ? 'Editar Jogador' : 'Adicionar Novo Jogador'}</h3>
-              <form onSubmit={handlePlayerSubmit} className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-gray-700">Posição</label>
-                    <input
-                      type="text"
-                      name="position"
-                      id="position"
-                      value={formData.position}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">Nascimento</label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      id="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nacionalidade</label>
-                    <input
-                      type="text"
-                      name="nationality"
-                      id="nationality"
-                      value={formData.nationality}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
+            <div>
+              <label htmlFor="nationalityFilter" className="sr-only">Filtrar por Nacionalidade</label>
+              <select
+                id="nationalityFilter"
+                value={nationalityFilter}
+                onChange={(e) => {
+                  setNationalityFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              >
+                <option value="">Nacionalidade</option>
+                {getUniqueNationalities().map(nationality => (
+                  <option key={nationality} value={nationality}>{nationality}</option>
+                ))}
+              </select>
+            </div>
 
-                </div>
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
-                  <select
-                    name="state"
-                    id="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    <option value="active">Ativo</option>
-                    <option value="retired">Aposentado</option>
-                    <option value="injured">Lesionado</option>
-                    <option value="inactive">Inativo</option>
-                  </select>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Foto do Jogador</label>
-                  <div className="mt-1 flex items-center space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setImageInputType('upload')}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'upload' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      Upload
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setImageInputType('url')}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'url' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      URL
-                    </button>
-                  </div>
-                  {imageInputType === 'upload' ? (
-                    <div className="mt-2 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
-                      <div className="space-y-1 text-center">
-                        <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
-                        <div className="flex text-sm text-gray-600">
-                          <label
-                            htmlFor="file-upload"
-                            className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
-                          >
-                            <span>Upload um arquivo</span>
-                            <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
-                          </label>
-                          <p className="pl-1">ou arraste e solte</p>
-                        </div>
-                        <p className="text-xs text-gray-500">PNG, JPG, GIF até 10MB</p>
+
+            <div>
+              <label htmlFor="stateFilter" className="sr-only">Filtrar por Estado</label>
+              <select
+                id="stateFilter"
+                value={stateFilter}
+                onChange={(e) => {
+                  setStateFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              >
+                <option value="">Estado</option>
+                {getUniqueStates().map(state => (
+                  <option key={state} value={state}>
+                    {state === 'active' ? 'Ativo' :
+                     state === 'retired' ? 'Aposentado' :
+                     state === 'injured' ? 'Lesionado' :
+                     state === 'inactive' ? 'Inativo' : state}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-4 flex justify-between items-center">
+            <p className="text-sm text-gray-700">
+              Mostrando {paginatedPlayers.length} de {filteredPlayers.length} jogadores
+            </p>
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+
+          <div className="mt-8 flow-root">
+            <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+              <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                          Nome
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Posição
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Nacionalidade
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Estado
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Nascimento
+                        </th>
+                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                          <span className="sr-only">Ações</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {paginatedPlayers.map((player) => (
+                        <tr key={player.id}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                            <div className="flex items-center">
+                              {player.image_url && (
+                                <img src={getPlayerImageUrl(player.image_url)} alt={`${player.name} foto`} className="h-8 w-8 rounded-full object-cover mr-2" />
+                              )}
+                              {!player.image_url && (
+                                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 mr-2">
+                                  {player.name ? player.name.substring(0, 2).toUpperCase() : 'PL'}
+                                </div>
+                              )}
+                              {player.name}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {player.position || 'N/A'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {player.nationality || 'N/A'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              player.state === 'active' ? 'bg-green-100 text-green-800' :
+                              player.state === 'retired' ? 'bg-gray-100 text-gray-800' :
+                              player.state === 'injured' ? 'bg-red-100 text-red-800' :
+                              player.state === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {player.state === 'active' ? 'Ativo' :
+                               player.state === 'retired' ? 'Aposentado' :
+                               player.state === 'injured' ? 'Lesionado' :
+                               player.state === 'inactive' ? 'Inativo' :
+                               'N/A'}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {formatDate(player.date_of_birth)}
+                          </td>
+                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                            <button
+                              onClick={() => openStatsCard(player)}
+                              className="text-blue-600 hover:text-blue-900 mr-3"
+                              title="Ver Estatísticas"
+                            >
+                              <ChartBarIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEditPlayer(player)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-3"
+                            >
+                              Editar<span className="sr-only">, {player.name}</span>
+                            </button>
+                            <button
+                              onClick={() => openHistoryModal(player)}
+                              className="text-teal-600 hover:text-teal-900 mr-3"
+                              title="Gerenciar Histórico de Time"
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePlayer(player.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Excluir<span className="sr-only">, {player.name}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Paginação */}
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-700">
+              Página {currentPage} de {totalPages} (Total: {filteredPlayers.length} jogadores)
+            </p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Primeira
+              </button>
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Última
+              </button>
+            </div>
+          </div>
+
+          {/* Modal para Adicionar/Editar Jogador */}
+          {showPlayerModal && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="player-modal">
+              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div className="mt-3 text-center">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">{editingPlayer ? 'Editar Jogador' : 'Adicionar Novo Jogador'}</h3>
+                  <form onSubmit={handlePlayerSubmit} className="mt-4 space-y-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
+                      <input
+                        type="text"
+                        name="name"
+                        id="name"
+                        value={formData.name}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="position" className="block text-sm font-medium text-gray-700">Posição</label>
+                        <input
+                          type="text"
+                          name="position"
+                          id="position"
+                          value={formData.position}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">Nascimento</label>
+                        <input
+                          type="date"
+                          name="date_of_birth"
+                          id="date_of_birth"
+                          value={formData.date_of_birth}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
                       </div>
                     </div>
-                  ) : (
-                    <input
-                      type="text"
-                      name="image_url"
-                      id="image_url"
-                      value={formData.image_url}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      placeholder="https://exemplo.com/foto.png"
-                    />
-                  )}
-                  {previewUrl && (
-                    <div className="mt-4">
-                      <p className="block text-sm font-medium text-gray-700 mb-2">Prévia da Foto:</p>
-                      <img src={previewUrl} alt="Prévia da Foto" className="h-20 w-20 rounded-full object-cover" />
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nacionalidade</label>
+                        <input
+                          type="text"
+                          name="nationality"
+                          id="nationality"
+                          value={formData.nationality}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                      </div>
+
+                    </div>
+                    <div>
+                      <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado</label>
+                      <select
+                        name="state"
+                        id="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        <option value="active">Ativo</option>
+                        <option value="retired">Aposentado</option>
+                        <option value="injured">Lesionado</option>
+                        <option value="inactive">Inativo</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="youtube_url" className="block text-sm font-medium text-gray-700">YouTube</label>
+                        <input
+                          type="url"
+                          name="youtube_url"
+                          id="youtube_url"
+                          value={formData.youtube_url}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="https://youtube.com/@canal"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="instagram_url" className="block text-sm font-medium text-gray-700">Instagram</label>
+                        <input
+                          type="url"
+                          name="instagram_url"
+                          id="instagram_url"
+                          value={formData.instagram_url}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="https://instagram.com/usuario"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Foto do Jogador</label>
+                      <div className="mt-1 flex items-center space-x-4">
+                        <button
+                          type="button"
+                          onClick={() => setImageInputType('upload')}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'upload' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputType('url')}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${imageInputType === 'url' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        >
+                          URL
+                        </button>
+                      </div>
+                      {imageInputType === 'upload' ? (
+                        <div className="mt-2 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
+                          <div className="space-y-1 text-center">
+                            <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="file-upload"
+                                className="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
+                              >
+                                <span>Upload um arquivo</span>
+                                <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
+                              </label>
+                              <p className="pl-1">ou arraste e solte</p>
+                            </div>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF até 10MB</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          name="image_url"
+                          id="image_url"
+                          value={formData.image_url}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="https://exemplo.com/foto.png"
+                        />
+                      )}
+                      {previewUrl && (
+                        <div className="mt-4">
+                          <p className="block text-sm font-medium text-gray-700 mb-2">Prévia da Foto:</p>
+                          <img src={previewUrl} alt="Prévia da Foto" className="h-20 w-20 rounded-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { setShowPlayerModal(false); setEditingPlayer(null); resetPlayerForm(); }}
+                        className="mr-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={uploading}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploading ? 'Salvando...' : (editingPlayer ? 'Salvar Alterações' : 'Adicionar Jogador')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal para Gerenciar Histórico de Time */}
+          {showHistoryModal && selectedPlayerForHistory && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="history-modal">
+              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div className="mt-3 text-center">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Histórico de Times: {selectedPlayerForHistory.name}</h3>
+                  <form onSubmit={handleHistorySubmit} className="mt-4 space-y-4">
+                    <div>
+                      <label htmlFor="team_id" className="block text-sm font-medium text-gray-700">Time</label>
+                      <select
+                        name="team_id"
+                        id="team_id"
+                        value={historyFormData.team_id}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setHistoryFormData({ ...historyFormData, team_id: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                      >
+                        <option value="">Selecione um time</option>
+                        {teams && teams.map(team => (
+                          <option key={team.id} value={team.id}>{team.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">Data de Início</label>
+                      <input
+                        type="date"
+                        name="start_date"
+                        id="start_date"
+                        value={historyFormData.start_date}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, start_date: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">Data de Fim (Opcional)</label>
+                      <input
+                        type="date"
+                        name="end_date"
+                        id="end_date"
+                        value={historyFormData.end_date}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, end_date: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="jersey_number" className="block text-sm font-medium text-gray-700">Número da Camisa (Opcional)</label>
+                      <input
+                        type="text"
+                        name="jersey_number"
+                        id="jersey_number"
+                        value={historyFormData.jersey_number}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, jersey_number: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="role" className="block text-sm font-medium text-gray-700">Função (Opcional)</label>
+                      <input
+                        type="text"
+                        name="role"
+                        id="role"
+                        value={historyFormData.role}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, role: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { setShowHistoryModal(false); resetHistoryForm(); }}
+                        className="mr-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Adicionar Histórico
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Histórico Existente */}
+                  {selectedPlayerForHistory.team_history && selectedPlayerForHistory.team_history.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">Histórico Atual</h4>
+                      <ul className="divide-y divide-gray-200">
+                        {selectedPlayerForHistory.team_history.map((history) => (
+                          <li key={history.id} className="py-2 flex justify-between items-center">
+                            <div className="flex-grow">
+                              <p className="text-sm font-medium text-gray-900">
+                                {history.team?.name} ({history.jersey_number || 'N/A'})
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatDate(history.start_date)} - {history.end_date ? formatDate(history.end_date) : 'Presente'}
+                                {history.role && ` (${history.role})`}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRemovePlayerFromTeamHistory(history.id, history.team.id)}
+                              className="ml-4 text-red-600 hover:text-red-900 text-sm"
+                            >
+                              Remover
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
-                
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => { setShowPlayerModal(false); setEditingPlayer(null); resetPlayerForm(); }}
-                    className="mr-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={uploading}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploading ? 'Salvando...' : (editingPlayer ? 'Salvar Alterações' : 'Adicionar Jogador')}
-                  </button>
-                </div>
-              </form>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Gerenciar Histórico de Time */}
-      {showHistoryModal && selectedPlayerForHistory && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="history-modal">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Histórico de Times: {selectedPlayerForHistory.name}</h3>
-              <form onSubmit={handleHistorySubmit} className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="team_id" className="block text-sm font-medium text-gray-700">Time</label>
-                  <select
-                    name="team_id"
-                    id="team_id"
-                    value={historyFormData.team_id}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setHistoryFormData({ ...historyFormData, team_id: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  >
-                    <option value="">Selecione um time</option>
-                    {teams.map(team => (
-                      <option key={team.id} value={team.id}>{team.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">Data de Início</label>
-                  <input
-                    type="date"
-                    name="start_date"
-                    id="start_date"
-                    value={historyFormData.start_date}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, start_date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">Data de Fim (Opcional)</label>
-                  <input
-                    type="date"
-                    name="end_date"
-                    id="end_date"
-                    value={historyFormData.end_date}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, end_date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="jersey_number" className="block text-sm font-medium text-gray-700">Número da Camisa (Opcional)</label>
-                  <input
-                    type="text"
-                    name="jersey_number"
-                    id="jersey_number"
-                    value={historyFormData.jersey_number}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, jersey_number: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700">Função (Opcional)</label>
-                  <input
-                    type="text"
-                    name="role"
-                    id="role"
-                    value={historyFormData.role}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHistoryFormData({ ...historyFormData, role: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => { setShowHistoryModal(false); resetHistoryForm(); }}
-                    className="mr-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Adicionar Histórico
-                  </button>
-                </div>
-              </form>
-
-              {/* Histórico Existente */}
-              {selectedPlayerForHistory.team_history && selectedPlayerForHistory.team_history.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">Histórico Atual</h4>
-                  <ul className="divide-y divide-gray-200">
-                    {selectedPlayerForHistory.team_history.map((history) => (
-                      <li key={history.id} className="py-2 flex justify-between items-center">
-                        <div className="flex-grow">
-                          <p className="text-sm font-medium text-gray-900">
-                            {history.team?.name} ({history.jersey_number || 'N/A'})
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(history.start_date)} - {history.end_date ? formatDate(history.end_date) : 'Presente'}
-                            {history.role && ` (${history.role})`}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemovePlayerFromTeamHistory(history.id, history.team.id)}
-                          className="ml-4 text-red-600 hover:text-red-900 text-sm"
-                        >
-                          Remover
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Renderiza o PlayerStatsCard se um jogador estiver selecionado */}
-      {selectedPlayerForStats && (
-        <PlayerStatsCard player={selectedPlayerForStats} onClose={closeStatsCard} />
+          )}
+          {/* Renderiza o PlayerStatsCard se um jogador estiver selecionado */}
+          {selectedPlayerForStats && (
+            <PlayerStatsCard player={selectedPlayerForStats} onClose={closeStatsCard} />
+          )}
+        </>
+      ) : (
+        <TopScorersTable />
       )}
     </div>
   );

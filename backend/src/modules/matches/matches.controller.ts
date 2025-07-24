@@ -22,41 +22,22 @@ export class MatchesController {
 
   @Get('top-scorers')
   async getTopScorers(@Res() res: Response) {
-    const topScorers = await this.matchesService.getTopScorers();
-    
-    // Adicionar headers para evitar cache
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Last-Modified': new Date().toUTCString()
-    });
-    
-    return res.json(topScorers);
-  }
-
-  @Get('/competition/:competitionId')
-  async findByCompetitionId(@Param('competitionId') competitionId: string, @Res() res: Response) {
-    const matches = await this.matchesService.findByCompetitionId(+competitionId);
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Last-Modified': new Date().toUTCString()
-    });
-    return res.json(matches);
-  }
-
-  @Get('/competition/:competitionId/rounds')
-  async getRoundsByCompetition(@Param('competitionId') competitionId: string, @Res() res: Response) {
-    const rounds = await this.matchesService.getRoundsByCompetition(+competitionId);
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Last-Modified': new Date().toUTCString()
-    });
-    return res.json(rounds);
+    try {
+      const topScorers = await this.matchesService.getTopScorers();
+      
+      // Adicionar headers para evitar cache
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': new Date().toUTCString()
+      });
+      
+      return res.json(topScorers);
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar artilheiros:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
   }
 
   @Get('test')
@@ -98,11 +79,36 @@ export class MatchesController {
     }
   }
 
+  @Get('/competition/:competitionId')
+  async findByCompetitionId(@Param('competitionId') competitionId: string, @Res() res: Response) {
+    const matches = await this.matchesService.findByCompetitionId(+competitionId);
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    return res.json(matches);
+  }
+
+  @Get('/competition/:competitionId/rounds')
+  async getRoundsByCompetition(@Param('competitionId') competitionId: string, @Res() res: Response) {
+    const rounds = await this.matchesService.getRoundsByCompetition(+competitionId);
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    return res.json(rounds);
+  }
+
   @Get()
   async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    return this.matchesService.findAll(pageNumber, limitNumber);
+    const result = await this.matchesService.findAll(pageNumber, limitNumber);
+    return result.data; // Retornar apenas os dados, não o objeto com total
   }
 
   @Get(':id')

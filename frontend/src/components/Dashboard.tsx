@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState('Dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['Usuários'])
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['Usuários', 'Jogadores'])
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
@@ -173,7 +173,7 @@ export default function Dashboard() {
         fetch(API_ENDPOINTS.whatsapp.status()),
         fetch(API_ENDPOINTS.users.list()),
         fetch(API_ENDPOINTS.teams.list()),
-        fetch(API_ENDPOINTS.matches.list()),
+        fetch(API_ENDPOINTS.matches.list(1, 1000)),
         fetch(API_ENDPOINTS.competitions.list()),
         fetch(API_ENDPOINTS.channels.list()),
         fetch(API_ENDPOINTS.stadiums.list()),
@@ -589,12 +589,19 @@ export default function Dashboard() {
   const menuItems = [
     { name: 'Dashboard', icon: ChartBarIcon, page: 'Dashboard' },
     { name: 'Times', icon: ShieldCheckIcon, page: 'Times' },
-    { name: 'Jogadores', icon: UserIcon, page: 'Jogadores' },
+    { 
+      name: 'Jogadores', 
+      icon: UserIcon, 
+      page: 'Jogadores',
+      subItems: [
+        { name: 'Lista de Jogadores', page: 'Jogadores' },
+        { name: 'Artilharia', page: 'Artilharia' }
+      ]
+    },
     { name: 'Estádios', icon: BuildingOfficeIcon, page: 'Estádios' },
     { name: 'Competições', icon: TrophyIcon, page: 'Competições' },
     { name: 'Jogos', icon: CalendarIcon, page: 'Jogos' },
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
-    { name: 'Artilharia', icon: TrophyIcon, page: 'Artilharia' },
     { name: 'Canais', icon: TvIcon, page: 'Canais' },
     { 
       name: 'Usuários', 
