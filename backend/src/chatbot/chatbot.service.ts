@@ -457,7 +457,7 @@ export class ChatbotService {
           .limit(3)
           .getMany();
 
-        let response = `📅 JOGOS DE HOJE 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n😔 Não há jogos agendados para hoje.`;
+        let response = `📅 JOGOS DE HOJE 📅\n\n🌐 LINKS PARA ASSISTIR e +INFO:\n${shortUrl}\n\n😔 Não há jogos agendados para hoje.`;
         
         if (nextMatches.length > 0) {
           response += `\n\n📅 PRÓXIMOS JOGOS:\n\n`;
@@ -479,7 +479,7 @@ export class ChatbotService {
         return response;
       }
 
-      let response = `📅 JOGOS DE HOJE 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n`;
+      let response = `📅 JOGOS DE HOJE 📅\n\n🌐 LINKS PARA ASSISTIR e +INFO:\n${shortUrl}\n\n`;
 
       todayMatches.forEach(match => {
         const matchDate = new Date(match.match_date);
@@ -550,14 +550,15 @@ export class ChatbotService {
       if (weekMatches.length === 0) {
         return `📅 JOGOS DA SEMANA 📅
 
-🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}
+🌐 LINKS PARA ASSISTIR e +INFO:
+${shortUrl}
 
 😔 Não há jogos agendados para os próximos 7 dias.
 
 ⚽ Quer saber sobre algum time específico?`;
       }
 
-      let response = `📅 JOGOS DA SEMANA 📅\n\n🌐 Para ver links de transmissão e mais detalhes acesse: ${shortUrl}\n\n`;
+      let response = `📅 JOGOS DA SEMANA 📅\n\n🌐 LINKS PARA ASSISTIR e +INFO:\n${shortUrl}\n\n`;
 
       weekMatches.forEach(match => {
         const date = new Date(match.match_date);
