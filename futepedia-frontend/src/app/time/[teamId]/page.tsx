@@ -6,6 +6,7 @@ import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
 import { MarkdownText } from '@/lib/markdown';
+import TeamTitles from '@/components/TeamTitles';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
@@ -222,7 +223,7 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
         return (
           <div className="bg-white p-3 md:p-6 border-t border-gray-300">
             <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">Títulos</h2>
-            <p className="text-gray-500 text-center text-sm md:text-base">Informações sobre títulos serão adicionadas em breve.</p>
+            <TeamTitles teamId={team.id} />
           </div>
         );
       

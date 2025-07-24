@@ -13,8 +13,6 @@ export function useTheme() {
     const savedTheme = localStorage.getItem('theme')
     const shouldBeDark = savedTheme ? savedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
     
-    console.log('🎨 Tema inicial:', { savedTheme, shouldBeDark })
-    
     setIsDark(shouldBeDark)
     applyTheme(shouldBeDark)
   }, [])
@@ -24,8 +22,6 @@ export function useTheme() {
     
     const html = document.documentElement
     
-    console.log('🎨 Aplicando tema:', dark ? 'escuro' : 'claro')
-    
     if (dark) {
       html.classList.add('dark')
       html.setAttribute('data-theme', 'dark')
@@ -33,16 +29,11 @@ export function useTheme() {
       html.classList.remove('dark')
       html.setAttribute('data-theme', 'light')
     }
-    
-    console.log('📄 Classes HTML:', html.className)
-    console.log('📄 Data-theme:', html.getAttribute('data-theme'))
   }
 
   const toggleTheme = () => {
     const newTheme = !isDark
     setIsDark(newTheme)
-    
-    console.log('🎨 Alternando para:', newTheme ? 'escuro' : 'claro')
     
     applyTheme(newTheme)
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')

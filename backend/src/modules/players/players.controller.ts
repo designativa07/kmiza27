@@ -18,11 +18,22 @@ export class PlayersController {
 
   @Get('test')
   async test() {
-    return { 
-      message: 'Players endpoint funcionando!', 
-      timestamp: new Date().toISOString(),
-      status: 'ok' 
-    };
+    try {
+      const count = await this.playersService.testConnection();
+      return { 
+        message: 'Players endpoint funcionando!', 
+        timestamp: new Date().toISOString(),
+        status: 'ok',
+        playerCount: count
+      };
+    } catch (error) {
+      return {
+        message: 'Erro no endpoint de players',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        status: 'error'
+      };
+    }
   }
 
   @Get()

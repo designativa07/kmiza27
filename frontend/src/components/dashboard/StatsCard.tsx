@@ -8,7 +8,7 @@ interface StatsCardProps {
     value: string;
     positive: boolean;
   };
-  color?: 'blue' | 'green' | 'purple' | 'orange' | 'red';
+  color?: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow' | 'emerald';
 }
 
 const colorClasses = {
@@ -36,6 +36,16 @@ const colorClasses = {
     bg: 'bg-red-50',
     icon: 'text-red-600',
     accent: 'text-red-600'
+  },
+  yellow: {
+    bg: 'bg-yellow-50',
+    icon: 'text-yellow-600',
+    accent: 'text-yellow-600'
+  },
+  emerald: {
+    bg: 'bg-emerald-50',
+    icon: 'text-emerald-600',
+    accent: 'text-emerald-600'
   }
 };
 

@@ -9,13 +9,25 @@ import {
   UserGroupIcon, 
   HeartIcon, 
   ChatBubbleLeftRightIcon,
-  ClockIcon 
+  ClockIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../LoadingSpinner';
+
+interface TitleStats {
+  total: number;
+  active: number;
+  byCategory: { [key: string]: number };
+  byType: { [key: string]: number };
+  recentTitles: any[];
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [titleStats, setTitleStats] = useState<TitleStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,10 +43,23 @@ export default function DashboardOverview() {
       // Carregar estatísticas e usuários em paralelo
       const [statsData, usersData] = await Promise.all([
         authService.getUserStats(),
-        authService.getAllUsers()
+        authService.getAllUsers(),
       ]);
 
+      // Tentar carregar estatísticas de títulos (opcional)
+      let titlesData = null;
+      try {
+        const titlesResponse = await fetch(`${API_URL}/titles/stats/overview`);
+        if (titlesResponse.ok) {
+          titlesData = await titlesResponse.json();
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar estatísticas de títulos:', error);
+        // Não falhar o dashboard se as estatísticas de títulos não estiverem disponíveis
+      }
+
       setStats(statsData);
+      setTitleStats(titlesData);
       
       // Pegar os últimos 5 usuários criados
       const sortedUsers = usersData
@@ -101,32 +126,135 @@ export default function DashboardOverview() {
       </div>
 
       {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Total de Usuários"
-            value={stats.total}
-            icon={<UsersIcon className="h-6 w-6" />}
-            color="blue"
-          />
-          <StatsCard
-            title="Usuários Ativos"
-            value={stats.active}
-            icon={<ChatBubbleLeftRightIcon className="h-6 w-6" />}
-            color="green"
-          />
-          <StatsCard
-            title="Com Time Favorito"
-            value={stats.withFavoriteTeam}
-            icon={<HeartIcon className="h-6 w-6" />}
-            color="purple"
-          />
-          <StatsCard
-            title="Administradores"
-            value={stats.admins}
-            icon={<UserGroupIcon className="h-6 w-6" />}
-            color="orange"
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        {stats && (
+          <>
+            <StatsCard
+              title="Total de Usuários"
+              value={stats.total}
+              icon={<UsersIcon className="h-6 w-6" />}
+              color="blue"
+            />
+            <StatsCard
+              title="Usuários Ativos"
+              value={stats.active}
+              icon={<ChatBubbleLeftRightIcon className="h-6 w-6" />}
+              color="green"
+            />
+            <StatsCard
+              title="Com Time Favorito"
+              value={stats.withFavoriteTeam}
+              icon={<HeartIcon className="h-6 w-6" />}
+              color="purple"
+            />
+            <StatsCard
+              title="Administradores"
+              value={stats.admins}
+              icon={<UserGroupIcon className="h-6 w-6" />}
+              color="orange"
+            />
+          </>
+        )}
+        
+        {titleStats && (
+          <>
+            <StatsCard
+              title="Total de Títulos"
+              value={titleStats.total}
+              icon={<TrophyIcon className="h-6 w-6" />}
+              color="yellow"
+            />
+            <StatsCard
+              title="Títulos Ativos"
+              value={titleStats.active}
+              icon={<TrophyIcon className="h-6 w-6" />}
+              color="emerald"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Estatísticas de Títulos */}
+      {titleStats && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Por Categoria */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Títulos por Categoria</h3>
+              <p className="text-sm text-gray-600">Distribuição por tipo de competição</p>
+            </div>
+            <div className="p-6">
+              {Object.keys(titleStats.byCategory).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(titleStats.byCategory).map(([category, count]) => (
+                    <div key={category} className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{category}</span>
+                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Nenhuma categoria encontrada</p>
+              )}
+            </div>
+          </div>
+
+          {/* Por Tipo */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Títulos por Tipo</h3>
+              <p className="text-sm text-gray-600">Distribuição por formato</p>
+            </div>
+            <div className="p-6">
+              {Object.keys(titleStats.byType).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(titleStats.byType).map(([type, count]) => (
+                    <div key={type} className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{type}</span>
+                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Nenhum tipo encontrado</p>
+              )}
+            </div>
+          </div>
+
+          {/* Títulos Recentes */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Títulos Recentes</h3>
+              <p className="text-sm text-gray-600">Últimos títulos adicionados</p>
+            </div>
+            <div className="p-6">
+              {titleStats.recentTitles.length > 0 ? (
+                <div className="space-y-3">
+                  {titleStats.recentTitles.map((title) => (
+                    <div key={title.id} className="flex items-center space-x-3">
+                      <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <TrophyIcon className="h-4 w-4 text-yellow-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {title.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {title.team?.name} • {title.year || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Nenhum título encontrado</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -207,6 +335,17 @@ export default function DashboardOverview() {
                 <div>
                   <p className="text-sm font-medium text-gray-900">Administradores</p>
                   <p className="text-xs text-gray-500">Criar e gerenciar administradores</p>
+                </div>
+              </a>
+
+              <a
+                href="/titles"
+                className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                <TrophyIcon className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Gerenciar Títulos</p>
+                  <p className="text-xs text-gray-500">Adicionar e editar títulos dos times</p>
                 </div>
               </a>
               

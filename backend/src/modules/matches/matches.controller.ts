@@ -109,7 +109,7 @@ export class MatchesController {
       const pageNumber = parseInt(page, 10);
       const limitNumber = parseInt(limit, 10);
       const result = await this.matchesService.findAll(pageNumber, limitNumber);
-      return result.data; // Retornar apenas os dados, não o objeto com total
+      return result; // Retornar o objeto completo com data e total
     } catch (error) {
       console.error('❌ Controller: Erro ao buscar matches:', error);
       throw error;

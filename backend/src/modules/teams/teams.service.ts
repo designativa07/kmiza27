@@ -83,6 +83,15 @@ export class TeamsService {
     return { data, total };
   }
 
+  async findAllForAutocomplete(): Promise<Team[]> {
+    return this.teamRepository.find({
+      select: ['id', 'name', 'short_name', 'logo_url'],
+      order: {
+        name: 'ASC'
+      }
+    });
+  }
+
   async search(query: string): Promise<Team[]> {
     if (!query || query.trim().length < 2) {
       return [];

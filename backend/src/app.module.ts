@@ -54,6 +54,7 @@ import { CdnTransformInterceptor } from './interceptors/cdn-transform.intercepto
 import { SearchModule } from './modules/search/search.module';
 import { RoundsModule } from './modules/rounds/rounds.module';
 import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module';
+import { TitlesModule } from './modules/titles/titles.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module
     SearchModule,
     RoundsModule,
     UrlShortenerModule,
+    TitlesModule,
   ],
   controllers: [AppController],
   providers: [

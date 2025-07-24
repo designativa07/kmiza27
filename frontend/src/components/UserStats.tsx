@@ -29,8 +29,6 @@ export default function UserStats() {
 
   const fetchStats = async () => {
     try {
-      console.log('🔄 UserStats: Iniciando requisição para /users/stats...')
-      
       const response = await fetch(API_ENDPOINTS.users.stats(), {
         method: 'GET',
         headers: {
@@ -39,14 +37,11 @@ export default function UserStats() {
         },
       })
       
-      console.log('📊 UserStats: Status da resposta:', response.status)
-      
       if (!response.ok) {
         throw new Error(`Erro ao carregar estatísticas: ${response.status} ${response.statusText}`)
       }
       
       const data = await response.json()
-      console.log('✅ UserStats: Dados recebidos:', data)
       setStats(data)
     } catch (error) {
       console.error('❌ UserStats: Erro ao carregar estatísticas:', error)
