@@ -50,6 +50,7 @@ export class ChatbotController {
       let phoneNumber: string | null = null;
       let messageText: string | null = null;
       let pushName: string | null = null;
+      let isAudioMessage: boolean = false;
 
       // Log detalhado da estrutura recebida
       console.log('🔍 Analisando estrutura do webhook:');
@@ -70,6 +71,12 @@ export class ChatbotController {
           if (key === 'remoteJid' && typeof value === 'string' && value.includes('@s.whatsapp.net')) {
             phoneNumber = value.replace('@s.whatsapp.net', '');
             console.log(`📞 Telefone encontrado em: ${currentPath} = ${phoneNumber}`);
+          }
+          
+          // 🎵 DETECTAR MENSAGEM DE ÁUDIO
+          if ((key === 'audioMessage' || key === 'pttMessage') && typeof value === 'object' && value !== null) {
+            isAudioMessage = true;
+            console.log(`🎵 Áudio detectado em: ${currentPath}`);
           }
           
           // Procurar por texto da mensagem (múltiplas possibilidades)
@@ -120,6 +127,34 @@ export class ChatbotController {
       console.log(`- Telefone: ${phoneNumber || 'NÃO ENCONTRADO'}`);
       console.log(`- Mensagem: ${messageText || 'NÃO ENCONTRADA'}`);
       console.log(`- Nome: ${pushName || 'NÃO ENCONTRADO'}`);
+      console.log(`- É Áudio: ${isAudioMessage ? 'SIM' : 'NÃO'}`);
+
+      // 🎵 TRATAMENTO ESPECIAL PARA ÁUDIO
+      if (isAudioMessage && phoneNumber) {
+        console.log(`🎵 Processando mensagem de áudio de ${phoneNumber}`);
+        
+        try {
+          const audioResponse = 'Ainda não sou capaz de entender áudios, custa caro e meu serviço é totalmente grátis, por favor escreva sua pergunta :D';
+          
+          console.log(`🤖 Enviando resposta de áudio: "${audioResponse}"`);
+          const sent = await this.chatbotService.sendMessage(phoneNumber, audioResponse);
+          console.log(`📤 Resposta de áudio enviada: ${sent ? 'Sucesso' : 'Falha'}`);
+          
+          return { 
+            success: true, 
+            message: 'Resposta de áudio enviada', 
+            processed: true,
+            audioHandled: true 
+          };
+        } catch (error) {
+          console.error('❌ Erro ao enviar resposta de áudio:', error);
+          return { 
+            success: true, 
+            message: 'Erro ao processar áudio', 
+            error: error.message 
+          };
+        }
+      }
 
       // 🛡️ FILTRO BÁSICO: Verificar se temos dados mínimos
       if (!messageText) {

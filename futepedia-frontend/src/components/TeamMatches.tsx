@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Home, Plane } from 'lucide-react';
+import { Calendar, Clock, MapPin, Home, Plane, ExternalLink } from 'lucide-react';
 import { getTeamLogoUrl } from '@/lib/cdn';
 import { getApiUrl } from '@/lib/config';
+import Link from 'next/link';
 
 interface Team {
   id: number;
@@ -160,6 +161,17 @@ const MatchCard = ({ match, teamId }: { match: Match; teamId: number }) => {
             </>
           )}
         </div>
+      </div>
+
+      {/* Link VER DETALHES */}
+      <div className="text-center mt-2 md:mt-3">
+        <Link 
+          href={`/jogos/${match.id}`}
+          className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-xs md:text-sm font-medium transition-colors"
+        >
+          <span>VER DETALHES</span>
+          <ExternalLink className="h-3 w-3 md:h-4 md:w-4" />
+        </Link>
       </div>
     </div>
   );

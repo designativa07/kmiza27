@@ -425,28 +425,7 @@ export default function MatchPage({ params }: Props) {
           </div>
         )}
 
-        {/* Informações Adicionais */}
-        {(match.leg || match.is_knockout) && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Informações Adicionais
-            </h3>
-            
-            <div className="space-y-2">
-              {match.is_knockout && (
-                <span className="inline-block bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">
-                  Mata-mata
-                </span>
-              )}
-              
-              {match.leg && (
-                <span className="inline-block bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full ml-2">
-                  {match.leg === 'first_leg' ? 'Jogo de Ida' : 'Jogo de Volta'}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+
       </main>
     </div>
   );
