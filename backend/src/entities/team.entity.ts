@@ -44,6 +44,9 @@ export class Team {
   @Column({ type: 'varchar', length: 100, default: 'Brasil' })
   country: string;
 
+  @Column({ type: 'varchar', length: 50, default: 'professional' })
+  category: string; // 'professional' ou 'amateur'
+
   @Column({ type: 'int', nullable: true })
   founded_year: number;
 

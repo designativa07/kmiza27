@@ -78,4 +78,26 @@ export class AuthController {
       };
     }
   }
+
+  @Post('register')
+  async register(@Body() registerDto: {
+    name: string;
+    email: string;
+    password: string;
+    role?: string;
+  }) {
+    try {
+      const user = await this.authService.registerAmateurUser(registerDto);
+      return {
+        success: true,
+        message: 'Usuário registrado com sucesso',
+        user: user
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro ao registrar usuário: ' + error.message
+      };
+    }
+  }
 } 

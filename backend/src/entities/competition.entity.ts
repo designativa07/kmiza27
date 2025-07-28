@@ -38,6 +38,9 @@ export class Competition {
   @Column({ type: 'varchar', length: 100, nullable: true })
   country: string;
 
+  @Column({ type: 'varchar', length: 50, default: 'professional' })
+  category: string; // 'professional' ou 'amateur'
+
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 

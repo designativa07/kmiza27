@@ -21,8 +21,17 @@ export class CompetitionsService {
     private goalRepository: Repository<Goal>,
   ) {}
 
-  async findAll(active?: boolean): Promise<Competition[]> {
-    const whereCondition = active ? { is_active: true } : {};
+  async findAll(active?: boolean, category?: string): Promise<Competition[]> {
+    const whereCondition: any = {};
+    
+    if (active !== undefined) {
+      whereCondition.is_active = active;
+    }
+    
+    if (category) {
+      whereCondition.category = category;
+    }
+    
     return this.competitionRepository.find({
       where: whereCondition,
       order: { name: 'ASC' }
