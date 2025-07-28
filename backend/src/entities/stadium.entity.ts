@@ -40,4 +40,7 @@ export class Stadium {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @Column({ type: 'varchar', length: 50, default: 'professional' })
+  category: string; // 'professional' ou 'amateur'
 } 

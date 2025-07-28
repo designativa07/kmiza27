@@ -10,43 +10,82 @@ async function getTopScorersForCompetition(slug: string): Promise<{ topScorers: 
   const API_URL = getApiUrl();
   
   try {
-    const [allCompetitionsRes, allTopScorersRes] = await Promise.all([
-      fetch(`${API_URL}/competitions`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      }),
-      fetch(`${API_URL}/matches/top-scorers`, { 
-        next: { revalidate: 60 },
-        headers: { 'Content-Type': 'application/json' }
-      }),
-    ]);
+    // Buscar todas as competições
+    const allCompetitionsRes = await fetch(`${API_URL}/competitions`, { 
+      next: { revalidate: 60 },
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-    if (!allCompetitionsRes.ok || !allTopScorersRes.ok) {
-      console.error('Failed to fetch data for top scorers page.');
+    if (!allCompetitionsRes.ok) {
+      console.error('Failed to fetch competitions.');
       return { topScorers: [], competitionName: '' };
     }
 
-    const allCompetitions: {id: number, slug: string, name: string}[] = await allCompetitionsRes.json();
-    const allTopScorers: any[] = await allTopScorersRes.json();
-    
+    const allCompetitions: {id: number, slug: string, name: string, category?: string}[] = await allCompetitionsRes.json();
     const currentCompetition = allCompetitions.find(c => c.slug === slug);
     
     if (!currentCompetition) {
       notFound();
     }
 
-    // Filtrar os artilheiros pela competição atual
-    const competitionTopScorers = allTopScorers.filter(
-      (scorer: any) => scorer.competition?.id === currentCompetition.id
-    );
-    
-    // Ordenar por gols (a API já deve fazer isso, mas garantimos)
-    competitionTopScorers.sort((a, b) => b.goals - a.goals);
-    
-    return { 
-      topScorers: competitionTopScorers,
-      competitionName: currentCompetition.name
-    };
+    // Verificar se é uma competição amadora
+    if (currentCompetition.category === 'amateur') {
+      // Usar API de artilheiros amadores
+      const amateurTopScorersRes = await fetch(`${API_URL}/amateur/top-scorers/${currentCompetition.id}`, { 
+        next: { revalidate: 60 },
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (amateurTopScorersRes.ok) {
+        const amateurTopScorers: any[] = await amateurTopScorersRes.json();
+        
+        // Converter formato dos artilheiros amadores para o formato esperado
+        const topScorers = amateurTopScorers.map(scorer => ({
+          player: {
+            id: scorer.player_id,
+            name: scorer.player_name,
+            position: 'Atacante', // Valor padrão
+            image_url: scorer.player_image || ''
+          },
+          team: {
+            id: scorer.team_id,
+            name: scorer.team_name,
+            logo_url: scorer.team_logo || ''
+          },
+          goals: scorer.goals
+        }));
+
+        return { 
+          topScorers,
+          competitionName: currentCompetition.name
+        };
+      }
+    } else {
+      // Usar API de artilheiros profissionais
+      const allTopScorersRes = await fetch(`${API_URL}/matches/top-scorers`, { 
+        next: { revalidate: 60 },
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (allTopScorersRes.ok) {
+        const allTopScorers: any[] = await allTopScorersRes.json();
+        
+        // Filtrar os artilheiros pela competição atual
+        const competitionTopScorers = allTopScorers.filter(
+          (scorer: any) => scorer.competition?.id === currentCompetition.id
+        );
+        
+        // Ordenar por gols (a API já deve fazer isso, mas garantimos)
+        competitionTopScorers.sort((a, b) => b.goals - a.goals);
+        
+        return { 
+          topScorers: competitionTopScorers,
+          competitionName: currentCompetition.name
+        };
+      }
+    }
+
+    return { topScorers: [], competitionName: currentCompetition.name };
   } catch (error) {
     console.error('Erro ao buscar dados dos artilheiros:', error);
     return { topScorers: [], competitionName: '' };

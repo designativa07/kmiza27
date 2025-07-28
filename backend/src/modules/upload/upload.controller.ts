@@ -84,11 +84,17 @@ export class UploadController {
   @Post('cloud')
   @UseInterceptors(FileInterceptor('file'))
   async uploadToCloud(@UploadedFile() file: any, @Body() body: any) {
+    console.log('Upload request received:', {
+      file: file ? { originalname: file.originalname, size: file.size, mimetype: file.mimetype } : null,
+      body
+    });
+    
     if (!file) {
       throw new BadRequestException('Nenhum arquivo foi enviado');
     }
 
     const { folder = 'escudos', namingStrategy = 'timestamp', entityName = '' } = body;
+    console.log('Upload parameters:', { folder, namingStrategy, entityName });
     
     // Definir nome do arquivo baseado na estratégia
     let fileName: string;
@@ -108,12 +114,16 @@ export class UploadController {
         fileName = `${folder}-${Date.now()}${fileExtension}`;
     }
 
+    console.log('Generated filename:', fileName);
+
     try {
       const url = await this.uploadCloudService.uploadFile(file, folder, fileName);
+      console.log('Upload successful, URL:', url);
       
       return {
         message: 'Arquivo enviado com sucesso para o CDN',
         url: url,
+        cloudUrl: url, // Adicionar cloudUrl para compatibilidade
         folder: folder,
         fileName: fileName,
         originalName: file.originalname,
@@ -121,6 +131,7 @@ export class UploadController {
         mimetype: file.mimetype
       };
     } catch (error) {
+      console.error('Upload error:', error);
       throw new BadRequestException(`Erro no upload: ${error.message}`);
     }
   }

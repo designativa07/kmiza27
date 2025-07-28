@@ -26,8 +26,8 @@ export class CompetitionsController {
   }
 
   @Get()
-  findAll(@Query('active') active: boolean) {
-    return this.competitionsService.findAll(active);
+  findAll(@Query('active') active: boolean, @Query('category') category?: string) {
+    return this.competitionsService.findAll(active, category);
   }
 
   @Get('slug/:slug')

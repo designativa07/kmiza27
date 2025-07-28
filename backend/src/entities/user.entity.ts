@@ -42,6 +42,9 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'whatsapp' })
   origin: string; // 'whatsapp' ou 'site'
 
+  @Column({ type: 'varchar', length: 50, default: 'user' })
+  role: string; // 'admin', 'user', 'amateur'
+
   @CreateDateColumn()
   created_at: Date;
 

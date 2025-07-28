@@ -28,7 +28,7 @@ export class AuthService {
       ]
     });
 
-    if (user && user.is_admin && user.password_hash) {
+    if (user && user.password_hash) {
       const isPasswordValid = await bcrypt.compare(cleanPassword, user.password_hash);
       
       if (isPasswordValid) {
@@ -50,7 +50,8 @@ export class AuthService {
     const payload = { 
       username: user.username || user.email || user.phone_number, 
       sub: user.id,
-      is_admin: user.is_admin
+      is_admin: user.is_admin,
+      role: user.role
     };
 
     return {
@@ -59,7 +60,8 @@ export class AuthService {
         id: user.id,
         username: user.username || user.email || user.phone_number,
         name: user.name,
-        is_admin: user.is_admin
+        is_admin: user.is_admin,
+        role: user.role
       }
     };
   }
@@ -144,5 +146,71 @@ export class AuthService {
 
     const result = await this.userRepository.update(userId, { password_hash });
     return (result.affected || 0) > 0;
+  }
+
+  async registerAmateurUser(userData: {
+    name: string;
+    email: string;
+    password: string;
+    role?: string;
+  }): Promise<User> {
+    // Validações
+    if (!userData.name?.trim()) {
+      throw new BadRequestException('Nome é obrigatório');
+    }
+
+    if (!userData.email?.trim()) {
+      throw new BadRequestException('Email é obrigatório');
+    }
+
+    if (!userData.password?.trim()) {
+      throw new BadRequestException('Senha é obrigatória');
+    }
+
+    if (userData.password.length < 6) {
+      throw new BadRequestException('Senha deve ter pelo menos 6 caracteres');
+    }
+
+    // Verificar se já existe um usuário com este email
+    const existingUser = await this.userRepository.findOne({
+      where: { email: userData.email }
+    });
+    if (existingUser) {
+      throw new BadRequestException('Email já está em uso');
+    }
+
+    // Gerar hash da senha
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(userData.password, saltRounds);
+
+    // Gerar um número de telefone único baseado no email
+    const phoneNumber = `55${Math.floor(Math.random() * 90000000000) + 10000000000}`;
+
+    // Criar novo usuário amador
+    const amateurUser = this.userRepository.create({
+      name: userData.name.trim(),
+      email: userData.email.trim(),
+      phone_number: phoneNumber,
+      password_hash,
+      is_admin: false,
+      is_active: true,
+      role: userData.role || 'amateur',
+      origin: 'site',
+      preferences: {
+        notifications: true,
+        language: 'pt-BR'
+      },
+      whatsapp_status: 'pending',
+      welcome_sent: false
+    });
+
+    // Salvar no banco
+    try {
+      const savedUser = await this.userRepository.save(amateurUser);
+      const { password_hash: _, ...userWithoutPassword } = savedUser;
+      return userWithoutPassword as User;
+    } catch (error) {
+      throw new BadRequestException('Erro ao criar usuário amador: ' + error.message);
+    }
   }
 } 

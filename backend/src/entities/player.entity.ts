@@ -38,6 +38,9 @@ export class Player {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
   updated_at: Date;
 
+  @Column({ type: 'varchar', length: 50, default: 'professional' })
+  category: string; // 'professional' ou 'amateur'
+
   // Relacionamento com histórico de times
   @OneToMany(() => PlayerTeamHistory, playerTeamHistory => playerTeamHistory.player)
   team_history: PlayerTeamHistory[];

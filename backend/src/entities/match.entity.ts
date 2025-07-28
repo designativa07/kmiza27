@@ -99,6 +99,9 @@ export class Match {
   @Column({ type: 'text', nullable: true })
   highlights_url: string;
 
+  @Column({ type: 'varchar', length: 50, default: 'professional' })
+  category: string; // 'professional' ou 'amateur'
+
   @Column({ type: 'jsonb', nullable: true })
   match_stats: any;
 

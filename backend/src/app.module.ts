@@ -55,6 +55,7 @@ import { SearchModule } from './modules/search/search.module';
 import { RoundsModule } from './modules/rounds/rounds.module';
 import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module';
 import { TitlesModule } from './modules/titles/titles.module';
+import { AmateurModule } from './modules/amateur/amateur.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { TitlesModule } from './modules/titles/titles.module';
     RoundsModule,
     UrlShortenerModule,
     TitlesModule,
+    AmateurModule,
   ],
   controllers: [AppController],
   providers: [
