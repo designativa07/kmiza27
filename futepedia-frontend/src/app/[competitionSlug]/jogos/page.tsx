@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import type { NextPage } from 'next';
-import { getTeamLogoUrl } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
+import TeamLogo from '@/components/TeamLogo';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RoundNavigator } from '@/components/RoundNavigator';
@@ -768,10 +769,10 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
             {/* Mandante */}
             <div className="flex items-center space-x-2 flex-1 justify-end">
               <span className="font-semibold text-gray-800">{match.home_team.name}</span>
-              <img
-                src={getTeamLogoUrl(match.home_team.logo_url)}
+              <TeamLogo
+                src={match.home_team.logo_url ? getTeamLogoUrl(match.home_team.logo_url) : null}
                 alt={`${match.home_team.name} logo`}
-                className="w-10 h-10 object-contain"
+                size="md"
               />
             </div>
 
@@ -784,10 +785,10 @@ const KnockoutTieCard: React.FC<KnockoutTieCardProps> = ({ matches, formatDate, 
 
             {/* Visitante */}
             <div className="flex items-center space-x-2 flex-1">
-              <img
-                src={getTeamLogoUrl(match.away_team.logo_url)}
+              <TeamLogo
+                src={match.away_team.logo_url ? getTeamLogoUrl(match.away_team.logo_url) : null}
                 alt={`${match.away_team.name} logo`}
-                className="w-10 h-10 object-contain"
+                size="md"
               />
               <span className="font-semibold text-gray-800">{match.away_team.name}</span>
             </div>

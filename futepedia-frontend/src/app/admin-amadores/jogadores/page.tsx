@@ -14,8 +14,8 @@ import {
   MapPin,
   Target
 } from 'lucide-react';
-import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { useAuth } from '@/hooks/useAuth';
+import PlayerImage from '@/components/PlayerImage';
 
 interface Player {
   id: number;
@@ -103,177 +103,129 @@ export default function JogadoresPage() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <HeaderWithLogo />
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white p-6 rounded-lg border border-gray-200">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <HeaderWithLogo />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/admin-amadores"
-                className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                <span>Voltar</span>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Meus Jogadores</h1>
-                <p className="text-gray-600 mt-2">
-                  Gerencie os jogadores dos seus times amadores
-                </p>
-              </div>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Meus Jogadores</h1>
+            <p className="mt-2 text-gray-600">Gerencie jogadores dos seus times</p>
+          </div>
+          <Link
+            href="/admin-amadores/jogadores/novo"
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Novo Jogador</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Players List */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Jogadores ({players.length})</h2>
+        </div>
+        
+        {players.length === 0 ? (
+          <div className="p-8 text-center">
+            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum jogador encontrado</h3>
+            <p className="text-gray-600 mb-4">Crie seu primeiro jogador para começar</p>
             <Link
               href="/admin-amadores/jogadores/novo"
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              <span>Novo Jogador</span>
+              <span>Criar Jogador</span>
             </Link>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Players Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {players.length === 0 ? (
-            <div className="col-span-full">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Nenhum jogador encontrado
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Adicione jogadores aos seus times amadores
-                </p>
-                <Link
-                  href="/admin-amadores/jogadores/novo"
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Adicionar Jogador</span>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            players.map((player) => (
-              <div
-                key={player.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {players.map((player) => (
+              <div key={player.id} className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
-                      {player.image_url ? (
-                        <img
-                          src={player.image_url}
-                          alt={player.name}
-                          className="h-12 w-12 object-cover rounded-full"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
-                          <Users className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
+                      <PlayerImage
+                        src={player.image_url}
+                        alt={player.name}
+                        size="md"
+                      />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {player.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {player.position || 'Posição não informada'}
-                      </p>
+                      <h3 className="text-lg font-semibold text-gray-900">{player.name}</h3>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                        {player.position && (
+                          <span className="flex items-center">
+                            <Target className="h-4 w-4 mr-1" />
+                            {player.position}
+                          </span>
+                        )}
+                        {player.birth_date && (
+                          <span className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {getAge(player.birth_date)} anos
+                          </span>
+                        )}
+                        {player.team && (
+                          <span className="flex items-center">
+                            <Shield className="h-4 w-4 mr-1" />
+                            {player.team.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center space-x-1">
+                  
+                  <div className="flex items-center space-x-2">
                     <Link
                       href={`/admin-amadores/jogadores/${player.id}/editar`}
-                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                      title="Editar"
+                      className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                     >
                       <Edit className="h-4 w-4" />
+                      <span>Editar</span>
                     </Link>
                     <button
                       onClick={() => handleDelete(player.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                      title="Excluir"
+                      className="flex items-center space-x-1 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
+                      <span>Excluir</span>
                     </button>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  {player.birth_date && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span>{getAge(player.birth_date)} anos</span>
-                    </div>
-                  )}
-
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                  <span>Criado em {new Date(player.created_at).toLocaleDateString('pt-BR')}</span>
                   {player.nationality && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      <span>{player.nationality}</span>
-                    </div>
+                    <span className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {player.nationality}
+                    </span>
                   )}
-
-                  {player.team && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Shield className="h-4 w-4 mr-2" />
-                      <span>{player.team.name}</span>
-                    </div>
-                  )}
-
-                  {(player.height || player.weight) && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Target className="h-4 w-4 mr-2" />
-                      <span>
-                        {player.height && `${player.height}cm`}
-                        {player.height && player.weight && ' • '}
-                        {player.weight && `${player.weight}kg`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <span className="text-xs text-gray-500">
-                    Adicionado em {new Date(player.created_at).toLocaleDateString('pt-BR')}
-                  </span>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </main>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

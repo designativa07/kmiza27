@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { getApiUrl } from '@/lib/config';
-import { getPlayerImageUrl, getTeamLogoUrl } from '@/lib/cdn';
+import { getPlayerImageUrl, getTeamLogoUrl } from '@/lib/cdn-simple';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { 
   User, 

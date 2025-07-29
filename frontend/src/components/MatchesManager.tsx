@@ -479,7 +479,7 @@ export default function MatchesManager() {
       const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
         fetch(API_ENDPOINTS.matches.list(1, 1000)),
         fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`),
-        fetch(API_ENDPOINTS.competitions.list()),
+        fetch(`${API_ENDPOINTS.competitions.list()}?active=true`),
         fetch(API_ENDPOINTS.channels.list())
       ])
 
@@ -778,7 +778,7 @@ export default function MatchesManager() {
     try {
       const [teamsRes, competitionsRes] = await Promise.all([
         fetch(API_ENDPOINTS.teams.list()),
-        fetch(API_ENDPOINTS.competitions.list())
+        fetch(`${API_ENDPOINTS.competitions.list()}?active=true`)
       ]);
 
       if (teamsRes.ok && competitionsRes.ok) {

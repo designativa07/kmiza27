@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Loader2, Edit } from 'lucide-react';
-import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { useAuth } from '@/hooks/useAuth';
 import AmateurMatchEditForm from '@/components/AmateurMatchEditForm';
 
@@ -355,235 +354,229 @@ export default function EditarJogoPage() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <HeaderWithLogo />
-        <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-2 text-gray-600">Carregando jogo...</span>
-          </div>
-        </main>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-2 text-gray-600">Carregando jogo...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <HeaderWithLogo />
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-6">
-            <Link 
-              href="/admin-amadores/jogos"
-              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              <span>Voltar</span>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Editar Jogo</h1>
-              <p className="text-gray-600 mt-2">
-                Atualize os dados do jogo amador
-              </p>
-            </div>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-4 mb-6">
+          <Link 
+            href="/admin-amadores/jogos"
+            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            <span>Voltar</span>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Editar Jogo</h1>
+            <p className="text-gray-600 mt-2">
+              Atualize os dados do jogo amador
+            </p>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
-              <p className="text-sm text-green-600">{success}</p>
-            </div>
-          )}
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+            <p className="text-sm text-green-600">{success}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Form */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700 mb-2">
+              Competição *
+            </label>
+            <select
+              id="competition_id"
+              name="competition_id"
+              value={formData.competition_id}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Selecione uma competição...</option>
+              {competitions.map(competition => (
+                <option key={competition.id} value={competition.id}>{competition.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="competition_id" className="block text-sm font-medium text-gray-700 mb-2">
-                Competição *
+              <label htmlFor="home_team_id" className="block text-sm font-medium text-gray-700 mb-2">
+                Time Casa *
               </label>
               <select
-                id="competition_id"
-                name="competition_id"
-                value={formData.competition_id}
+                id="home_team_id"
+                name="home_team_id"
+                value={formData.home_team_id}
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <option value="">Selecione uma competição...</option>
-                {competitions.map(competition => (
-                  <option key={competition.id} value={competition.id}>{competition.name}</option>
+                <option value="">Selecione o time casa...</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
                 ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="home_team_id" className="block text-sm font-medium text-gray-700 mb-2">
-                  Time Casa *
-                </label>
-                <select
-                  id="home_team_id"
-                  name="home_team_id"
-                  value={formData.home_team_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Selecione o time casa...</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="away_team_id" className="block text-sm font-medium text-gray-700 mb-2">
-                  Time Visitante *
-                </label>
-                <select
-                  id="away_team_id"
-                  name="away_team_id"
-                  value={formData.away_team_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Selecione o time visitante...</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="match_date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Data do Jogo *
-                </label>
-                <input
-                  type="datetime-local"
-                  id="match_date"
-                  name="match_date"
-                  value={formData.match_date}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700 mb-2">
-                  Estádio
-                </label>
-                <select
-                  id="stadium_id"
-                  name="stadium_id"
-                  value={formData.stadium_id}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Selecione um estádio...</option>
-                  {stadiums.map(stadium => (
-                    <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="home_score" className="block text-sm font-medium text-gray-700 mb-2">
-                  Gols Casa
-                </label>
-                <input
-                  type="number"
-                  id="home_score"
-                  name="home_score"
-                  value={formData.home_score}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="away_score" className="block text-sm font-medium text-gray-700 mb-2">
-                  Gols Visitante
-                </label>
-                <input
-                  type="number"
-                  id="away_score"
-                  name="away_score"
-                  value={formData.away_score}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                  Status *
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  {matchStatuses.map(status => (
-                    <option key={status} value={status}>{statusLabels[status as keyof typeof statusLabels]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-              <Link
-                href="/admin-amadores/jogos"
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            <div>
+              <label htmlFor="away_team_id" className="block text-sm font-medium text-gray-700 mb-2">
+                Time Visitante *
+              </label>
+              <select
+                id="away_team_id"
+                name="away_team_id"
+                value={formData.away_team_id}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                Cancelar
-              </Link>
-              {currentMatch && (
-                <button
-                  type="button"
-                  onClick={handleEditGoals}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Editar Gols</span>
-                </button>
-              )}
+                <option value="">Selecione o time visitante...</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="match_date" className="block text-sm font-medium text-gray-700 mb-2">
+                Data do Jogo *
+              </label>
+              <input
+                type="datetime-local"
+                id="match_date"
+                name="match_date"
+                value={formData.match_date}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="stadium_id" className="block text-sm font-medium text-gray-700 mb-2">
+                Estádio
+              </label>
+              <select
+                id="stadium_id"
+                name="stadium_id"
+                value={formData.stadium_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Selecione um estádio...</option>
+                {stadiums.map(stadium => (
+                  <option key={stadium.id} value={stadium.id}>{stadium.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="home_score" className="block text-sm font-medium text-gray-700 mb-2">
+                Gols Casa
+              </label>
+              <input
+                type="number"
+                id="home_score"
+                name="home_score"
+                value={formData.home_score}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="away_score" className="block text-sm font-medium text-gray-700 mb-2">
+                Gols Visitante
+              </label>
+              <input
+                type="number"
+                id="away_score"
+                name="away_score"
+                value={formData.away_score}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                Status *
+              </label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {matchStatuses.map(status => (
+                  <option key={status} value={status}>{statusLabels[status as keyof typeof statusLabels]}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+            <Link
+              href="/admin-amadores/jogos"
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </Link>
+            {currentMatch && (
               <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                type="button"
+                onClick={handleEditGoals}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
               >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                <span>{saving ? 'Salvando...' : 'Salvar Alterações'}</span>
+                <Edit className="h-4 w-4" />
+                <span>Editar Gols</span>
               </button>
-            </div>
-          </form>
-        </div>
-      </main>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span>{saving ? 'Salvando...' : 'Salvar Alterações'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Modal de Edição de Gols */}
       {showGoalEditForm && currentMatch && (

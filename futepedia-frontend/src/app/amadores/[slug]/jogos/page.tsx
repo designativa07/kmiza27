@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, Target, ListOrdered } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
-import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
 import ImageWithFallback from '@/components/ImageWithFallback';
 
 interface Match {
@@ -42,7 +41,7 @@ interface Competition {
 async function getAmateurCompetition(slug: string): Promise<Competition | null> {
   try {
     const API_URL = getApiUrl();
-    const res = await fetch(`${API_URL}/competitions?category=amateur`);
+    const res = await fetch(`${API_URL}/competitions?active=true&category=amateur`);
     if (!res.ok) return null;
     const competitions = await res.json();
     return competitions.find((comp: Competition) => comp.slug === slug) || null;
@@ -219,10 +218,12 @@ export default function AmateurMatchesPage({ params }: { params: { slug: string 
                       <div className="flex items-center space-x-3 flex-1">
                         <div className="flex items-center space-x-2 flex-1 justify-end">
                           <span className="text-sm font-medium text-gray-900">{match.home_team.name}</span>
-                          <img
-                            src={getCompetitionLogoUrl(match.home_team.logo_url || '')}
+                          <ImageWithFallback
+                            src={match.home_team.logo_url}
                             alt={match.home_team.name}
-                            className="h-6 w-6 object-contain"
+                            fallbackType="team"
+                            size="xs"
+                            className="h-6 w-6"
                           />
                         </div>
                         
@@ -237,10 +238,12 @@ export default function AmateurMatchesPage({ params }: { params: { slug: string 
                         </div>
                         
                         <div className="flex items-center space-x-2 flex-1">
-                          <img
-                            src={getCompetitionLogoUrl(match.away_team.logo_url || '')}
+                          <ImageWithFallback
+                            src={match.away_team.logo_url}
                             alt={match.away_team.name}
-                            className="h-6 w-6 object-contain"
+                            fallbackType="team"
+                            size="xs"
+                            className="h-6 w-6"
                           />
                           <span className="text-sm font-medium text-gray-900">{match.away_team.name}</span>
                         </div>

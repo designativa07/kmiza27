@@ -85,7 +85,7 @@ export default function CompetitionTiebreakers() {
 
   const fetchCompetitions = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.competitions.list())
+      const response = await fetch(`${API_ENDPOINTS.competitions.list()}?active=true`)
       const data = await response.json()
       setCompetitions(data)
     } catch (error) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Users, User, Calendar, Hash } from 'lucide-react';
+import PlayerImage from '@/components/PlayerImage';
 
 interface Player {
   id: number;
@@ -261,13 +262,12 @@ export default function TeamPlayersPage() {
                     <tr key={teamPlayer.id || `${teamPlayer.player_id}-${teamPlayer.team_id}-${index}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {teamPlayer.player?.image_url && (
-                            <img
-                              src={teamPlayer.player.image_url}
-                              alt={teamPlayer.player.name}
-                              className="w-10 h-10 rounded-full object-cover mr-3"
-                            />
-                          )}
+                          <PlayerImage
+                            src={teamPlayer.player?.image_url}
+                            alt={teamPlayer.player?.name || 'Jogador'}
+                            size="sm"
+                            className="mr-3"
+                          />
                           <div>
                             <div className="text-sm font-medium text-gray-900">
                               {teamPlayer.player?.name || 'Jogador não encontrado'}

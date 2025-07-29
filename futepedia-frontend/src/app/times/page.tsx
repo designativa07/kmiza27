@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { Shield, Search, Filter, X } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
-import { getTeamLogoUrl } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams } from 'next/navigation';

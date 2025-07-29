@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Home, Plane, ExternalLink } from 'lucide-react';
-import { getTeamLogoUrl } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
 import Link from 'next/link';
 

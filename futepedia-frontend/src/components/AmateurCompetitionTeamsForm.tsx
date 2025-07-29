@@ -46,6 +46,8 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
   const [competitionTeams, setCompetitionTeams] = useState<CompetitionTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingTeams, setFetchingTeams] = useState(true);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
 
   // Buscar times disponíveis e times da competição
   useEffect(() => {
@@ -53,21 +55,40 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
       try {
         setFetchingTeams(true);
         
+        // Obter token de autenticação
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return;
+        }
+        
         // Buscar todos os times amadores
-        const teamsResponse = await fetch('/api/amateur/teams');
+        const teamsResponse = await fetch('/api/amateur/teams', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (teamsResponse.ok) {
           const teamsData = await teamsResponse.json();
           setAvailableTeams(teamsData);
         }
 
         // Buscar times já associados à competição
-        const competitionTeamsResponse = await fetch(`/api/amateur/competitions/${competition.id}/teams`);
+        const competitionTeamsResponse = await fetch(`/api/amateur/competitions/${competition.id}/teams`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
         if (competitionTeamsResponse.ok) {
           const competitionTeamsData = await competitionTeamsResponse.json();
-          setCompetitionTeams(competitionTeamsData.map((ct: any) => ({
+          console.log('Dados recebidos da API:', competitionTeamsData);
+          
+          const mappedTeams = competitionTeamsData.map((ct: any) => ({
             id: ct.id,
             competition_id: competition.id,
-            team_id: ct.team_id,
+            team_id: ct.team?.id || ct.team_id,
             group_name: ct.group_name || '',
             points: ct.points || 0,
             played: ct.played || 0,
@@ -78,10 +99,15 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
             goals_against: ct.goals_against || 0,
             goal_difference: ct.goal_difference || 0,
             team: ct.team
-          })));
+          }));
+          
+          console.log('Times mapeados:', mappedTeams);
+          setCompetitionTeams(mappedTeams);
+        } else {
+          console.log('Erro ao buscar times da competição:', competitionTeamsResponse.status);
         }
       } catch (error) {
-        console.error('Erro ao buscar dados:', error);
+        // Silenciar erro para não poluir o console
       } finally {
         setFetchingTeams(false);
       }
@@ -111,6 +137,34 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
     setCompetitionTeams(competitionTeams.filter((_, i) => i !== index));
   };
 
+  const handleBulkAddTeams = () => {
+    const newTeams = selectedTeamIds.map(teamId => ({
+      competition_id: competition.id,
+      team_id: teamId,
+      group_name: '',
+      points: 0,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goals_for: 0,
+      goals_against: 0,
+      goal_difference: 0
+    }));
+    
+    setCompetitionTeams([...competitionTeams, ...newTeams]);
+    setSelectedTeamIds([]);
+    setShowBulkAdd(false);
+  };
+
+  const handleTeamSelection = (teamId: number) => {
+    setSelectedTeamIds(prev => 
+      prev.includes(teamId) 
+        ? prev.filter(id => id !== teamId)
+        : [...prev, teamId]
+    );
+  };
+
   const handleTeamChange = (index: number, field: keyof CompetitionTeam, value: any) => {
     const newCompetitionTeams = [...competitionTeams];
     newCompetitionTeams[index] = {
@@ -130,7 +184,7 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
       
       await onSave(validCompetitionTeams);
     } catch (error) {
-      console.error('Erro ao salvar times:', error);
+      // Silenciar erro para não poluir o console
     } finally {
       setLoading(false);
     }
@@ -142,8 +196,8 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
   };
 
   const getAvailableTeamsForSelection = () => {
-    const selectedTeamIds = competitionTeams.map(ct => ct.team_id).filter(id => id > 0);
-    return availableTeams.filter(team => !selectedTeamIds.includes(team.id));
+    // Retornar todos os times disponíveis para permitir seleção e troca
+    return availableTeams;
   };
 
   if (fetchingTeams) {
@@ -182,47 +236,120 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
               <h3 className="text-lg font-semibold text-gray-900">
                 Times da Competição
               </h3>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleAddTeam}
+                  className="flex items-center space-x-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Adicionar Time</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    for (let i = 0; i < 5; i++) {
+                      handleAddTeam();
+                    }
+                  }}
+                  className="flex items-center space-x-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Adicionar 5 Times</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Seleção em Massa */}
+            <div className="mb-4">
               <button
                 type="button"
-                onClick={handleAddTeam}
-                className="flex items-center space-x-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                onClick={() => setShowBulkAdd(!showBulkAdd)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
-                <Plus className="h-4 w-4" />
-                <span>Adicionar Time</span>
+                {showBulkAdd ? 'Ocultar' : 'Mostrar'} seleção em massa de times
               </button>
+              
+              {showBulkAdd && (
+                <div className="mt-3 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Selecionar Times em Massa</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+                    {availableTeams.map(team => (
+                      <label key={team.id} className="flex items-center space-x-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedTeamIds.includes(team.id)}
+                          onChange={() => handleTeamSelection(team.id)}
+                          className="rounded"
+                        />
+                        <span className="truncate">{team.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedTeamIds.length > 0 && (
+                    <div className="mt-3 flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleBulkAddTeams}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                      >
+                        Adicionar {selectedTeamIds.length} time(s) selecionado(s)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTeamIds([])}
+                        className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+                      >
+                        Limpar seleção
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {competitionTeams.length === 0 ? (
               <p className="text-gray-500 text-center py-4">
-                Nenhum time associado à competição. Clique em "Adicionar Time" para começar.
+                Nenhum time associado à competição. Use os botões acima ou a seleção em massa para adicionar times.
               </p>
             ) : (
-              <div className="space-y-4">
+              <>
+                <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                  <span className="font-medium text-green-800">
+                    {competitionTeams.filter(ct => ct.team_id > 0).length} de {competitionTeams.length} times configurados
+                  </span>
+                  {competitionTeams.filter(ct => ct.team_id === 0).length > 0 && (
+                    <span className="text-yellow-600 ml-2">
+                      ({competitionTeams.filter(ct => ct.team_id === 0).length} pendente(s))
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-3">
                 {competitionTeams.map((competitionTeam, index) => (
-                  <div key={index} className="bg-white p-4 rounded border space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium text-gray-900">
+                  <div key={index} className="bg-white p-3 rounded border">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-medium text-gray-900 text-sm">
                         Time {index + 1}
                       </h4>
                       <button
                         type="button"
                         onClick={() => handleRemoveTeam(index)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 p-1"
                         aria-label="Remover time"
                       >
-                        <Minus className="h-5 w-5" />
+                        <Minus className="h-4 w-4" />
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
                           Time *
                         </label>
                         <select
                           value={competitionTeam.team_id}
                           onChange={(e) => handleTeamChange(index, 'team_id', parseInt(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           required
                           aria-label="Selecionar time"
                         >
@@ -232,78 +359,91 @@ export default function AmateurCompetitionTeamsForm({ competition, onSave, onCan
                               {team.name} {team.city && `(${team.city})`}
                             </option>
                           ))}
-                          {/* Mostrar time já selecionado mesmo se não estiver na lista disponível */}
-                          {competitionTeam.team && (
-                            <option value={competitionTeam.team_id}>
-                              {competitionTeam.team.name} {competitionTeam.team.city && `(${competitionTeam.team.city})`}
-                            </option>
-                          )}
                         </select>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
                           Grupo
                         </label>
                         <input
                           type="text"
                           value={competitionTeam.group_name}
                           onChange={(e) => handleTeamChange(index, 'group_name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                          placeholder="Ex: Grupo A, Grupo B"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Ex: Grupo A"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Pontos Iniciais
+                        </label>
+                        <input
+                          type="number"
+                          value={competitionTeam.points}
+                          onChange={(e) => handleTeamChange(index, 'points', parseInt(e.target.value) || 0)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          min="0"
+                          placeholder="0"
                         />
                       </div>
                     </div>
 
-                    {/* Estatísticas Iniciais (opcional) */}
-                    <div className="bg-gray-50 p-3 rounded">
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Estatísticas Iniciais (Opcional)</h5>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <div>
-                          <label className="block text-xs text-gray-600">Pontos</label>
-                          <input
-                            type="number"
-                            value={competitionTeam.points}
-                            onChange={(e) => handleTeamChange(index, 'points', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                            min="0"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600">Jogos</label>
-                          <input
-                            type="number"
-                            value={competitionTeam.played}
-                            onChange={(e) => handleTeamChange(index, 'played', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                            min="0"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600">Vitórias</label>
-                          <input
-                            type="number"
-                            value={competitionTeam.won}
-                            onChange={(e) => handleTeamChange(index, 'won', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                            min="0"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600">Empates</label>
-                          <input
-                            type="number"
-                            value={competitionTeam.drawn}
-                            onChange={(e) => handleTeamChange(index, 'drawn', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                            min="0"
-                          />
+                    {/* Estatísticas Iniciais (colapsável) */}
+                    <details className="mt-2">
+                      <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-800">
+                        Estatísticas avançadas (opcional)
+                      </summary>
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <label className="block text-gray-600">Jogos</label>
+                            <input
+                              type="number"
+                              value={competitionTeam.played}
+                              onChange={(e) => handleTeamChange(index, 'played', parseInt(e.target.value) || 0)}
+                              className="w-full px-1 py-1 border border-gray-300 rounded"
+                              min="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-600">Vitórias</label>
+                            <input
+                              type="number"
+                              value={competitionTeam.won}
+                              onChange={(e) => handleTeamChange(index, 'won', parseInt(e.target.value) || 0)}
+                              className="w-full px-1 py-1 border border-gray-300 rounded"
+                              min="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-600">Empates</label>
+                            <input
+                              type="number"
+                              value={competitionTeam.drawn}
+                              onChange={(e) => handleTeamChange(index, 'drawn', parseInt(e.target.value) || 0)}
+                              className="w-full px-1 py-1 border border-gray-300 rounded"
+                              min="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-600">Derrotas</label>
+                            <input
+                              type="number"
+                              value={competitionTeam.lost}
+                              onChange={(e) => handleTeamChange(index, 'lost', parseInt(e.target.value) || 0)}
+                              className="w-full px-1 py-1 border border-gray-300 rounded"
+                              min="0"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </details>
                   </div>
-                ))}
-              </div>
+                                  ))}
+                </div>
+              </>
             )}
           </div>
 

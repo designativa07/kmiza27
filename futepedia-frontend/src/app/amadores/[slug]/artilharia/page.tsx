@@ -28,7 +28,7 @@ interface Competition {
 async function getAmateurCompetition(slug: string): Promise<Competition | null> {
   try {
     const API_URL = getApiUrl();
-    const res = await fetch(`${API_URL}/competitions?category=amateur`);
+    const res = await fetch(`${API_URL}/competitions?active=true&category=amateur`);
     if (!res.ok) return null;
     const competitions = await res.json();
     return competitions.find((comp: Competition) => comp.slug === slug) || null;
