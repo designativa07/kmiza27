@@ -9,6 +9,9 @@ interface ImageWithFallbackProps {
   fallbackType?: 'competition' | 'team';
   className?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  width?: number;
+  height?: number;
+  fallbackSrc?: string;
 }
 
 export default function ImageWithFallback({
@@ -16,7 +19,10 @@ export default function ImageWithFallback({
   alt,
   fallbackType = 'team',
   className = '',
-  size = 'md'
+  size = 'md',
+  width,
+  height,
+  fallbackSrc
 }: ImageWithFallbackProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -50,6 +56,8 @@ export default function ImageWithFallback({
     <img
       src={src}
       alt={alt}
+      width={width}
+      height={height}
       className={`${sizeClasses[size]} object-contain rounded-lg ${className}`}
       onError={() => setImageError(true)}
     />

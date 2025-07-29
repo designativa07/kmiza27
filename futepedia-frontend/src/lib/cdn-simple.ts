@@ -55,6 +55,11 @@ export function getPlayerImageUrl(imagePath: string): string {
   return getCdnImageUrl(imagePath);
 }
 
+export function getStadiumImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) return `${CDN_BASE}/img/estadios/default-stadium-photo.svg`;
+  return getCdnImageUrl(imagePath);
+}
+
 export function getFutepediaLogoUrl(logoPath: string | null | undefined): string {
   if (!logoPath) return '/kmiza27_logo30px.gif';
   return getCdnImageUrl(logoPath);
