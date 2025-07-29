@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getTeamLogoUrl, getCompetitionLogoUrl, getPlayerImageUrl } from '@/lib/cdn';
+import { getTeamLogoUrl, getCompetitionLogoUrl, getPlayerImageUrl } from '@/lib/cdn-simple';
 
 interface SafeImageProps {
   src: string | null | undefined;

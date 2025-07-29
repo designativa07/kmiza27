@@ -30,6 +30,16 @@ export class CompetitionsController {
     return this.competitionsService.findAll(active, category);
   }
 
+  @Patch(':id/display-order')
+  updateDisplayOrder(@Param('id') id: string, @Body() body: { display_order: number }) {
+    return this.competitionsService.updateDisplayOrder(+id, body.display_order);
+  }
+
+  @Patch('display-orders')
+  updateDisplayOrders(@Body() updates: { id: number; display_order: number }[]) {
+    return this.competitionsService.updateDisplayOrders(updates);
+  }
+
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.competitionsService.findBySlug(slug);

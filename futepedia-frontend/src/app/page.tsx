@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Shield, ListOrdered, CalendarDays, Users, Building, Target, Trophy } from 'lucide-react';
-import { getCompetitionLogoUrl } from '@/lib/cdn-simple';
+import { Shield, ListOrdered, CalendarDays, Users, Building, Target, Trophy, ArrowRight } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import { useState, useEffect } from 'react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { TeamsCard } from '@/components/TeamsCard';
+import ImageWithFallback from '@/components/ImageWithFallback';
+import { useRouter } from 'next/navigation';
 
 interface Competition {
   id: number;
@@ -14,20 +15,24 @@ interface Competition {
   slug: string;
   logo_url: string | null;
   country: string | null;
+  category?: string;
+  display_order: number;
 }
 
 async function getCompetitions(): Promise<Competition[]> {
   try {
     const API_URL = getApiUrl();
-    const res = await fetch(`${API_URL}/competitions`);
+    const res = await fetch(`${API_URL}/competitions?active=true`);
     if (!res.ok) {
       console.error(`Error fetching competitions: ${res.statusText}`);
       return [];
     }
     const data = await res.json();
+    // Ordenar por display_order primeiro, depois por nome
     return data.sort((a: Competition, b: Competition) => {
-      if (a.name.includes('Brasileirão') && !b.name.includes('Brasileirão')) return -1;
-      if (!a.name.includes('Brasileirão') && b.name.includes('Brasileirão')) return 1;
+      if (a.display_order !== b.display_order) {
+        return a.display_order - b.display_order;
+      }
       return a.name.localeCompare(b.name);
     });
   } catch (error) {
@@ -36,47 +41,111 @@ async function getCompetitions(): Promise<Competition[]> {
   }
 }
 
+async function getAmateurCompetitions(): Promise<Competition[]> {
+  try {
+    const API_URL = getApiUrl();
+    const res = await fetch(`${API_URL}/competitions?active=true&category=amateur`);
+    if (!res.ok) {
+      console.error(`Error fetching amateur competitions: ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    return data.sort((a: Competition, b: Competition) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error('Failed to fetch amateur competitions:', error);
+    return [];
+  }
+}
+
 export default function Home() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [amateurCompetitions, setAmateurCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  const handleAmateurAreaClick = () => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      // Usuário já está logado, ir direto para o painel
+      router.push('/admin-amadores');
+    } else {
+      // Usuário não está logado, ir para a página de login
+      router.push('/login');
+    }
+  };
 
   useEffect(() => {
     const fetchCompetitions = async () => {
-      const data = await getCompetitions();
+      const [data, amateurData] = await Promise.all([
+        getCompetitions(),
+        getAmateurCompetitions()
+      ]);
       setCompetitions(data);
+      setAmateurCompetitions(amateurData);
       setLoading(false);
     };
     fetchCompetitions();
   }, []);
 
-  const nationalCompetitions = competitions.filter(c => c.country === 'Brasil');
-  const internationalCompetitions = competitions.filter(c => c.country !== 'Brasil');
+  const nationalCompetitions = competitions.filter(c => c.country === 'Brasil' && c.category !== 'amateur');
+  const internationalCompetitions = competitions.filter(c => c.country !== 'Brasil' && c.category !== 'amateur');
+  const topAmateurCompetitions = amateurCompetitions.slice(0, 10);
 
-  const renderCompetitionList = (comps: Competition[], title: string) => (
+  const renderCompetitionList = (comps: Competition[], title: string, showViewAll = false, viewAllLink = '') => (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
       <div className="p-3 sm:p-4 border-b border-gray-100">
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          {showViewAll && comps.length > 0 && (
+            <Link 
+              href={viewAllLink} 
+              className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Ver todos
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Link>
+          )}
+        </div>
       </div>
       <div className="divide-y divide-gray-100">
         {comps.map((comp) => (
           <div key={comp.id} className="p-3 sm:px-4 hover:bg-gray-50 transition-colors duration-200">
             <div className="flex items-center justify-between">
-              <Link href={`/${comp.slug}/jogos`} className="flex items-center space-x-3 flex-1">
-                <img
-                  src={getCompetitionLogoUrl(comp.logo_url || '')}
+              <Link 
+                href={comp.category === 'amateur' ? `/amadores/${comp.slug}/jogos` : `/${comp.slug}/jogos`} 
+                className="flex items-center space-x-3 flex-1"
+              >
+                <ImageWithFallback
+                  src={comp.logo_url}
                   alt={comp.name}
-                  className="h-7 w-7 object-contain"
+                  fallbackType="competition"
+                  size="xs"
+                  className="h-7 w-7"
                 />
                 <span className="text-base text-gray-800">{comp.name}</span>
               </Link>
               <div className="flex items-center space-x-2 text-gray-400">
-                <Link href={`/${comp.slug}/classificacao`} title="Classificação" className="hover:text-blue-600 transition-colors">
+                <Link 
+                  href={comp.category === 'amateur' ? `/amadores/${comp.slug}/classificacao` : `/${comp.slug}/classificacao`} 
+                  title="Classificação" 
+                  className="hover:text-blue-600 transition-colors"
+                >
                   <ListOrdered className="h-5 w-5" />
                 </Link>
-                <Link href={`/${comp.slug}/jogos`} title="Jogos" className="hover:text-green-600 transition-colors">
+                <Link 
+                  href={comp.category === 'amateur' ? `/amadores/${comp.slug}/jogos` : `/${comp.slug}/jogos`} 
+                  title="Jogos" 
+                  className="hover:text-green-600 transition-colors"
+                >
                   <CalendarDays className="h-5 w-5" />
                 </Link>
-                <Link href={`/${comp.slug}/artilharia`} title="Artilharia" className="hover:text-red-600 transition-colors">
+                <Link 
+                  href={comp.category === 'amateur' ? `/amadores/${comp.slug}/artilharia` : `/${comp.slug}/artilharia`} 
+                  title="Artilharia" 
+                  className="hover:text-red-600 transition-colors"
+                >
                   <Target className="h-5 w-5" />
                 </Link>
               </div>
@@ -111,6 +180,7 @@ export default function Home() {
               <div>
                 {nationalCompetitions.length > 0 && renderCompetitionList(nationalCompetitions, 'Nacional')}
                 {internationalCompetitions.length > 0 && renderCompetitionList(internationalCompetitions, 'Internacional')}
+                {topAmateurCompetitions.length > 0 && renderCompetitionList(topAmateurCompetitions, 'Amador', true, '/amadores')}
               </div>
             )}
           </div>
@@ -207,7 +277,10 @@ export default function Home() {
                        <p className="ml-1 font-medium text-xs text-gray-700">Campeonatos Amadores</p>
                      </div>
                    </Link>
-                   <Link href="/login" className="group block p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                   <button 
+                     onClick={handleAmateurAreaClick}
+                     className="group block p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors w-full"
+                   >
                      <div className="flex items-center justify-center">
                        <div className="p-1 bg-green-100 rounded-full">
                          <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +289,7 @@ export default function Home() {
                        </div>
                        <p className="ml-1 font-medium text-xs text-gray-700">Área do Amador</p>
                      </div>
-                   </Link>
+                   </button>
                  </div>
                </div>
 

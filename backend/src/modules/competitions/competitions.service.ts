@@ -34,8 +34,19 @@ export class CompetitionsService {
     
     return this.competitionRepository.find({
       where: whereCondition,
-      order: { name: 'ASC' }
+      order: { display_order: 'ASC', name: 'ASC' }
     });
+  }
+
+  async updateDisplayOrder(competitionId: number, displayOrder: number): Promise<Competition | null> {
+    await this.competitionRepository.update(competitionId, { display_order: displayOrder });
+    return this.findOne(competitionId);
+  }
+
+  async updateDisplayOrders(updates: { id: number; display_order: number }[]): Promise<void> {
+    for (const update of updates) {
+      await this.competitionRepository.update(update.id, { display_order: update.display_order });
+    }
   }
 
   async findOne(id: number): Promise<Competition | null> {

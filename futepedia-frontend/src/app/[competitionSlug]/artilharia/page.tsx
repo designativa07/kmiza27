@@ -10,8 +10,8 @@ async function getTopScorersForCompetition(slug: string): Promise<{ topScorers: 
   const API_URL = getApiUrl();
   
   try {
-    // Buscar todas as competições
-    const allCompetitionsRes = await fetch(`${API_URL}/competitions`, { 
+    // Buscar todas as competições ativas
+    const allCompetitionsRes = await fetch(`${API_URL}/competitions?active=true`, { 
       next: { revalidate: 60 },
       headers: { 'Content-Type': 'application/json' }
     });

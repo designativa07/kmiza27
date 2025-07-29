@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { NextPage } from 'next';
-import { getTeamLogoUrl } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
 import { useState, useEffect } from 'react';
 import { Match } from '@/types/match';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';

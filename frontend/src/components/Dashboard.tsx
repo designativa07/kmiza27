@@ -173,7 +173,7 @@ export default function Dashboard() {
         fetch(API_ENDPOINTS.users.list()),
         fetch(API_ENDPOINTS.teams.list()),
         fetch(API_ENDPOINTS.matches.list(1, 1000)),
-        fetch(API_ENDPOINTS.competitions.list()),
+        fetch(`${API_ENDPOINTS.competitions.list()}?active=true`),
         fetch(API_ENDPOINTS.channels.list()),
         fetch(API_ENDPOINTS.stadiums.list()),
         fetch(API_ENDPOINTS.players.list())

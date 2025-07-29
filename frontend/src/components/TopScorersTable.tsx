@@ -85,7 +85,7 @@ export default function TopScorersTable() {
       
       // Buscar dados básicos e artilheiros em paralelo
       const [competitionsRes, teamsRes, topScorersRes] = await Promise.all([
-        fetch(API_ENDPOINTS.competitions.list()),
+        fetch(`${API_ENDPOINTS.competitions.list()}?active=true`),
         fetch(API_ENDPOINTS.teams.list()),
         fetch(API_ENDPOINTS.matches.topScorers())
       ])

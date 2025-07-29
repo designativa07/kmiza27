@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Clock, Users, TrendingUp } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
-import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
+import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
 import dynamic from 'next/dynamic';
 

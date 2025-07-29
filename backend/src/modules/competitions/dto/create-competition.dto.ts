@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsBoolean, IsObject, IsNumber } from 'class-validator';
 import { CompetitionType } from '../../../entities/competition.entity';
 
 export class CreateCompetitionDto {
@@ -25,6 +25,10 @@ export class CreateCompetitionDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  display_order?: number;
 
   @IsOptional()
   @IsObject()

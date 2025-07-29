@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Competition, CompetitionType } from '../../entities/competition.entity';
 import { Team } from '../../entities/team.entity';
-import { Match } from '../../entities/match.entity';
+import { Match, MatchStatus } from '../../entities/match.entity';
 import { CompetitionTeam } from '../../entities/competition-team.entity';
 import { Goal } from '../../entities/goal.entity';
 import { Player } from '../../entities/player.entity';
@@ -167,13 +167,133 @@ export class AmateurService {
   }
 
   async getAmateurStandings(competitionId: number) {
+    // Primeiro, atualizar as estatísticas baseadas nos jogos
+    await this.updateCompetitionStandings(competitionId);
+    
     return this.competitionTeamRepository.find({
       where: { 
-        competition: { id: competitionId, category: 'amateur' }
+        competition: { id: competitionId }
       },
       relations: ['team'],
       order: { points: 'DESC', goal_difference: 'DESC', goals_for: 'DESC' }
     });
+  }
+
+  async updateCompetitionStandings(competitionId: number) {
+    try {
+      console.log(`Atualizando estatísticas da competição ${competitionId}...`);
+      
+      // Buscar todos os jogos da competição que já foram jogados
+      const matches = await this.matchRepository.find({
+        where: { 
+          competition: { id: competitionId },
+          category: 'amateur',
+          status: MatchStatus.FINISHED
+        },
+        relations: ['home_team', 'away_team', 'competition']
+      });
+      
+      console.log(`Encontrados ${matches.length} jogos finalizados para a competição ${competitionId}`);
+      
+      matches.forEach(match => {
+        console.log(`- ${match.home_team.name} ${match.home_score} x ${match.away_score} ${match.away_team.name}`);
+      });
+
+      // Buscar todos os times da competição
+      const competitionTeams = await this.competitionTeamRepository.find({
+        where: { competition: { id: competitionId } },
+        relations: ['team']
+      });
+      
+      console.log(`Encontrados ${competitionTeams.length} times na competição ${competitionId}`);
+      
+      competitionTeams.forEach(ct => {
+        console.log(`- ${ct.team.name} (ID: ${ct.team.id})`);
+      });
+
+      // Criar um mapa para facilitar o acesso aos times
+      const teamStatsMap = new Map();
+      competitionTeams.forEach(ct => {
+        teamStatsMap.set(ct.team.id, {
+          id: ct.id,
+          points: 0,
+          played: 0,
+          won: 0,
+          drawn: 0,
+          lost: 0,
+          goals_for: 0,
+          goals_against: 0
+        });
+      });
+
+      // Processar cada jogo
+      for (const match of matches) {
+        if (!match.home_score || !match.away_score) continue;
+
+        const homeTeamId = match.home_team.id;
+        const awayTeamId = match.away_team.id;
+        const homeScore = match.home_score;
+        const awayScore = match.away_score;
+
+        // Atualizar estatísticas do time da casa
+        if (teamStatsMap.has(homeTeamId)) {
+          const homeStats = teamStatsMap.get(homeTeamId);
+          homeStats.played += 1;
+          homeStats.goals_for += homeScore;
+          homeStats.goals_against += awayScore;
+
+          if (homeScore > awayScore) {
+            homeStats.won += 1;
+            homeStats.points += 3;
+          } else if (homeScore === awayScore) {
+            homeStats.drawn += 1;
+            homeStats.points += 1;
+          } else {
+            homeStats.lost += 1;
+          }
+        }
+
+        // Atualizar estatísticas do time visitante
+        if (teamStatsMap.has(awayTeamId)) {
+          const awayStats = teamStatsMap.get(awayTeamId);
+          awayStats.played += 1;
+          awayStats.goals_for += awayScore;
+          awayStats.goals_against += homeScore;
+
+          if (awayScore > homeScore) {
+            awayStats.won += 1;
+            awayStats.points += 3;
+          } else if (awayScore === homeScore) {
+            awayStats.drawn += 1;
+            awayStats.points += 1;
+          } else {
+            awayStats.lost += 1;
+          }
+        }
+      }
+
+      // Atualizar as estatísticas no banco de dados
+      for (const [teamId, stats] of teamStatsMap) {
+        await this.competitionTeamRepository.update(
+          { id: stats.id },
+          {
+            points: stats.points,
+            played: stats.played,
+            won: stats.won,
+            drawn: stats.drawn,
+            lost: stats.lost,
+            goals_for: stats.goals_for,
+            goals_against: stats.goals_against
+            // goal_difference é calculado automaticamente pelo banco
+          }
+        );
+      }
+
+      console.log(`Estatísticas da competição ${competitionId} atualizadas`);
+    } catch (error) {
+      console.error('Erro ao atualizar estatísticas da competição:', error);
+      throw error;
+    }
   }
 
   async getAmateurTopScorers(competitionId: number) {
@@ -659,10 +779,16 @@ export class AmateurService {
                   if (matchData.home_team_player_stats && Array.isArray(matchData.home_team_player_stats)) {
                     for (const stat of matchData.home_team_player_stats) {
                       if (stat.player_id && stat.player_id > 0 && stat.goals && stat.goals > 0) {
+                        // Buscar o jogador para obter o nome
+                        const player = await this.playerRepository.findOne({
+                          where: { id: stat.player_id }
+                        });
+                        
                         for (let i = 0; i < stat.goals; i++) {
                           await this.goalRepository.save({
                             match_id: id,
                             player_id: stat.player_id,
+                            player_name: player ? player.name : `Jogador ${stat.player_id}`,
                             team_id: matchWithRelations.home_team.id,
                             type: 'goal',
                             minute: undefined
@@ -676,10 +802,16 @@ export class AmateurService {
                   if (matchData.away_team_player_stats && Array.isArray(matchData.away_team_player_stats)) {
                     for (const stat of matchData.away_team_player_stats) {
                       if (stat.player_id && stat.player_id > 0 && stat.goals && stat.goals > 0) {
+                        // Buscar o jogador para obter o nome
+                        const player = await this.playerRepository.findOne({
+                          where: { id: stat.player_id }
+                        });
+                        
                         for (let i = 0; i < stat.goals; i++) {
                           await this.goalRepository.save({
                             match_id: id,
                             player_id: stat.player_id,
+                            player_name: player ? player.name : `Jogador ${stat.player_id}`,
                             team_id: matchWithRelations.away_team.id,
                             type: 'goal',
                             minute: undefined
@@ -692,11 +824,17 @@ export class AmateurService {
                   console.log('Estatísticas dos jogadores processadas com sucesso');
                 }
 
-                // Buscar o jogo atualizado com relacionamentos
-                const updatedMatch = await this.getAmateurMatch(id);
-                console.log('Jogo atualizado:', updatedMatch);
-                console.log('=== UPDATE AMATEUR MATCH FINALIZADO ===');
-                return updatedMatch;
+                                 // Buscar o jogo atualizado com relacionamentos
+                 const updatedMatch = await this.getAmateurMatch(id);
+                 
+                 // Se o jogo foi finalizado, atualizar as estatísticas da competição
+                 if (updatedMatch && updatedMatch.status === MatchStatus.FINISHED && updatedMatch.competition) {
+                   await this.updateCompetitionStandings(updatedMatch.competition.id);
+                 }
+                 
+                 console.log('Jogo atualizado:', updatedMatch);
+                 console.log('=== UPDATE AMATEUR MATCH FINALIZADO ===');
+                 return updatedMatch;
               }
 
               async deleteAmateurMatch(id: number) {
@@ -945,36 +1083,17 @@ export class AmateurService {
   }
 
   async getAmateurCompetitionTeams(competitionId: number) {
-    console.log('=== GET AMATEUR COMPETITION TEAMS INICIADO ===');
-    console.log('Competition ID:', competitionId);
-    
     try {
       // Buscar times associados à competição
       const competitionTeams = await this.competitionTeamRepository
         .createQueryBuilder('ct')
-        .leftJoin('ct.competition', 'competition')
-        .leftJoin('ct.team', 'team')
-        .where('competition.id = :competitionId', { competitionId })
-        .andWhere('competition.category = :category', { category: 'amateur' })
-        .select([
-          'ct.id',
-          'ct.group_name',
-          'ct.points',
-          'ct.played',
-          'ct.won',
-          'ct.drawn',
-          'ct.lost',
-          'ct.goals_for',
-          'ct.goals_against',
-          'ct.goal_difference',
-          'team.id',
-          'team.name',
-          'team.logo_url'
-        ])
+        .leftJoinAndSelect('ct.competition', 'competition')
+        .leftJoinAndSelect('ct.team', 'team')
+        .where('ct.competition_id = :competitionId', { competitionId })
         .getMany();
 
-      console.log('Times encontrados:', competitionTeams.length);
-      console.log('=== GET AMATEUR COMPETITION TEAMS FINALIZADO ===');
+      console.log('Times encontrados para competição', competitionId, ':', competitionTeams.length);
+      
       return competitionTeams;
     } catch (error) {
       console.error('Erro ao buscar times da competição:', error);
@@ -983,10 +1102,6 @@ export class AmateurService {
   }
 
   async saveAmateurCompetitionTeams(competitionId: number, competitionTeamsDto: any) {
-    console.log('=== SAVE AMATEUR COMPETITION TEAMS INICIADO ===');
-    console.log('Competition ID:', competitionId);
-    console.log('Dados recebidos:', competitionTeamsDto);
-
     try {
       const { competition_teams } = competitionTeamsDto;
       
@@ -994,15 +1109,47 @@ export class AmateurService {
         throw new Error('competition_teams deve ser um array');
       }
 
-      // Aqui você implementaria a lógica para salvar os times na competição
-      // Por enquanto, vamos retornar os dados recebidos
-      console.log('Times a serem salvos:', competition_teams);
-      console.log('=== SAVE AMATEUR COMPETITION TEAMS FINALIZADO ===');
+      // Verificar se a competição existe
+      const competition = await this.competitionRepository.findOne({
+        where: { id: competitionId, category: 'amateur' }
+      });
+
+      if (!competition) {
+        throw new Error('Competição amadora não encontrada');
+      }
+
+                // Limpar times existentes da competição
+          await this.competitionTeamRepository.delete({
+            competition: { id: competitionId }
+          });
+
+          // Salvar novos times da competição
+          const savedTeams: any[] = [];
+          for (const teamData of competition_teams) {
+            if (teamData.team_id > 0) {
+                             const competitionTeam = this.competitionTeamRepository.create({
+                 competition: { id: competitionId },
+                 team: { id: teamData.team_id },
+                 group_name: teamData.group_name || null,
+                 points: teamData.points || 0,
+                 played: teamData.played || 0,
+                 won: teamData.won || 0,
+                 drawn: teamData.drawn || 0,
+                 lost: teamData.lost || 0,
+                 goals_for: teamData.goals_for || 0,
+                 goals_against: teamData.goals_against || 0
+                 // goal_difference é calculado automaticamente pelo banco
+               });
+
+              const savedTeam = await this.competitionTeamRepository.save(competitionTeam);
+              savedTeams.push(savedTeam);
+            }
+          }
       
       return {
         success: true,
         message: 'Times salvos com sucesso',
-        data: competition_teams
+        data: savedTeams
       };
     } catch (error) {
       console.error('Erro ao salvar times da competição:', error);

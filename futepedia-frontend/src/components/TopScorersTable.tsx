@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Trophy, User, Target, BarChart3, Filter } from 'lucide-react';
 import { getCdnImageUrl, getTeamLogoUrl, getPlayerImageUrl } from '@/lib/cdn-simple';
+import TeamLogo from '@/components/TeamLogo';
 import Link from 'next/link';
 import { getApiUrl } from '@/lib/config';
 
@@ -366,15 +367,12 @@ export const TopScorersTable = ({ topScorers, competitionName }: TopScorersTable
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        {scorer.team.logo_url ? (
-                          <img 
-                            src={getTeamLogoUrl(scorer.team.logo_url)}
-                            alt={scorer.team.name} 
-                            className="h-6 w-6 object-contain mr-2"
-                          />
-                        ) : (
-                          <ShieldCheck className="h-6 w-6 text-gray-300 mr-2" />
-                        )}
+                        <TeamLogo
+                          src={scorer.team.logo_url ? getTeamLogoUrl(scorer.team.logo_url) : null}
+                          alt={scorer.team.name}
+                          size="sm"
+                          className="mr-2"
+                        />
                         <span className="text-sm text-gray-800">{scorer.team.name}</span>
                       </div>
                     </td>
@@ -481,7 +479,7 @@ export const TopScorersPage = () => {
         // Buscar dados em paralelo
         const [topScorersRes, competitionsRes, teamsRes] = await Promise.all([
           fetch(`${getApiUrl()}/matches/top-scorers`),
-          fetch(`${getApiUrl()}/competitions`),
+          fetch(`${getApiUrl()}/competitions?active=true`),
           fetch(`${getApiUrl()}/teams`)
         ]);
 

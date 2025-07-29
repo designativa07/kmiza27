@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BarChart3, TrendingUp, Users, Trophy, Target } from 'lucide-react';
-import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { useAuth } from '@/hooks/useAuth';
 
 interface StatComparison {
@@ -57,29 +56,17 @@ export default function EstatisticasPage() {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <HeaderWithLogo />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <HeaderWithLogo />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -222,7 +209,6 @@ export default function EstatisticasPage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
   );
 } 

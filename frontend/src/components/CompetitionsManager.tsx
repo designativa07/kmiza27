@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, UsersIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, UsersIcon, PhotoIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS } from '../config/api'
 import { getCompetitionLogoUrl, handleImageError } from '../lib/cdn'
 import CompetitionTeamsManager from './CompetitionTeamsManager'
@@ -17,6 +17,8 @@ interface Competition {
   logo_url?: string
   is_active: boolean
   regulamento?: string
+  display_order: number
+  category?: string
   created_at: string
   updated_at: string
 }
@@ -31,7 +33,11 @@ interface CompetitionFormData {
   is_active: boolean;
   logo_url?: string;
   regulamento?: string;
+  display_order: number;
+  category: string;
 }
+
+type TabType = 'nacional' | 'internacional' | 'amador';
 
 export default function CompetitionsManager() {
   const [competitions, setCompetitions] = useState<Competition[]>([])
@@ -40,6 +46,7 @@ export default function CompetitionsManager() {
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null)
   const [showTeamsManager, setShowTeamsManager] = useState<number | null>(null)
   const [showRoundsManager, setShowRoundsManager] = useState<{ competitionId: number; competitionName: string; competitionType: string } | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('nacional')
   
   // Usar a nova interface para o formData
   const [formData, setFormData] = useState<CompetitionFormData>({
@@ -49,7 +56,10 @@ export default function CompetitionsManager() {
     season: new Date().getFullYear().toString(),
     country: 'Brasil',
     is_active: true,
-    logo_url: '' // Inicializar com string vazia
+    logo_url: '',
+    regulamento: '',
+    display_order: 0,
+    category: 'professional'
   })
 
   useEffect(() => {
@@ -113,7 +123,9 @@ export default function CompetitionsManager() {
       country: 'Brasil',
       is_active: true,
       logo_url: '',
-      regulamento: ''
+      regulamento: '',
+      display_order: 0,
+      category: 'professional'
     })
   }
 
@@ -127,7 +139,9 @@ export default function CompetitionsManager() {
       country: competition.country || 'Brasil',
       is_active: competition.is_active,
       logo_url: competition.logo_url || '',
-      regulamento: competition.regulamento || ''
+      regulamento: competition.regulamento || '',
+      display_order: competition.display_order || 0,
+      category: competition.category || 'professional'
     })
     setShowModal(true)
   }
@@ -141,6 +155,48 @@ export default function CompetitionsManager() {
         fetchData()
       } catch (error) {
         console.error('Erro ao excluir competição:', error)
+      }
+    }
+  }
+
+  const handleMoveUp = async (competition: Competition) => {
+    const currentOrder = competition.display_order
+    const prevCompetition = getFilteredCompetitions().find(c => c.display_order < currentOrder)
+    
+    if (prevCompetition) {
+      try {
+        await fetch(`${API_ENDPOINTS.competitions.list()}/display-orders`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify([
+            { id: competition.id, display_order: prevCompetition.display_order },
+            { id: prevCompetition.id, display_order: currentOrder }
+          ])
+        })
+        fetchData()
+      } catch (error) {
+        console.error('Erro ao mover competição:', error)
+      }
+    }
+  }
+
+  const handleMoveDown = async (competition: Competition) => {
+    const currentOrder = competition.display_order
+    const nextCompetition = getFilteredCompetitions().find(c => c.display_order > currentOrder)
+    
+    if (nextCompetition) {
+      try {
+        await fetch(`${API_ENDPOINTS.competitions.list()}/display-orders`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify([
+            { id: competition.id, display_order: nextCompetition.display_order },
+            { id: nextCompetition.id, display_order: currentOrder }
+          ])
+        })
+        fetchData()
+      } catch (error) {
+        console.error('Erro ao mover competição:', error)
       }
     }
   }
@@ -167,9 +223,51 @@ export default function CompetitionsManager() {
     return types[type as keyof typeof types] || type
   }
 
+  const getFilteredCompetitions = () => {
+    const filtered = competitions.filter(comp => {
+      if (activeTab === 'nacional') {
+        return comp.country === 'Brasil' && comp.category !== 'amateur'
+      } else if (activeTab === 'internacional') {
+        return comp.country !== 'Brasil' && comp.category !== 'amateur'
+      } else if (activeTab === 'amador') {
+        return comp.category === 'amateur'
+      }
+      return false
+    })
+    
+    return filtered.sort((a, b) => a.display_order - b.display_order)
+  }
+
+  const getTabLabel = (tab: TabType) => {
+    const labels = {
+      nacional: 'Nacional',
+      internacional: 'Internacional',
+      amador: 'Amador'
+    }
+    return labels[tab]
+  }
+
+  const getTabCount = (tab: TabType) => {
+    // Calcular contagem específica para cada aba, independente da aba ativa
+    const count = competitions.filter(comp => {
+      if (tab === 'nacional') {
+        return comp.country === 'Brasil' && comp.category !== 'amateur'
+      } else if (tab === 'internacional') {
+        return comp.country !== 'Brasil' && comp.category !== 'amateur'
+      } else if (tab === 'amador') {
+        return comp.category === 'amateur'
+      }
+      return false
+    }).length
+    
+    return count
+  }
+
   if (loading) {
     return <div className="text-center">Carregando competições...</div>
   }
+
+  const filteredCompetitions = getFilteredCompetitions()
 
   return (
     <div>
@@ -183,13 +281,36 @@ export default function CompetitionsManager() {
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
           <button
             type="button"
-            onClick={() => { setEditingCompetition(null); setShowModal(true); }}
+            onClick={() => { 
+              setEditingCompetition(null); 
+              setFormData(prev => ({ ...prev, category: activeTab === 'amador' ? 'amateur' : 'professional' }));
+              setShowModal(true); 
+            }}
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             <PlusIcon className="h-4 w-4 mr-1" />
             Adicionar Competição
           </button>
         </div>
+      </div>
+
+      {/* Abas */}
+      <div className="mt-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {(['nacional', 'internacional', 'amador'] as TabType[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {getTabLabel(tab)} ({getTabCount(tab)})
+            </button>
+          ))}
+        </nav>
       </div>
 
       <div className="mt-8 flow-root">
@@ -200,6 +321,9 @@ export default function CompetitionsManager() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                      Ordem
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Competição
                     </th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo</th>
@@ -209,8 +333,27 @@ export default function CompetitionsManager() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {competitions.map((competition) => (
+                  {filteredCompetitions.map((competition) => (
                     <tr key={competition.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleMoveUp(competition)}
+                            className="text-gray-400 hover:text-gray-600"
+                            title="Mover para cima"
+                          >
+                            <ChevronUpIcon className="h-4 w-4" />
+                          </button>
+                          <span className="text-gray-500 font-medium">{competition.display_order}</span>
+                          <button
+                            onClick={() => handleMoveDown(competition)}
+                            className="text-gray-400 hover:text-gray-600"
+                            title="Mover para baixo"
+                          >
+                            <ChevronDownIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
@@ -319,7 +462,6 @@ export default function CompetitionsManager() {
                 />
               </div>
 
-              {/* Novo campo para URL da Logo */}
               <div className="mb-4">
                 <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700">URL da Logo</label>
                 <input
@@ -330,7 +472,6 @@ export default function CompetitionsManager() {
                   value={formData.logo_url || ''}
                   onChange={e => setFormData({ ...formData, logo_url: e.target.value })}
                 />
-                {/* Exibição da pré-visualização da logo (se houver) */}
                 {formData.logo_url && (
                   <div className="mt-2">
                     <img src={formData.logo_url} alt="Pré-visualização da Logo" className="h-20 w-20 object-contain rounded-md" />
@@ -351,7 +492,19 @@ export default function CompetitionsManager() {
                 />
               </div>
 
-              {/* Campo Regulamento */}
+              <div className="mb-4">
+                <label htmlFor="display_order" className="block text-sm font-medium text-gray-700">Ordem de Exibição</label>
+                <input
+                  type="number"
+                  name="display_order"
+                  id="display_order"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.display_order}
+                  onChange={e => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+                  min="0"
+                />
+              </div>
+
               <div className="mb-4">
                 <label htmlFor="regulamento" className="block text-sm font-medium text-gray-700">Regulamento</label>
                 <textarea

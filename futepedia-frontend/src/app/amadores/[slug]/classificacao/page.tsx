@@ -15,10 +15,10 @@ interface Standing {
     logo_url: string | null;
   };
   points: number;
-  games_played: number;
-  wins: number;
-  draws: number;
-  losses: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
   goals_for: number;
   goals_against: number;
   goal_difference: number;
@@ -35,7 +35,7 @@ interface Competition {
 async function getAmateurCompetition(slug: string): Promise<Competition | null> {
   try {
     const API_URL = getApiUrl();
-    const res = await fetch(`${API_URL}/competitions?category=amateur`);
+    const res = await fetch(`${API_URL}/competitions?active=true&category=amateur`);
     if (!res.ok) return null;
     const competitions = await res.json();
     return competitions.find((comp: Competition) => comp.slug === slug) || null;
@@ -194,16 +194,16 @@ export default function AmateurStandingsPage({ params }: { params: { slug: strin
                         {standing.points}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
-                        {standing.games_played}
+                        {standing.played}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
-                        {standing.wins}
+                        {standing.won}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
-                        {standing.draws}
+                        {standing.drawn}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
-                        {standing.losses}
+                        {standing.lost}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">
                         {standing.goals_for}

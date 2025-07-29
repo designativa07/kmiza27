@@ -2,7 +2,7 @@
 
 import { notFound } from 'next/navigation';
 import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink } from 'lucide-react';
-import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn';
+import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
 import { MarkdownText } from '@/lib/markdown';

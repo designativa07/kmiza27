@@ -22,6 +22,9 @@ export class Goal {
   @JoinColumn({ name: 'player_id' })
   player: Player;
 
+  @Column({ length: 255 })
+  player_name: string; // Nome do jogador que marcou o gol
+
   @Column({ nullable: true })
   team_id: number; // Time que marcou o gol
 

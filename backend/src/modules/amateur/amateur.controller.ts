@@ -98,18 +98,7 @@ export class AmateurController {
   @UseGuards(AmateurPermissionsGuard)
   @Post('matches')
   async createAmateurMatch(@Body() createMatchDto: any) {
-    console.log('=== CONTROLLER: createAmateurMatch INICIADO ===');
-    console.log('Controller: Creating amateur match with data:', createMatchDto);
-    console.log('Controller: Calling amateurService.createAmateurMatch...');
-    try {
-      const result = await this.amateurService.createAmateurMatch(createMatchDto);
-      console.log('Controller: Created match result:', result);
-      console.log('=== CONTROLLER: createAmateurMatch FINALIZADO ===');
-      return result;
-    } catch (error) {
-      console.error('Controller: Erro no createAmateurMatch:', error);
-      throw error;
-    }
+    return this.amateurService.createAmateurMatch(createMatchDto);
   }
 
   @UseGuards(AmateurPermissionsGuard)
@@ -155,6 +144,13 @@ export class AmateurController {
   @Get('standings/:competitionId')
   async getAmateurStandings(@Param('competitionId') competitionId: string) {
     return this.amateurService.getAmateurStandings(+competitionId);
+  }
+
+  @UseGuards(AmateurPermissionsGuard)
+  @Post('competitions/:competitionId/update-standings')
+  async updateCompetitionStandings(@Param('competitionId') competitionId: string) {
+    await this.amateurService.updateCompetitionStandings(+competitionId);
+    return { success: true, message: 'Estatísticas da competição atualizadas com sucesso' };
   }
 
   @Get('top-scorers/:competitionId')

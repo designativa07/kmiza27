@@ -6,9 +6,6 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization');
 
-    console.log('=== GET AMATEUR PLAYERS INICIADO ===');
-    console.log('Token:', token);
-
     // Buscar todos os jogadores amadores no backend
     const response = await fetch(`${API_URL}/amateur/players`, {
       headers: {
@@ -17,17 +14,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log('Status da resposta:', response.status);
-
     if (response.ok) {
       const data = await response.json();
-      console.log('Jogadores encontrados:', data);
-      console.log('=== GET AMATEUR PLAYERS FINALIZADO ===');
       return NextResponse.json(data);
     } else {
       const errorData = await response.json();
-      console.error('Erro na resposta:', errorData);
-      console.log('=== GET AMATEUR PLAYERS FINALIZADO COM ERRO ===');
       return NextResponse.json(
         { message: errorData.message || 'Erro ao buscar jogadores' },
         { status: response.status }

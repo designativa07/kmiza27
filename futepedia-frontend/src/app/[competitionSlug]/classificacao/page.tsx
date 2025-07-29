@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getTeamLogoUrl } from '@/lib/cdn';
+import { getTeamLogoUrl } from '@/lib/cdn-simple';
+import TeamLogo from '@/components/TeamLogo';
 import { RoundNavigator } from '@/components/RoundNavigator';
 import { createKnockoutTies, isKnockoutCompetition, shouldShowBracket } from '@/lib/competition-utils';
 import { Match } from '@/types/match';
@@ -574,10 +575,11 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
                 </td>
                 <td className="px-2 py-3 whitespace-nowrap">
                   <div className="flex items-center">
-                    <img 
-                      src={getTeamLogoUrl(standing.team.logo_url)} 
-                      alt={standing.team.name} 
-                      className="h-7 w-7 object-contain mr-2"
+                    <TeamLogo
+                      src={standing.team.logo_url ? getTeamLogoUrl(standing.team.logo_url) : null}
+                      alt={standing.team.name}
+                      size="sm"
+                      className="mr-2"
                     />
                     <span className="text-xs font-medium text-gray-900">{standing.team.name}</span>
                   </div>

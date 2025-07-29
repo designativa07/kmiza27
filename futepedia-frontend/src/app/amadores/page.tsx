@@ -19,7 +19,7 @@ interface Competition {
 async function getAmateurCompetitions(): Promise<Competition[]> {
   try {
     const API_URL = getApiUrl();
-    const res = await fetch(`${API_URL}/competitions?category=amateur`);
+    const res = await fetch(`${API_URL}/competitions?active=true&category=amateur`);
     if (!res.ok) {
       console.error(`Error fetching amateur competitions: ${res.statusText}`);
       return [];

@@ -44,6 +44,9 @@ export class Competition {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  display_order: number;
+
   @Column({ type: 'jsonb', nullable: true })
   rules: any;
 
