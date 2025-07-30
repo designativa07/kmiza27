@@ -582,14 +582,65 @@ export class AmateurService {
                 return { success: true, message: 'Jogador amador excluído com sucesso' };
               }
 
-              async getAmateurMatch(id: number) {
+  private groupGoalsByPlayer(goals: any[]): any[] {
+    const playerStats = new Map<number, any>();
+    
+    for (const goal of goals) {
+      const playerId = goal.player_id;
+      
+      if (!playerStats.has(playerId)) {
+        playerStats.set(playerId, {
+          player_id: playerId,
+          goals: 0,
+          yellow_cards: 0,
+          red_cards: 0
+        });
+      }
+      
+      const stats = playerStats.get(playerId);
+      stats.goals += 1;
+    }
+    
+    return Array.from(playerStats.values());
+  }
+
+  async getAmateurMatch(id: number) {
                 console.log('Getting amateur match:', id);
                 const match = await this.matchRepository.findOne({
                   where: { id, category: 'amateur' },
                   relations: ['home_team', 'away_team', 'competition', 'stadium']
                 });
                 console.log('Found match:', match);
-                return match;
+                
+                if (!match) {
+                  return null;
+                }
+                
+                // Buscar gols do jogo
+                const goals = await this.goalRepository.find({
+                  where: { match_id: id },
+                  relations: ['player']
+                });
+                
+                console.log('Goals found:', goals);
+                
+                // Agrupar gols por jogador e time
+                const homeTeamGoals = goals.filter(goal => goal.team_id === match.home_team.id);
+                const awayTeamGoals = goals.filter(goal => goal.team_id === match.away_team.id);
+                
+                // Criar estatísticas dos jogadores
+                const homeTeamPlayerStats = this.groupGoalsByPlayer(homeTeamGoals);
+                const awayTeamPlayerStats = this.groupGoalsByPlayer(awayTeamGoals);
+                
+                console.log('Home team player stats:', homeTeamPlayerStats);
+                console.log('Away team player stats:', awayTeamPlayerStats);
+                
+                // Retornar jogo com estatísticas dos jogadores
+                return {
+                  ...match,
+                  home_team_player_stats: homeTeamPlayerStats,
+                  away_team_player_stats: awayTeamPlayerStats
+                };
               }
 
               async createAmateurMatch(matchData: any) {
