@@ -17,6 +17,11 @@ export class AmateurController {
     return this.amateurService.getAmateurCompetition(+id);
   }
 
+  @Get('competitions/slug/:slug')
+  async getAmateurCompetitionBySlug(@Param('slug') slug: string) {
+    return this.amateurService.getAmateurCompetitionBySlug(slug);
+  }
+
   @Get('competitions/:id/teams')
   async getAmateurCompetitionTeams(@Param('id') id: string) {
     return this.amateurService.getAmateurCompetitionTeams(+id);

@@ -44,6 +44,12 @@ export class AmateurService {
     });
   }
 
+  async getAmateurCompetitionBySlug(slug: string) {
+    return this.competitionRepository.findOne({
+      where: { slug, category: 'amateur' }
+    });
+  }
+
   async createAmateurCompetition(competitionData: any) {
     const competition = this.competitionRepository.create({
       ...competitionData,
