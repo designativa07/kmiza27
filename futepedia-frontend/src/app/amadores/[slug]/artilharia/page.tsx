@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Target, ListOrdered } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Target, ListOrdered, Users } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
 import ImageWithFallback from '@/components/ImageWithFallback';
@@ -139,6 +139,10 @@ export default function AmateurTopScorersPage({ params }: { params: { slug: stri
             <Link href={`/amadores/${competition.slug}/classificacao`} className="flex items-center text-gray-600 hover:text-blue-600 transition-colors">
               <ListOrdered className="h-4 w-4 mr-1" />
               Classificação
+            </Link>
+            <Link href={`/amadores/${competition.slug}/jogadores`} className="flex items-center text-gray-600 hover:text-purple-600 transition-colors">
+              <Users className="h-4 w-4 mr-1" />
+              Jogadores
             </Link>
           </div>
         </div>

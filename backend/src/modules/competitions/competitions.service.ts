@@ -19,6 +19,8 @@ export class CompetitionsService {
     private competitionTeamRepository: Repository<CompetitionTeam>,
     @InjectRepository(Goal)
     private goalRepository: Repository<Goal>,
+    @InjectRepository(Player)
+    private playerRepository: Repository<Player>,
   ) {}
 
   async findAll(active?: boolean, category?: string): Promise<Competition[]> {
@@ -169,5 +171,53 @@ export class CompetitionsService {
       } as Team,
       goals: parseInt(res.totalGoals, 10),
     }));
+  }
+
+  async getCompetitionPlayers(competitionId: number) {
+    try {
+      // Buscar times da competição
+      const competitionTeams = await this.competitionTeamRepository.find({
+        where: { competition: { id: competitionId } },
+        relations: ['team']
+      });
+
+      const teamIds = competitionTeams.map(ct => ct.team.id);
+
+      // Buscar jogadores dos times da competição
+      const players = await this.playerRepository
+        .createQueryBuilder('player')
+        .leftJoin('player.team_history', 'ph')
+        .leftJoin('ph.team', 'team')
+        .where('team.id IN (:...teamIds)', { teamIds })
+        .andWhere('(ph.end_date IS NULL OR ph.end_date > NOW())')
+        .select([
+          'player.id',
+          'player.name',
+          'player.position',
+          'player.image_url',
+          'team.id',
+          'team.name',
+          'team.logo_url'
+        ])
+        .getRawMany();
+
+      // Formatar os dados
+      const formattedPlayers = players.map(player => ({
+        id: player.player_id,
+        name: player.player_name,
+        position: player.player_position,
+        image_url: player.player_image_url,
+        team: {
+          id: player.team_id,
+          name: player.team_name,
+          logo_url: player.team_logo_url
+        }
+      }));
+
+      return formattedPlayers;
+    } catch (error) {
+      console.error('Error fetching competition players:', error);
+      return [];
+    }
   }
 } 

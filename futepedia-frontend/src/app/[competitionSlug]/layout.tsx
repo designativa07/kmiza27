@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { NavLinks } from '@/components/NavLinks';
 import { getApiUrl } from '@/lib/config';
-import { ListOrdered, CalendarDays, Star, Building } from 'lucide-react';
+import { ListOrdered, CalendarDays, Star, Building, Users } from 'lucide-react';
 
 interface Competition {
   id: number;
@@ -51,6 +51,7 @@ export default async function CompetitionLayout({
     { name: 'Tabela', href: `/${competition.slug}/classificacao`, icon: <ListOrdered className="h-4 w-4" /> },
     { name: 'Jogos', href: `/${competition.slug}/jogos`, icon: <CalendarDays className="h-4 w-4" /> },
     { name: 'Artilharia', href: `/${competition.slug}/artilharia`, icon: <Star className="h-4 w-4" /> },
+    { name: 'Jogadores', href: `/${competition.slug}/jogadores`, icon: <Users className="h-4 w-4" /> },
     { name: 'Estádios', href: `/${competition.slug}/estadios`, icon: <Building className="h-4 w-4" /> },
     // Descomente quando as páginas estiverem prontas
     // { name: 'Estatísticas', href: `/${competition.slug}/estatisticas` },

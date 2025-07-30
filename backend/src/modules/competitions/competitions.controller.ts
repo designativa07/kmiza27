@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Query, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -135,5 +135,10 @@ export class CompetitionsController {
       console.error('Erro ao processar upload de logo:', error);
       throw new Error('Falha ao processar upload da logo da competição');
     }
+  }
+
+  @Get(':id/players')
+  async getCompetitionPlayers(@Param('id', ParseIntPipe) id: number) {
+    return this.competitionsService.getCompetitionPlayers(id);
   }
 } 

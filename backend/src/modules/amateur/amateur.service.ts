@@ -1207,4 +1207,53 @@ export class AmateurService {
       throw error;
     }
   }
+
+  async getAmateurCompetitionPlayers(competitionId: number) {
+    try {
+      // Buscar times da competição amadora
+      const competitionTeams = await this.competitionTeamRepository.find({
+        where: { competition: { id: competitionId, category: 'amateur' } },
+        relations: ['team']
+      });
+
+      const teamIds = competitionTeams.map(ct => ct.team.id);
+
+      // Buscar jogadores dos times da competição
+      const players = await this.playerRepository
+        .createQueryBuilder('player')
+        .leftJoin('player.team_history', 'ph')
+        .leftJoin('ph.team', 'team')
+        .where('team.id IN (:...teamIds)', { teamIds })
+        .andWhere('player.category = :category', { category: 'amateur' })
+        .andWhere('(ph.end_date IS NULL OR ph.end_date > NOW())')
+        .select([
+          'player.id',
+          'player.name',
+          'player.position',
+          'player.image_url',
+          'team.id',
+          'team.name',
+          'team.logo_url'
+        ])
+        .getRawMany();
+
+      // Formatar os dados
+      const formattedPlayers = players.map(player => ({
+        id: player.player_id,
+        name: player.player_name,
+        position: player.player_position,
+        image_url: player.player_image_url,
+        team: {
+          id: player.team_id,
+          name: player.team_name,
+          logo_url: player.team_logo_url
+        }
+      }));
+
+      return formattedPlayers;
+    } catch (error) {
+      console.error('Error fetching amateur competition players:', error);
+      return [];
+    }
+  }
 } 
