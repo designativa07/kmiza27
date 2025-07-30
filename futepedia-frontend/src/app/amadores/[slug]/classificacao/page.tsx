@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Target, ListOrdered, Users } from 'lucide-react';
-import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
 import ImageWithFallback from '@/components/ImageWithFallback';
+import { ListOrdered } from 'lucide-react';
 
 interface Standing {
   id: number;
@@ -77,82 +75,30 @@ export default function AmateurStandingsPage({ params }: { params: { slug: strin
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <HeaderWithLogo />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
-            <div className="space-y-4">
-              {[...Array(10)].map((_, i) => (
-                <div key={i} className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded"></div>
-                </div>
-              ))}
+      <div className="animate-pulse">
+        <div className="h-8 bg-gray-200 rounded mb-4"></div>
+        <div className="space-y-4">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded"></div>
             </div>
-          </div>
-        </main>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!competition) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <HeaderWithLogo />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Competição não encontrada</h1>
-            <Link href="/amadores" className="text-indigo-600 hover:text-indigo-800">
-              Voltar para Amadores
-            </Link>
-          </div>
-        </main>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Competição não encontrada</h1>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <HeaderWithLogo />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="mb-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <Link href="/amadores" className="flex items-center text-indigo-600 hover:text-indigo-800 transition-colors">
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              <span className="text-sm font-medium">Voltar</span>
-            </Link>
-          </div>
-          
-          <div className="flex items-center space-x-3 mb-4">
-            <ImageWithFallback
-              src={competition.logo_url}
-              alt={competition.name}
-              fallbackType="competition"
-              size="md"
-              className="h-12 w-12"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{competition.name}</h1>
-              <p className="text-gray-600 text-sm">Classificação</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4 text-sm">
-            <Link href={`/amadores/${competition.slug}/jogos`} className="flex items-center text-gray-600 hover:text-green-600 transition-colors">
-              <CalendarDays className="h-4 w-4 mr-1" />
-              Jogos
-            </Link>
-            <Link href={`/amadores/${competition.slug}/artilharia`} className="flex items-center text-gray-600 hover:text-red-600 transition-colors">
-              <Target className="h-4 w-4 mr-1" />
-              Artilharia
-            </Link>
-            <Link href={`/amadores/${competition.slug}/jogadores`} className="flex items-center text-gray-600 hover:text-purple-600 transition-colors">
-              <Users className="h-4 w-4 mr-1" />
-              Jogadores
-            </Link>
-          </div>
-        </div>
+    <div>
 
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100">
@@ -233,7 +179,6 @@ export default function AmateurStandingsPage({ params }: { params: { slug: strin
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 } 
