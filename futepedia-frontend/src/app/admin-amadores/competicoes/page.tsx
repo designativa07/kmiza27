@@ -183,10 +183,8 @@ export default function CompeticoesPage() {
                       <ImageWithFallback
                         src={competition.logo_url}
                         alt={competition.name}
-                        width={48}
-                        height={48}
+                        fallbackType="competition"
                         className="w-12 h-12 rounded-lg object-cover"
-                        fallbackSrc="/placeholder-team.png"
                       />
                     </div>
                     <div>

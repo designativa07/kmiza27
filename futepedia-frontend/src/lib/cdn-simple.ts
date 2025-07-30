@@ -40,18 +40,23 @@ export function getCdnImageUrl(imagePath: string): string {
 }
 
 // Funções específicas para compatibilidade
-export function getTeamLogoUrl(logoPath: string): string {
+export function getTeamLogoUrl(logoPath: string | null | undefined): string {
   if (!logoPath) return `${CDN_BASE}/img/escudos/default-team-logo.svg`;
   return getCdnImageUrl(logoPath);
 }
 
-export function getCompetitionLogoUrl(logoPath: string): string {
+export function getCompetitionLogoUrl(logoPath: string | null | undefined): string {
   if (!logoPath) return `${CDN_BASE}/img/logo-competition/default-competition-logo.svg`;
   return getCdnImageUrl(logoPath);
 }
 
-export function getPlayerImageUrl(imagePath: string): string {
+export function getPlayerImageUrl(imagePath: string | null | undefined): string {
   if (!imagePath) return `${CDN_BASE}/img/players/default-player-photo.svg`;
+  return getCdnImageUrl(imagePath);
+}
+
+export function getStadiumImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) return `${CDN_BASE}/img/estadios/default-stadium-photo.svg`;
   return getCdnImageUrl(imagePath);
 }
 
