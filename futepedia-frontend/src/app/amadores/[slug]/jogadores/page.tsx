@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Users, Search, CalendarDays, ListOrdered, Target } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getApiUrl } from '@/lib/config';
-import ImageWithFallback from '@/components/ImageWithFallback';
+import { PlayerCard } from '@/components/PlayerCard';
 
 interface Player {
   id: number;
@@ -90,16 +90,6 @@ export default function AmateurCompetitionPlayersPage({ params }: { params: { sl
     player.team.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Agrupar jogadores por time
-  const playersByTeam = filteredPlayers.reduce((acc, player) => {
-    const teamName = player.team.name;
-    if (!acc[teamName]) {
-      acc[teamName] = [];
-    }
-    acc[teamName].push(player);
-    return acc;
-  }, {} as Record<string, Player[]>);
-
   if (loading) {
     return (
       <div className="bg-gray-50 min-h-screen">
@@ -140,7 +130,7 @@ export default function AmateurCompetitionPlayersPage({ params }: { params: { sl
   return (
     <div className="bg-gray-50 min-h-screen">
       <HeaderWithLogo />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">
             <Link href="/amadores" className="flex items-center text-indigo-600 hover:text-indigo-800 transition-colors">
@@ -150,12 +140,6 @@ export default function AmateurCompetitionPlayersPage({ params }: { params: { sl
           </div>
           
           <div className="flex items-center space-x-4 mb-6">
-            <ImageWithFallback
-              src={competition?.logo_url || null}
-              alt={competition?.name || 'Competição'}
-              fallbackType="competition"
-              size="lg"
-            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {competition?.name || 'Carregando...'}
@@ -214,66 +198,42 @@ export default function AmateurCompetitionPlayersPage({ params }: { params: { sl
           </div>
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <div className="text-2xl font-bold text-yellow-600">
-              {Object.keys(playersByTeam).length}
+              {new Set(filteredPlayers.map(p => p.team.name)).size}
             </div>
             <div className="text-sm text-gray-600">Times Participantes</div>
           </div>
         </div>
 
-        {/* Lista de jogadores por time */}
-        <div className="space-y-6">
-          {Object.entries(playersByTeam).map(([teamName, teamPlayers]) => (
-            <div key={teamName} className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-900">{teamName}</h2>
-                <p className="text-sm text-gray-600">{teamPlayers.length} jogadores</p>
+        {/* Grid de jogadores */}
+        {loading ? (
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm animate-pulse">
+                <div className="aspect-[3/4] bg-gray-200 rounded-t-lg"></div>
+                <div className="p-2 md:p-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/4 mt-2"></div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                {teamPlayers.map((player) => (
-                  <div key={player.id} className="flex items-center space-x-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
-                    <ImageWithFallback
-                      src={player.image_url || null}
-                      alt={player.name}
-                      fallbackType="team"
-                      size="sm"
-                      className="h-12 w-12 rounded-full"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 truncate">
-                        {player.name}
-                      </h3>
-                      <p className="text-xs text-gray-500">{player.position}</p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        {player.goals !== undefined && (
-                          <span className="text-xs text-green-600">
-                            {player.goals} gol{player.goals !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {player.assists !== undefined && (
-                          <span className="text-xs text-purple-600">
-                            {player.assists} assist{player.assists !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {player.yellow_cards !== undefined && player.yellow_cards > 0 && (
-                          <span className="text-xs text-yellow-600">
-                            {player.yellow_cards} cartão{player.yellow_cards !== 1 ? 's' : ''} amarelo{player.yellow_cards !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {player.red_cards !== undefined && player.red_cards > 0 && (
-                          <span className="text-xs text-red-600">
-                            {player.red_cards} cartão{player.red_cards !== 1 ? 's' : ''} vermelho{player.red_cards !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredPlayers.length === 0 && (
+            ))}
+          </div>
+        ) : filteredPlayers.length > 0 ? (
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
+            {filteredPlayers.map((player) => (
+              <PlayerCard 
+                key={player.id} 
+                player={{
+                  id: player.id,
+                  name: player.name,
+                  position: player.position,
+                  image_url: player.image_url
+                }}
+                teamName={player.team.name}
+                showTeamName={true}
+              />
+            ))}
+          </div>
+        ) : (
           <div className="text-center py-12">
             <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
