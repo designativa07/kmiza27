@@ -62,7 +62,15 @@ export class SystemSettingsController {
 
   @Get('futepedia-images')
   async getFutepediaImagesSettings() {
-    return this.systemSettingsService.getFutepediaImagesSettings();
+    try {
+      return await this.systemSettingsService.getFutepediaImagesSettings();
+    } catch (error) {
+      console.error('❌ Erro no controller getFutepediaImagesSettings:', error);
+      return {
+        ogImageUrl: null,
+        headerLogoUrl: null,
+      };
+    }
   }
 
   @Put('futepedia-images')
