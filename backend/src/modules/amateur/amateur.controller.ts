@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { AmateurService } from './amateur.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AmateurPermissionsGuard } from './amateur-permissions.guard';
@@ -205,5 +205,10 @@ export class AmateurController {
   @Get('statistics')
   async getStatisticsComparison() {
     return this.amateurService.getStatisticsComparison();
+  }
+
+  @Get('competitions/:id/players')
+  async getAmateurCompetitionPlayers(@Param('id', ParseIntPipe) id: number) {
+    return this.amateurService.getAmateurCompetitionPlayers(id);
   }
 } 
