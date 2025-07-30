@@ -263,7 +263,7 @@ export default function TeamPlayersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <PlayerImage
-                            src={teamPlayer.player?.image_url}
+                            src={teamPlayer.player?.image_url || null}
                             alt={teamPlayer.player?.name || 'Jogador'}
                             size="sm"
                             className="mr-3"
