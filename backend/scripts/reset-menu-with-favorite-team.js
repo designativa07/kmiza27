@@ -8,7 +8,7 @@ async function resetMenuWithFavoriteTeam() {
   try {
     // Resetar menu para padrão (que agora inclui os comandos de time favorito)
     console.log('📋 Resetando menu para configuração padrão...');
-    const resetResponse = await axios.post(`${BASE_URL}/whatsapp-menu/reset-to-default`);
+    const resetResponse = await axios.post(`${BASE_URL}/whatsapp-menu/reset-default`);
     
     if (resetResponse.data) {
       console.log('✅ Menu resetado com sucesso!');
