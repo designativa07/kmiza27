@@ -9,7 +9,7 @@ interface StadiumExpansionProps {
 }
 
 export default function StadiumExpansion({ team }: StadiumExpansionProps) {
-  const { updateTeamBudget, isLoading, error } = useGameStore();
+  const { expandStadium, isLoading, error } = useGameStore();
   const [showExpansion, setShowExpansion] = useState(false);
 
   const expansionOptions = [
@@ -27,21 +27,21 @@ export default function StadiumExpansion({ team }: StadiumExpansionProps) {
         return;
       }
 
-      // Deduzir o custo do orçamento
-      await updateTeamBudget(team.id, cost, 'subtract');
+      // Expandir o estádio (isso já atualiza orçamento e capacidade)
+      await expandStadium(team.id, capacity, cost);
       
-      // TODO: Implementar atualização da capacidade do estádio no backend
       alert(`Expansão realizada! Capacidade aumentada em ${capacity} lugares.`);
       setShowExpansion(false);
     } catch (error) {
       console.error('Error expanding stadium:', error);
+      alert('Erro ao expandir estádio: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className="card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-gray-900">
           🏟️ Expansão do Estádio
         </h3>
         <button
@@ -54,18 +54,18 @@ export default function StadiumExpansion({ team }: StadiumExpansionProps) {
 
       <div className="mb-4">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Capacidade atual:</span>
+          <span className="text-gray-700">Capacidade atual:</span>
           <span className="font-medium">{team.stadium_capacity?.toLocaleString()} lugares</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Orçamento disponível:</span>
+          <span className="text-gray-700">Orçamento disponível:</span>
           <span className="font-medium">R$ {team.budget?.toLocaleString()}</span>
         </div>
       </div>
 
       {showExpansion && (
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-800 mb-3">Opções de Expansão:</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Opções de Expansão:</h4>
           
           {expansionOptions.map((option, index) => (
             <div
@@ -79,14 +79,14 @@ export default function StadiumExpansion({ team }: StadiumExpansionProps) {
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-gray-800">{option.description}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-medium text-gray-900">{option.description}</p>
+                  <p className="text-sm text-gray-700">
                     Nova capacidade: {(team.stadium_capacity + option.capacity).toLocaleString()} lugares
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-gray-800">R$ {option.cost.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-gray-900">R$ {option.cost.toLocaleString()}</p>
+                  <p className="text-xs text-gray-600">
                     {team.budget >= option.cost ? 'Disponível' : 'Orçamento insuficiente'}
                   </p>
                 </div>

@@ -31,6 +31,9 @@ interface GameState {
   // Ações do jogo
   createTeam: (teamData: CreateTeamData) => Promise<void>;
   updateTeamBudget: (teamId: string, amount: number, operation: 'add' | 'subtract') => Promise<void>;
+  expandStadium: (teamId: string, capacityIncrease: number, cost: number) => Promise<void>;
+  getTeamMatches: (teamId: string) => Promise<any[]>;
+  simulateMatch: (matchId: string) => Promise<any>;
   loadTeams: () => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
 }
@@ -50,7 +53,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   setUserId: (userId) => set({ userId, isAuthenticated: true }),
   setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   logout: () => {
-    localStorage.removeItem('gameUser');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('gameUser');
+    }
     set({ 
       userId: null, 
       isAuthenticated: false, 
@@ -66,21 +71,29 @@ export const useGameStore = create<GameState>((set, get) => ({
   setError: (error) => set({ error }),
   
   // Ações do jogo
-  createTeam: async (teamData) => {
+    createTeam: async (teamData) => {
     set({ isLoading: true, error: null });
     try {
       // Obter o userId do usuário logado
-      const savedUser = localStorage.getItem('gameUser');
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
       const userData = savedUser ? JSON.parse(savedUser) : null;
       const userId = userData?.id || get().userId;
-      
-      console.log('Creating team:', teamData, 'for userId:', userId);
       
       const result = await gameApi.createTeam(teamData, userId);
       
       // Verificar se o time criado é válido
       if (!result.team || !result.team.id) {
         throw new Error('Time criado não possui ID válido');
+      }
+      
+      // Atualizar o userId se foi retornado um novo
+      if (result.actualUserId && result.actualUserId !== userId) {
+        set({ userId: result.actualUserId });
+        // Atualizar o localStorage também
+        if (userData && typeof window !== 'undefined') {
+          const updatedUserData = { ...userData, id: result.actualUserId };
+          localStorage.setItem('gameUser', JSON.stringify(updatedUserData));
+        }
       }
       
       // Adicionar o novo time à lista
@@ -91,7 +104,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         isLoading: false 
       });
       
-      console.log('Team created successfully:', result.team);
     } catch (error) {
       console.error('Error creating team:', error);
       set({ 
@@ -104,7 +116,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   updateTeamBudget: async (teamId, amount, operation) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('Updating budget:', { teamId, amount, operation });
+
       
       const result = await gameApi.updateTeamBudget(teamId, amount, operation);
       
@@ -122,24 +134,98 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
     }
   },
+
+  expandStadium: async (teamId, capacityIncrease, cost) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await gameApi.expandStadium(teamId, capacityIncrease, cost);
+      
+      // Atualizar o time selecionado se for o mesmo
+      const selectedTeam = get().selectedTeam;
+      if (selectedTeam && selectedTeam.id === teamId) {
+        set({ 
+          selectedTeam: { 
+            ...selectedTeam, 
+            budget: result.budget,
+            stadium_capacity: result.stadium_capacity
+          } 
+        });
+      }
+      
+      // Atualizar também na lista de times
+      const currentTeams = get().userTeams;
+      set({
+        userTeams: currentTeams.map(team => 
+          team.id === teamId 
+            ? { 
+                ...team, 
+                budget: result.budget,
+                stadium_capacity: result.stadium_capacity
+              }
+            : team
+        )
+      });
+      
+      set({ isLoading: false });
+    } catch (error) {
+      set({ 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'Erro ao expandir estádio' 
+      });
+    }
+  },
+
+  getTeamMatches: async (teamId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const matches = await gameApi.getTeamMatches(teamId);
+      set({ isLoading: false });
+      return matches;
+    } catch (error) {
+      set({ 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'Erro ao carregar partidas' 
+      });
+      throw error;
+    }
+  },
+
+  simulateMatch: async (matchId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await gameApi.simulateMatch(matchId);
+      
+      // Recarregar times para atualizar reputação e orçamento
+      await get().loadTeams();
+      
+      set({ isLoading: false });
+      return result;
+    } catch (error) {
+      set({ 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'Erro ao simular partida' 
+      });
+      throw error;
+    }
+  },
   
   loadTeams: async () => {
     set({ isLoading: true, error: null });
     try {
       // Obter o userId do usuário logado
-      const savedUser = localStorage.getItem('gameUser');
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
       const userData = savedUser ? JSON.parse(savedUser) : null;
       const userId = userData?.id || get().userId;
       
       console.log('Loading teams for userId:', userId);
       
       const teams = await gameApi.getTeams(userId);
-      console.log('API response teams:', teams);
       
       // Garantir que sempre seja um array e filtrar apenas times válidos
       const teamsArray = Array.isArray(teams) ? teams : [];
       const validTeams = teamsArray.filter(team => team && team.id);
-      console.log('Valid teams:', validTeams);
+      
+      console.log('Loaded teams:', validTeams);
       
       set({ userTeams: validTeams, isLoading: false });
     } catch (error) {
@@ -157,7 +243,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       // Obter o userId do usuário logado (usando a chave correta)
-      const savedUser = localStorage.getItem('gameUser');
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
       const userData = savedUser ? JSON.parse(savedUser) : null;
       const userId = userData?.id || get().userId;
       

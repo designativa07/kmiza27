@@ -20,9 +20,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   password_hash: string;
 
-  @ManyToOne(() => Team)
+  @ManyToOne(() => Team, { nullable: true })
   @JoinColumn({ name: 'favorite_team_id' })
-  favorite_team: Team;
+  favorite_team: Team | null;
 
   @Column({ type: 'boolean', default: false })
   is_admin: boolean;

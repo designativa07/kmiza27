@@ -50,6 +50,8 @@ export class ChatbotService {
     private botConfigService: BotConfigService,
     private whatsAppMenuService: WhatsAppMenuService,
     private urlShortenerService: UrlShortenerService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>
   ) {}
 
   /**
@@ -1441,6 +1443,21 @@ Digite sua pergunta ou comando! ⚽`;
           await this.sendCompetitionsMenuForStats(phoneNumber);
           return 'Selecione a competição para ver as estatísticas:';
 
+        // Comandos para gerenciar time favorito
+        case 'CMD_DEFINIR_TIME_FAVORITO':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_favorite');
+          return '❤️ Qual é o seu time favorito?\n\nPor favor, digite o nome do time (ex: Flamengo, Palmeiras, Corinthians):';
+
+        case 'CMD_MEU_TIME_FAVORITO':
+          return await this.getFavoriteTeamSummary(phoneNumber);
+
+        case 'CMD_ALTERAR_TIME_FAVORITO':
+          await this.setUserConversationState(phoneNumber, 'waiting_team_for_favorite');
+          return '🔄 Qual será seu novo time favorito?\n\nPor favor, digite o nome do time:';
+
+        case 'CMD_REMOVER_TIME_FAVORITO':
+          return await this.removeFavoriteTeam(phoneNumber);
+
         default:
           // Verificar se é um ID de competição (COMP_X)
           if (buttonId.startsWith('COMP_')) {
@@ -1520,6 +1537,10 @@ Digite sua pergunta ou comando! ⚽`;
 
         case 'waiting_competition_for_scorers':
           response = await this.getTopScorers(message);
+          break;
+
+        case 'waiting_team_for_favorite':
+          response = await this.setFavoriteTeam(phoneNumber, message);
           break;
 
         default:
@@ -2657,5 +2678,95 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
       .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
       .orderBy('match.match_date', 'DESC')
       .getOne();
+  }
+
+  private async getFavoriteTeamSummary(phoneNumber: string): Promise<string> {
+    try {
+      const user = await this.usersService.findByPhone(phoneNumber);
+      if (!user || !user.favorite_team) {
+        return '❌ Você ainda não definiu um time favorito.\n\nUse "Definir Time Favorito" para escolher seu time.';
+      }
+
+      const team = await this.teamsRepository.findOne({
+        where: { id: user.favorite_team.id }
+      });
+
+      if (!team) {
+        return '❌ Time favorito não encontrado no banco de dados.';
+      }
+
+      let summary = `❤️ SEU TIME FAVORITO: ${team.name}\n\n`;
+
+      // Buscar último jogo
+      const lastMatch = await this.findLastMatchByTeam(team);
+      if (lastMatch) {
+        summary += `🏁 ÚLTIMO JOGO:\n${this.formatMatchDetails(lastMatch, false)}\n\n`;
+      }
+
+      // Buscar próximo jogo
+      const nextMatch = await this.findNextMatchByTeam(team);
+      if (nextMatch) {
+        summary += `⚽ PRÓXIMO JOGO:\n${this.formatMatchDetails(nextMatch, false)}\n\n`;
+      }
+
+      // Buscar posição na tabela (se estiver em alguma competição)
+      try {
+        const position = await this.getTeamPosition(team.name);
+        if (position && !position.includes('não encontrado')) {
+          summary += `📊 CLASSIFICAÇÃO:\n${position}\n\n`;
+        }
+      } catch (error) {
+        console.log('Time não está em competição ativa ou erro ao buscar posição');
+      }
+
+      summary += `💡 Dica: Digite "próximo jogo" ou "último jogo" para informações específicas sobre ${team.name}`;
+
+      return summary;
+    } catch (error) {
+      console.error('Erro ao buscar informações do time favorito:', error);
+      return '❌ Erro ao buscar informações do time favorito.';
+    }
+  }
+
+  private async removeFavoriteTeam(phoneNumber: string): Promise<string> {
+    try {
+      const user = await this.usersService.findByPhone(phoneNumber);
+      if (!user || !user.favorite_team) {
+        return '❌ Você ainda não definiu um time favorito.';
+      }
+
+      user.favorite_team = null;
+      await this.userRepository.save(user);
+
+      return '✅ Time favorito removido com sucesso!';
+    } catch (error) {
+      console.error('Erro ao remover time favorito:', error);
+      return '❌ Erro ao remover time favorito.';
+    }
+  }
+
+  private async setFavoriteTeam(phoneNumber: string, teamName: string): Promise<string> {
+    try {
+      const user = await this.usersService.findByPhone(phoneNumber);
+      if (!user) {
+        return '❌ Usuário não encontrado no banco de dados.';
+      }
+
+      const team = await this.teamsRepository.findOne({
+        where: { name: teamName }
+      });
+
+      if (!team) {
+        return `❌ Time "${teamName}" não encontrado no banco de dados.`;
+      }
+
+      user.favorite_team = team;
+      await this.userRepository.save(user);
+
+      return `✅ Time favorito definido com sucesso: ${team.name}!`;
+    } catch (error) {
+      console.error('Erro ao definir time favorito:', error);
+      return `❌ Erro ao definir time favorito: ${error.message}`;
+    }
   }
 } 

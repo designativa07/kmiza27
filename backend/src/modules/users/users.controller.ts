@@ -66,6 +66,11 @@ export class UsersController {
     return this.usersService.setFavoriteTeam(phone, teamData.teamSlug);
   }
 
+  @Delete('phone/:phone/favorite-team')
+  removeFavoriteTeamByPhone(@Param('phone') phone: string) {
+    return this.usersService.removeFavoriteTeam(phone);
+  }
+
   @Patch(':id')
   updateUser(@Param('id') id: string, @Body() updateData: { 
     name?: string; 

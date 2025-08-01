@@ -17,20 +17,22 @@ export default function LoginForm() {
 
   // Limpar dados antigos e validar usuário atual
   useEffect(() => {
-    const gameUser = localStorage.getItem('gameUser');
-    if (gameUser) {
-      try {
-        const user = JSON.parse(gameUser);
-        // Verificar se o ID é um UUID válido
-        if (!user.id || !user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          console.log('Removendo dados de usuário inválidos');
+    if (typeof window !== 'undefined') {
+      const gameUser = localStorage.getItem('gameUser');
+      if (gameUser) {
+        try {
+          const user = JSON.parse(gameUser);
+          // Verificar se o ID é um UUID válido
+          if (!user.id || !user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            console.log('Removendo dados de usuário inválidos');
+            localStorage.removeItem('gameUser');
+            localStorage.removeItem('gameUsers');
+          }
+        } catch (error) {
+          console.log('Erro ao validar dados do usuário, limpando localStorage');
           localStorage.removeItem('gameUser');
           localStorage.removeItem('gameUsers');
         }
-      } catch (error) {
-        console.log('Erro ao validar dados do usuário, limpando localStorage');
-        localStorage.removeItem('gameUser');
-        localStorage.removeItem('gameUsers');
       }
     }
   }, []);
