@@ -16,6 +16,7 @@ import { Channel } from '../entities/channel.entity';
 import { MatchBroadcast } from '../entities/match-broadcast.entity';
 import { Player } from '../entities/player.entity';
 import { PlayerTeamHistory } from '../entities/player-team-history.entity';
+import { User } from '../entities/user.entity';
 import { UsersModule } from '../modules/users/users.module';
 import { StandingsService } from '../modules/standings/standings.service';
 import { BotConfigModule } from '../modules/bot-config/bot-config.module';
@@ -37,6 +38,7 @@ import { UrlShortenerModule } from '../modules/url-shortener/url-shortener.modul
       MatchBroadcast,
       Player,
       PlayerTeamHistory,
+      User,
     ]),
     UsersModule,
     BotConfigModule,

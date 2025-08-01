@@ -100,36 +100,198 @@ export class CompetitionsService {
 
       if (insertError) throw new Error(`Error registering team: ${insertError.message}`);
 
-      // Criar entrada na classificação para o usuário
-      await supabase
+      // Atualizar contador de times na competição
+      const { error: updateError } = await supabase
+        .from('game_competitions')
+        .update({ current_teams: competition.current_teams + 1 })
+        .eq('id', competitionId);
+
+      if (updateError) {
+        this.logger.error('Error updating competition team count:', updateError);
+      }
+
+      // Criar entrada na classificação
+      const { error: standingsError } = await supabase
         .from('game_standings')
         .insert({
           competition_id: competitionId,
           team_id: teamId,
-          season_year: 2024
+          season_year: new Date().getFullYear(),
+          position: 0,
+          games_played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goals_for: 0,
+          goals_against: 0,
+          points: 0
         });
 
-      // AUTO-POPULAÇÃO: Se a competição não está cheia, popular com times da máquina
-      const newCurrentTeams = competition.current_teams + 1;
-      const neededTeams = competition.max_teams - newCurrentTeams;
-
-      if (neededTeams > 0) {
-        this.logger.log(`Auto-populando competição ${competitionId} com ${neededTeams} times da máquina`);
-        await this.autoPopulateCompetition(competitionId, neededTeams);
+      if (standingsError) {
+        this.logger.error('Error creating standings entry:', standingsError);
       }
 
-      // Atualizar contador de times na competição
-      await supabase
-        .from('game_competitions')
-        .update({ current_teams: competition.max_teams })
-        .eq('id', competitionId);
+      // Verificar se deve criar partidas automaticamente
+      await this.checkAndCreateMatches(competitionId);
 
-      this.logger.log(`Team ${teamId} registered in competition ${competitionId} and competition auto-populated`);
       return registration;
     } catch (error) {
       this.logger.error('Error registering team in competition:', error);
       throw error;
     }
+  }
+
+  private async checkAndCreateMatches(competitionId: string) {
+    try {
+      // Buscar times inscritos na competição
+      const { data: enrolledTeams, error: teamsError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_teams!inner(id, name, team_type)
+        `)
+        .eq('competition_id', competitionId);
+
+      if (teamsError) {
+        this.logger.error('Error fetching enrolled teams:', teamsError);
+        return;
+      }
+
+      // Verificar se já existem partidas para esta competição
+      const { data: existingMatches, error: matchesError } = await supabase
+        .from('game_matches')
+        .select('id')
+        .eq('competition_id', competitionId);
+
+      if (matchesError) {
+        this.logger.error('Error checking existing matches:', matchesError);
+        return;
+      }
+
+      // Se não há partidas e há times suficientes, criar calendário
+      if (existingMatches.length === 0 && enrolledTeams.length >= 2) {
+        this.logger.log(`Creating match schedule for competition ${competitionId} with ${enrolledTeams.length} teams`);
+        await this.createMatchSchedule(competitionId, enrolledTeams);
+      }
+    } catch (error) {
+      this.logger.error('Error in checkAndCreateMatches:', error);
+    }
+  }
+
+  private async createMatchSchedule(competitionId: string, teams: any[]) {
+    try {
+      // Criar rodadas (turno e returno)
+      const rounds = [];
+      const totalRounds = (teams.length - 1) * 2; // Turno e returno
+      
+      for (let round = 1; round <= totalRounds; round++) {
+        rounds.push({
+          competition_id: competitionId,
+          round_number: round,
+          name: `Rodada ${round}`
+        });
+      }
+
+      // Inserir rodadas
+      const { data: createdRounds, error: roundsError } = await supabase
+        .from('game_rounds')
+        .insert(rounds)
+        .select();
+
+      if (roundsError) {
+        this.logger.error('Error creating rounds:', roundsError);
+        return;
+      }
+
+      // Gerar partidas usando algoritmo de round-robin
+      const matches = this.generateRoundRobinMatches(teams, competitionId, createdRounds);
+      
+      // Inserir partidas em lotes
+      const batchSize = 10;
+      for (let i = 0; i < matches.length; i += batchSize) {
+        const batch = matches.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from('game_matches')
+          .insert(batch);
+
+        if (insertError) {
+          this.logger.error('Error inserting match batch:', insertError);
+          continue;
+        }
+      }
+
+      this.logger.log(`Created ${matches.length} matches for competition ${competitionId}`);
+    } catch (error) {
+      this.logger.error('Error creating match schedule:', error);
+    }
+  }
+
+  private generateRoundRobinMatches(teams: any[], competitionId: string, rounds: any[]) {
+    const matches = [];
+    const teamIds = teams.map(team => team.game_teams.id);
+    const teamNames = teams.map(team => team.game_teams.name);
+    
+    // Se número ímpar de times, adicionar "bye"
+    if (teamIds.length % 2 !== 0) {
+      teamIds.push(null);
+      teamNames.push('BYE');
+    }
+
+    const n = teamIds.length;
+    const totalRounds = n - 1;
+    
+    // Gerar partidas para turno e returno
+    for (let round = 0; round < totalRounds * 2; round++) {
+      const roundNumber = round + 1;
+      const isReturnRound = round >= totalRounds;
+      
+      // Calcular partidas da rodada
+      for (let i = 0; i < n / 2; i++) {
+        const homeIndex = i;
+        const awayIndex = n - 1 - i;
+        
+        // Pular partidas com "bye"
+        if (teamIds[homeIndex] === null || teamIds[awayIndex] === null) {
+          continue;
+        }
+
+        // Para returno, inverter mandante/visitante
+        const actualHomeIndex = isReturnRound ? awayIndex : homeIndex;
+        const actualAwayIndex = isReturnRound ? homeIndex : awayIndex;
+
+        const matchDate = new Date();
+        matchDate.setDate(matchDate.getDate() + round * 7); // Uma semana entre rodadas
+
+        matches.push({
+          competition_id: competitionId,
+          round: roundNumber,
+          home_team_id: teamIds[actualHomeIndex],
+          away_team_id: teamIds[actualAwayIndex],
+          home_team_name: teamNames[actualHomeIndex],
+          away_team_name: teamNames[actualAwayIndex],
+          match_date: matchDate.toISOString(),
+          status: 'scheduled',
+          home_score: null,
+          away_score: null,
+          highlights: [],
+          stats: {}
+        });
+      }
+
+      // Rotacionar times (exceto o primeiro)
+      if (round < totalRounds - 1) {
+        const temp = teamIds[1];
+        for (let i = 1; i < n - 1; i++) {
+          teamIds[i] = teamIds[i + 1];
+          teamNames[i] = teamNames[i + 1];
+        }
+        teamIds[n - 1] = temp;
+        teamNames[n - 1] = teams.find(t => t.game_teams.id === temp)?.game_teams.name || 'Unknown';
+      }
+    }
+
+    return matches;
   }
 
   async unregisterTeamFromCompetition(teamId: string, competitionId: string) {
