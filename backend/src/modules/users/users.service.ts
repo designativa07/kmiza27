@@ -170,6 +170,14 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
+  async removeFavoriteTeam(phoneNumber: string): Promise<User | null> {
+    const user = await this.findByPhone(phoneNumber);
+    if (!user) return null;
+
+    user.favorite_team = null;
+    return this.userRepository.save(user);
+  }
+
   async updateLastInteraction(phoneNumber: string): Promise<void> {
     await this.userRepository.update(
       { phone_number: phoneNumber },

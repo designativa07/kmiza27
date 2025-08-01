@@ -289,6 +289,15 @@ export class WhatsAppMenuService {
           { id: 'CMD_CANAIS', title: '📡 Canais', description: 'Canais de transmissão' },
           { id: 'CMD_ESTATISTICAS_COMPETICOES', title: '📊 Estatísticas de Competições', description: 'Estatísticas detalhadas de uma competição' }
         ]
+      },
+      {
+        title: '❤️ Meu Time Favorito',
+        rows: [
+          { id: 'CMD_DEFINIR_TIME_FAVORITO', title: '❤️ Definir Time Favorito', description: 'Escolher seu time favorito' },
+          { id: 'CMD_MEU_TIME_FAVORITO', title: '📊 Resumo do Meu Time', description: 'Ver resumo do seu time favorito' },
+          { id: 'CMD_ALTERAR_TIME_FAVORITO', title: '🔄 Alterar Time Favorito', description: 'Trocar seu time favorito' },
+          { id: 'CMD_REMOVER_TIME_FAVORITO', title: '❌ Remover Time Favorito', description: 'Remover time favorito' }
+        ]
       }
     ];
   }
@@ -317,7 +326,13 @@ export class WhatsAppMenuService {
       // Seção 4: Competições e Outros
       { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_ARTILHEIROS', item_title: '🥇 Artilheiros', item_description: 'Maiores goleadores de uma competição', item_order: 1 },
       { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_CANAIS', item_title: '📡 Canais', item_description: 'Canais de transmissão', item_order: 2 },
-      { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_ESTATISTICAS_COMPETICOES', item_title: '📊 Estatísticas de Competições', item_description: 'Estatísticas detalhadas de uma competição', item_order: 3 }
+      { section_id: 'competicoes_outros', section_title: '🏆 Competições e Outros', section_order: 4, item_id: 'CMD_ESTATISTICAS_COMPETICOES', item_title: '📊 Estatísticas de Competições', item_description: 'Estatísticas detalhadas de uma competição', item_order: 3 },
+      
+      // Seção 5: Meu Time Favorito
+      { section_id: 'meu_time_favorito', section_title: '❤️ Meu Time Favorito', section_order: 5, item_id: 'CMD_DEFINIR_TIME_FAVORITO', item_title: '❤️ Definir Time Favorito', item_description: 'Escolher seu time favorito', item_order: 1 },
+      { section_id: 'meu_time_favorito', section_title: '❤️ Meu Time Favorito', section_order: 5, item_id: 'CMD_MEU_TIME_FAVORITO', item_title: '📊 Resumo do Meu Time', item_description: 'Ver resumo do seu time favorito', item_order: 2 },
+      { section_id: 'meu_time_favorito', section_title: '❤️ Meu Time Favorito', section_order: 5, item_id: 'CMD_ALTERAR_TIME_FAVORITO', item_title: '🔄 Alterar Time Favorito', item_description: 'Trocar seu time favorito', item_order: 3 },
+      { section_id: 'meu_time_favorito', section_title: '❤️ Meu Time Favorito', section_order: 5, item_id: 'CMD_REMOVER_TIME_FAVORITO', item_title: '❌ Remover Time Favorito', item_description: 'Remover time favorito', item_order: 4 }
     ];
   }
 } 

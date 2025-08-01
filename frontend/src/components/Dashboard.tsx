@@ -47,6 +47,7 @@ import AutomationPanel from './AutomationPanel'
 import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
 import TitlesPage from '../app/titles/page'
+import ProfilePage from '../app/profile/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -572,6 +573,8 @@ export default function Dashboard() {
         return <TopScorersTable />
       case 'Títulos':
         return <TitlesPage />
+      case 'Perfil':
+        return <ProfilePage />
       case 'Configurações':
         return <SystemSettings />
       default:
@@ -614,6 +617,7 @@ export default function Dashboard() {
     { name: 'Configurações do Bot', icon: CpuChipIcon, page: 'Configurações do Bot' },
     { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
     { name: 'Status do Sistema', icon: ComputerDesktopIcon, page: 'Status do Sistema' },
+    { name: 'Perfil', icon: UserIcon, page: 'Perfil' },
 
     { name: 'Configurações', icon: CogIcon, page: 'Configurações' }
   ]

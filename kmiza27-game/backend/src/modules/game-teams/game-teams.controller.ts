@@ -91,6 +91,27 @@ export class GameTeamsController {
     }
   }
 
+  @Get(':id/players')
+  async getTeamPlayers(@Param('id') teamId: string) {
+    try {
+      const players = await this.gameTeamsService.getTeamPlayers(teamId);
+      return {
+        success: true,
+        data: players,
+        message: 'Jogadores carregados com sucesso!'
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Erro ao carregar jogadores',
+          error: error.message
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
   @Put(':id')
   async updateTeam(@Param('id') teamId: string, @Body() updateData: any) {
     try {
@@ -173,6 +194,97 @@ export class GameTeamsController {
         {
           success: false,
           message: error.message || 'Erro ao atualizar orçamento',
+          error: error.message
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post(':id/stadium-expansion')
+  async expandStadium(
+    @Param('id') teamId: string,
+    @Body() expansionData: { capacityIncrease: number; cost: number }
+  ) {
+    try {
+      const result = await this.gameTeamsService.expandStadium(
+        teamId,
+        expansionData.capacityIncrease,
+        expansionData.cost
+      );
+      return {
+        success: true,
+        data: result,
+        message: 'Estádio expandido com sucesso!'
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Erro ao expandir estádio',
+          error: error.message
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Get(':id/matches')
+  async getTeamMatches(@Param('id') teamId: string) {
+    try {
+      const matches = await this.gameTeamsService.getTeamMatches(teamId);
+      return {
+        success: true,
+        data: matches,
+        message: 'Partidas carregadas com sucesso!'
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Erro ao carregar partidas',
+          error: error.message
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post('matches')
+  async createMatch(@Body() matchData: any) {
+    try {
+      const result = await this.gameTeamsService.createMatch(matchData);
+      return {
+        success: true,
+        data: result,
+        message: 'Partida criada com sucesso!'
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Erro ao criar partida',
+          error: error.message
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post('matches/:matchId/simulate')
+  async simulateMatch(@Param('matchId') matchId: string) {
+    try {
+      const result = await this.gameTeamsService.simulateMatch(matchId);
+      return {
+        success: true,
+        data: result,
+        message: 'Partida simulada com sucesso!'
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Erro ao simular partida',
           error: error.message
         },
         HttpStatus.BAD_REQUEST

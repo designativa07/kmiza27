@@ -44,7 +44,8 @@ export class SupabaseService {
         *,
         youth_academies (*)
       `)
-      .eq('owner_id', userId);
+      .eq('owner_id', userId)
+      .eq('team_type', 'user_created');
 
     if (error) throw new Error(`Error fetching teams: ${error.message}`);
     // Garantir que sempre retorne um array

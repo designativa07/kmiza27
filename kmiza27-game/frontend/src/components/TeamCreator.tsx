@@ -19,7 +19,7 @@ export default function TeamCreator() {
     }
   });
 
-  console.log('TeamCreator: Componente renderizado, showForm =', showForm);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,41 +73,38 @@ export default function TeamCreator() {
   };
 
   if (!showForm) {
-    console.log('TeamCreator: Mostrando botão de criar time, showForm =', showForm);
+
     return (
-      <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg border-4 border-red-500">
+      <div className="card">
         <div className="text-center">
           <div className="text-6xl mb-4">⚽</div>
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">
             Bem-vindo ao Kmiza27 Game!
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-700 mb-6">
             Crie seu primeiro time para começar sua jornada no futebol!
           </p>
           <button
-            onClick={() => {
-              console.log('TeamCreator: Botão clicado!');
-              setShowForm(true);
-            }}
-            className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors font-medium text-lg border-2 border-yellow-400"
+            onClick={() => setShowForm(true)}
+            className="btn-primary text-base"
           >
             🏆 Criar Meu Primeiro Time
           </button>
-          <p className="text-xs text-red-600 mt-2">DEBUG: showForm = {showForm.toString()}</p>
+
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">
+    <div className="card">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-gray-900">
           🏆 Criar Time
         </h2>
         <button
           onClick={() => setShowForm(false)}
-          className="text-gray-500 hover:text-gray-700"
+          className="text-gray-500 hover:text-gray-700 text-lg"
         >
           ✕
         </button>
@@ -134,7 +131,7 @@ export default function TeamCreator() {
             type="text"
             value={teamData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-600"
             placeholder="Digite o nome do time"
             required
           />
@@ -168,26 +165,30 @@ export default function TeamCreator() {
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="primary-color" className="block text-sm font-medium text-gray-700 mb-1">
               Cor Principal
             </label>
             <input
+              id="primary-color"
               type="color"
               value={teamData.colors.primary}
               onChange={(e) => handleInputChange('colors.primary', e.target.value)}
               className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
+              aria-label="Selecionar cor principal do time"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="secondary-color" className="block text-sm font-medium text-gray-700 mb-1">
               Cor Secundária
             </label>
             <input
+              id="secondary-color"
               type="color"
               value={teamData.colors.secondary}
               onChange={(e) => handleInputChange('colors.secondary', e.target.value)}
               className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
+              aria-label="Selecionar cor secundária do time"
             />
           </div>
         </div>
@@ -195,7 +196,7 @@ export default function TeamCreator() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Criando...' : 'Criar Time'}
         </button>
