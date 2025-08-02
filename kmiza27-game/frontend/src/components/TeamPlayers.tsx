@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { gameApi } from '@/services/gameApi';
+// import { gameApiReformed } from '@/services/gameApiReformed';
 
 interface Player {
   id: string;
@@ -47,17 +47,16 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Carregando jogadores para o time:', teamId);
-      const playersData = await gameApi.getTeamPlayers(teamId);
-      console.log('📊 Dados recebidos:', playersData);
-      console.log('📊 Tipo dos dados:', typeof playersData);
-      console.log('📊 É array?', Array.isArray(playersData));
+      console.log('🔍 Sistema reformulado: Gestão de jogadores em desenvolvimento');
       
-      const finalPlayers = Array.isArray(playersData) ? playersData : [];
-      console.log('📊 Jogadores finais:', finalPlayers);
-      setPlayers(finalPlayers);
+      // TODO: Implementar no sistema reformulado
+      // const playersData = await gameApiReformed.getTeamPlayers(teamId);
+      
+      // Por enquanto, mostrar mensagem informativa
+      setPlayers([]);
+      setError('Gestão de jogadores será implementada em próxima versão do sistema reformulado');
     } catch (err) {
-      setError('Erro ao carregar jogadores');
+      setError('Funcionalidade não implementada no sistema reformulado');
       console.error('Error loading players:', err);
       setPlayers([]);
     } finally {

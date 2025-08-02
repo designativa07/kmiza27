@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { gameApi } from '@/services/gameApi';
-import CompetitionsManager from './CompetitionsManager';
+import { gameApiReformed, SeasonMatch } from '@/services/gameApiReformed';
+import CompetitionsManagerReformed from './CompetitionsManagerReformed';
 
+// Tipo antigo mantido para compatibilidade com código existente
 interface Match {
   id: string;
   home_team_name: string;
@@ -49,6 +50,27 @@ export default function MatchSimulator() {
   const [activeTab, setActiveTab] = useState<'matches' | 'simulation' | 'tactics' | 'competitions'>('matches');
 
   // Função simples para carregar partidas
+  // Função para converter SeasonMatch para Match (compatibilidade)
+  const convertSeasonMatchesToMatches = (seasonMatches: SeasonMatch[]): Match[] => {
+    return seasonMatches.map(match => {
+      const isHome = match.home_team_id !== null;
+      const opponentName = isHome ? 
+        (match.away_machine?.name || 'Adversário') : 
+        (match.home_machine?.name || 'Adversário');
+      
+      return {
+        id: match.id,
+        home_team_name: isHome ? selectedTeam?.name || 'Seu Time' : opponentName,
+        away_team_name: isHome ? opponentName : selectedTeam?.name || 'Seu Time',
+        home_score: match.home_score,
+        away_score: match.away_score,
+        match_date: match.match_date,
+        status: match.status as 'scheduled' | 'in_progress' | 'finished',
+        highlights: match.highlights as string[] | undefined
+      };
+    });
+  };
+
   const loadMatches = async () => {
     if (!selectedTeam) return;
     
@@ -56,10 +78,15 @@ export default function MatchSimulator() {
     setError(null);
     
     try {
-      console.log('Carregando partidas para:', selectedTeam.name);
-      const teamMatches = await gameApi.getTeamMatches(selectedTeam.id);
-      console.log('Partidas carregadas:', teamMatches.length);
-      setMatches(teamMatches);
+      console.log('Carregando partidas reformuladas para:', selectedTeam.name);
+      const [upcoming, recent] = await Promise.all([
+        gameApiReformed.getUserUpcomingMatches(selectedTeam.owner_id, 10),
+        gameApiReformed.getUserRecentMatches(selectedTeam.owner_id, 10)
+      ]);
+      const seasonMatches = [...upcoming, ...recent];
+      const convertedMatches = convertSeasonMatchesToMatches(seasonMatches);
+      console.log('Partidas carregadas (reformulado):', convertedMatches.length);
+      setMatches(convertedMatches);
     } catch (error) {
       console.error('Erro ao carregar partidas:', error);
       setError('Erro ao carregar partidas. Verifique se o backend está rodando.');
@@ -122,8 +149,9 @@ export default function MatchSimulator() {
 
       for (const matchData of sampleMatches) {
         try {
-          await gameApi.createMatch(matchData);
-          console.log('Partida criada:', matchData.home_team_name, 'vs', matchData.away_team_name);
+          // TODO: Implementar no sistema reformulado
+          // await gameApiReformed.createMatch(matchData);
+          console.log('Sistema reformulado: Criação de partidas não implementada');
         } catch (error) {
           console.error('Erro ao criar partida:', error);
         }
@@ -142,13 +170,9 @@ export default function MatchSimulator() {
   const startSimulation = async (matchId: string) => {
     try {
       setSimulating(true);
-      const result = await gameApi.simulateMatch(matchId);
-      
-      // Atualizar a lista de partidas
-      await loadMatches();
-      
-      // Mostrar resultado
-      alert(`Partida simulada! Resultado: ${result.home_score}x${result.away_score}`);
+      // TODO: Implementar no sistema reformulado
+      // const result = await gameApiReformed.simulateMatch(matchId);
+      throw new Error('Simulação de partidas será implementada no sistema reformulado');
       
     } catch (error) {
       console.error('Erro ao simular partida:', error);
@@ -446,9 +470,9 @@ export default function MatchSimulator() {
             </div>
           )}
 
-                     {activeTab === 'competitions' && (
-             <CompetitionsManager />
-           )}
+                               {activeTab === 'competitions' && (
+            <CompetitionsManagerReformed />
+          )}
         </div>
       )}
     </div>

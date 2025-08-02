@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameTeam, YouthAcademy, YouthPlayer } from '@/lib/supabase';
-import { gameApi, CreateTeamData } from '@/services/gameApi';
+import { gameApiReformed, CreateTeamData } from '@/services/gameApiReformed';
 
 interface GameState {
   // Estado do usuário
@@ -28,13 +28,15 @@ interface GameState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   
-  // Ações do jogo
+  // Ações do jogo (reformuladas)
   createTeam: (teamData: CreateTeamData) => Promise<void>;
+  loadTeams: () => Promise<void>;
+  
+  // Métodos não implementados no sistema reformulado (futuras funcionalidades)
   updateTeamBudget: (teamId: string, amount: number, operation: 'add' | 'subtract') => Promise<void>;
   expandStadium: (teamId: string, capacityIncrease: number, cost: number) => Promise<void>;
   getTeamMatches: (teamId: string) => Promise<any[]>;
   simulateMatch: (matchId: string) => Promise<any>;
-  loadTeams: () => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
 }
 
@@ -79,28 +81,21 @@ export const useGameStore = create<GameState>((set, get) => ({
       const userData = savedUser ? JSON.parse(savedUser) : null;
       const userId = userData?.id || get().userId;
       
-      const result = await gameApi.createTeam(teamData, userId);
+      const result = await gameApiReformed.createTeam(userId, teamData);
       
       // Verificar se o time criado é válido
-      if (!result.team || !result.team.id) {
-        throw new Error('Time criado não possui ID válido');
+      if (!result.success || !result.data?.team?.id) {
+        throw new Error(result.error || 'Time criado não possui ID válido');
       }
       
-      // Atualizar o userId se foi retornado um novo
-      if (result.actualUserId && result.actualUserId !== userId) {
-        set({ userId: result.actualUserId });
-        // Atualizar o localStorage também
-        if (userData && typeof window !== 'undefined') {
-          const updatedUserData = { ...userData, id: result.actualUserId };
-          localStorage.setItem('gameUser', JSON.stringify(updatedUserData));
-        }
-      }
+      // No sistema reformulado, o time já é inscrito automaticamente na Série D
+      const createdTeam = result.data.team;
       
       // Adicionar o novo time à lista
       const currentTeams = get().userTeams;
       set({ 
-        userTeams: [...currentTeams, result.team],
-        selectedTeam: result.team,
+        userTeams: [...currentTeams, createdTeam],
+        selectedTeam: createdTeam,
         isLoading: false 
       });
       
@@ -116,21 +111,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   updateTeamBudget: async (teamId, amount, operation) => {
     set({ isLoading: true, error: null });
     try {
-
-      
-      const result = await gameApi.updateTeamBudget(teamId, amount, operation);
-      
-      // Atualizar o time selecionado se for o mesmo
-      const selectedTeam = get().selectedTeam;
-      if (selectedTeam && selectedTeam.id === teamId) {
-        set({ selectedTeam: { ...selectedTeam, budget: result.budget } });
-      }
-      
-      set({ isLoading: false });
+      // TODO: Implementar no sistema reformulado
+      throw new Error('Funcionalidade de orçamento será implementada em próxima versão');
     } catch (error) {
       set({ 
         isLoading: false, 
-        error: error instanceof Error ? error.message : 'Erro ao atualizar orçamento' 
+        error: error instanceof Error ? error.message : 'Funcionalidade não implementada' 
       });
     }
   },
@@ -138,39 +124,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   expandStadium: async (teamId, capacityIncrease, cost) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await gameApi.expandStadium(teamId, capacityIncrease, cost);
-      
-      // Atualizar o time selecionado se for o mesmo
-      const selectedTeam = get().selectedTeam;
-      if (selectedTeam && selectedTeam.id === teamId) {
-        set({ 
-          selectedTeam: { 
-            ...selectedTeam, 
-            budget: result.budget,
-            stadium_capacity: result.stadium_capacity
-          } 
-        });
-      }
-      
-      // Atualizar também na lista de times
-      const currentTeams = get().userTeams;
-      set({
-        userTeams: currentTeams.map(team => 
-          team.id === teamId 
-            ? { 
-                ...team, 
-                budget: result.budget,
-                stadium_capacity: result.stadium_capacity
-              }
-            : team
-        )
-      });
-      
-      set({ isLoading: false });
+      // TODO: Implementar no sistema reformulado
+      throw new Error('Funcionalidade de expansão de estádio será implementada em próxima versão');
     } catch (error) {
       set({ 
         isLoading: false, 
-        error: error instanceof Error ? error.message : 'Erro ao expandir estádio' 
+        error: error instanceof Error ? error.message : 'Funcionalidade não implementada' 
       });
     }
   },
@@ -178,9 +137,20 @@ export const useGameStore = create<GameState>((set, get) => ({
   getTeamMatches: async (teamId) => {
     set({ isLoading: true, error: null });
     try {
-      const matches = await gameApi.getTeamMatches(teamId);
+      // No sistema reformulado, usar o userId ao invés do teamId
+      const userId = get().userId;
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
+      
+      const [upcoming, recent] = await Promise.all([
+        gameApiReformed.getUserUpcomingMatches(userId, 10),
+        gameApiReformed.getUserRecentMatches(userId, 10)
+      ]);
+      
+      const allMatches = [...upcoming, ...recent];
       set({ isLoading: false });
-      return matches;
+      return allMatches;
     } catch (error) {
       set({ 
         isLoading: false, 
@@ -193,17 +163,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   simulateMatch: async (matchId) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await gameApi.simulateMatch(matchId);
-      
-      // Recarregar times para atualizar reputação e orçamento
-      await get().loadTeams();
-      
-      set({ isLoading: false });
-      return result;
+      // TODO: Implementar simulação no sistema reformulado
+      throw new Error('Simulação de partidas será implementada em próxima versão');
     } catch (error) {
       set({ 
         isLoading: false, 
-        error: error instanceof Error ? error.message : 'Erro ao simular partida' 
+        error: error instanceof Error ? error.message : 'Funcionalidade não implementada' 
       });
       throw error;
     }
@@ -219,13 +184,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       
       console.log('Loading teams for userId:', userId);
       
-      const teams = await gameApi.getTeams(userId);
+      const teams = await gameApiReformed.getUserTeams(userId);
       
-      // Garantir que sempre seja um array e filtrar apenas times válidos
-      const teamsArray = Array.isArray(teams) ? teams : [];
-      const validTeams = teamsArray.filter(team => team && team.id);
+      // Os times reformulados já vêm como array da API
+      const validTeams = teams.filter(team => team && team.id);
       
-      console.log('Loaded teams:', validTeams);
+      console.log('Loaded teams (reformed):', validTeams);
       
       set({ userTeams: validTeams, isLoading: false });
     } catch (error) {
@@ -242,34 +206,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      // Obter o userId do usuário logado (usando a chave correta)
-      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
-      const userData = savedUser ? JSON.parse(savedUser) : null;
-      const userId = userData?.id || get().userId;
-      
-      if (!userId) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const result = await gameApi.deleteTeam(teamId, userId);
-      
-      // Verificar se a deleção foi bem-sucedida
-      if (result && (result.success || result.data?.success)) {
-        // Remover o time da lista local
-        set(state => ({
-          userTeams: state.userTeams.filter(team => team.id !== teamId),
-          selectedTeam: state.selectedTeam?.id === teamId ? null : state.selectedTeam,
-          isLoading: false
-        }));
-        
-        return result;
-      } else {
-        throw new Error(result?.message || 'Erro ao deletar time');
-      }
+      // TODO: Implementar no sistema reformulado
+      throw new Error('Funcionalidade de deletar time será implementada em próxima versão');
     } catch (error) {
       console.error('Error in deleteTeam:', error);
       set({ 
-        error: error instanceof Error ? error.message : 'Erro ao deletar time',
+        error: error instanceof Error ? error.message : 'Funcionalidade não implementada',
         isLoading: false 
       });
       throw error;
