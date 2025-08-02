@@ -62,6 +62,9 @@ export class Team {
   @Column({ type: 'text', nullable: true })
   information: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  aliases: string[];
+
   @CreateDateColumn()
   created_at: Date;
 

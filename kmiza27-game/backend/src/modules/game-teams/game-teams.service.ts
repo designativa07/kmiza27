@@ -100,7 +100,13 @@ export class GameTeamsService {
       await this.createInitialPlayers(team.id);
       
       // Inscrição automática em competição disponível
-      await this.autoEnrollInCompetition(team.id);
+      this.logger.log(`🎯 Chamando autoEnrollInCompetition para o time ${team.id}...`);
+      try {
+        await this.autoEnrollInCompetition(team.id);
+        this.logger.log(`✅ autoEnrollInCompetition concluído para o time ${team.id}`);
+      } catch (error) {
+        this.logger.error(`❌ Erro no autoEnrollInCompetition para o time ${team.id}:`, error);
+      }
       
       this.logger.log(`Team created successfully: ${team.name}`);
       return { team, actualUserId };
@@ -857,9 +863,10 @@ export class GameTeamsService {
 
   private async autoEnrollInCompetition(teamId: string) {
     try {
-      this.logger.log(`Auto-inscrevendo time ${teamId} em competição disponível`);
+      this.logger.log(`🚀 Auto-inscrevendo time ${teamId} em competição disponível`);
       
       // Buscar competições disponíveis (com vagas)
+      this.logger.log('🔍 Buscando competições disponíveis...');
       const { data: competitions, error: compError } = await supabase
         .from('game_competitions')
         .select('id, name, tier, current_teams, max_teams')
@@ -867,21 +874,29 @@ export class GameTeamsService {
         .order('tier', { ascending: true });
 
       if (compError) {
-        this.logger.error('Error fetching available competitions:', compError);
+        this.logger.error('❌ Error fetching available competitions:', compError);
         return;
       }
 
+      this.logger.log(`✅ Competições encontradas: ${competitions?.length || 0}`);
+      if (competitions) {
+        competitions.forEach(comp => {
+          this.logger.log(`   - ${comp.name} (Tier ${comp.tier}): ${comp.current_teams}/${comp.max_teams}`);
+        });
+      }
+
       if (!competitions || competitions.length === 0) {
-        this.logger.warn('No available competitions found');
+        this.logger.warn('⚠️ No available competitions found');
         return;
       }
 
       // Priorizar Série D (tier 4), depois C, B, A
       const availableCompetition = competitions[0];
       
-      this.logger.log(`Inscrito em ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
+      this.logger.log(`🎯 Competição escolhida: ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
 
       // Inserir inscrição
+      this.logger.log('📝 Inserindo inscrição...');
       const { error: insertError } = await supabase
         .from('game_competition_teams')
         .insert({
@@ -890,21 +905,27 @@ export class GameTeamsService {
         });
 
       if (insertError) {
-        this.logger.error('Error enrolling team in competition:', insertError);
+        this.logger.error('❌ Error enrolling team in competition:', insertError);
         return;
       }
 
+      this.logger.log('✅ Inscrição inserida com sucesso');
+
       // Atualizar contador da competição
+      this.logger.log('📊 Atualizando contador da competição...');
       const { error: updateError } = await supabase
         .from('game_competitions')
         .update({ current_teams: availableCompetition.current_teams + 1 })
         .eq('id', availableCompetition.id);
 
       if (updateError) {
-        this.logger.error('Error updating competition team count:', updateError);
+        this.logger.error('❌ Error updating competition team count:', updateError);
+      } else {
+        this.logger.log('✅ Contador atualizado');
       }
 
       // Criar entrada na classificação
+      this.logger.log('🏆 Criando entrada na classificação...');
       const { error: standingsError } = await supabase
         .from('game_standings')
         .insert({
@@ -922,15 +943,18 @@ export class GameTeamsService {
         });
 
       if (standingsError) {
-        this.logger.error('Error creating standings entry:', standingsError);
+        this.logger.error('❌ Error creating standings entry:', standingsError);
+      } else {
+        this.logger.log('✅ Entrada na classificação criada');
       }
 
       // Verificar se deve criar partidas automaticamente
+      this.logger.log('⚽ Verificando se deve criar partidas...');
       await this.checkAndCreateMatches(availableCompetition.id);
 
-      this.logger.log(`Team ${teamId} successfully enrolled in ${availableCompetition.name}`);
+      this.logger.log(`🎉 Team ${teamId} successfully enrolled in ${availableCompetition.name}`);
     } catch (error) {
-      this.logger.error('Error in autoEnrollInCompetition:', error);
+      this.logger.error('❌ Error in autoEnrollInCompetition:', error);
     }
   }
 
