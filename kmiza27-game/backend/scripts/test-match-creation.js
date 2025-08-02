@@ -1,37 +1,31 @@
 const { getSupabaseServiceClient } = require('../config/supabase-connection');
 
-console.log('🧪 TESTANDO CRIAÇÃO AUTOMÁTICA DE PARTIDAS');
-console.log('=' .repeat(45));
+const supabase = getSupabaseServiceClient('vps');
 
 async function testMatchCreation() {
+  console.log('🧪 Testando criação de partidas...\n');
+
   try {
-    const supabase = getSupabaseServiceClient('vps');
-    
-    console.log('\n📋 1. Verificando competições ativas...');
-    
-    const { data: competitions, error } = await supabase
+    // 1. Buscar competição com times inscritos
+    console.log('1. Buscando competição com times inscritos...');
+    const { data: competitions, error: compError } = await supabase
       .from('game_competitions')
-      .select('id, name, tier, status, current_teams, max_teams')
+      .select('*')
       .eq('status', 'active')
       .order('tier', { ascending: true });
 
-    if (error) {
-      console.error('❌ Erro ao buscar competições:', error);
+    if (compError) {
+      console.error('❌ Erro ao buscar competições:', compError);
       return;
     }
 
-    console.log('📊 Competições ativas:');
-    competitions.forEach(comp => {
-      console.log(`   - ${comp.name} (Tier ${comp.tier}): ${comp.current_teams}/${comp.max_teams} times`);
-    });
+    let targetCompetition = null;
+    let targetEnrollments = null;
 
-    console.log('\n📋 2. Verificando partidas existentes...');
-    
     for (const competition of competitions) {
-      console.log(`\n🏆 ${competition.name}:`);
+      console.log(`\n🔍 Verificando ${competition.name}...`);
       
-      // Buscar times inscritos
-      const { data: enrolledTeams, error: teamsError } = await supabase
+      const { data: enrollments, error: enrollmentsError } = await supabase
         .from('game_competition_teams')
         .select(`
           *,
@@ -39,113 +33,199 @@ async function testMatchCreation() {
         `)
         .eq('competition_id', competition.id);
 
-      if (teamsError) {
-        console.error(`   ❌ Erro ao buscar times:`, teamsError);
+      if (enrollmentsError) {
+        console.error(`❌ Erro ao buscar inscrições de ${competition.name}:`, enrollmentsError);
         continue;
       }
 
-      console.log(`   📊 ${enrolledTeams.length} times inscritos`);
-
-      // Buscar partidas
-      const { data: matches, error: matchesError } = await supabase
-        .from('game_matches')
-        .select('id, home_team_name, away_team_name, round, status')
-        .eq('competition_id', competition.id)
-        .order('round', { ascending: true });
-
-      if (matchesError) {
-        console.error(`   ❌ Erro ao buscar partidas:`, matchesError);
-        continue;
+      console.log(`   - Times inscritos: ${enrollments.length}`);
+      
+      if (enrollments.length >= 2) {
+        targetCompetition = competition;
+        targetEnrollments = enrollments;
+        console.log(`✅ Encontrada competição com times suficientes: ${competition.name}`);
+        break;
       }
-
-      console.log(`   ⚽ ${matches.length} partidas criadas`);
-
-      if (matches.length > 0) {
-        console.log(`   📅 Rodadas: ${Math.max(...matches.map(m => m.round))}`);
-        console.log(`   🎯 Status: ${matches.filter(m => m.status === 'scheduled').length} agendadas, ${matches.filter(m => m.status === 'finished').length} finalizadas`);
-        
-        // Mostrar algumas partidas de exemplo
-        const sampleMatches = matches.slice(0, 5);
-        console.log(`   📋 Exemplos de partidas:`);
-        sampleMatches.forEach(match => {
-          console.log(`     - ${match.home_team_name} vs ${match.away_team_name} (Rodada ${match.round})`);
-        });
-      }
-
-      // Buscar rodadas
-      const { data: rounds, error: roundsError } = await supabase
-        .from('game_rounds')
-        .select('id, round_number, name')
-        .eq('competition_id', competition.id)
-        .order('round_number', { ascending: true });
-
-      if (roundsError) {
-        console.error(`   ❌ Erro ao buscar rodadas:`, roundsError);
-        continue;
-      }
-
-      console.log(`   📋 ${rounds.length} rodadas criadas`);
     }
 
-    console.log('\n📋 3. Testando inscrição de novo time...');
-    
-    // Buscar um time de usuário para teste
-    const { data: userTeams, error: userError } = await supabase
-      .from('game_teams')
-      .select('id, name')
-      .eq('team_type', 'user_created')
-      .limit(1);
-
-    if (userError) {
-      console.error('❌ Erro ao buscar times de usuário:', userError);
+    if (!targetCompetition) {
+      console.log('❌ Nenhuma competição com times suficientes encontrada');
       return;
     }
 
-    if (userTeams && userTeams.length > 0) {
-      const testTeam = userTeams[0];
-      console.log(`   🧪 Time de teste: ${testTeam.name} (ID: ${testTeam.id})`);
-      
-      // Buscar competição da Série D
-      const { data: serieD, error: serieDError } = await supabase
-        .from('game_competitions')
-        .select('id, name, current_teams, max_teams')
-        .eq('tier', 4)
-        .eq('status', 'active')
-        .single();
+    console.log(`\n🎯 Trabalhando com: ${targetCompetition.name}`);
+    console.log(`   - Times inscritos: ${targetEnrollments.length}`);
 
-      if (serieDError) {
-        console.error('❌ Erro ao buscar Série D:', serieDError);
+    // 2. Verificar se já existem partidas
+    console.log('\n2. Verificando partidas existentes...');
+    const { data: existingMatches, error: matchesError } = await supabase
+      .from('game_matches')
+      .select('*')
+      .eq('competition_id', targetCompetition.id);
+
+    if (matchesError) {
+      console.error('❌ Erro ao buscar partidas:', matchesError);
+      return;
+    }
+
+    console.log(`✅ Partidas existentes: ${existingMatches.length}`);
+
+    if (existingMatches.length > 0) {
+      console.log('✅ Partidas já existem, não é necessário criar novas');
+      return;
+    }
+
+    // 3. Verificar rodadas existentes
+    console.log('\n3. Verificando rodadas existentes...');
+    let { data: existingRounds, error: roundsError } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('competition_id', targetCompetition.id);
+
+    if (roundsError) {
+      console.error('❌ Erro ao buscar rodadas:', roundsError);
+      return;
+    }
+
+    console.log(`✅ Rodadas existentes: ${existingRounds.length}`);
+
+    // 4. Criar rodadas se não existirem
+    if (existingRounds.length === 0) {
+      console.log('\n4. Criando rodadas...');
+      const rounds = [];
+      const totalRounds = (targetEnrollments.length - 1) * 2; // Turno e returno
+      
+      for (let round = 1; round <= totalRounds; round++) {
+        rounds.push({
+          competition_id: targetCompetition.id,
+          round_number: round,
+          name: `Rodada ${round}`
+        });
+      }
+
+      const { data: createdRounds, error: createRoundsError } = await supabase
+        .from('game_rounds')
+        .insert(rounds)
+        .select();
+
+      if (createRoundsError) {
+        console.error('❌ Erro ao criar rodadas:', createRoundsError);
         return;
       }
 
-      console.log(`   🏆 Competição: ${serieD.name} (${serieD.current_teams}/${serieD.max_teams} times)`);
-      
-      // Verificar se o time já está inscrito
-      const { data: existingRegistration, error: checkError } = await supabase
-        .from('game_competition_teams')
-        .select('id')
-        .eq('competition_id', serieD.id)
-        .eq('team_id', testTeam.id)
-        .single();
-
-      if (existingRegistration) {
-        console.log(`   ⚠️  Time ${testTeam.name} já está inscrito na ${serieD.name}`);
-      } else {
-        console.log(`   ✅ Time ${testTeam.name} pode ser inscrito na ${serieD.name}`);
-        console.log(`   💡 Para testar, inscreva o time via frontend ou API`);
-      }
+      console.log(`✅ Criadas ${createdRounds.length} rodadas`);
+      existingRounds = createdRounds;
     }
 
-    console.log('\n🎯 SISTEMA DE CRIAÇÃO AUTOMÁTICA DE PARTIDAS:');
-    console.log('✅ Verificação de competições ativas');
-    console.log('✅ Contagem de times inscritos');
-    console.log('✅ Contagem de partidas criadas');
-    console.log('✅ Verificação de rodadas');
-    console.log('✅ Sistema integrado com backend');
+    // 5. Gerar partidas
+    console.log('\n5. Gerando partidas...');
+    const matches = generateRoundRobinMatches(targetEnrollments, targetCompetition.id, existingRounds);
+    
+    console.log(`✅ Geradas ${matches.length} partidas`);
+
+    // 6. Inserir partidas em lotes
+    console.log('\n6. Inserindo partidas...');
+    const batchSize = 10;
+    let insertedCount = 0;
+    
+    for (let i = 0; i < matches.length; i += batchSize) {
+      const batch = matches.slice(i, i + batchSize);
+      
+      const { error: insertError } = await supabase
+        .from('game_matches')
+        .insert(batch);
+
+      if (insertError) {
+        console.error('❌ Erro ao inserir lote de partidas:', insertError);
+        continue;
+      }
+
+      insertedCount += batch.length;
+      console.log(`   - Inseridas ${insertedCount}/${matches.length} partidas`);
+    }
+
+    console.log(`\n✅ Processo concluído! ${insertedCount} partidas inseridas`);
 
   } catch (error) {
-    console.error('❌ Erro durante o teste:', error);
+    console.error('❌ Erro geral:', error);
   }
+}
+
+function generateRoundRobinMatches(teams, competitionId, rounds) {
+  const matches = [];
+  const teamIds = teams.map(team => team.game_teams.id);
+  const teamNames = teams.map(team => team.game_teams.name);
+  
+  // Se número ímpar de times, adicionar "bye"
+  if (teamIds.length % 2 !== 0) {
+    teamIds.push(null);
+    teamNames.push('BYE');
+  }
+
+  const n = teamIds.length;
+  const totalRounds = n - 1;
+  
+  // Gerar partidas para turno e returno
+  for (let round = 0; round < totalRounds * 2; round++) {
+    const roundNumber = round + 1;
+    const isReturnRound = round >= totalRounds;
+    
+    // Calcular partidas da rodada
+    for (let i = 0; i < n / 2; i++) {
+      const homeIndex = i;
+      const awayIndex = n - 1 - i;
+      
+      // Pular partidas com "bye"
+      if (teamIds[homeIndex] === null || teamIds[awayIndex] === null) {
+        continue;
+      }
+
+      // Para returno, inverter mandante/visitante
+      const actualHomeIndex = isReturnRound ? awayIndex : homeIndex;
+      const actualAwayIndex = isReturnRound ? homeIndex : awayIndex;
+
+      // Alternar casa/fora para distribuir melhor os jogos
+      let finalHomeIndex = actualHomeIndex;
+      let finalAwayIndex = actualAwayIndex;
+      
+      // Se é uma rodada par (exceto a primeira), alternar alguns jogos
+      if (round > 0 && round % 2 === 1 && i % 2 === 1) {
+        finalHomeIndex = actualAwayIndex;
+        finalAwayIndex = actualHomeIndex;
+      }
+
+      const matchDate = new Date();
+      matchDate.setDate(matchDate.getDate() + round * 7); // Uma semana entre rodadas
+
+      matches.push({
+        competition_id: competitionId,
+        round: roundNumber,
+        home_team_id: teamIds[finalHomeIndex],
+        away_team_id: teamIds[finalAwayIndex],
+        home_team_name: teamNames[finalHomeIndex],
+        away_team_name: teamNames[finalAwayIndex],
+        match_date: matchDate.toISOString(),
+        status: 'scheduled',
+        home_score: null,
+        away_score: null,
+        highlights: [],
+        stats: {}
+      });
+    }
+
+    // Rotacionar times (exceto o primeiro)
+    if (round < totalRounds - 1) {
+      const temp = teamIds[1];
+      for (let i = 1; i < n - 1; i++) {
+        teamIds[i] = teamIds[i + 1];
+        teamNames[i] = teamNames[i + 1];
+      }
+      teamIds[n - 1] = temp;
+      teamNames[n - 1] = teams.find(t => t.game_teams.id === temp)?.game_teams.name || 'Unknown';
+    }
+  }
+
+  return matches;
 }
 
 testMatchCreation(); 

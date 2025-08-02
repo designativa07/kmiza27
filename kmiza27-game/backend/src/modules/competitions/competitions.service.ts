@@ -83,9 +83,26 @@ export class CompetitionsService {
         throw new Error('Competição está cheia');
       }
 
-      // Verificar se a competição está aberta para novos usuários (apenas Série D)
+      // Verificar se a competição está aberta para novos usuários
+      // Temporariamente permitir inscrição em outras séries se a Série D estiver cheia
       if (competition.tier !== 4) {
-        throw new Error(`A ${competition.name} não está aberta para novos usuários. Apenas a Série D aceita novos times.`);
+        // Verificar se a Série D está cheia
+        const { data: serieD, error: serieDError } = await supabase
+          .from('game_competitions')
+          .select('current_teams, max_teams')
+          .eq('tier', 4)
+          .single();
+        
+        if (serieDError) {
+          throw new Error(`A ${competition.name} não está aberta para novos usuários. Apenas a Série D aceita novos times.`);
+        }
+        
+        // Se a Série D está cheia, permitir inscrição em outras séries
+        if (serieD.current_teams >= serieD.max_teams) {
+          console.log(`Série D está cheia (${serieD.current_teams}/${serieD.max_teams}). Permitindo inscrição em ${competition.name}.`);
+        } else {
+          throw new Error(`A ${competition.name} não está aberta para novos usuários. Apenas a Série D aceita novos times.`);
+        }
       }
 
       // Inserir inscrição do usuário
