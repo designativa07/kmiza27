@@ -8,7 +8,10 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon,
   Cog6ToothIcon,
-  DevicePhoneMobileIcon
+  DevicePhoneMobileIcon,
+  Bars3Icon,
+  ChevronUpIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline'
 import { API_ENDPOINTS, apiUrl } from '../config/api'
 
@@ -419,6 +422,64 @@ export default function AutomationPanel() {
     }))
   }
 
+  // Funções de drag and drop para seções
+  const moveSection = (fromIndex: number, toIndex: number) => {
+    setWhatsappMenu(prev => {
+      const newSections = [...prev.sections]
+      const [movedSection] = newSections.splice(fromIndex, 1)
+      newSections.splice(toIndex, 0, movedSection)
+      return { ...prev, sections: newSections }
+    })
+  }
+
+  // Funções de drag and drop para linhas dentro de uma seção
+  const moveRow = (sectionIndex: number, fromIndex: number, toIndex: number) => {
+    setWhatsappMenu(prev => {
+      const newSections = [...prev.sections]
+      const section = { ...newSections[sectionIndex] }
+      const [movedRow] = section.rows.splice(fromIndex, 1)
+      section.rows.splice(toIndex, 0, movedRow)
+      newSections[sectionIndex] = section
+      return { ...prev, sections: newSections }
+    })
+  }
+
+  // Handlers para drag and drop
+  const handleSectionDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString())
+  }
+
+  const handleSectionDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleSectionDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault()
+    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'))
+    if (fromIndex !== toIndex) {
+      moveSection(fromIndex, toIndex)
+    }
+  }
+
+  const handleRowDragStart = (e: React.DragEvent, sectionIndex: number, rowIndex: number) => {
+    e.dataTransfer.setData('text/plain', `${sectionIndex}-${rowIndex}`)
+  }
+
+  const handleRowDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleRowDrop = (e: React.DragEvent, sectionIndex: number, toRowIndex: number) => {
+    e.preventDefault()
+    const data = e.dataTransfer.getData('text/plain').split('-')
+    const fromSectionIndex = parseInt(data[0])
+    const fromRowIndex = parseInt(data[1])
+    
+    if (fromSectionIndex === sectionIndex && fromRowIndex !== toRowIndex) {
+      moveRow(sectionIndex, fromRowIndex, toRowIndex)
+    }
+  }
+
   // Filtrar apenas configurações que são realmente usadas
   const usedConfigs = configs.filter(config => {
     const usedKeys = ['welcome_message', 'auto_response_enabled', 'BOT_NOME']
@@ -759,7 +820,12 @@ export default function AutomationPanel() {
             {/* Seções do Menu */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-900">Seções do Menu</h4>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Seções do Menu</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Arraste as seções para reordenar ou use os botões ↑↓
+                  </p>
+                </div>
                 <button
                   onClick={addMenuSection}
                   className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50"
@@ -769,27 +835,73 @@ export default function AutomationPanel() {
               </div>
 
               {whatsappMenu.sections.map((section, sectionIndex) => (
-                <div key={sectionIndex} className="border border-gray-200 rounded-lg p-4">
+                <div 
+                  key={sectionIndex} 
+                  className="border border-gray-200 rounded-lg p-4 cursor-move hover:border-indigo-300 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleSectionDragStart(e, sectionIndex)}
+                  onDragOver={handleSectionDragOver}
+                  onDrop={(e) => handleSectionDrop(e, sectionIndex)}
+                >
                   <div className="flex items-center justify-between mb-3">
-                    <input
-                      type="text"
-                      value={section.title}
-                      onChange={(e) => updateMenuSection(sectionIndex, 'title', e.target.value)}
-                      className="text-sm font-medium border-none bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1"
-                      placeholder="Título da seção..."
-                    />
-                    <button
-                      onClick={() => removeMenuSection(sectionIndex)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Remover Seção
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <Bars3Icon className="h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={section.title}
+                        onChange={(e) => updateMenuSection(sectionIndex, 'title', e.target.value)}
+                        className="text-sm font-medium border-none bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1"
+                        placeholder="Título da seção..."
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          if (sectionIndex > 0) {
+                            moveSection(sectionIndex, sectionIndex - 1)
+                          }
+                        }}
+                        disabled={sectionIndex === 0}
+                        className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-1"
+                        title="Mover para cima"
+                      >
+                        <ChevronUpIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (sectionIndex < whatsappMenu.sections.length - 1) {
+                            moveSection(sectionIndex, sectionIndex + 1)
+                          }
+                        }}
+                        disabled={sectionIndex === whatsappMenu.sections.length - 1}
+                        className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-1"
+                        title="Mover para baixo"
+                      >
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => removeMenuSection(sectionIndex)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Remover Seção
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     {section.rows.map((row, rowIndex) => (
-                      <div key={rowIndex} className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-2 rounded">
-                        <div className="col-span-3">
+                      <div 
+                        key={rowIndex} 
+                        className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-2 rounded cursor-move hover:bg-gray-100 transition-colors"
+                        draggable
+                        onDragStart={(e) => handleRowDragStart(e, sectionIndex, rowIndex)}
+                        onDragOver={handleRowDragOver}
+                        onDrop={(e) => handleRowDrop(e, sectionIndex, rowIndex)}
+                      >
+                        <div className="col-span-1 flex items-center justify-center">
+                          <Bars3Icon className="h-3 w-3 text-gray-400" />
+                        </div>
+                        <div className="col-span-2">
                           <input
                             type="text"
                             value={row.id}
@@ -816,7 +928,31 @@ export default function AutomationPanel() {
                             placeholder="Descrição..."
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div className="col-span-1 flex items-center space-x-1">
+                          <button
+                            onClick={() => {
+                              if (rowIndex > 0) {
+                                moveRow(sectionIndex, rowIndex, rowIndex - 1)
+                              }
+                            }}
+                            disabled={rowIndex === 0}
+                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-1"
+                            title="Mover para cima"
+                          >
+                            <ChevronUpIcon className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (rowIndex < section.rows.length - 1) {
+                                moveRow(sectionIndex, rowIndex, rowIndex + 1)
+                              }
+                            }}
+                            disabled={rowIndex === section.rows.length - 1}
+                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-1"
+                            title="Mover para baixo"
+                          >
+                            <ChevronDownIcon className="h-3 w-3" />
+                          </button>
                           <button
                             onClick={() => removeMenuRow(sectionIndex, rowIndex)}
                             className="text-red-600 hover:text-red-800 text-xs"
