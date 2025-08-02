@@ -34,6 +34,12 @@ export class OpenAIService implements OnModuleInit {
       if (team.slug) {
         this.teamNames.push(this.removeAccents(team.slug.toLowerCase()));
       }
+      // Adicionar aliases dinâmicos
+      if (team.aliases && Array.isArray(team.aliases)) {
+        for (const alias of team.aliases) {
+          this.teamNames.push(this.removeAccents(alias.toLowerCase()));
+        }
+      }
     }
     this.teamNames = [...new Set(this.teamNames)].sort((a, b) => b.length - a.length);
 

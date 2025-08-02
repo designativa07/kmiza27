@@ -12,6 +12,7 @@ export const databaseConfig = (): TypeOrmModuleOptions => {
     migrations: [__dirname + '/../migrations/*{.ts,.js}'],
     synchronize: false,
     logging: loggingLevels,
+    schema: 'public',
     extra: {
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     },

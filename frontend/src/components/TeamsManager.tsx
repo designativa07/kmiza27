@@ -6,6 +6,7 @@ import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon, MagnifyingGlassIcon, Chevro
 import { API_ENDPOINTS, apiUrl } from '../config/api'
 import { getTeamLogoUrl, handleImageError } from '../lib/cdn'
 import RichTextEditor from './ui/rich-text-editor'
+import TeamAliasesManager from './TeamAliasesManager'
 
 interface Stadium {
   id: number;
@@ -28,6 +29,7 @@ interface Team {
   stadium_id?: number;
   history?: string;
   information?: string;
+  aliases?: string[];
   social_media?: {
     instagram_url?: string;
     tiktok_url?: string;
@@ -75,6 +77,8 @@ export default function TeamsManager() {
   const [selectedPlayerToAddId, setSelectedPlayerToAddId] = useState<string>('')
   const [playerJerseyNumber, setPlayerJerseyNumber] = useState<string>('')
   const [playerRole, setPlayerRole] = useState<string>('')
+  const [showAliasesModal, setShowAliasesModal] = useState(false)
+  const [managingTeamAliases, setManagingTeamAliases] = useState<Team | null>(null)
   
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
@@ -647,6 +651,11 @@ export default function TeamsManager() {
     fetchAllPlayers(); // Carrega todos os jogadores para a lista de adição
   };
 
+  const handleManageAliases = (team: Team) => {
+    setManagingTeamAliases(team);
+    setShowAliasesModal(true);
+  };
+
   const handleAddPlayerToTeam = async () => {
     if (!managingTeamRoster || !selectedPlayerToAddId) return;
 
@@ -858,6 +867,14 @@ export default function TeamsManager() {
                   >
                     <UserGroupIcon className="h-4 w-4" />
                     <span className="sr-only">Gerenciar Elenco, {team.name}</span>
+                  </button>
+                  <button
+                    onClick={() => handleManageAliases(team)}
+                    className="text-green-600 hover:text-green-900 mr-3"
+                    title="Gerenciar Aliases"
+                  >
+                    <span className="text-xs">Aliases</span>
+                    <span className="sr-only">Gerenciar Aliases, {team.name}</span>
                   </button>
                   <button
                     onClick={() => handleDelete(team.id)}
@@ -1235,6 +1252,38 @@ export default function TeamsManager() {
                     setSelectedPlayerToAddId('');
                     setPlayerJerseyNumber('');
                     setPlayerRole('');
+                  }}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAliasesModal && managingTeamAliases && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="aliases-modal">
+          <div className="relative top-20 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Gerenciar Aliases: {managingTeamAliases.name}</h3>
+              <div className="mt-4">
+                <TeamAliasesManager 
+                  team={managingTeamAliases}
+                  onUpdate={(updatedTeam) => {
+                    // Atualizar o time na lista local
+                    setTeams(teams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+                    setManagingTeamAliases(updatedTeam);
+                  }}
+                />
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAliasesModal(false);
+                    setManagingTeamAliases(null);
                   }}
                   className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
