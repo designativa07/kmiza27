@@ -1,68 +1,51 @@
-const { Pool } = require('pg');
-
-// Configuração do banco PostgreSQL
-const pool = new Pool({
-  host: '195.200.0.191',
-  port: 5433,
-  database: 'kmiza27',
-  user: 'postgres',
-  password: '8F1DC9A7F9CE32C4D32E88A1C5FF7',
-});
+const { Client } = require('pg');
 
 async function checkTables() {
-  const client = await pool.connect();
-  
+  const client = new Client({
+    host: 'localhost',
+    port: 5432,
+    user: 'devuser',
+    password: 'devuser',
+    database: 'kmiza27_dev'
+  });
+
   try {
-    console.log('🔍 Verificando estrutura do banco de dados...\n');
-    
+    await client.connect();
+    console.log('🔗 Conectado ao banco de dados');
+
     // Listar todas as tabelas
     const tablesResult = await client.query(`
       SELECT table_name 
       FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      ORDER BY table_name
+      WHERE table_schema = 'public'
+      ORDER BY table_name;
     `);
     
-    console.log('📋 TABELAS EXISTENTES:');
-    console.log('======================');
-    tablesResult.rows.forEach(row => {
-      console.log(`- ${row.table_name}`);
+    console.log(`📊 Tabelas encontradas (${tablesResult.rows.length}):\n`);
+    
+    tablesResult.rows.forEach((row, index) => {
+      console.log(`${index + 1}. ${row.table_name}`);
     });
-    
-    // Verificar estrutura das principais tabelas
-    const mainTables = ['teams', 'competitions', 'matches', 'stadiums', 'rounds'];
-    
-    for (const tableName of mainTables) {
-      console.log(`\n🔧 ESTRUTURA DA TABELA: ${tableName.toUpperCase()}`);
-      console.log('='.repeat(40));
-      
-      try {
-        const columnsResult = await client.query(`
-          SELECT column_name, data_type, is_nullable, column_default
-          FROM information_schema.columns 
-          WHERE table_name = $1 
-          ORDER BY ordinal_position
-        `, [tableName]);
-        
-        if (columnsResult.rows.length > 0) {
-          columnsResult.rows.forEach(col => {
-            console.log(`  ${col.column_name.padEnd(20)} | ${col.data_type.padEnd(15)} | ${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'}`);
-          });
-        } else {
-          console.log(`  ❌ Tabela '${tableName}' não encontrada!`);
-        }
-      } catch (error) {
-        console.log(`  ❌ Erro ao verificar tabela '${tableName}': ${error.message}`);
-      }
+
+    // Verificar se existe alguma tabela relacionada a times
+    const teamTables = tablesResult.rows.filter(row => 
+      row.table_name.toLowerCase().includes('team') || 
+      row.table_name.toLowerCase().includes('time')
+    );
+
+    if (teamTables.length > 0) {
+      console.log('\n🔍 Tabelas relacionadas a times:');
+      teamTables.forEach((row, index) => {
+        console.log(`${index + 1}. ${row.table_name}`);
+      });
     }
-    
+
   } catch (error) {
-    console.error('❌ Erro durante a verificação:', error);
+    console.error('❌ Erro:', error.message);
   } finally {
-    client.release();
-    await pool.end();
+    await client.end();
+    console.log('🔌 Desconectado do banco de dados');
   }
 }
 
-// Executar a verificação
 checkTables(); 

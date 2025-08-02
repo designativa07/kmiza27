@@ -101,11 +101,16 @@ export class GameTeamsService {
       
       // Inscrição automática em competição disponível
       this.logger.log(`🎯 Chamando autoEnrollInCompetition para o time ${team.id}...`);
+      this.logger.log(`🎯 Time ID: ${team.id}`);
+      this.logger.log(`🎯 Time Name: ${team.name}`);
+      this.logger.log(`🎯 Time Slug: ${team.slug}`);
       try {
+        this.logger.log(`🎯 Iniciando autoEnrollInCompetition...`);
         await this.autoEnrollInCompetition(team.id);
         this.logger.log(`✅ autoEnrollInCompetition concluído para o time ${team.id}`);
       } catch (error) {
         this.logger.error(`❌ Erro no autoEnrollInCompetition para o time ${team.id}:`, error);
+        this.logger.error(`❌ Stack trace:`, error.stack);
       }
       
       this.logger.log(`Team created successfully: ${team.name}`);
@@ -863,73 +868,97 @@ export class GameTeamsService {
 
   private async autoEnrollInCompetition(teamId: string) {
     try {
-      this.logger.log(`🚀 Auto-inscrevendo time ${teamId} em competição disponível`);
+      this.logger.log(`🚀 Auto-inscrevendo time ${teamId} na Série D (ponto de entrada)`);
       
-      // Buscar competições disponíveis (com vagas)
-      this.logger.log('🔍 Buscando competições disponíveis...');
-      const { data: competitions, error: compError } = await supabase
+      // Buscar especificamente a Série D (tier 4)
+      this.logger.log('🔍 Buscando Série D...');
+      let { data: serieD, error: compError } = await supabase
         .from('game_competitions')
         .select('id, name, tier, current_teams, max_teams')
         .eq('status', 'active')
-        .order('tier', { ascending: true });
+        .eq('tier', 4)
+        .eq('name', 'Série D')
+        .single();
 
-      if (compError) {
-        this.logger.error('❌ Error fetching available competitions:', compError);
-        return;
+      if (compError || !serieD) {
+        this.logger.error('❌ Série D não encontrada:', compError?.message);
+        
+        // Tentar criar Série D se não existir
+        this.logger.log('🔧 Tentando criar Série D...');
+        const { data: newSerieD, error: createError } = await supabase
+          .from('game_competitions')
+          .insert({
+            name: 'Série D',
+            description: 'Quarta divisão do futebol brasileiro - Ponto de entrada para novos times',
+            tier: 4,
+            type: 'pve',
+            max_teams: 20, // Capacidade fixa de 20 times
+            current_teams: 0,
+            promotion_spots: 4,
+            relegation_spots: 0,
+            season_year: new Date().getFullYear(),
+            status: 'active'
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          this.logger.error('❌ Erro ao criar Série D:', createError);
+          return;
+        }
+        
+        this.logger.log('✅ Série D criada com sucesso');
+        serieD = newSerieD;
       }
 
-      this.logger.log(`✅ Competições encontradas: ${competitions?.length || 0}`);
-      if (competitions) {
-        competitions.forEach(comp => {
-          this.logger.log(`   - ${comp.name} (Tier ${comp.tier}): ${comp.current_teams}/${comp.max_teams}`);
-        });
+      this.logger.log(`✅ Série D encontrada: ${serieD.name}`);
+      this.logger.log(`   - Times atuais: ${serieD.current_teams}/${serieD.max_teams}`);
+      this.logger.log(`   - Vagas disponíveis: ${serieD.max_teams - serieD.current_teams}`);
+
+      // Verificar se há vagas na Série D (máximo 20 times)
+      if (serieD.current_teams >= serieD.max_teams) {
+        this.logger.warn('⚠️ Série D está cheia (20 times). Removendo um time da máquina para dar vaga ao usuário...');
+        
+        // Remover um time da máquina para dar vaga ao usuário
+        await this.removerTimeMaquinaParaVaga(serieD.id);
       }
 
-      if (!competitions || competitions.length === 0) {
-        this.logger.warn('⚠️ No available competitions found');
-        return;
-      }
-
-      // Priorizar Série D (tier 4), depois C, B, A
-      const availableCompetition = competitions[0];
-      
-      this.logger.log(`🎯 Competição escolhida: ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
-
-      // Inserir inscrição
-      this.logger.log('📝 Inserindo inscrição...');
+      // Inserir inscrição na Série D
+      this.logger.log('📝 Inserindo inscrição na Série D...');
       const { error: insertError } = await supabase
         .from('game_competition_teams')
         .insert({
-          competition_id: availableCompetition.id,
-          team_id: teamId
+          competition_id: serieD.id,
+          team_id: teamId,
+          status: 'active'
         });
 
       if (insertError) {
-        this.logger.error('❌ Error enrolling team in competition:', insertError);
+        this.logger.error('❌ Error enrolling team in Série D:', insertError);
         return;
       }
 
-      this.logger.log('✅ Inscrição inserida com sucesso');
+      this.logger.log('✅ Inscrição na Série D inserida com sucesso');
 
       // Atualizar contador da competição
-      this.logger.log('📊 Atualizando contador da competição...');
+      this.logger.log('📊 Atualizando contador da Série D...');
       const { error: updateError } = await supabase
         .from('game_competitions')
-        .update({ current_teams: availableCompetition.current_teams + 1 })
-        .eq('id', availableCompetition.id);
+        .update({ current_teams: serieD.current_teams + 1 })
+        .eq('id', serieD.id);
 
       if (updateError) {
-        this.logger.error('❌ Error updating competition team count:', updateError);
+        this.logger.error('❌ Error updating Série D team count:', updateError);
       } else {
-        this.logger.log('✅ Contador atualizado');
+        this.logger.log('✅ Contador da Série D atualizado');
       }
 
       // Criar entrada na classificação
-      this.logger.log('🏆 Criando entrada na classificação...');
+      this.logger.log('🏆 Criando entrada na classificação da Série D...');
       const { error: standingsError } = await supabase
         .from('game_standings')
         .insert({
-          competition_id: availableCompetition.id,
+          competition_id: serieD.id,
           team_id: teamId,
           season_year: new Date().getFullYear(),
           position: 0,
@@ -945,14 +974,20 @@ export class GameTeamsService {
       if (standingsError) {
         this.logger.error('❌ Error creating standings entry:', standingsError);
       } else {
-        this.logger.log('✅ Entrada na classificação criada');
+        this.logger.log('✅ Entrada na classificação da Série D criada');
       }
 
-      // Verificar se deve criar partidas automaticamente
-      this.logger.log('⚽ Verificando se deve criar partidas...');
-      await this.checkAndCreateMatches(availableCompetition.id);
+      // Garantir que há 19 times da máquina + 1 time do usuário
+      await this.garantir19TimesMaquina(serieD.id);
 
-      this.logger.log(`🎉 Team ${teamId} successfully enrolled in ${availableCompetition.name}`);
+      // Verificar se deve criar partidas automaticamente
+      this.logger.log('⚽ Verificando se deve criar partidas na Série D...');
+      await this.checkAndCreateMatches(serieD.id);
+
+      this.logger.log(`🎉 Team ${teamId} successfully enrolled in ${serieD.name}`);
+      this.logger.log(`🎯 O time agora está pronto para disputar a Série D e conquistar acesso à Série C!`);
+      this.logger.log(`📊 Total: 19 times da máquina + 1 time do usuário = 20 times`);
+      
     } catch (error) {
       this.logger.error('❌ Error in autoEnrollInCompetition:', error);
     }
@@ -960,6 +995,8 @@ export class GameTeamsService {
 
   private async checkAndCreateMatches(competitionId: string) {
     try {
+      this.logger.log(`📅 Verificando necessidade de criar partidas para competição ${competitionId}...`);
+      
       // Buscar times inscritos na competição
       const { data: enrolledTeams, error: teamsError } = await supabase
         .from('game_competition_teams')
@@ -970,9 +1007,16 @@ export class GameTeamsService {
         .eq('competition_id', competitionId);
 
       if (teamsError) {
-        this.logger.error('Error fetching enrolled teams:', teamsError);
+        this.logger.error('❌ Error fetching enrolled teams:', teamsError);
         return;
       }
+
+      if (!enrolledTeams || enrolledTeams.length < 2) {
+        this.logger.log('⚠️ Times insuficientes para criar partidas (mínimo 2)');
+        return;
+      }
+
+      this.logger.log(`📊 ${enrolledTeams.length} times inscritos na competição`);
 
       // Verificar se já existem partidas para esta competição
       const { data: existingMatches, error: matchesError } = await supabase
@@ -981,17 +1025,19 @@ export class GameTeamsService {
         .eq('competition_id', competitionId);
 
       if (matchesError) {
-        this.logger.error('Error checking existing matches:', matchesError);
+        this.logger.error('❌ Error checking existing matches:', matchesError);
         return;
       }
 
       // Se não há partidas e há times suficientes, criar calendário
       if (existingMatches.length === 0 && enrolledTeams.length >= 2) {
-        this.logger.log(`Creating match schedule for competition ${competitionId} with ${enrolledTeams.length} teams`);
+        this.logger.log(`📅 Criando calendário para competição ${competitionId} com ${enrolledTeams.length} times`);
         await this.createMatchSchedule(competitionId, enrolledTeams);
+      } else if (existingMatches.length > 0) {
+        this.logger.log('✅ Partidas já existem para esta competição');
       }
     } catch (error) {
-      this.logger.error('Error in checkAndCreateMatches:', error);
+      this.logger.error('❌ Error in checkAndCreateMatches:', error);
     }
   }
 
@@ -1187,6 +1233,276 @@ export class GameTeamsService {
       this.logger.log(`Team ${teamId} successfully removed from all competitions`);
     } catch (error) {
       this.logger.error('Error removing team from competitions:', error);
+    }
+  }
+
+  // Métodos auxiliares para gerenciar times da máquina
+
+  private async removerTimeMaquinaParaVaga(competitionId: string) {
+    try {
+      this.logger.log(`🗑️ Removendo um time da máquina para dar vaga ao usuário...`);
+
+      // Buscar times da máquina na competição
+      const { data: machineTeams, error: teamsError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_teams!inner(id, name, team_type)
+        `)
+        .eq('competition_id', competitionId)
+        .eq('game_teams.team_type', 'machine');
+
+      if (teamsError) {
+        this.logger.error(`❌ Erro ao buscar times da máquina:`, teamsError);
+        return;
+      }
+
+      if (!machineTeams || machineTeams.length === 0) {
+        this.logger.warn(`⚠️ Nenhum time da máquina encontrado para remover`);
+        return;
+      }
+
+      // Remover o primeiro time da máquina encontrado
+      const teamToRemove = machineTeams[0];
+
+      // Remover da competição
+      const { error: removeError } = await supabase
+        .from('game_competition_teams')
+        .delete()
+        .eq('competition_id', competitionId)
+        .eq('team_id', teamToRemove.team_id);
+
+      if (removeError) {
+        this.logger.error(`❌ Erro ao remover time ${teamToRemove.game_teams.name}:`, removeError);
+        return;
+      }
+
+      // Remover da classificação
+      const { error: standingsError } = await supabase
+        .from('game_standings')
+        .delete()
+        .eq('competition_id', competitionId)
+        .eq('team_id', teamToRemove.team_id);
+
+      if (standingsError) {
+        this.logger.error(`❌ Erro ao remover classificação de ${teamToRemove.game_teams.name}:`, standingsError);
+      }
+
+      this.logger.log(`✅ Time removido: ${teamToRemove.game_teams.name}`);
+    } catch (error) {
+      this.logger.error(`❌ Erro ao remover time da máquina:`, error);
+    }
+  }
+
+  private async garantir19TimesMaquina(competitionId: string) {
+    try {
+      this.logger.log(`🤖 Garantindo 19 times da máquina na competição...`);
+
+      // Verificar times inscritos
+      const { data: enrolledTeams, error: teamsError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_teams!inner(id, name, team_type)
+        `)
+        .eq('competition_id', competitionId);
+
+      if (teamsError) {
+        this.logger.error(`❌ Erro ao buscar times inscritos:`, teamsError);
+        return;
+      }
+
+      const userTeams = enrolledTeams.filter(team => team.game_teams.team_type === 'user_created');
+      const machineTeams = enrolledTeams.filter(team => team.game_teams.team_type === 'machine');
+
+      this.logger.log(`📊 Times inscritos: ${enrolledTeams.length}`);
+      this.logger.log(`👤 Times de usuários: ${userTeams.length}`);
+      this.logger.log(`🤖 Times da máquina: ${machineTeams.length}`);
+
+      // Calcular quantos times da máquina precisamos
+      const targetMachineTeams = 19;
+      const currentMachineTeams = machineTeams.length;
+      const neededMachineTeams = targetMachineTeams - currentMachineTeams;
+
+      if (neededMachineTeams > 0) {
+        this.logger.log(`🤖 Criando ${neededMachineTeams} times da máquina...`);
+        await this.criarTimesMaquina(competitionId, neededMachineTeams);
+      } else if (neededMachineTeams < 0) {
+        this.logger.log(`🗑️ Removendo ${Math.abs(neededMachineTeams)} times da máquina extras...`);
+        await this.removerTimesMaquinaExtras(competitionId, Math.abs(neededMachineTeams));
+      } else {
+        this.logger.log(`✅ Número correto de times da máquina (19)`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Erro ao garantir 19 times da máquina:`, error);
+    }
+  }
+
+  private async criarTimesMaquina(competitionId: string, quantidade: number) {
+    try {
+      this.logger.log(`🤖 Criando ${quantidade} times da máquina...`);
+
+      // Lista de nomes de times brasileiros para usar
+      const nomesTimes = [
+        'Atlético Mineiro', 'Cruzeiro', 'América Mineiro', 'Tombense',
+        'Athletico Paranaense', 'Coritiba', 'Londrina', 'Cascavel',
+        'Bahia', 'Vitória', 'Juazeirense', 'Jacobinense',
+        'Ceará', 'Fortaleza', 'Ferroviário', 'Icasa',
+        'Sport', 'Náutico', 'Salgueiro', 'Central',
+        'Grêmio', 'Internacional', 'Juventude', 'Caxias',
+        'Flamengo', 'Vasco', 'Botafogo', 'Fluminense',
+        'Palmeiras', 'Corinthians', 'São Paulo', 'Santos',
+        'Goiás', 'Vila Nova', 'Aparecidense', 'Anápolis',
+        'Paysandu', 'Remo', 'Tuna Luso', 'Independente',
+        'Sampaio Corrêa', 'Maranhão', 'Imperatriz', 'Moto Club',
+        'Vitória', 'Bahia de Feira', 'Juazeirense', 'Jacobina',
+        'Criciúma', 'Avaí', 'Chapecoense', 'Brusque',
+        'Ponte Preta', 'Guarani', 'Ituano', 'Mirassol',
+        'Bragantino', 'Ituano', 'Novorizontino', 'Guaratinguetá',
+        'Oeste', 'São Bento', 'Santo André', 'Portuguesa',
+        'Boa', 'Tupi', 'Democrata', 'Ipatinga',
+        'América de Natal', 'ABC', 'Globo', 'Potiguar',
+        'Botafogo-PB', 'Treze', 'Campinense', 'Auto Esporte',
+        'Santa Cruz', 'Náutico', 'Salgueiro', 'Central',
+        'Confiança', 'Sergipe', 'Itabaiana', 'Falcon'
+      ];
+
+      // Filtrar nomes já usados
+      const { data: existingTeams, error: existingError } = await supabase
+        .from('game_teams')
+        .select('name')
+        .eq('team_type', 'machine');
+
+      if (existingError) {
+        this.logger.error(`❌ Erro ao buscar times existentes:`, existingError);
+        return;
+      }
+
+      const nomesUsados = existingTeams.map(team => team.name);
+      const nomesDisponiveis = nomesTimes.filter(nome => !nomesUsados.includes(nome));
+
+      if (nomesDisponiveis.length < quantidade) {
+        this.logger.error(`❌ Não há nomes suficientes disponíveis`);
+        return;
+      }
+
+      // Criar times da máquina
+      for (let i = 0; i < quantidade; i++) {
+        const nomeTime = nomesDisponiveis[i];
+        
+        // Criar time
+        const { data: newTeam, error: teamError } = await supabase
+          .from('game_teams')
+          .insert({
+            name: nomeTime,
+            slug: `machine-${Date.now()}-${i}`,
+            team_type: 'machine',
+            budget: 1000000,
+            stadium_capacity: 15000,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (teamError) {
+          this.logger.error(`❌ Erro ao criar time ${nomeTime}:`, teamError);
+          continue;
+        }
+
+        // Inserir na competição
+        const { error: enrollError } = await supabase
+          .from('game_competition_teams')
+          .insert({
+            competition_id: competitionId,
+            team_id: newTeam.id,
+            status: 'active'
+          });
+
+        if (enrollError) {
+          this.logger.error(`❌ Erro ao inscrever time ${nomeTime}:`, enrollError);
+          continue;
+        }
+
+        // Criar entrada na classificação
+        const { error: standingsError } = await supabase
+          .from('game_standings')
+          .insert({
+            competition_id: competitionId,
+            team_id: newTeam.id,
+            season_year: new Date().getFullYear(),
+            position: 0,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          });
+
+        if (standingsError) {
+          this.logger.error(`❌ Erro ao criar classificação para ${nomeTime}:`, standingsError);
+        }
+
+        this.logger.log(`✅ Time da máquina criado: ${nomeTime}`);
+      }
+
+    } catch (error) {
+      this.logger.error(`❌ Erro ao criar times da máquina:`, error);
+    }
+  }
+
+  private async removerTimesMaquinaExtras(competitionId: string, quantidade: number) {
+    try {
+      this.logger.log(`🗑️ Removendo ${quantidade} times da máquina extras...`);
+
+      // Buscar times da máquina na competição
+      const { data: machineTeams, error: teamsError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_teams!inner(id, name, team_type)
+        `)
+        .eq('competition_id', competitionId)
+        .eq('game_teams.team_type', 'machine');
+
+      if (teamsError) {
+        this.logger.error(`❌ Erro ao buscar times da máquina:`, teamsError);
+        return;
+      }
+
+      // Remover os últimos times da máquina (mais recentes)
+      const teamsToRemove = machineTeams.slice(-quantidade);
+
+      for (const team of teamsToRemove) {
+        // Remover da competição
+        const { error: removeError } = await supabase
+          .from('game_competition_teams')
+          .delete()
+          .eq('competition_id', competitionId)
+          .eq('team_id', team.team_id);
+
+        if (removeError) {
+          this.logger.error(`❌ Erro ao remover time ${team.game_teams.name}:`, removeError);
+          continue;
+        }
+
+        // Remover da classificação
+        const { error: standingsError } = await supabase
+          .from('game_standings')
+          .delete()
+          .eq('competition_id', competitionId)
+          .eq('team_id', team.team_id);
+
+        if (standingsError) {
+          this.logger.error(`❌ Erro ao remover classificação de ${team.game_teams.name}:`, standingsError);
+        }
+
+        this.logger.log(`✅ Time removido: ${team.game_teams.name}`);
+      }
+
+    } catch (error) {
+      this.logger.error(`❌ Erro ao remover times extras:`, error);
     }
   }
 } 

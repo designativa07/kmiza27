@@ -15,6 +15,7 @@ const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME || 'devuser',
   password: process.env.DB_PASSWORD || 'devuser',
   database: process.env.DB_DATABASE || 'kmiza27_dev',
+  schema: 'public',
   entities: [entitiesPath],
   migrations: [migrationsPath],
   synchronize: process.env.NODE_ENV === 'development' ? true : false, // Sincronizar em desenvolvimento

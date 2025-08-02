@@ -70,7 +70,7 @@ export class CompetitionsService {
         throw new Error('Time já está inscrito nesta competição');
       }
 
-      // Verificar se a competição está cheia e se está aberta para novos usuários
+      // Buscar informações da competição
       const { data: competition, error: compError } = await supabase
         .from('game_competitions')
         .select('max_teams, current_teams, name, tier')
@@ -79,8 +79,70 @@ export class CompetitionsService {
 
       if (compError) throw new Error(`Error fetching competition: ${compError.message}`);
 
+      // Verificar se a competição está cheia
       if (competition.current_teams >= competition.max_teams) {
-        throw new Error('Competição está cheia');
+        // Se a competição está cheia, tentar remover times da máquina para acomodar o novo time
+        console.log(`Competição ${competition.name} está cheia (${competition.current_teams}/${competition.max_teams}). Tentando remover times da máquina...`);
+        
+        // Buscar times da máquina na competição
+        const { data: machineTeams, error: machineTeamsError } = await supabase
+          .from('game_competition_teams')
+          .select(`
+            id,
+            team_id,
+            teams!inner(
+              id,
+              name,
+              is_machine_team
+            )
+          `)
+          .eq('competition_id', competitionId)
+          .eq('teams.is_machine_team', true);
+
+        if (machineTeamsError) {
+          throw new Error(`Error fetching machine teams: ${machineTeamsError.message}`);
+        }
+
+        if (machineTeams && machineTeams.length > 0) {
+          // Remover o primeiro time da máquina encontrado
+          const teamToRemove = machineTeams[0];
+          console.log(`Removendo time da máquina: ${teamToRemove.teams.name} (ID: ${teamToRemove.team_id})`);
+          
+          // Remover o time da competição
+          const { error: removeError } = await supabase
+            .from('game_competition_teams')
+            .delete()
+            .eq('id', teamToRemove.id);
+
+          if (removeError) {
+            throw new Error(`Error removing machine team: ${removeError.message}`);
+          }
+
+          // Remover entrada da classificação
+          const { error: standingsRemoveError } = await supabase
+            .from('game_standings')
+            .delete()
+            .eq('competition_id', competitionId)
+            .eq('team_id', teamToRemove.team_id);
+
+          if (standingsRemoveError) {
+            console.log('Warning: Error removing standings entry:', standingsRemoveError);
+          }
+
+          // Atualizar contador de times na competição
+          const { error: updateCountError } = await supabase
+            .from('game_competitions')
+            .update({ current_teams: competition.current_teams - 1 })
+            .eq('id', competitionId);
+
+          if (updateCountError) {
+            console.log('Warning: Error updating competition count:', updateCountError);
+          }
+
+          console.log(`Time da máquina removido com sucesso. Agora há ${competition.current_teams - 1} times na competição.`);
+        } else {
+          throw new Error('Competição está cheia e não há times da máquina para remover');
+        }
       }
 
       // Verificar se a competição está aberta para novos usuários
