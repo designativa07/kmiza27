@@ -90,14 +90,14 @@ export class CompetitionsService {
           .select(`
             id,
             team_id,
-            teams!inner(
+            game_teams!inner(
               id,
               name,
-              is_machine_team
+              team_type
             )
           `)
           .eq('competition_id', competitionId)
-          .eq('teams.is_machine_team', true);
+          .eq('game_teams.team_type', 'machine');
 
         if (machineTeamsError) {
           throw new Error(`Error fetching machine teams: ${machineTeamsError.message}`);
@@ -106,7 +106,7 @@ export class CompetitionsService {
         if (machineTeams && machineTeams.length > 0) {
           // Remover o primeiro time da máquina encontrado
           const teamToRemove = machineTeams[0];
-          console.log(`Removendo time da máquina: ${teamToRemove.teams.name} (ID: ${teamToRemove.team_id})`);
+          console.log(`Removendo time da máquina: ${teamToRemove.game_teams.name} (ID: ${teamToRemove.team_id})`);
           
           // Remover o time da competição
           const { error: removeError } = await supabase

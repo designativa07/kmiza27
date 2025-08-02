@@ -13,6 +13,10 @@ interface Team {
   name: string;
   short_name?: string;
   aliases?: string[];
+  // Propriedades opcionais para compatibilidade
+  slug?: string;
+  created_at?: string;
+  [key: string]: any; // Permite outras propriedades
 }
 
 interface TeamAliasesManagerProps {

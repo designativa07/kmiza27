@@ -1272,9 +1272,9 @@ export default function TeamsManager() {
                 <TeamAliasesManager 
                   team={managingTeamAliases}
                   onUpdate={(updatedTeam) => {
-                    // Atualizar o time na lista local
-                    setTeams(teams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
-                    setManagingTeamAliases(updatedTeam);
+                    // Atualizar o time na lista local preservando propriedades originais
+                    setTeams(teams.map(t => t.id === updatedTeam.id ? { ...t, ...updatedTeam } : t));
+                    setManagingTeamAliases({ ...managingTeamAliases, ...updatedTeam });
                   }}
                 />
               </div>

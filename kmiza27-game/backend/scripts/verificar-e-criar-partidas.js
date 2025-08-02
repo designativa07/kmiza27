@@ -1,20 +1,38 @@
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env' });
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+// Definir variáveis de ambiente diretamente
+const SUPABASE_URL = 'https://kmiza27-supabase.h4xd66.easypanel.host/';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+
+console.log('🔧 Conectando ao Supabase...');
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function verificarECriarPartidas() {
   console.log('🔍 Verificando status das competições e partidas...\n');
 
   try {
-    // Buscar todas as competições ativas
+    // Primeiro, verificar se há times na tabela game_teams
+    const { data: allTeams, error: teamsError } = await supabase
+      .from('game_teams')
+      .select('id, name, team_type, owner_id')
+      .order('name');
+
+    if (teamsError) {
+      console.error('❌ Erro ao buscar times:', teamsError);
+      return;
+    }
+
+    console.log(`📋 Encontrados ${allTeams.length} times no total:`);
+    allTeams.forEach(team => {
+      console.log(`   - ${team.name} (${team.team_type}) - Owner: ${team.owner_id || 'N/A'}`);
+    });
+    console.log('');
+
+    // Buscar todas as competições
     const { data: competitions, error: compError } = await supabase
       .from('game_competitions')
       .select('*')
-      .eq('is_active', true)
       .order('tier', { ascending: true });
 
     if (compError) {
@@ -22,7 +40,53 @@ async function verificarECriarPartidas() {
       return;
     }
 
-    console.log(`✅ Encontradas ${competitions.length} competições ativas\n`);
+    console.log(`✅ Encontradas ${competitions.length} competições\n`);
+
+    // Buscar times de usuários que não estão inscritos em nenhuma competição
+    const userTeams = allTeams.filter(team => team.team_type === 'user' && team.owner_id);
+    console.log(`👤 Times de usuários encontrados: ${userTeams.length}`);
+
+    if (userTeams.length > 0) {
+      console.log('🎯 Inscrição automática de times de usuários...');
+      
+      for (const userTeam of userTeams) {
+        // Verificar se o time já está inscrito em alguma competição
+        const { data: existingRegistration, error: regError } = await supabase
+          .from('game_competition_teams')
+          .select('competition_id')
+          .eq('team_id', userTeam.id)
+          .single();
+
+        if (regError && regError.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error(`❌ Erro ao verificar inscrição do ${userTeam.name}:`, regError);
+          continue;
+        }
+
+        if (!existingRegistration) {
+          // Inscrição automática na Série D (Tier 4)
+          const serieD = competitions.find(c => c.tier === 4);
+          if (serieD) {
+            console.log(`   📝 Inscrição automática: ${userTeam.name} → ${serieD.name}`);
+            
+            const { error: insertError } = await supabase
+              .from('game_competition_teams')
+              .insert({
+                competition_id: serieD.id,
+                team_id: userTeam.id
+              });
+
+            if (insertError) {
+              console.error(`❌ Erro ao inscrever ${userTeam.name}:`, insertError);
+            } else {
+              console.log(`   ✅ ${userTeam.name} inscrito com sucesso!`);
+            }
+          }
+        } else {
+          console.log(`   ✅ ${userTeam.name} já está inscrito na competição ${existingRegistration.competition_id}`);
+        }
+      }
+      console.log('');
+    }
 
     for (const competition of competitions) {
       console.log(`🏆 Processando ${competition.name} (Tier ${competition.tier})`);
@@ -46,7 +110,7 @@ async function verificarECriarPartidas() {
       // Buscar partidas existentes
       const { data: existingMatches, error: matchesError } = await supabase
         .from('game_matches')
-        .select('id, round_number')
+        .select('id')
         .eq('competition_id', competition.id);
 
       if (matchesError) {
@@ -55,6 +119,14 @@ async function verificarECriarPartidas() {
       }
 
       console.log(`   - Partidas existentes: ${existingMatches.length}`);
+
+      // Mostrar detalhes dos times inscritos
+      if (enrolledTeams.length > 0) {
+        console.log(`   📋 Times inscritos:`);
+        enrolledTeams.forEach(team => {
+          console.log(`      - ${team.game_teams.name} (${team.game_teams.team_type})`);
+        });
+      }
 
       // Se não há partidas e há times suficientes, criar calendário
       if (existingMatches.length === 0 && enrolledTeams.length >= 2) {
