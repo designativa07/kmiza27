@@ -260,16 +260,26 @@ export class CompetitionsService {
         const actualHomeIndex = isReturnRound ? awayIndex : homeIndex;
         const actualAwayIndex = isReturnRound ? homeIndex : awayIndex;
 
+        // Alternar casa/fora para distribuir melhor os jogos
+        let finalHomeIndex = actualHomeIndex;
+        let finalAwayIndex = actualAwayIndex;
+        
+        // Se é uma rodada par (exceto a primeira), alternar alguns jogos
+        if (round > 0 && round % 2 === 1 && i % 2 === 1) {
+          finalHomeIndex = actualAwayIndex;
+          finalAwayIndex = actualHomeIndex;
+        }
+
         const matchDate = new Date();
         matchDate.setDate(matchDate.getDate() + round * 7); // Uma semana entre rodadas
 
         matches.push({
           competition_id: competitionId,
           round: roundNumber,
-          home_team_id: teamIds[actualHomeIndex],
-          away_team_id: teamIds[actualAwayIndex],
-          home_team_name: teamNames[actualHomeIndex],
-          away_team_name: teamNames[actualAwayIndex],
+          home_team_id: teamIds[finalHomeIndex],
+          away_team_id: teamIds[finalAwayIndex],
+          home_team_name: teamNames[finalHomeIndex],
+          away_team_name: teamNames[finalAwayIndex],
           match_date: matchDate.toISOString(),
           status: 'scheduled',
           home_score: null,
@@ -338,6 +348,7 @@ export class CompetitionsService {
 
   async getCompetitionStandings(competitionId: string) {
     try {
+      const currentYear = new Date().getFullYear();
       const { data, error } = await supabase
         .from('game_standings')
         .select(`
@@ -345,7 +356,7 @@ export class CompetitionsService {
           team:game_teams(id, name, short_name, colors, logo_url)
         `)
         .eq('competition_id', competitionId)
-        .eq('season_year', 2024)
+        .eq('season_year', currentYear)
         .order('position', { ascending: true });
 
       if (error) throw new Error(`Error fetching standings: ${error.message}`);
@@ -358,9 +369,9 @@ export class CompetitionsService {
 
   async updateStandings(competitionId: string) {
     try {
-      // Buscar todas as partidas da competição
+      // Buscar todas as partidas da competição (corrigido para usar game_matches)
       const { data: matches, error: matchesError } = await supabase
-        .from('game_competition_matches')
+        .from('game_matches')
         .select('*')
         .eq('competition_id', competitionId)
         .eq('status', 'finished');
@@ -447,7 +458,7 @@ export class CompetitionsService {
           .upsert({
             competition_id: competitionId,
             team_id: standing.team_id,
-            season_year: 2024,
+            season_year: new Date().getFullYear(),
             position: standing.position,
             points: standing.points,
             games_played: standing.games_played,
@@ -546,9 +557,9 @@ export class CompetitionsService {
 
   async simulateCompetitionMatch(matchId: string) {
     try {
-      // Buscar a partida
+      // Buscar a partida (corrigido para usar game_matches)
       const { data: match, error: matchError } = await supabase
-        .from('game_competition_matches')
+        .from('game_matches')
         .select('*')
         .eq('id', matchId)
         .single();
@@ -577,7 +588,7 @@ export class CompetitionsService {
 
       // Atualizar a partida
       const { data: updatedMatch, error: updateError } = await supabase
-        .from('game_competition_matches')
+        .from('game_matches')
         .update({
           home_score: simulation.homeScore,
           away_score: simulation.awayScore,
