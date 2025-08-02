@@ -266,6 +266,17 @@ export class ChatbotService {
           break;
 
         default:
+          // Verificar se é uma solicitação de "meu time" ou similar
+          const lowerMessage = message.toLowerCase().trim();
+          if (lowerMessage === 'meu time' || 
+              lowerMessage === 'time favorito' || 
+              lowerMessage === 'meu time favorito' ||
+              lowerMessage === 'favorito') {
+            response = await this.getFavoriteTeamSummary(phoneNumber);
+            shouldSendMenu = true;
+            break;
+          }
+          
           // Mensagem não reconhecida - enviar ajuda básica
           response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
           shouldSendMenu = true;
@@ -3043,7 +3054,7 @@ ${competitionLine}ዙ Rodada: ${roundName}
         console.error('❌ DEBUG: Erro ao buscar posição:', error);
       }
 
-      summary += `💡 Dica: Digite "próximo jogo" ou "último jogo" para informações específicas sobre ${team.name}`;
+      summary += `💡 Dica: Digite "MEU TIME" para receber esse resumo do seu time favorito sempre que quiser.`;
 
       return summary;
     } catch (error) {
