@@ -933,7 +933,7 @@ ${shortUrl}
         }
         
         response += `⚽ A próxima partida é:\n`;
-        response += `${this.formatMatchDetails(nextMatch, false)}\n`;
+        response += `${this.formatMatchDetails(nextMatch, false, false)}\n\n`;
       } 
       // Se não há próxima partida, verificar se foi eliminado
       else if (lastMatch && lastMatch.round) {
@@ -947,14 +947,14 @@ ${shortUrl}
         if (wasEliminated) {
           response += `📍 O ${team.name} foi eliminado na fase "${phaseName}" da competição\n`;
           response += `🏁 Última partida na competição:\n`;
-          response += `${this.formatMatchDetails(lastMatch, false)}\n`;
+          response += `${this.formatMatchDetails(lastMatch, false, false)}\n\n`;
         } else {
           response += `📍 O ${team.name} está na fase "${phaseName}" da competição\n`;
-          response += `⚽ Próxima partida ainda não definida\n`;
+          response += `⚽ Próxima partida ainda não definida\n\n`;
         }
       } else {
         response += `📍 O ${team.name} está participando da competição\n`;
-        response += `⚽ Informações de fase não disponíveis\n`;
+        response += `⚽ Informações de fase não disponíveis\n\n`;
       }
 
       return response;
@@ -2851,7 +2851,7 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
     }
   }
 
-  private formatMatchDetails(match: Match, includeIntro: boolean = true): string {
+  private formatMatchDetails(match: Match, includeIntro: boolean = true, includeCompetition: boolean = true): string {
     const date = new Date(match.match_date);
     const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const formattedTime = date.toLocaleTimeString('pt-BR', { 
@@ -2883,13 +2883,19 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
         } else {
             intro = `📅 PRÓXIMO JOGO - ${teamName.toUpperCase()}\n`;
         }
+    } else {
+        // Para jogos finalizados, incluir resultado mesmo sem intro
+        if (match.status === MatchStatus.FINISHED) {
+            scoreInfo = ` (${match.home_score ?? 0} x ${match.away_score ?? 0})`;
+        }
     }
 
+    const competitionLine = includeCompetition ? `🏆 Competição: ${competitionName}\n` : '';
+    
     return `${intro}⚽ *${homeTeamName} x ${awayTeamName}*${scoreInfo}
 📅 Data: ${formattedDate}
 ⏰ Hora: ${formattedTime}
-🏆 Competição: ${competitionName}
-ዙ Rodada: ${roundName}
+${competitionLine}ዙ Rodada: ${roundName}
 🏟️ Estádio: ${stadiumName}`;
   }
 
