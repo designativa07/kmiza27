@@ -241,10 +241,18 @@ export class WhatsAppMenuService {
       // Desativar todas as configurações atuais
       await this.menuConfigRepository.update({}, { active: false });
 
-      // Inserir configurações padrão
+      // Inserir configurações padrão uma por uma
       const defaultConfigs = this.getDefaultMenuConfigs();
-      await this.menuConfigRepository.save(defaultConfigs);
+      
+      for (const config of defaultConfigs) {
+        const newConfig = this.menuConfigRepository.create({
+          ...config,
+          active: true
+        });
+        await this.menuConfigRepository.save(newConfig);
+      }
 
+      this.logger.log(`✅ Menu resetado com ${defaultConfigs.length} configurações`);
       return true;
     } catch (error) {
       this.logger.error('Erro ao resetar menu para padrão:', error);
