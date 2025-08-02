@@ -781,9 +781,39 @@ ${shortUrl}
         try {
           console.log(`🏆 DEBUG getTeamPosition: Processando competição "${ct.competition.name}" (tipo: ${ct.competition.type})`);
           
-          // Verificar se é competição de mata-mata
+          // Verificar se é competição de mata-mata ou grupos+mata-mata
           console.log(`🔍 DEBUG getTeamPosition: Tipo da competição "${ct.competition.name}": ${ct.competition.type}`);
+          
+          // Para grupos_e_mata_mata, verificar se está na fase de mata-mata
+          let useKnockoutLogic = false;
           if (ct.competition.type === 'mata_mata' || ct.competition.type === 'copa') {
+            useKnockoutLogic = true;
+          } else if (ct.competition.type === 'grupos_e_mata_mata') {
+            // Verificar se há partidas futuras na fase de mata-mata ou se foi eliminado
+            const knockoutMatch = await this.matchesRepository
+              .createQueryBuilder('match')
+              .leftJoinAndSelect('match.round', 'round')
+              .where('match.competition_id = :competitionId', { competitionId: ct.competition.id })
+              .andWhere('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+              .andWhere('(match.status = :scheduled OR match.status = :finished)', { 
+                scheduled: MatchStatus.SCHEDULED, 
+                finished: MatchStatus.FINISHED 
+              })
+              .andWhere('(round.phase = :knockout OR round.name LIKE :oitavas OR round.name LIKE :quartas OR round.name LIKE :semi OR round.name LIKE :final)', {
+                knockout: 'Mata-mata',
+                oitavas: '%itavas%',
+                quartas: '%uartas%', 
+                semi: '%emi%',
+                final: '%inal%'
+              })
+              .orderBy('match.match_date', 'DESC')
+              .getOne();
+            
+            useKnockoutLogic = !!knockoutMatch;
+            console.log(`🔍 DEBUG: Competição grupos+mata-mata - Usar lógica mata-mata? ${useKnockoutLogic}`);
+          }
+          
+          if (useKnockoutLogic) {
             console.log(`⚽ DEBUG getTeamPosition: Competição de mata-mata detectada`);
             // Para competições de mata-mata, buscar fase atual e próxima partida
             const knockoutInfo = await this.getKnockoutCompetitionInfo(team, ct.competition);
@@ -859,53 +889,72 @@ ${shortUrl}
         .orderBy('match.match_date', 'ASC')
         .getOne();
 
-      // Buscar a rodada atual da competição (qualquer partida futura do time)
-      const currentRound = await this.matchesRepository
+      // Buscar a última partida para análise (importante para detectar eliminação)
+      const lastMatch = await this.matchesRepository
         .createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
         .leftJoinAndSelect('match.round', 'round')
+        .leftJoinAndSelect('match.stadium', 'stadium')
         .where('match.competition_id = :competitionId', { competitionId: competition.id })
         .andWhere('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-        .andWhere('match.status = :status', { status: MatchStatus.SCHEDULED })
-        .andWhere('match.match_date > :now', { now: new Date() })
-        .orderBy('match.match_date', 'ASC')
+        .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
+        .orderBy('match.match_date', 'DESC')
         .getOne();
 
       console.log(`🔍 DEBUG getKnockoutCompetitionInfo: Próxima partida encontrada: ${nextMatch ? 'sim' : 'não'}`);
-      console.log(`🔍 DEBUG getKnockoutCompetitionInfo: Rodada atual encontrada: ${currentRound ? 'sim' : 'não'}`);
-      if (currentRound && currentRound.round) {
-        console.log(`🔍 DEBUG getKnockoutCompetitionInfo: Rodada: ${currentRound.round.name}, Fase: ${currentRound.round.phase}`);
-      }
+      console.log(`🔍 DEBUG getKnockoutCompetitionInfo: Última partida encontrada: ${lastMatch ? 'sim' : 'não'}`);
 
       let response = `🏆 ${competition.name}\n`;
       
-      if (currentRound && currentRound.round) {
-        // Usar phase se disponível, senão usar name da rodada
-        const phaseName = currentRound.round.phase || currentRound.round.name;
-        response += `📍 O ${team.name} está na fase "${phaseName}" da competição\n`;
-      } else {
-        // Se não encontrou partida futura, buscar a última partida para ver a fase
-        const lastMatch = await this.matchesRepository
-          .createQueryBuilder('match')
-          .leftJoinAndSelect('match.round', 'round')
-          .where('match.competition_id = :competitionId', { competitionId: competition.id })
-          .andWhere('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
-          .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
-          .orderBy('match.match_date', 'DESC')
-          .getOne();
-
-        if (lastMatch && lastMatch.round) {
-          const phaseName = lastMatch.round.phase || lastMatch.round.name;
-          response += `📍 O ${team.name} está na fase "${phaseName}" da competição\n`;
+      // Se há próxima partida agendada, o time está ativo
+      if (nextMatch && nextMatch.round) {
+        // Para Copa do Brasil: preferir nome da rodada (ex: "Oitavas de final")
+        // Para outras: preferir phase se disponível
+        const phaseName = competition.type === 'mata_mata' ? 
+          (nextMatch.round.name || nextMatch.round.phase) :
+          (nextMatch.round.phase || nextMatch.round.name);
+        
+        if (competition.type === 'grupos_e_mata_mata') {
+          // Para Libertadores/Mundial: verificar se está na fase de mata-mata
+          const isKnockoutPhase = nextMatch.round.phase === 'Mata-mata' || 
+                                  nextMatch.round.name?.toLowerCase().includes('oitavas') ||
+                                  nextMatch.round.name?.toLowerCase().includes('quartas') ||
+                                  nextMatch.round.name?.toLowerCase().includes('semi') ||
+                                  nextMatch.round.name?.toLowerCase().includes('final');
+          
+          if (isKnockoutPhase) {
+            response += `📍 O ${team.name} está nas "${nextMatch.round.name}" da competição\n`;
+          } else {
+            response += `📍 O ${team.name} está na fase "${phaseName}" da competição\n`;
+          }
         } else {
-          response += `📍 O ${team.name} está participando da competição\n`;
+          response += `📍 O ${team.name} está nas "${phaseName}" da competição\n`;
         }
-      }
-
-      if (nextMatch) {
+        
         response += `⚽ A próxima partida é:\n`;
         response += `${this.formatMatchDetails(nextMatch, false)}\n`;
+      } 
+      // Se não há próxima partida, verificar se foi eliminado
+      else if (lastMatch && lastMatch.round) {
+        const phaseName = competition.type === 'mata_mata' ? 
+          (lastMatch.round.name || lastMatch.round.phase) :
+          (lastMatch.round.phase || lastMatch.round.name);
+        
+        // Verificar se foi eliminado (perdeu o jogo ou foi derrotado)
+        const wasEliminated = this.checkIfEliminated(lastMatch, team);
+        
+        if (wasEliminated) {
+          response += `📍 O ${team.name} foi eliminado na fase "${phaseName}" da competição\n`;
+          response += `🏁 Última partida na competição:\n`;
+          response += `${this.formatMatchDetails(lastMatch, false)}\n`;
+        } else {
+          response += `📍 O ${team.name} está na fase "${phaseName}" da competição\n`;
+          response += `⚽ Próxima partida ainda não definida\n`;
+        }
       } else {
-        response += `⚽ Próxima partida ainda não definida\n`;
+        response += `📍 O ${team.name} está participando da competição\n`;
+        response += `⚽ Informações de fase não disponíveis\n`;
       }
 
       return response;
@@ -913,6 +962,20 @@ ${shortUrl}
       console.error('Erro ao buscar informações de mata-mata:', error);
       return `🏆 ${competition.name}\n📍 O ${team.name} está participando da competição\n⚽ Informações de fase não disponíveis\n`;
     }
+  }
+
+  private checkIfEliminated(match: any, team: Team): boolean {
+    // Se não há placar definido, não podemos determinar eliminação
+    if (match.home_score === null || match.away_score === null) {
+      return false;
+    }
+    
+    const isHomeTeam = match.home_team.id === team.id;
+    const teamScore = isHomeTeam ? match.home_score : match.away_score;
+    const opponentScore = isHomeTeam ? match.away_score : match.home_score;
+    
+    // Em mata-mata, se perdeu e é uma fase eliminatória, foi eliminado
+    return teamScore < opponentScore;
   }
 
   private async getLastMatch(teamName: string): Promise<string> {
@@ -987,8 +1050,8 @@ ${shortUrl}
     try {
       const team = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
         .getOne();
 
       if (!team) {
@@ -2431,8 +2494,8 @@ Digite sua pergunta ou comando! ⚽`;
     this.logger.log(`🔍 Procurando elenco para o time: ${teamName}`);
     const team = await this.teamsRepository
       .createQueryBuilder('team')
-      .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-      .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
+      .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
+      .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
       .getOne();
 
     if (!team) {
@@ -2468,7 +2531,7 @@ Digite sua pergunta ou comando! ⚽`;
 
     const player = await this.playerRepository
       .createQueryBuilder('player')
-      .where('UNACCENT(LOWER(player.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${playerName}%` })
+      .where('LOWER(player.name) LIKE LOWER(:name)', { name: `%${playerName}%` })
       .getOne();
 
     if (!player) {
@@ -2830,6 +2893,13 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
 🏟️ Estádio: ${stadiumName}`;
   }
 
+  private normalizeString(str: string): string {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+  }
+
   private async findTeam(name: string): Promise<{ team: Team | null; suggestions?: Team[] }> {
     // Mapeamento de prioridade para times conhecidos
     const priorityTeams = {
@@ -2858,24 +2928,34 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
     }
 
     // Busca normal se não encontrou ou não é prioritário
+    // Normalizar acentos na busca
+    const normalizedName = this.normalizeString(name);
+    
     const teams = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${name}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${name}%` })
         .getMany();
+    
+    // Filtrar times que correspondem à busca (com normalização de acentos)
+    const filteredTeams = teams.filter(team => {
+      const normalizedTeamName = this.normalizeString(team.name);
+      const normalizedShortName = this.normalizeString(team.short_name || '');
+      
+      return normalizedTeamName.includes(normalizedName) || 
+             normalizedShortName.includes(normalizedName);
+    });
 
-    if (teams.length === 0) {
+    if (filteredTeams.length === 0) {
       return { team: null };
     }
 
-    if (teams.length === 1) {
-      return { team: teams[0] };
+    if (filteredTeams.length === 1) {
+      return { team: filteredTeams[0] };
     }
 
     // Se encontrou múltiplos times, retornar o primeiro como principal e os outros como sugestões
     return { 
-      team: teams[0], 
-      suggestions: teams.slice(1) 
+      team: filteredTeams[0], 
+      suggestions: filteredTeams.slice(1) 
     };
   }
 
