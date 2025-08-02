@@ -315,8 +315,54 @@ export class OpenAIService implements OnModuleInit {
   }
   
   private extractTeamName(message: string): string | undefined {
+    const lowerMessage = message.toLowerCase();
+    
+    // Mapeamento de aliases para times específicos
+    const teamAliases = {
+      'botafogo': 'botafogo', // Prioriza Botafogo-RJ
+      'bota': 'botafogo',
+      'fogão': 'botafogo',
+      'fogao': 'botafogo', // Sem acento
+      'estrela': 'botafogo', // Abreviação de "estrela solitária"
+      'solitária': 'botafogo', // Abreviação de "estrela solitária"
+      'solitaria': 'botafogo', // Sem acento
+      'botafogo-rj': 'botafogo',
+      'botafogo-sp': 'botafogo-sp',
+      'botafogo-pb': 'botafogo-pb',
+      'flamengo': 'flamengo',
+      'mengão': 'flamengo',
+      'mengao': 'flamengo', // Sem acento
+      'fla': 'flamengo',
+      'vasco': 'vasco',
+      'vascão': 'vasco',
+      'vascao': 'vasco', // Sem acento
+      'fluminense': 'fluminense',
+      'flu': 'fluminense',
+      'palmeiras': 'palmeiras',
+      'verdão': 'palmeiras',
+      'verdao': 'palmeiras', // Sem acento
+      'corinthians': 'corinthians',
+      'timão': 'corinthians',
+      'timao': 'corinthians', // Sem acento
+      'são paulo': 'sao paulo',
+      'sao paulo': 'sao paulo', // Sem acento
+      'spfc': 'sao paulo',
+      'santos': 'santos',
+      'peixe': 'santos'
+    };
+
+    // Primeiro, verificar aliases específicos
+    for (const [alias, teamName] of Object.entries(teamAliases)) {
+      if (lowerMessage.includes(alias)) {
+        // Verificar se o time existe na lista
+        if (this.teamNames.includes(teamName)) {
+          return teamName;
+        }
+      }
+    }
+
+    // Depois, verificar nomes exatos
     for (const team of this.teamNames) {
-      // Usar regex com word boundaries para evitar falsos positivos
       // Para siglas curtas (<=3 chars), ser mais restritivo
       if (team.length <= 3) {
         const regex = new RegExp(`\\b${team}\\b`, 'i');
@@ -325,7 +371,7 @@ export class OpenAIService implements OnModuleInit {
         }
       } else {
         // Para nomes longos, usar busca normal
-        if (message.includes(team)) {
+        if (lowerMessage.includes(team.toLowerCase())) {
           return team;
         }
       }

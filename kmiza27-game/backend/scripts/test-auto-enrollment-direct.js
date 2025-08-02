@@ -1,12 +1,37 @@
 const { getSupabaseServiceClient } = require('../config/supabase-connection');
 const supabase = getSupabaseServiceClient('vps');
 
-async function testAutoEnrollmentDebug() {
-  console.log('🔍 Testando autoEnrollInCompetition passo a passo...\n');
+async function testAutoEnrollmentDirect() {
+  console.log('🔍 Testando autoEnrollInCompetition diretamente...\n');
 
   try {
-    // 1. Buscar competições disponíveis
-    console.log('1. Buscando competições disponíveis...');
+    // 1. Buscar o time mais recente
+    console.log('1. Buscando time mais recente...');
+    const { data: recentTeams, error: teamError } = await supabase
+      .from('game_teams')
+      .select('id, name, created_at')
+      .eq('team_type', 'user_created')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (teamError) {
+      console.error('❌ Erro ao buscar time:', teamError);
+      return;
+    }
+
+    if (!recentTeams || recentTeams.length === 0) {
+      console.log('❌ Nenhum time encontrado');
+      return;
+    }
+
+    const testTeam = recentTeams[0];
+    console.log(`✅ Time encontrado: ${testTeam.name} (ID: ${testTeam.id})`);
+
+    // 2. Simular o método autoEnrollInCompetition
+    console.log('\n2. Simulando autoEnrollInCompetition...');
+    
+    // Buscar competições disponíveis
+    console.log('   - Buscando competições disponíveis...');
     const { data: competitions, error: compError } = await supabase
       .from('game_competitions')
       .select('id, name, tier, current_teams, max_teams')
@@ -18,9 +43,9 @@ async function testAutoEnrollmentDebug() {
       return;
     }
 
-    console.log('✅ Competições encontradas:', competitions.length);
+    console.log(`   - Competições encontradas: ${competitions.length}`);
     competitions.forEach(comp => {
-      console.log(`   - ${comp.name} (Tier ${comp.tier}): ${comp.current_teams}/${comp.max_teams}`);
+      console.log(`     - ${comp.name} (Tier ${comp.tier}): ${comp.current_teams}/${comp.max_teams}`);
     });
 
     if (!competitions || competitions.length === 0) {
@@ -28,34 +53,12 @@ async function testAutoEnrollmentDebug() {
       return;
     }
 
-    // 2. Escolher a primeira competição disponível
+    // Escolher a primeira competição disponível
     const availableCompetition = competitions[0];
-    console.log(`\n2. Competição escolhida: ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
+    console.log(`   - Competição escolhida: ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
 
-    // 3. Buscar um time de teste
-    console.log('\n3. Buscando time de teste...');
-    const { data: testTeams, error: teamError } = await supabase
-      .from('game_teams')
-      .select('id, name')
-      .eq('team_type', 'user_created')
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (teamError) {
-      console.error('❌ Erro ao buscar time de teste:', teamError);
-      return;
-    }
-
-    if (!testTeams || testTeams.length === 0) {
-      console.log('❌ Nenhum time de teste encontrado');
-      return;
-    }
-
-    const testTeam = testTeams[0];
-    console.log(`✅ Time de teste: ${testTeam.name} (ID: ${testTeam.id})`);
-
-    // 4. Verificar se o time já está inscrito
-    console.log('\n4. Verificando se o time já está inscrito...');
+    // Verificar se o time já está inscrito
+    console.log('   - Verificando se o time já está inscrito...');
     const { data: existingEnrollment, error: enrollmentError } = await supabase
       .from('game_competition_teams')
       .select('*')
@@ -63,19 +66,19 @@ async function testAutoEnrollmentDebug() {
       .eq('competition_id', availableCompetition.id);
 
     if (enrollmentError) {
-      console.error('❌ Erro ao verificar inscrição existente:', enrollmentError);
+      console.error('❌ Erro ao verificar inscrição:', enrollmentError);
       return;
     }
 
     if (existingEnrollment && existingEnrollment.length > 0) {
-      console.log('⚠️ Time já está inscrito nesta competição');
+      console.log('✅ Time já está inscrito nesta competição');
       return;
     }
 
-    console.log('✅ Time não está inscrito, prosseguindo...');
+    console.log('   - Time não está inscrito, prosseguindo...');
 
-    // 5. Inserir inscrição
-    console.log('\n5. Inserindo inscrição...');
+    // Inserir inscrição
+    console.log('   - Inserindo inscrição...');
     const { error: insertError } = await supabase
       .from('game_competition_teams')
       .insert({
@@ -90,8 +93,8 @@ async function testAutoEnrollmentDebug() {
 
     console.log('✅ Inscrição inserida com sucesso');
 
-    // 6. Atualizar contador da competição
-    console.log('\n6. Atualizando contador da competição...');
+    // Atualizar contador da competição
+    console.log('   - Atualizando contador da competição...');
     const { error: updateError } = await supabase
       .from('game_competitions')
       .update({ current_teams: availableCompetition.current_teams + 1 })
@@ -103,8 +106,8 @@ async function testAutoEnrollmentDebug() {
       console.log('✅ Contador atualizado');
     }
 
-    // 7. Criar entrada na classificação
-    console.log('\n7. Criando entrada na classificação...');
+    // Criar entrada na classificação
+    console.log('   - Criando entrada na classificação...');
     const { error: standingsError } = await supabase
       .from('game_standings')
       .insert({
@@ -127,8 +130,8 @@ async function testAutoEnrollmentDebug() {
       console.log('✅ Entrada na classificação criada');
     }
 
-    // 8. Verificar se deve criar partidas
-    console.log('\n8. Verificando se deve criar partidas...');
+    // Verificar se deve criar partidas
+    console.log('\n3. Verificando se deve criar partidas...');
     const { data: enrolledTeams, error: teamsError } = await supabase
       .from('game_competition_teams')
       .select(`
@@ -142,9 +145,9 @@ async function testAutoEnrollmentDebug() {
       return;
     }
 
-    console.log(`✅ Times inscritos: ${enrolledTeams.length}`);
+    console.log(`   - Times inscritos: ${enrolledTeams.length}`);
 
-    // 9. Verificar se já existem partidas
+    // Verificar se já existem partidas
     const { data: existingMatches, error: matchesError } = await supabase
       .from('game_matches')
       .select('id')
@@ -155,10 +158,11 @@ async function testAutoEnrollmentDebug() {
       return;
     }
 
-    console.log(`✅ Partidas existentes: ${existingMatches.length}`);
+    console.log(`   - Partidas existentes: ${existingMatches.length}`);
 
     if (existingMatches.length === 0 && enrolledTeams.length >= 2) {
       console.log('✅ Deve criar partidas automaticamente');
+      console.log('🔧 O método checkAndCreateMatches deveria criar partidas');
     } else if (existingMatches.length > 0) {
       console.log('⚠️ Partidas já existem');
     } else {
@@ -172,4 +176,4 @@ async function testAutoEnrollmentDebug() {
   }
 }
 
-testAutoEnrollmentDebug(); 
+testAutoEnrollmentDirect(); 

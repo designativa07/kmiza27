@@ -45,10 +45,10 @@ export class TeamsService {
     if (search) {
       const searchTerm = search.trim();
       whereConditions.push(
-        `(UNACCENT(team.name) ILIKE UNACCENT(:searchTerm) OR 
-         UNACCENT(team.short_name) ILIKE UNACCENT(:searchTerm) OR
-         UNACCENT(team.city) ILIKE UNACCENT(:searchTerm) OR
-         UNACCENT(team.state) ILIKE UNACCENT(:searchTerm))`
+        `(LOWER(team.name) LIKE LOWER(:searchTerm) OR 
+         LOWER(team.short_name) LIKE LOWER(:searchTerm) OR
+         LOWER(team.city) LIKE LOWER(:searchTerm) OR
+         LOWER(team.state) LIKE LOWER(:searchTerm))`
       );
       parameters.searchTerm = `%${searchTerm}%`;
     }
@@ -214,6 +214,64 @@ export class TeamsService {
       console.error("Erro ao atualizar o time:", error);
       throw new BadRequestException('Erro ao atualizar o time. Verifique os dados fornecidos.');
     }
+  }
+
+  async updateAliases(id: number, aliases: string[]): Promise<Team | null> {
+    const team = await this.findOne(id);
+    if (!team) {
+      throw new NotFoundException(`Time com ID ${id} não encontrado`);
+    }
+
+    // Validar aliases
+    if (aliases && !Array.isArray(aliases)) {
+      throw new BadRequestException('Aliases deve ser um array de strings');
+    }
+
+    // Remover aliases vazios e duplicados
+    const cleanAliases = aliases
+      ?.filter(alias => alias && alias.trim().length > 0)
+      ?.map(alias => alias.trim().toLowerCase())
+      ?.filter((alias, index, arr) => arr.indexOf(alias) === index) || [];
+
+    team.aliases = cleanAliases;
+    return this.teamRepository.save(team);
+  }
+
+  async addAlias(id: number, alias: string): Promise<Team | null> {
+    const team = await this.findOne(id);
+    if (!team) {
+      throw new NotFoundException(`Time com ID ${id} não encontrado`);
+    }
+
+    const cleanAlias = alias.trim().toLowerCase();
+    if (!cleanAlias) {
+      throw new BadRequestException('Alias não pode estar vazio');
+    }
+
+    const currentAliases = team.aliases || [];
+    if (currentAliases.includes(cleanAlias)) {
+      throw new BadRequestException('Alias já existe para este time');
+    }
+
+    team.aliases = [...currentAliases, cleanAlias];
+    return this.teamRepository.save(team);
+  }
+
+  async removeAlias(id: number, alias: string): Promise<Team | null> {
+    const team = await this.findOne(id);
+    if (!team) {
+      throw new NotFoundException(`Time com ID ${id} não encontrado`);
+    }
+
+    const cleanAlias = alias.trim().toLowerCase();
+    const currentAliases = team.aliases || [];
+    
+    if (!currentAliases.includes(cleanAlias)) {
+      throw new BadRequestException('Alias não encontrado para este time');
+    }
+
+    team.aliases = currentAliases.filter(a => a !== cleanAlias);
+    return this.teamRepository.save(team);
   }
 
   async checkTeamDependencies(id: number): Promise<{

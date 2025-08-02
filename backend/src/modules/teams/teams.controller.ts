@@ -168,4 +168,20 @@ export class TeamsController {
   async getUniqueCountries(): Promise<string[]> {
     return this.teamsService.getUniqueCountries();
   }
+
+  // Endpoints para gerenciar aliases
+  @Patch(':id/aliases')
+  async updateAliases(@Param('id') id: string, @Body('aliases') aliases: string[]) {
+    return this.teamsService.updateAliases(+id, aliases);
+  }
+
+  @Post(':id/aliases')
+  async addAlias(@Param('id') id: string, @Body('alias') alias: string) {
+    return this.teamsService.addAlias(+id, alias);
+  }
+
+  @Delete(':id/aliases/:alias')
+  async removeAlias(@Param('id') id: string, @Param('alias') alias: string) {
+    return this.teamsService.removeAlias(+id, alias);
+  }
 } 

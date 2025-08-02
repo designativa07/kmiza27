@@ -295,14 +295,29 @@ export class ChatbotService {
       return 'Por favor, especifique um time para que eu possa encontrar a próxima partida.';
     }
 
-    const team = await this.findTeam(teamName);
-    if (!team) {
-      return `Time "${teamName}" não encontrado.`;
+    const result = await this.findTeam(teamName);
+    if (!result.team) {
+      let response = `Time "${teamName}" não encontrado.`;
+      
+      // Se há sugestões, incluí-las na resposta
+      if (result.suggestions && result.suggestions.length > 0) {
+        response += '\n\n🤔 Você quis dizer:\n';
+        result.suggestions.forEach((suggestion, index) => {
+          response += `${index + 1}. ${suggestion.name}`;
+          if (suggestion.city && suggestion.state) {
+            response += ` (${suggestion.city}-${suggestion.state})`;
+          }
+          response += '\n';
+        });
+        response += '\n💡 Tente usar o nome completo do time.';
+      }
+      
+      return response;
     }
 
-    const nextMatch = await this.findNextMatchByTeam(team);
+    const nextMatch = await this.findNextMatchByTeam(result.team);
     if (!nextMatch) {
-      return `Não foi possível encontrar a próxima partida para ${team.name}.`;
+      return `Não foi possível encontrar a próxima partida para ${result.team.name}.`;
     }
 
     try {
@@ -347,19 +362,30 @@ export class ChatbotService {
 
   private async getTeamInfo(teamName: string): Promise<string> {
     try {
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${teamName}%` })
-        .getOne();
-
-      if (!team) {
-        return `❌ Time "${teamName}" não encontrado.`;
+      const result = await this.findTeam(teamName);
+      if (!result.team) {
+        let response = `❌ Time "${teamName}" não encontrado.`;
+        
+        // Se há sugestões, incluí-las na resposta
+        if (result.suggestions && result.suggestions.length > 0) {
+          response += '\n\n🤔 Você quis dizer:\n';
+          result.suggestions.forEach((suggestion, index) => {
+            response += `${index + 1}. ${suggestion.name}`;
+            if (suggestion.city && suggestion.state) {
+              response += ` (${suggestion.city}-${suggestion.state})`;
+            }
+            response += '\n';
+          });
+          response += '\n💡 Tente usar o nome completo do time.';
+        }
+        
+        return response;
       }
 
+      const team = result.team;
       const fullNameDisplay = team.full_name || team.name || 'A definir';
 
-      return `ℹ️ INFORMAÇÕES DO ${team.name.toUpperCase()} ℹ️
+      let response = `ℹ️ INFORMAÇÕES DO ${team.name.toUpperCase()} ℹ️
 
 📛 Nome completo: ${fullNameDisplay}
 🏷️ Sigla: ${team.short_name || 'A definir'}
@@ -372,6 +398,19 @@ export class ChatbotService {
 
 ⚽ Quer saber sobre o próximo jogo? É só perguntar!`;
 
+      // Se há sugestões, incluí-las na resposta
+      if (result.suggestions && result.suggestions.length > 0) {
+        response += '\n\n💡 Outros times similares:\n';
+        result.suggestions.forEach((suggestion, index) => {
+          response += `${index + 1}. ${suggestion.name}`;
+          if (suggestion.city && suggestion.state) {
+            response += ` (${suggestion.city}-${suggestion.state})`;
+          }
+          response += '\n';
+        });
+      }
+
+      return response;
     } catch (error) {
       console.error('Erro ao buscar informações do time:', error);
       return '❌ Erro ao buscar informações do time.';
@@ -772,14 +811,29 @@ ${shortUrl}
       return 'Por favor, especifique um time para que eu possa encontrar a última partida.';
     }
 
-    const team = await this.findTeam(teamName);
-    if (!team) {
-      return `Time "${teamName}" não encontrado.`;
+    const result = await this.findTeam(teamName);
+    if (!result.team) {
+      let response = `Time "${teamName}" não encontrado.`;
+      
+      // Se há sugestões, incluí-las na resposta
+      if (result.suggestions && result.suggestions.length > 0) {
+        response += '\n\n🤔 Você quis dizer:\n';
+        result.suggestions.forEach((suggestion, index) => {
+          response += `${index + 1}. ${suggestion.name}`;
+          if (suggestion.city && suggestion.state) {
+            response += ` (${suggestion.city}-${suggestion.state})`;
+          }
+          response += '\n';
+        });
+        response += '\n💡 Tente usar o nome completo do time.';
+      }
+      
+      return response;
     }
 
-    const lastMatch = await this.findLastMatchByTeam(team);
+    const lastMatch = await this.findLastMatchByTeam(result.team);
     if (!lastMatch) {
-      return `Não foi possível encontrar a última partida de ${team.name}.`;
+      return `Não foi possível encontrar a última partida de ${result.team.name}.`;
     }
 
     try {
@@ -816,7 +870,7 @@ ${shortUrl}
 
     } catch (error) {
       this.logger.error(`❌ Erro ao formatar detalhes da partida ${lastMatch.id}:`, error);
-      return `Ocorreu um erro ao buscar os detalhes da última partida de ${team.name}.`;
+      return `Ocorreu um erro ao buscar os detalhes da última partida de ${result.team.name}.`;
     }
   }
 
@@ -2070,14 +2124,29 @@ Digite sua pergunta ou comando! ⚽`;
       return 'Por favor, especifique um time para que eu possa encontrar a partida atual.';
     }
 
-    const team = await this.findTeam(teamName);
-    if (!team) {
-      return `Time "${teamName}" não encontrado.`;
+    const result = await this.findTeam(teamName);
+    if (!result.team) {
+      let response = `Time "${teamName}" não encontrado.`;
+      
+      // Se há sugestões, incluí-las na resposta
+      if (result.suggestions && result.suggestions.length > 0) {
+        response += '\n\n🤔 Você quis dizer:\n';
+        result.suggestions.forEach((suggestion, index) => {
+          response += `${index + 1}. ${suggestion.name}`;
+          if (suggestion.city && suggestion.state) {
+            response += ` (${suggestion.city}-${suggestion.state})`;
+          }
+          response += '\n';
+        });
+        response += '\n💡 Tente usar o nome completo do time.';
+      }
+      
+      return response;
     }
 
-    const currentMatch = await this.findCurrentMatchByTeam(team);
+    const currentMatch = await this.findCurrentMatchByTeam(result.team);
     if (!currentMatch) {
-      return `Nenhuma partida de ${team.name} está acontecendo agora.`;
+      return `Nenhuma partida de ${result.team.name} está acontecendo agora.`;
     }
 
     try {
@@ -2116,7 +2185,7 @@ Digite sua pergunta ou comando! ⚽`;
 
     } catch (error) {
       this.logger.error(`❌ Erro ao formatar detalhes da partida ${currentMatch.id}:`, error);
-      return `Ocorreu um erro ao buscar os detalhes da partida atual de ${team.name}.`;
+      return `Ocorreu um erro ao buscar os detalhes da partida atual de ${result.team.name}.`;
     }
   }
 
@@ -2645,12 +2714,53 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
 🏟️ Estádio: ${match.stadium?.name || 'A definir'}`;
   }
 
-  private async findTeam(name: string): Promise<Team | null> {
-    return await this.teamsRepository
+  private async findTeam(name: string): Promise<{ team: Team | null; suggestions?: Team[] }> {
+    // Mapeamento de prioridade para times conhecidos
+    const priorityTeams = {
+      'botafogo': 'botafogo', // Prioriza Botafogo-RJ
+      'flamengo': 'flamengo',
+      'vasco': 'vasco',
+      'fluminense': 'fluminense',
+      'palmeiras': 'palmeiras',
+      'corinthians': 'corinthians',
+      'são paulo': 'são paulo',
+      'santos': 'santos'
+    };
+
+    const lowerName = name.toLowerCase();
+    
+    // Se é um time prioritário, buscar pelo nome exato primeiro
+    if (priorityTeams[lowerName]) {
+      const priorityTeam = await this.teamsRepository
         .createQueryBuilder('team')
-        .where('UNACCENT(LOWER(team.name)) LIKE UNACCENT(LOWER(:name))', { name: `%${name}%` })
-        .orWhere('UNACCENT(LOWER(team.short_name)) LIKE UNACCENT(LOWER(:name))', { name: `%${name}%` })
+        .where('LOWER(team.name) = LOWER(:name)', { name: priorityTeams[lowerName] })
         .getOne();
+      
+      if (priorityTeam) {
+        return { team: priorityTeam };
+      }
+    }
+
+    // Busca normal se não encontrou ou não é prioritário
+    const teams = await this.teamsRepository
+        .createQueryBuilder('team')
+        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${name}%` })
+        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${name}%` })
+        .getMany();
+
+    if (teams.length === 0) {
+      return { team: null };
+    }
+
+    if (teams.length === 1) {
+      return { team: teams[0] };
+    }
+
+    // Se encontrou múltiplos times, retornar o primeiro como principal e os outros como sugestões
+    return { 
+      team: teams[0], 
+      suggestions: teams.slice(1) 
+    };
   }
 
   private async findCurrentMatchByTeam(team: Team): Promise<Match | null> {
@@ -2682,49 +2792,209 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
 
   private async getFavoriteTeamSummary(phoneNumber: string): Promise<string> {
     try {
+      console.log(`🔍 Debug: Iniciando getFavoriteTeamSummary para ${phoneNumber}`);
+      
       const user = await this.usersService.findByPhone(phoneNumber);
+      console.log(`🔍 Debug: Usuário encontrado:`, user ? 'Sim' : 'Não');
+      
       if (!user || !user.favorite_team) {
+        console.log(`🔍 Debug: Usuário sem time favorito`);
         return '❌ Você ainda não definiu um time favorito.\n\nUse "Definir Time Favorito" para escolher seu time.';
       }
 
+      console.log(`🔍 Debug: Time favorito ID: ${user.favorite_team.id}`);
+      
       const team = await this.teamsRepository.findOne({
         where: { id: user.favorite_team.id }
       });
 
+      console.log(`🔍 Debug: Time encontrado:`, team ? team.name : 'Não');
+
       if (!team) {
+        console.log(`🔍 Debug: Time não encontrado no banco`);
         return '❌ Time favorito não encontrado no banco de dados.';
       }
 
       let summary = `❤️ SEU TIME FAVORITO: ${team.name}\n\n`;
 
       // Buscar último jogo
+      console.log(`🔍 Debug: Buscando último jogo`);
       const lastMatch = await this.findLastMatchByTeam(team);
       if (lastMatch) {
+        console.log(`🔍 Debug: Último jogo encontrado`);
         summary += `🏁 ÚLTIMO JOGO:\n${this.formatMatchDetails(lastMatch, false)}\n\n`;
+      } else {
+        console.log(`🔍 Debug: Nenhum último jogo encontrado`);
       }
 
       // Buscar próximo jogo
+      console.log(`🔍 Debug: Buscando próximo jogo`);
       const nextMatch = await this.findNextMatchByTeam(team);
       if (nextMatch) {
+        console.log(`🔍 Debug: Próximo jogo encontrado`);
         summary += `⚽ PRÓXIMO JOGO:\n${this.formatMatchDetails(nextMatch, false)}\n\n`;
+      } else {
+        console.log(`🔍 Debug: Nenhum próximo jogo encontrado`);
       }
 
-      // Buscar posição na tabela (se estiver em alguma competição)
+      // Buscar informações das competições
+      console.log(`🔍 Debug: Buscando informações das competições`);
       try {
-        const position = await this.getTeamPosition(team.name);
-        if (position && !position.includes('não encontrado')) {
-          summary += `📊 CLASSIFICAÇÃO:\n${position}\n\n`;
+        const competitionInfo = await this.getTeamCompetitionInfo(team);
+        console.log(`🔍 Debug: Informações das competições obtidas`);
+        if (competitionInfo) {
+          summary += `📊 CLASSIFICAÇÃO:\n${competitionInfo}\n\n`;
         }
       } catch (error) {
-        console.log('Time não está em competição ativa ou erro ao buscar posição');
+        console.log('❌ Erro ao buscar informações das competições:', error);
+        console.log('❌ Stack trace:', error.stack);
       }
 
       summary += `💡 Dica: Digite "próximo jogo" ou "último jogo" para informações específicas sobre ${team.name}`;
 
+      console.log(`🔍 Debug: Resumo final gerado com sucesso`);
       return summary;
     } catch (error) {
-      console.error('Erro ao buscar informações do time favorito:', error);
+      console.error('❌ Erro ao buscar informações do time favorito:', error);
+      console.error('❌ Stack trace:', error.stack);
       return '❌ Erro ao buscar informações do time favorito.';
+    }
+  }
+
+  private async getTeamCompetitionInfo(team: Team): Promise<string> {
+    try {
+      console.log(`🔍 Debug: Buscando competições para o time ${team.name} (ID: ${team.id})`);
+      
+      // Buscar competições em que o time participa
+      const competitionTeams = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.competition', 'competition')
+        .where('ct.team = :teamId', { teamId: team.id })
+        .andWhere('competition.is_active = :active', { active: true })
+        .getMany();
+
+      console.log(`🔍 Debug: Encontradas ${competitionTeams.length} competições ativas`);
+
+      if (competitionTeams.length === 0) {
+        return `😔 O time não está participando de competições ativas no momento.`;
+      }
+
+      let response = `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊\n\n`;
+      let foundAnyData = false;
+
+      for (const ct of competitionTeams) {
+        const competition = ct.competition;
+        console.log(`🔍 Debug: Processando competição ${competition.name} (tipo: ${competition.type})`);
+        
+        // Verificar se é competição de pontos corridos
+        if (competition.type === 'pontos_corridos' || competition.type === 'serie') {
+          console.log(`🔍 Debug: Competição de pontos corridos - buscando standings`);
+          // Para pontos corridos, mostrar posição na tabela
+          try {
+            const standings = await this.standingsService.getCompetitionStandings(competition.id);
+            const teamStanding = standings.find(standing => standing.team.id === team.id);
+            
+            if (teamStanding) {
+              foundAnyData = true;
+              response += `🏆 ${competition.name}\n`;
+              response += `📍 ${teamStanding.position}º lugar - ${teamStanding.points} pontos\n`;
+              response += `⚽ J:${teamStanding.played} V:${teamStanding.won} E:${teamStanding.drawn} D:${teamStanding.lost}\n`;
+              response += `🥅 GP:${teamStanding.goals_for} GC:${teamStanding.goals_against} SG:${teamStanding.goal_difference}\n\n`;
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao calcular classificação para ${competition.name}:`, error);
+            // Fallback para dados estáticos
+            response += `🏆 ${competition.name}\n`;
+            response += `📍 ${ct.position || 'TBD'}º lugar - ${ct.points} pontos\n`;
+            response += `⚽ J:${ct.played} V:${ct.won} E:${ct.drawn} D:${ct.lost}\n`;
+            response += `🥅 GP:${ct.goals_for} GC:${ct.goals_against} SG:${ct.goal_difference}\n\n`;
+          }
+        } else {
+          console.log(`🔍 Debug: Competição de mata-mata - buscando fase atual`);
+          // Para competições de mata-mata, mostrar fase atual e próxima partida
+          try {
+            const phaseInfo = await this.getTeamKnockoutPhaseInfo(team, competition);
+            if (phaseInfo) {
+              foundAnyData = true;
+              response += `🏆 ${competition.name}\n`;
+              response += `${phaseInfo}\n\n`;
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar fase para ${competition.name}:`, error);
+            response += `🏆 ${competition.name}\n`;
+            response += `📍 Fase a determinar\n\n`;
+          }
+        }
+      }
+
+      if (!foundAnyData) {
+        response += `😔 Dados de classificação ainda não disponíveis.\n`;
+        response += `📈 As informações serão atualizadas conforme os jogos acontecem.`;
+      }
+
+      console.log(`🔍 Debug: Resposta final gerada com sucesso`);
+      return response;
+
+    } catch (error) {
+      console.error('❌ Erro ao buscar informações das competições:', error);
+      console.error('❌ Stack trace:', error.stack);
+      return '❌ Erro ao buscar informações das competições.';
+    }
+  }
+
+  private async getTeamKnockoutPhaseInfo(team: Team, competition: Competition): Promise<string> {
+    try {
+      console.log(`🔍 Debug: Iniciando getTeamKnockoutPhaseInfo para ${team.name} na competição ${competition.name}`);
+      
+      // Buscar a próxima partida do time nesta competição
+      const nextMatch = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
+        .leftJoinAndSelect('match.round', 'round')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('match.competition_id = :competitionId', { competitionId: competition.id })
+        .andWhere('match.status = :status', { status: MatchStatus.SCHEDULED })
+        .andWhere('match.match_date > :now', { now: new Date() })
+        .orderBy('match.match_date', 'ASC')
+        .getOne();
+
+      console.log(`🔍 Debug: Próxima partida encontrada:`, nextMatch ? 'Sim' : 'Não');
+
+      if (nextMatch) {
+        const phaseName = nextMatch.round?.phase || nextMatch.round?.name || 'Fase atual';
+        const matchInfo = this.formatMatchDetails(nextMatch, false);
+        
+        console.log(`🔍 Debug: Fase atual: ${phaseName}`);
+        return `📍 O ${team.name} está na fase "${phaseName}" da competição, a próxima partida é:\n${matchInfo}`;
+      } else {
+        console.log(`🔍 Debug: Nenhuma próxima partida encontrada, buscando última partida`);
+        // Se não há próxima partida, verificar se o time ainda está na competição
+        const lastMatch = await this.matchesRepository
+          .createQueryBuilder('match')
+          .leftJoinAndSelect('match.round', 'round')
+          .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+          .andWhere('match.competition_id = :competitionId', { competitionId: competition.id })
+          .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
+          .orderBy('match.match_date', 'DESC')
+          .getOne();
+
+        console.log(`🔍 Debug: Última partida encontrada:`, lastMatch ? 'Sim' : 'Não');
+
+        if (lastMatch) {
+          const phaseName = lastMatch.round?.phase || lastMatch.round?.name || 'Fase anterior';
+          console.log(`🔍 Debug: Fase da última partida: ${phaseName}`);
+          return `📍 O ${team.name} estava na fase "${phaseName}" da competição.\n\n❌ Não há mais partidas agendadas para este time nesta competição.`;
+        } else {
+          console.log(`🔍 Debug: Nenhuma partida encontrada para o time`);
+          return `📍 O ${team.name} está inscrito na competição ${competition.name}.\n\n⏳ Aguardando início das partidas.`;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro ao buscar informações da fase:', error);
+      console.error('❌ Stack trace:', error.stack);
+      return `📍 O ${team.name} está inscrito na competição ${competition.name}.\n\n⏳ Aguardando informações da fase atual.`;
     }
   }
 
