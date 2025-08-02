@@ -99,6 +99,9 @@ export class GameTeamsService {
       // Criar 23 jogadores para o time
       await this.createInitialPlayers(team.id);
       
+      // Inscrição automática em competição disponível
+      await this.autoEnrollInCompetition(team.id);
+      
       this.logger.log(`Team created successfully: ${team.name}`);
       return { team, actualUserId };
     } catch (error) {
@@ -201,6 +204,9 @@ export class GameTeamsService {
         this.logger.error(`Unauthorized: Team owner ${team.owner_id} != userId ${userId}`);
         throw new Error('Unauthorized: You can only delete your own teams');
       }
+
+      // Remover o time de todas as competições
+      await this.removeTeamFromAllCompetitions(teamId);
 
       const { error } = await supabase
         .from('game_teams')
@@ -847,5 +853,316 @@ export class GameTeamsService {
       defending: Math.min(99, attributes.defending + Math.floor(Math.random() * 10) - 5),
       physical: Math.min(99, attributes.physical + Math.floor(Math.random() * 10) - 5)
     };
+  }
+
+  private async autoEnrollInCompetition(teamId: string) {
+    try {
+      this.logger.log(`Auto-inscrevendo time ${teamId} em competição disponível`);
+      
+      // Buscar competições disponíveis (com vagas)
+      const { data: competitions, error: compError } = await supabase
+        .from('game_competitions')
+        .select('id, name, tier, current_teams, max_teams')
+        .eq('status', 'active')
+        .order('tier', { ascending: true });
+
+      if (compError) {
+        this.logger.error('Error fetching available competitions:', compError);
+        return;
+      }
+
+      if (!competitions || competitions.length === 0) {
+        this.logger.warn('No available competitions found');
+        return;
+      }
+
+      // Priorizar Série D (tier 4), depois C, B, A
+      const availableCompetition = competitions[0];
+      
+      this.logger.log(`Inscrito em ${availableCompetition.name} (Tier ${availableCompetition.tier})`);
+
+      // Inserir inscrição
+      const { error: insertError } = await supabase
+        .from('game_competition_teams')
+        .insert({
+          competition_id: availableCompetition.id,
+          team_id: teamId
+        });
+
+      if (insertError) {
+        this.logger.error('Error enrolling team in competition:', insertError);
+        return;
+      }
+
+      // Atualizar contador da competição
+      const { error: updateError } = await supabase
+        .from('game_competitions')
+        .update({ current_teams: availableCompetition.current_teams + 1 })
+        .eq('id', availableCompetition.id);
+
+      if (updateError) {
+        this.logger.error('Error updating competition team count:', updateError);
+      }
+
+      // Criar entrada na classificação
+      const { error: standingsError } = await supabase
+        .from('game_standings')
+        .insert({
+          competition_id: availableCompetition.id,
+          team_id: teamId,
+          season_year: new Date().getFullYear(),
+          position: 0,
+          games_played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goals_for: 0,
+          goals_against: 0,
+          points: 0
+        });
+
+      if (standingsError) {
+        this.logger.error('Error creating standings entry:', standingsError);
+      }
+
+      // Verificar se deve criar partidas automaticamente
+      await this.checkAndCreateMatches(availableCompetition.id);
+
+      this.logger.log(`Team ${teamId} successfully enrolled in ${availableCompetition.name}`);
+    } catch (error) {
+      this.logger.error('Error in autoEnrollInCompetition:', error);
+    }
+  }
+
+  private async checkAndCreateMatches(competitionId: string) {
+    try {
+      // Buscar times inscritos na competição
+      const { data: enrolledTeams, error: teamsError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_teams!inner(id, name, team_type)
+        `)
+        .eq('competition_id', competitionId);
+
+      if (teamsError) {
+        this.logger.error('Error fetching enrolled teams:', teamsError);
+        return;
+      }
+
+      // Verificar se já existem partidas para esta competição
+      const { data: existingMatches, error: matchesError } = await supabase
+        .from('game_matches')
+        .select('id')
+        .eq('competition_id', competitionId);
+
+      if (matchesError) {
+        this.logger.error('Error checking existing matches:', matchesError);
+        return;
+      }
+
+      // Se não há partidas e há times suficientes, criar calendário
+      if (existingMatches.length === 0 && enrolledTeams.length >= 2) {
+        this.logger.log(`Creating match schedule for competition ${competitionId} with ${enrolledTeams.length} teams`);
+        await this.createMatchSchedule(competitionId, enrolledTeams);
+      }
+    } catch (error) {
+      this.logger.error('Error in checkAndCreateMatches:', error);
+    }
+  }
+
+  private async createMatchSchedule(competitionId: string, teams: any[]) {
+    try {
+      // Criar rodadas (turno e returno)
+      const rounds = [];
+      const totalRounds = (teams.length - 1) * 2; // Turno e returno
+      
+      for (let round = 1; round <= totalRounds; round++) {
+        rounds.push({
+          competition_id: competitionId,
+          round_number: round,
+          name: `Rodada ${round}`
+        });
+      }
+
+      // Inserir rodadas
+      const { data: createdRounds, error: roundsError } = await supabase
+        .from('game_rounds')
+        .insert(rounds)
+        .select();
+
+      if (roundsError) {
+        this.logger.error('Error creating rounds:', roundsError);
+        return;
+      }
+
+      // Gerar partidas usando algoritmo de round-robin
+      const matches = this.generateRoundRobinMatches(teams, competitionId, createdRounds);
+      
+      // Inserir partidas em lotes
+      const batchSize = 10;
+      for (let i = 0; i < matches.length; i += batchSize) {
+        const batch = matches.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from('game_matches')
+          .insert(batch);
+
+        if (insertError) {
+          this.logger.error('Error inserting match batch:', insertError);
+          continue;
+        }
+      }
+
+      this.logger.log(`Created ${matches.length} matches for competition ${competitionId}`);
+    } catch (error) {
+      this.logger.error('Error creating match schedule:', error);
+    }
+  }
+
+  private generateRoundRobinMatches(teams: any[], competitionId: string, rounds: any[]) {
+    const matches = [];
+    const teamIds = teams.map(team => team.game_teams.id);
+    const teamNames = teams.map(team => team.game_teams.name);
+    
+    // Se número ímpar de times, adicionar "bye"
+    if (teamIds.length % 2 !== 0) {
+      teamIds.push(null);
+      teamNames.push('BYE');
+    }
+
+    const n = teamIds.length;
+    const totalRounds = n - 1;
+    
+    // Gerar partidas para turno e returno
+    for (let round = 0; round < totalRounds * 2; round++) {
+      const roundNumber = round + 1;
+      const isReturnRound = round >= totalRounds;
+      
+      // Calcular partidas da rodada
+      for (let i = 0; i < n / 2; i++) {
+        const homeIndex = i;
+        const awayIndex = n - 1 - i;
+        
+        // Pular partidas com "bye"
+        if (teamIds[homeIndex] === null || teamIds[awayIndex] === null) {
+          continue;
+        }
+
+        // Para returno, inverter mandante/visitante
+        const actualHomeIndex = isReturnRound ? awayIndex : homeIndex;
+        const actualAwayIndex = isReturnRound ? homeIndex : awayIndex;
+
+        // Alternar casa/fora para distribuir melhor os jogos
+        let finalHomeIndex = actualHomeIndex;
+        let finalAwayIndex = actualAwayIndex;
+        
+        // Se é uma rodada par (exceto a primeira), alternar alguns jogos
+        if (round > 0 && round % 2 === 1 && i % 2 === 1) {
+          finalHomeIndex = actualAwayIndex;
+          finalAwayIndex = actualHomeIndex;
+        }
+
+        const matchDate = new Date();
+        matchDate.setDate(matchDate.getDate() + round * 7); // Uma semana entre rodadas
+
+        matches.push({
+          competition_id: competitionId,
+          round: roundNumber,
+          home_team_id: teamIds[finalHomeIndex],
+          away_team_id: teamIds[finalAwayIndex],
+          home_team_name: teamNames[finalHomeIndex],
+          away_team_name: teamNames[finalAwayIndex],
+          match_date: matchDate.toISOString(),
+          status: 'scheduled',
+          home_score: null,
+          away_score: null,
+          highlights: [],
+          stats: {}
+        });
+      }
+
+      // Rotacionar times (exceto o primeiro)
+      if (round < totalRounds - 1) {
+        const temp = teamIds[1];
+        for (let i = 1; i < n - 1; i++) {
+          teamIds[i] = teamIds[i + 1];
+          teamNames[i] = teamNames[i + 1];
+        }
+        teamIds[n - 1] = temp;
+        teamNames[n - 1] = teams.find(t => t.game_teams.id === temp)?.game_teams.name || 'Unknown';
+      }
+    }
+
+    return matches;
+  }
+
+  private async removeTeamFromAllCompetitions(teamId: string) {
+    try {
+      this.logger.log(`Removendo time ${teamId} de todas as competições`);
+      
+      // Buscar todas as competições onde o time está inscrito
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('game_competition_teams')
+        .select(`
+          *,
+          game_competitions!inner(id, name, current_teams)
+        `)
+        .eq('team_id', teamId);
+
+      if (enrollError) {
+        this.logger.error('Error fetching team enrollments:', enrollError);
+        return;
+      }
+
+      if (!enrollments || enrollments.length === 0) {
+        this.logger.log(`Team ${teamId} not enrolled in any competitions`);
+        return;
+      }
+
+      // Remover de cada competição
+      for (const enrollment of enrollments) {
+        const competition = enrollment.game_competitions;
+        
+        // Remover inscrição
+        const { error: deleteError } = await supabase
+          .from('game_competition_teams')
+          .delete()
+          .eq('competition_id', competition.id)
+          .eq('team_id', teamId);
+
+        if (deleteError) {
+          this.logger.error(`Error removing team from ${competition.name}:`, deleteError);
+          continue;
+        }
+
+        // Atualizar contador da competição
+        const { error: updateError } = await supabase
+          .from('game_competitions')
+          .update({ current_teams: Math.max(0, competition.current_teams - 1) })
+          .eq('id', competition.id);
+
+        if (updateError) {
+          this.logger.error(`Error updating competition count for ${competition.name}:`, updateError);
+        }
+
+        // Remover da classificação
+        const { error: standingsError } = await supabase
+          .from('game_standings')
+          .delete()
+          .eq('competition_id', competition.id)
+          .eq('team_id', teamId);
+
+        if (standingsError) {
+          this.logger.error(`Error removing standings for ${competition.name}:`, standingsError);
+        }
+
+        this.logger.log(`Team ${teamId} removed from ${competition.name}`);
+      }
+
+      this.logger.log(`Team ${teamId} successfully removed from all competitions`);
+    } catch (error) {
+      this.logger.error('Error removing team from competitions:', error);
+    }
   }
 } 
