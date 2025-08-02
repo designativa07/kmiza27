@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { X, Plus, Save, Loader2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+// import { toast } from 'react-hot-toast';
 
 interface Team {
   id: number;
@@ -33,11 +33,11 @@ export default function TeamAliasesManager({ team, onUpdate }: TeamAliasesManage
   const addAlias = () => {
     const trimmedAlias = newAlias.trim().toLowerCase();
     if (!trimmedAlias) {
-      toast.error('Alias não pode estar vazio');
+      console.error('Alias não pode estar vazio');
       return;
     }
     if (aliases.includes(trimmedAlias)) {
-      toast.error('Alias já existe');
+      console.error('Alias já existe');
       return;
     }
     setAliases([...aliases, trimmedAlias]);
@@ -64,11 +64,11 @@ export default function TeamAliasesManager({ team, onUpdate }: TeamAliasesManage
       }
 
       const updatedTeam = await response.json();
-      toast.success('Aliases salvos com sucesso!');
+      console.log('Aliases salvos com sucesso!');
       onUpdate?.(updatedTeam);
     } catch (error) {
       console.error('Erro ao salvar aliases:', error);
-      toast.error('Erro ao salvar aliases');
+      console.error('Erro ao salvar aliases');
     } finally {
       setIsSaving(false);
     }
