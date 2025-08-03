@@ -8,7 +8,51 @@ export class PromotionRelegationController {
   constructor(private readonly promotionRelegationService: PromotionRelegationService) {}
 
   /**
-   * Processar fim de temporada para um usuário
+   * Verificar automaticamente e processar fim de temporada se necessário
+   * POST /api/v2/promotion-relegation/check-season-end
+   */
+  @Post('check-season-end')
+  async checkSeasonEnd(@Body() body: { userId: string; seasonYear?: number }) {
+    try {
+      const { userId, seasonYear } = body;
+
+      if (!userId) {
+        return {
+          success: false,
+          error: 'userId é obrigatório'
+        };
+      }
+
+      const year = seasonYear || new Date().getFullYear();
+      this.logger.log(`🔍 Verificando fim de temporada ${year} para usuário ${userId}`);
+
+      const result = await this.promotionRelegationService.checkAndProcessSeasonEnd(userId, year);
+
+      if (result) {
+        this.logger.log(`🎉 Fim de temporada processado automaticamente`);
+        return {
+          success: true,
+          seasonEnded: true,
+          result: result
+        };
+      } else {
+        return {
+          success: true,
+          seasonEnded: false,
+          message: 'Temporada ainda não terminou'
+        };
+      }
+    } catch (error) {
+      this.logger.error('Error in checkSeasonEnd:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Processar fim de temporada para um usuário (manual)
    * POST /api/v2/promotion-relegation/process-season-end
    */
   @Post('process-season-end')

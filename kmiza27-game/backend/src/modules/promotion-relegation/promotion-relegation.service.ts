@@ -300,6 +300,30 @@ export class PromotionRelegationService {
   // ===== CONSULTAS E UTILITÁRIOS =====
 
   /**
+   * Verificar automaticamente se temporada deve ser finalizada
+   */
+  async checkAndProcessSeasonEnd(userId: string, seasonYear: number = new Date().getFullYear()) {
+    try {
+      const canFinish = await this.canFinishSeason(userId, seasonYear);
+      
+      if (canFinish) {
+        this.logger.log(`🏁 AUTO: Temporada ${seasonYear} pode ser finalizada para usuário ${userId}`);
+        
+        // Processar automaticamente o fim de temporada
+        const result = await this.processSeasonEnd(userId, seasonYear);
+        
+        this.logger.log(`✅ AUTO: Fim de temporada processado automaticamente`);
+        return result;
+      }
+      
+      return null;
+    } catch (error) {
+      this.logger.error('Error in auto season end check:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Verificar se temporada pode ser finalizada
    */
   async canFinishSeason(userId: string, seasonYear: number = new Date().getFullYear()): Promise<boolean> {

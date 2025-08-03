@@ -235,7 +235,18 @@ class GameApiReformedService {
   // ===== PROMOTION/RELEGATION API =====
 
   /**
-   * Processar fim de temporada
+   * Verificar automaticamente se temporada terminou e processar se necessário
+   */
+  async checkSeasonEnd(userId: string, seasonYear?: number): Promise<any> {
+    const year = seasonYear || new Date().getFullYear();
+    return this.request<any>('/api/v2/promotion-relegation/check-season-end', {
+      method: 'POST',
+      body: JSON.stringify({ userId, seasonYear: year }),
+    });
+  }
+
+  /**
+   * Processar fim de temporada (manual)
    */
   async processSeasonEnd(userId: string, seasonYear?: number): Promise<any> {
     const year = seasonYear || new Date().getFullYear();

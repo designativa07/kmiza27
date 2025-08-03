@@ -9,14 +9,20 @@ import TeamPlayers from '@/components/TeamPlayers';
 import YouthAcademy from '@/components/YouthAcademy';
 import FinanceManager from '@/components/FinanceManager';
 import MatchSimulator from '@/components/MatchSimulator';
+import CompetitionsManagerReformed from '@/components/CompetitionsManagerReformed';
+import SeasonEndModal from '@/components/SeasonEndModal';
 
 export default function TeamPageContent() {
   const params = useParams();
   const router = useRouter();
   const { userTeams, selectedTeam, loadTeams, setSelectedTeam, deleteTeam, isLoading, error } = useGameStore();
   const [team, setTeam] = useState<GameTeam | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('competition');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [seasonEndModal, setSeasonEndModal] = useState<{
+    isOpen: boolean;
+    seasonResult: any;
+  }>({ isOpen: false, seasonResult: null });
 
   const teamId = params.teamId as string;
 
@@ -169,13 +175,13 @@ export default function TeamPageContent() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg">
             <div className="border-b border-gray-200">
-              <nav className="flex space-x-8 px-6">
+              <nav className="flex flex-wrap space-x-2 md:space-x-8 px-6">
                 {[
+                  { id: 'competition', label: 'Competição', icon: '🏆' },
                   { id: 'overview', label: 'Visão Geral', icon: '📊' },
+                  { id: 'players', label: 'Jogadores', icon: '⚽' },
                   { id: 'stadium', label: 'Estádio', icon: '🏟️' },
                   { id: 'academy', label: 'Academia', icon: '🏃' },
-                  { id: 'players', label: 'Jogadores', icon: '⚽' },
-                  { id: 'matches', label: 'Partidas', icon: '🎮' },
                   { id: 'finances', label: 'Finanças', icon: '💰' }
                 ].map((tab) => (
                   <button
@@ -196,6 +202,21 @@ export default function TeamPageContent() {
 
             {/* Tab Content */}
             <div className="p-6">
+              {activeTab === 'competition' && (
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">🏆 Competição</h3>
+                  <CompetitionsManagerReformed 
+                    onSeasonEnd={(seasonResult) => {
+                      console.log('🎉 Fim de temporada detectado:', seasonResult);
+                      setSeasonEndModal({ 
+                        isOpen: true, 
+                        seasonResult: seasonResult 
+                      });
+                    }}
+                  />
+                </div>
+              )}
+
               {activeTab === 'overview' && (
                 <div className="space-y-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">Visão Geral</h3>
@@ -204,14 +225,23 @@ export default function TeamPageContent() {
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-gray-900 mb-2">Próximas Ações</h4>
                       <div className="space-y-2">
-                        <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                        <button 
+                          onClick={() => setActiveTab('competition')}
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          🏆 Ver Competição
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('stadium')}
+                          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                        >
                           🏟️ Expandir Estádio
                         </button>
-                        <button className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors">
+                        <button 
+                          onClick={() => setActiveTab('academy')}
+                          className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors"
+                        >
                           🏃 Realizar Peneira
-                        </button>
-                        <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors">
-                          ⚽ Simular Partida
                         </button>
                       </div>
                     </div>
@@ -262,12 +292,7 @@ export default function TeamPageContent() {
                 </div>
               )}
 
-              {activeTab === 'matches' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Partidas</h3>
-                  <MatchSimulator />
-                </div>
-              )}
+
 
               {activeTab === 'finances' && (
                 <div>
@@ -278,6 +303,26 @@ export default function TeamPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Modal de Fim de Temporada */}
+        <SeasonEndModal
+          isOpen={seasonEndModal.isOpen}
+          seasonResult={seasonEndModal.seasonResult}
+          onContinue={async () => {
+            console.log('🚀 Continuando para próxima temporada...');
+            try {
+              // A nova temporada já foi criada pelo backend
+              setSeasonEndModal({ isOpen: false, seasonResult: null });
+              
+              // Recarregar dados da nova temporada
+              window.location.reload();
+            } catch (error) {
+              console.error('Erro ao continuar para próxima temporada:', error);
+              alert('Erro ao continuar para próxima temporada. Tente novamente.');
+            }
+          }}
+          onClose={() => setSeasonEndModal({ isOpen: false, seasonResult: null })}
+        />
       </div>
     </div>
   );
