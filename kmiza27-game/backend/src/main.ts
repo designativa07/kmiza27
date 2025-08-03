@@ -24,7 +24,7 @@ async function bootstrap() {
   }));
 
   // Prefixo global da API
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v2');
 
   const port = process.env.PORT || 3004;
   const host = '0.0.0.0'; // Escutar em todas as interfaces

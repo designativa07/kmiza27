@@ -21,6 +21,9 @@ export class MatchBroadcast {
   @Column({ name: 'channel_id' })
   channel_id: number;
 
+  @Column({ type: 'text', nullable: true })
+  broadcast_url: string;
+
   @CreateDateColumn()
   created_at: Date;
 

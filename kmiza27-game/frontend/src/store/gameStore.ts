@@ -206,12 +206,34 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      // TODO: Implementar no sistema reformulado
-      throw new Error('Funcionalidade de deletar time será implementada em próxima versão');
+      // Obter o userId do usuário logado
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
+      const userData = savedUser ? JSON.parse(savedUser) : null;
+      const userId = userData?.id || get().userId;
+      
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const result = await gameApiReformed.deleteTeam(teamId, userId);
+      
+      // Verificar se a deleção foi bem-sucedida
+      if (result && result.success) {
+        // Remover o time da lista local
+        set(state => ({
+          userTeams: state.userTeams.filter(team => team.id !== teamId),
+          selectedTeam: state.selectedTeam?.id === teamId ? null : state.selectedTeam,
+          isLoading: false
+        }));
+        
+        return result;
+      } else {
+        throw new Error(result?.error || 'Erro ao deletar time');
+      }
     } catch (error) {
       console.error('Error in deleteTeam:', error);
       set({ 
-        error: error instanceof Error ? error.message : 'Funcionalidade não implementada',
+        error: error instanceof Error ? error.message : 'Erro ao deletar time',
         isLoading: false 
       });
       throw error;

@@ -468,4 +468,152 @@ export class GameTeamsReformedService {
       throw error;
     }
   }
+
+  // ===== DELEÇÃO DE TIMES =====
+
+  /**
+   * Deletar time com limpeza completa
+   * 1. Deletar partidas da temporada
+   * 2. Deletar progresso da temporada
+   * 3. Deletar jogadores
+   * 4. Deletar time
+   */
+  async deleteTeam(teamId: string, userId: string) {
+    try {
+      this.logger.log(`🗑️ REFORM: Iniciando deleção do time ${teamId} do usuário ${userId}`);
+
+      // 1. Verificar se o time pertence ao usuário
+      const { data: team, error: teamError } = await supabase
+        .from('game_teams')
+        .select('id, name, owner_id')
+        .eq('id', teamId)
+        .eq('owner_id', userId)
+        .single();
+
+      if (teamError || !team) {
+        throw new Error('Time não encontrado ou não pertence ao usuário');
+      }
+
+      this.logger.log(`🔍 REFORM: Deletando time "${team.name}"`);
+
+      // 2. Deletar partidas da temporada atual
+      await this.deleteSeasonMatches(userId, teamId);
+
+      // 3. Deletar progresso da temporada atual
+      await this.deleteUserProgress(userId, teamId);
+
+      // 4. Deletar histórico de temporadas (opcional - vou manter por enquanto)
+      // await this.deleteSeasonHistory(userId, teamId);
+
+      // 5. Deletar jogadores do time
+      await this.deleteTeamPlayers(teamId);
+
+      // 6. Deletar o time
+      const { error: deleteTeamError } = await supabase
+        .from('game_teams')
+        .delete()
+        .eq('id', teamId)
+        .eq('owner_id', userId);
+
+      if (deleteTeamError) {
+        throw new Error(`Error deleting team: ${deleteTeamError.message}`);
+      }
+
+      this.logger.log(`✅ REFORM: Time "${team.name}" deletado com sucesso`);
+
+      return {
+        success: true,
+        message: `Time "${team.name}" foi deletado com sucesso. Todos os dados da temporada atual foram removidos.`,
+        team_name: team.name
+      };
+
+    } catch (error) {
+      this.logger.error('❌ REFORM: Error deleting team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletar partidas da temporada atual
+   */
+  private async deleteSeasonMatches(userId: string, teamId: string) {
+    try {
+      const currentYear = new Date().getFullYear();
+      
+      const { error } = await supabase
+        .from('game_season_matches')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar partidas: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Partidas da temporada deletadas');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar partidas:', error);
+    }
+  }
+
+  /**
+   * Deletar progresso da temporada atual
+   */
+  private async deleteUserProgress(userId: string, teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('game_user_competition_progress')
+        .delete()
+        .eq('user_id', userId)
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar progresso: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Progresso da temporada deletado');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar progresso:', error);
+    }
+  }
+
+  /**
+   * Deletar jogadores do time
+   */
+  private async deleteTeamPlayers(teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('youth_players')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar jogadores: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Jogadores do time deletados');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar jogadores:', error);
+    }
+  }
+
+  /**
+   * Deletar histórico de temporadas (opcional)
+   */
+  private async deleteSeasonHistory(userId: string, teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('game_season_history')
+        .delete()
+        .eq('user_id', userId)
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar histórico: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Histórico de temporadas deletado');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar histórico:', error);
+    }
+  }
 }

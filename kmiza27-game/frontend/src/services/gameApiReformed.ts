@@ -299,6 +299,36 @@ class GameApiReformedService {
   }
 
   /**
+   * Deletar time
+   */
+  async deleteTeam(teamId: string, userId: string): Promise<any> {
+    return this.request<any>(`/api/v2/game-teams/${teamId}?userId=${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Simular partida
+   */
+  async simulateMatch(matchId: string, userId: string): Promise<any> {
+    return this.request<any>('/api/v2/seasons/simulate-match', {
+      method: 'POST',
+      body: JSON.stringify({
+        matchId,
+        userId
+      }),
+    });
+  }
+
+  /**
+   * Buscar classificação completa da série
+   */
+  async getFullStandings(userId: string): Promise<any> {
+    const response = await this.request<any>(`/api/v2/seasons/full-standings?userId=${userId}`);
+    return response.data;
+  }
+
+  /**
    * Status da API reformulada
    */
   async getApiStatus(): Promise<any> {

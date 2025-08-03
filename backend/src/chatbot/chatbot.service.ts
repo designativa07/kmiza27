@@ -353,12 +353,21 @@ export class ChatbotService {
   
       if (broadcasts && broadcasts.length > 0) {
         this.logger.log(`🔍 DEBUG (findNextMatch): Transmissões encontradas: ${broadcasts.length}`);
-        const streamDetails = broadcasts.map((b) => {
+        const channelNames = broadcasts.map((b) => {
           this.logger.log(`🔍 DEBUG (findNextMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
-          // Usar link puro do canal, sem encurtar
-          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
+          return b.channel.name;
         });
-        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
+        response += `\n\nOnde assistir:\n📺 ${channelNames.join(', ')}`;
+      }
+
+      // Verificar links diretos no campo broadcast_channels
+      if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+        const directLinks = nextMatch.broadcast_channels.filter(link => 
+          typeof link === 'string' && link.startsWith('http')
+        );
+        if (directLinks.length > 0) {
+          response += `\n\n🔗 ASSISTIR:\n${directLinks.map(link => `🎬 ${link}`).join('\n')}`;
+        }
       }
       
       response += `\n\nBora torcer! 🔥⚽`;
@@ -944,7 +953,30 @@ ${shortUrl}
         }
         
         response += `⚽ A próxima partida é:\n`;
-        response += `${this.formatMatchDetails(nextMatch, false, false)}\n\n`;
+        response += `${this.formatMatchDetails(nextMatch, false, false)}\n`;
+        
+        // Buscar informações de transmissão para a próxima partida
+        const broadcasts = await this.matchBroadcastRepository.find({
+          where: { match: { id: nextMatch.id } },
+          relations: ['channel'],
+        });
+        
+        if (broadcasts && broadcasts.length > 0) {
+          const channelNames = broadcasts.map((b) => b.channel.name);
+          response += `\n📺 ONDE ASSISTIR:\n${channelNames.join(', ')}\n`;
+        }
+        
+        // Verificar links diretos no campo broadcast_channels
+        if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+          const directLinks = nextMatch.broadcast_channels.filter(link => 
+            typeof link === 'string' && link.startsWith('http')
+          );
+          if (directLinks.length > 0) {
+            response += `\n🔗 ASSISTIR:\n${directLinks.map(link => `🎬 ${link}`).join('\n')}\n`;
+          }
+        }
+        
+        response += `\n`;
       } 
       // Se não há próxima partida, verificar se foi eliminado
       else if (lastMatch && lastMatch.round) {
@@ -1041,12 +1073,11 @@ ${shortUrl}
   
       if (broadcasts && broadcasts.length > 0) {
         this.logger.log(`🔍 DEBUG (getLastMatch): Transmissões encontradas: ${broadcasts.length}`);
-        const streamDetails = broadcasts.map((b) => {
+        const channelNames = broadcasts.map((b) => {
           this.logger.log(`🔍 DEBUG (getLastMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
-          // Usar link puro do canal, sem encurtar
-          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
+          return b.channel.name;
         });
-        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
+        response += `\n\nOnde assistir:\n📺 ${channelNames.join(', ')}`;
       }
       
       return response;
@@ -2355,12 +2386,11 @@ Digite sua pergunta ou comando! ⚽`;
   
       if (broadcasts && broadcasts.length > 0) {
         this.logger.log(`🔍 DEBUG (getCurrentMatch): Transmissões encontradas: ${broadcasts.length}`);
-        const streamDetails = broadcasts.map((b) => {
+        const channelNames = broadcasts.map((b) => {
           this.logger.log(`🔍 DEBUG (getCurrentMatch): Canal: ${b.channel.name}, Link do Canal (puro): ${b.channel.channel_link}`);
-          // Usar link puro do canal, sem encurtar
-          return `📺 ${b.channel.name}: ${b.channel.channel_link || 'Link não disponível'}`;
+          return b.channel.name;
         });
-        response += `\n\nOnde assistir:\n${streamDetails.join('\n')}`;
+        response += `\n\nOnde assistir:\n📺 ${channelNames.join(', ')}`;
       }
       
       response += `\n\n🔴 JOGO EM ANDAMENTO!\n⚽ Acompanhe o placar ao vivo!`;
@@ -2921,6 +2951,8 @@ ${competitionLine}ዙ Rodada: ${roundName}
     // Mapeamento de prioridade para times conhecidos
     const priorityTeams = {
       'botafogo': 'botafogo', // Prioriza Botafogo-RJ
+      'botafogo-pb': 'botafogo-pb', // Botafogo da Paraíba
+      'botafogo-sp': 'botafogo-sp', // Botafogo de São Paulo
       'flamengo': 'flamengo',
       'vasco': 'vasco',
       'fluminense': 'fluminense',
@@ -3039,7 +3071,30 @@ ${competitionLine}ዙ Rodada: ${roundName}
       // Buscar próximo jogo
       const nextMatch = await this.findNextMatchByTeam(team);
       if (nextMatch) {
-        summary += `⚽ PRÓXIMO JOGO:\n${this.formatMatchDetails(nextMatch, false)}\n\n`;
+        let nextMatchDetails = `⚽ PRÓXIMO JOGO:\n${this.formatMatchDetails(nextMatch, false)}\n`;
+        
+        // Buscar informações de transmissão
+        const broadcasts = await this.matchBroadcastRepository.find({
+          where: { match: { id: nextMatch.id } },
+          relations: ['channel'],
+        });
+        
+        if (broadcasts && broadcasts.length > 0) {
+          const channelNames = broadcasts.map((b) => b.channel.name);
+          nextMatchDetails += `\n📺 ONDE ASSISTIR:\n${channelNames.join(', ')}\n`;
+        }
+        
+        // Verificar links diretos no campo broadcast_channels
+        if (nextMatch.broadcast_channels && Array.isArray(nextMatch.broadcast_channels) && nextMatch.broadcast_channels.length > 0) {
+          const directLinks = nextMatch.broadcast_channels.filter(link => 
+            typeof link === 'string' && link.startsWith('http')
+          );
+          if (directLinks.length > 0) {
+            nextMatchDetails += `\n🔗 ASSISTIR:\n${directLinks.map(link => `🎬 ${link}`).join('\n')}\n`;
+          }
+        }
+        
+        summary += nextMatchDetails + '\n';
       }
 
       // Buscar posição na tabela (se estiver em alguma competição)
@@ -3054,6 +3109,10 @@ ${competitionLine}ዙ Rodada: ${roundName}
         console.error('❌ DEBUG: Erro ao buscar posição:', error);
       }
 
+      // Adicionar links do time
+      summary += `🌐 LINKS PARA ASSISTIR e +INFO:\n`;
+      summary += `📄 Página do time: https://futepedia.kmiza27.com/time/${team.id}\n\n`;
+      
       summary += `💡 Dica: Digite "MEU TIME" para receber esse resumo do seu time favorito sempre que quiser.`;
 
       return summary;

@@ -27,7 +27,7 @@ export class SeasonsService {
       // 3. Atualizar progresso com informações iniciais
       await this.updateUserProgress(userId, teamId, seasonYear, {
         position: Math.floor(Math.random() * 20) + 1, // Posição inicial aleatória
-        status: 'active'
+        season_status: 'active'
       });
 
       this.logger.log(`✅ Temporada inicializada: ${calendar.matches.length} partidas criadas`);
@@ -251,6 +251,7 @@ export class SeasonsService {
    */
   async getUserCurrentProgress(userId: string, seasonYear: number = new Date().getFullYear()) {
     try {
+      // Buscar todos os registros ativos e pegar o mais recente (último time criado)
       const { data, error } = await supabase
         .from('game_user_competition_progress')
         .select(`
@@ -260,13 +261,15 @@ export class SeasonsService {
         .eq('user_id', userId)
         .eq('season_year', seasonYear)
         .eq('season_status', 'active')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
         throw new Error(`Error fetching user progress: ${error.message}`);
       }
 
-      return data;
+      // Retornar o primeiro (mais recente) ou null se não houver nenhum
+      return data && data.length > 0 ? data[0] : null;
     } catch (error) {
       this.logger.error('Error getting user current progress:', error);
       throw error;
@@ -379,6 +382,16 @@ export class SeasonsService {
         throw new Error(`Error fetching matches: ${matchesError.message}`);
       }
 
+      // Buscar teamId do usuário
+      let userTeamId = null;
+      if (matches && matches.length > 0) {
+        userTeamId = matches[0].home_team_id || matches[0].away_team_id;
+      }
+
+      if (!userTeamId) {
+        throw new Error('Não foi possível encontrar o teamId do usuário');
+      }
+
       // Calcular estatísticas
       let points = 0;
       let wins = 0;
@@ -407,7 +420,7 @@ export class SeasonsService {
       }
 
       // Atualizar progresso
-      const updatedProgress = await this.updateUserProgress(userId, '', seasonYear, {
+      const updatedProgress = await this.updateUserProgress(userId, userTeamId, seasonYear, {
         points,
         games_played: matches?.length || 0,
         wins,
@@ -446,6 +459,167 @@ export class SeasonsService {
   }
 
   /**
+   * Busca classificação completa da série do usuário
+   */
+  async getFullStandings(userId: string, seasonYear: number = new Date().getFullYear()) {
+    try {
+      this.logger.log(`📊 Gerando classificação completa para usuário ${userId}`);
+
+      // 1. Buscar progresso atual do usuário para saber a série
+      const userProgress = await this.getUserCurrentProgress(userId, seasonYear);
+      
+      if (!userProgress) {
+        throw new Error('Usuário não tem temporada ativa');
+      }
+
+      const tier = userProgress.current_tier;
+      
+      // 2. Buscar todos os times da máquina da mesma série
+      const machineTeams = await this.machineTeamsService.getMachineTeamsForSeason(tier, userId);
+      
+      // 3. Simular estatísticas realistas dos times da máquina
+      const machineStandings = machineTeams.map((team, index) => {
+        // Usar mesma quantidade de jogos que o usuário para consistência
+        const games = userProgress.games_played || 1;
+        
+        // Calcular força do time baseada na posição (1º = mais forte, 19º = mais fraco)
+        const teamStrength = (19 - index) / 19; // 0.95 para o 1º, 0.05 para o 19º
+        
+        // Simular resultados baseados na força do time
+        let wins = 0;
+        let draws = 0;
+        let losses = 0;
+        let goalsFor = 0;
+        let goalsAgainst = 0;
+        
+        // Simular cada jogo baseado na força
+        for (let game = 0; game < games; game++) {
+          const random = Math.random();
+          const strengthFactor = teamStrength + (Math.random() - 0.5) * 0.3; // Adicionar variação
+          
+          if (strengthFactor > 0.7) {
+            // Time forte tem mais chance de vitória
+            if (random < 0.6) {
+              wins++;
+              goalsFor += 1 + Math.floor(Math.random() * 3); // 1-3 gols
+              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
+            } else if (random < 0.8) {
+              draws++;
+              const goals = Math.floor(Math.random() * 3); // 0-2 gols
+              goalsFor += goals;
+              goalsAgainst += goals;
+            } else {
+              losses++;
+              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
+              goalsAgainst += 1 + Math.floor(Math.random() * 2); // 1-2 gols
+            }
+          } else if (strengthFactor > 0.4) {
+            // Time médio tem resultados equilibrados
+            if (random < 0.4) {
+              wins++;
+              goalsFor += 1 + Math.floor(Math.random() * 2); // 1-2 gols
+              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
+            } else if (random < 0.7) {
+              draws++;
+              const goals = Math.floor(Math.random() * 3); // 0-2 gols
+              goalsFor += goals;
+              goalsAgainst += goals;
+            } else {
+              losses++;
+              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
+              goalsAgainst += 1 + Math.floor(Math.random() * 3); // 1-3 gols
+            }
+          } else {
+            // Time fraco tem mais chance de derrota
+            if (random < 0.25) {
+              wins++;
+              goalsFor += 1 + Math.floor(Math.random() * 2); // 1-2 gols
+              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
+            } else if (random < 0.5) {
+              draws++;
+              const goals = Math.floor(Math.random() * 2); // 0-1 gols
+              goalsFor += goals;
+              goalsAgainst += goals;
+            } else {
+              losses++;
+              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
+              goalsAgainst += 1 + Math.floor(Math.random() * 3); // 1-3 gols
+            }
+          }
+        }
+        
+        // Calcular pontos corretamente: vitória = 3, empate = 1, derrota = 0
+        const points = (wins * 3) + (draws * 1);
+        
+        return {
+          position: index + 1, // Posição temporária, será reordenada depois
+          team_name: team.name,
+          team_colors: team.colors,
+          team_type: 'machine',
+          team_id: team.id,
+          points: points,
+          games_played: games,
+          wins: wins,
+          draws: draws,
+          losses: losses,
+          goals_for: goalsFor,
+          goals_against: goalsAgainst,
+          goal_difference: goalsFor - goalsAgainst,
+          stadium_name: team.stadium_name
+        };
+      });
+
+      // 4. Adicionar o time do usuário
+      const userStanding = {
+        position: userProgress.position || 20,
+        team_name: userProgress.team?.name || 'Seu Time',
+        team_colors: userProgress.team?.colors || { primary: '#0066CC', secondary: '#FFFFFF' },
+        team_type: 'user',
+        team_id: userProgress.team_id,
+        points: userProgress.points,
+        games_played: userProgress.games_played,
+        wins: userProgress.wins,
+        draws: userProgress.draws,
+        losses: userProgress.losses,
+        goals_for: userProgress.goals_for,
+        goals_against: userProgress.goals_against,
+        goal_difference: userProgress.goal_difference || (userProgress.goals_for - userProgress.goals_against),
+        stadium_name: 'Seu Estádio'
+      };
+
+      // 5. Combinar e ordenar todos os times
+      const allStandings = [...machineStandings, userStanding];
+      
+      // Ordenar por: pontos DESC, saldo de gols DESC, gols feitos DESC
+      allStandings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
+        return b.goals_for - a.goals_for;
+      });
+
+      // 6. Atualizar posições baseadas na ordenação
+      allStandings.forEach((team, index) => {
+        team.position = index + 1;
+      });
+
+      this.logger.log(`✅ Classificação gerada: ${allStandings.length} times na Série ${this.getTierName(tier)}`);
+
+      return {
+        tier: tier,
+        tier_name: this.getTierName(tier),
+        season_year: seasonYear,
+        standings: allStandings,
+        user_position: allStandings.find(s => s.team_type === 'user')?.position || 20,
+        total_teams: allStandings.length
+      };
+
+    } catch (error) {
+      this.logger.error('Error generating full standings:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Busca informações resumidas da temporada
    */
   async getSeasonSummary(userId: string, seasonYear: number = new Date().getFullYear()) {
@@ -465,6 +639,219 @@ export class SeasonsService {
       };
     } catch (error) {
       this.logger.error('Error getting season summary:', error);
+      throw error;
+    }
+  }
+
+  // ===== SIMULAÇÃO DE PARTIDAS =====
+
+  /**
+   * Simula uma partida específica e atualiza o resultado
+   */
+  async simulateMatch(matchId: string, userId: string) {
+    try {
+      this.logger.log(`⚽ Simulando partida ${matchId} do usuário ${userId}`);
+
+      // 1. Buscar dados da partida
+      this.logger.log(`🔍 Buscando partida ${matchId} para usuário ${userId}`);
+      
+      // Primeiro, buscar apenas a partida básica para debug
+      const { data: match, error: matchError } = await supabase
+        .from('game_season_matches')
+        .select('*')
+        .eq('id', matchId)
+        .eq('user_id', userId)
+        .eq('status', 'scheduled')
+        .single();
+
+      this.logger.log(`🔍 Query result: error=${!!matchError}, match=${!!match}`);
+      if (matchError) {
+        this.logger.error('❌ Match query error:', matchError);
+      }
+      if (match) {
+        this.logger.log(`✅ Match found: ${match.id}, status: ${match.status}`);
+      }
+
+      if (matchError || !match) {
+        throw new Error('Partida não encontrada ou já foi simulada');
+      }
+
+      // 2. Simular resultado usando algoritmo baseado em ratings
+      const simulationResult = this.simulateMatchResult(match);
+      
+      // 3. Atualizar partida no banco
+      const { data: updatedMatch, error: updateError } = await supabase
+        .from('game_season_matches')
+        .update({
+          home_score: simulationResult.homeScore,
+          away_score: simulationResult.awayScore,
+          status: 'finished',
+          simulation_data: simulationResult.details,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', matchId)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Erro ao atualizar partida: ${updateError.message}`);
+      }
+
+      // 4. Recalcular estatísticas do usuário
+      const userTeamId = match.home_team_id || match.away_team_id;
+      await this.recalculateUserStandingsAfterMatch(userId, match.season_year, userTeamId);
+
+      this.logger.log(`✅ Partida simulada: ${simulationResult.homeScore}-${simulationResult.awayScore}`);
+
+      return {
+        success: true,
+        match: updatedMatch,
+        result: simulationResult,
+        message: `Partida simulada: ${simulationResult.homeScore}-${simulationResult.awayScore}`
+      };
+
+    } catch (error) {
+      this.logger.error('Erro ao simular partida:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Algoritmo de simulação de partida
+   */
+  private simulateMatchResult(match: any) {
+    // Determinar se usuário joga em casa
+    const userIsHome = match.home_team_id !== null;
+    
+    // Ratings base
+    const userRating = 75; // Rating fixo do usuário por enquanto
+    const machineRating = userIsHome ? 
+      (match.away_machine?.overall_rating || 70) : 
+      (match.home_machine?.overall_rating || 70);
+
+    // Bônus de casa (+3 pontos)
+    const homeBonus = 3;
+    
+    // Calcular probabilidade de vitória
+    const userEffectiveRating = userRating + (userIsHome ? homeBonus : 0);
+    const machineEffectiveRating = machineRating + (!userIsHome ? homeBonus : 0);
+    
+    // Gerar resultado baseado nas diferenças de rating
+    const ratingDifference = userEffectiveRating - machineEffectiveRating;
+    const userAdvantage = Math.max(-30, Math.min(30, ratingDifference)); // Limitar entre -30 e +30
+    
+    // Probabilidades base (vitória, empate, derrota)
+    let winChance = 35 + (userAdvantage * 1.5); // 35% base + ajuste por rating
+    let drawChance = 30;
+    let lossChance = 100 - winChance - drawChance;
+
+    // Garantir probabilidades válidas
+    winChance = Math.max(10, Math.min(70, winChance));
+    lossChance = Math.max(10, 100 - winChance - drawChance);
+
+    // Sorteio do resultado
+    const random = Math.random() * 100;
+    let userGoals, machineGoals;
+
+    if (random < winChance) {
+      // Vitória do usuário
+      userGoals = Math.floor(Math.random() * 3) + 1; // 1-3 gols
+      machineGoals = Math.floor(Math.random() * userGoals); // 0 a (userGoals-1)
+    } else if (random < winChance + drawChance) {
+      // Empate
+      const goals = Math.floor(Math.random() * 4); // 0-3 gols cada
+      userGoals = goals;
+      machineGoals = goals;
+    } else {
+      // Derrota do usuário
+      machineGoals = Math.floor(Math.random() * 3) + 1; // 1-3 gols
+      userGoals = Math.floor(Math.random() * machineGoals); // 0 a (machineGoals-1)
+    }
+
+    // Definir placar final baseado em quem joga em casa
+    const homeScore = userIsHome ? userGoals : machineGoals;
+    const awayScore = userIsHome ? machineGoals : userGoals;
+
+    // Detalhes da simulação
+    const details = {
+      user_rating: userRating,
+      machine_rating: machineRating,
+      user_is_home: userIsHome,
+      rating_difference: ratingDifference,
+      win_chance: Math.round(winChance),
+      draw_chance: drawChance,
+      loss_chance: Math.round(lossChance),
+      result_type: userGoals > machineGoals ? 'win' : userGoals === machineGoals ? 'draw' : 'loss'
+    };
+
+    return {
+      homeScore,
+      awayScore,
+      userGoals,
+      machineGoals,
+      details
+    };
+  }
+
+  /**
+   * Recalcula estatísticas após uma partida específica
+   */
+  private async recalculateUserStandingsAfterMatch(userId: string, seasonYear: number, teamId: string) {
+    try {
+      // Buscar todas as partidas finalizadas
+      const { data: matches, error: matchesError } = await supabase
+        .from('game_season_matches')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .eq('status', 'finished');
+
+      if (matchesError) {
+        throw new Error(`Error fetching matches: ${matchesError.message}`);
+      }
+
+      // Calcular estatísticas
+      let points = 0;
+      let wins = 0;
+      let draws = 0;
+      let losses = 0;
+      let goalsFor = 0;
+      let goalsAgainst = 0;
+
+      for (const match of matches || []) {
+        const userIsHome = match.home_team_id !== null;
+        const userScore = userIsHome ? match.home_score : match.away_score;
+        const opponentScore = userIsHome ? match.away_score : match.home_score;
+
+        goalsFor += userScore;
+        goalsAgainst += opponentScore;
+
+        if (userScore > opponentScore) {
+          wins++;
+          points += 3;
+        } else if (userScore === opponentScore) {
+          draws++;
+          points += 1;
+        } else {
+          losses++;
+        }
+      }
+
+      // Atualizar progresso (goal_difference é calculada automaticamente)
+      await this.updateUserProgress(userId, teamId, seasonYear, {
+        points,
+        games_played: matches?.length || 0,
+        wins,
+        draws,
+        losses,
+        goals_for: goalsFor,
+        goals_against: goalsAgainst
+      });
+
+      this.logger.log(`📊 Estatísticas atualizadas: ${points} pontos em ${matches?.length || 0} jogos`);
+      
+    } catch (error) {
+      this.logger.error('Error recalculating standings after match:', error);
       throw error;
     }
   }

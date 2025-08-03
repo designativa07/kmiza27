@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Query, Body, Param, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Query, Body, Param, Logger } from '@nestjs/common';
 import { GameTeamsReformedService } from './game-teams-reformed.service';
 
-@Controller('api/v2/game-teams')
+@Controller('game-teams')
 export class GameTeamsReformedController {
   private readonly logger = new Logger(GameTeamsReformedController.name);
 
@@ -73,6 +73,29 @@ export class GameTeamsReformedController {
   }
 
   /**
+   * Status de compatibilidade - informa que API foi reformulada
+   * GET /api/v2/game-teams/status
+   */
+  @Get('status')
+  async getApiStatus() {
+    return {
+      success: true,
+      data: {
+        api_version: 'v2',
+        system: 'reformed',
+        description: 'Sistema reformulado estilo Elifoot',
+        features: [
+          'Criação automática na Série D',
+          'Times da máquina fixos',
+          'Calendário de 38 rodadas',
+          'Promoção/rebaixamento automático'
+        ]
+      },
+      message: 'API reformulada funcionando!'
+    };
+  }
+
+  /**
    * Buscar time específico com progresso
    * GET /api/v2/game-teams/:teamId
    */
@@ -83,7 +106,7 @@ export class GameTeamsReformedController {
         throw new Error('teamId é obrigatório');
       }
 
-      this.logger.log(`🔍 REFORM: Buscando time ${teamId} com progresso`);
+      this.logger.log(`🔍 REFORM: Buscando time status com progresso`);
 
       const team = await this.gameTeamsReformedService.getTeamWithProgress(teamId);
 
@@ -110,25 +133,32 @@ export class GameTeamsReformedController {
   }
 
   /**
-   * Status de compatibilidade - informa que API foi reformulada
-   * GET /api/v2/game-teams/status
+   * Deletar time com limpeza completa
+   * DELETE /api/v2/game-teams/:teamId?userId=xxx
    */
-  @Get('status')
-  async getApiStatus() {
-    return {
-      success: true,
-      data: {
-        api_version: 'v2',
-        system: 'reformed',
-        description: 'Sistema reformulado estilo Elifoot',
-        features: [
-          'Criação automática na Série D',
-          'Times da máquina fixos',
-          'Calendário de 38 rodadas',
-          'Promoção/rebaixamento automático'
-        ]
-      },
-      message: 'API reformulada funcionando!'
-    };
+  @Delete(':teamId')
+  async deleteTeam(@Param('teamId') teamId: string, @Query('userId') userId: string) {
+    try {
+      if (!teamId || !userId) {
+        throw new Error('teamId e userId são obrigatórios');
+      }
+
+      this.logger.log(`🗑️ REFORM: Solicitação de deleção do time ${teamId} pelo usuário ${userId}`);
+
+      const result = await this.gameTeamsReformedService.deleteTeam(teamId, userId);
+
+      return {
+        success: true,
+        data: result,
+        message: result.message
+      };
+    } catch (error) {
+      this.logger.error('Error in deleteTeam:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: null
+      };
+    }
   }
 }
