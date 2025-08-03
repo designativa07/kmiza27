@@ -902,6 +902,13 @@ ${shortUrl}
         .leftJoinAndSelect('match.away_team', 'away_team')
         .leftJoinAndSelect('match.round', 'round')
         .leftJoinAndSelect('match.stadium', 'stadium')
+        .select([
+          'match.id', 'match.match_date', 'match.status', 'match.broadcast_channels',
+          'home_team.id', 'home_team.name', 'home_team.short_name',
+          'away_team.id', 'away_team.name', 'away_team.short_name',
+          'round.id', 'round.name', 'round.phase',
+          'stadium.id', 'stadium.name'
+        ])
         .where('match.competition_id = :competitionId', { competitionId: competition.id })
         .andWhere('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
         .andWhere('match.status = :status', { status: MatchStatus.SCHEDULED })
@@ -2879,6 +2886,14 @@ Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
         .leftJoinAndSelect('match.competition', 'competition')
         .leftJoinAndSelect('match.round', 'round')
         .leftJoinAndSelect('match.stadium', 'stadium')
+        .select([
+          'match.id', 'match.match_date', 'match.status', 'match.broadcast_channels',
+          'home_team.id', 'home_team.name', 'home_team.short_name',
+          'away_team.id', 'away_team.name', 'away_team.short_name',
+          'competition.id', 'competition.name',
+          'round.id', 'round.name', 'round.phase',
+          'stadium.id', 'stadium.name'
+        ])
         .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
         .andWhere('match.status = :status', { status: MatchStatus.SCHEDULED })
         .andWhere('match.match_date > :now', { now: new Date() })
@@ -3016,6 +3031,15 @@ ${competitionLine}ዙ Rodada: ${roundName}
       .leftJoinAndSelect('match.away_team', 'away_team')
       .leftJoinAndSelect('match.stadium', 'stadium')
       .leftJoinAndSelect('match.round', 'round')
+      .select([
+        'match.id', 'match.match_date', 'match.status', 'match.broadcast_channels',
+        'match.home_score', 'match.away_score',
+        'home_team.id', 'home_team.name', 'home_team.short_name',
+        'away_team.id', 'away_team.name', 'away_team.short_name',
+        'competition.id', 'competition.name',
+        'round.id', 'round.name', 'round.phase',
+        'stadium.id', 'stadium.name'
+      ])
       .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
       .andWhere('match.status = :status', { status: MatchStatus.LIVE })
       .getOne();
@@ -3029,6 +3053,15 @@ ${competitionLine}ዙ Rodada: ${roundName}
       .leftJoinAndSelect('match.away_team', 'away_team')
       .leftJoinAndSelect('match.stadium', 'stadium')
       .leftJoinAndSelect('match.round', 'round')
+      .select([
+        'match.id', 'match.match_date', 'match.status', 'match.broadcast_channels',
+        'match.home_score', 'match.away_score',
+        'home_team.id', 'home_team.name', 'home_team.short_name',
+        'away_team.id', 'away_team.name', 'away_team.short_name',
+        'competition.id', 'competition.name',
+        'round.id', 'round.name', 'round.phase',
+        'stadium.id', 'stadium.name'
+      ])
       .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
       .andWhere('match.status = :status', { status: MatchStatus.FINISHED })
       .orderBy('match.match_date', 'DESC')
