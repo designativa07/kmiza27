@@ -23,6 +23,11 @@ export class OpenAIService implements OnModuleInit {
     await this.loadTeamNames();
   }
 
+  // Método público para recarregar nomes de times
+  async reloadTeamNames(): Promise<void> {
+    await this.loadTeamNames();
+  }
+
   private async loadTeamNames() {
     this.teamNames = [];
     const teamsResult = await this.teamsService.findAll(1, 1000); // Buscar até 1000 times
@@ -322,78 +327,31 @@ export class OpenAIService implements OnModuleInit {
   
   private extractTeamName(message: string): string | undefined {
     const lowerMessage = message.toLowerCase();
-    
-    // Mapeamento de aliases para times específicos
-    // IMPORTANTE: aliases mais específicos devem vir ANTES dos genéricos
-    const teamAliases = {
-      'botafogo-pb': 'botafogo-pb', // Botafogo da Paraíba - DEVE VIR ANTES
-      'botafogo-sp': 'botafogo-sp', // Botafogo de São Paulo - DEVE VIR ANTES  
-      'botafogo-rj': 'botafogo',    // Botafogo do Rio
-      'botafogo': 'botafogo',       // Prioriza Botafogo-RJ (genérico)
-      'bota': 'botafogo',
-      'fogão': 'botafogo',
-      'fogao': 'botafogo', // Sem acento
-      'estrela': 'botafogo', // Abreviação de "estrela solitária"
-      'solitária': 'botafogo', // Abreviação de "estrela solitária"
-      'solitaria': 'botafogo', // Sem acento
-      'flamengo': 'flamengo',
-      'mengão': 'flamengo',
-      'mengao': 'flamengo', // Sem acento
-      'fla': 'flamengo',
-      'vasco': 'vasco',
-      'vascão': 'vasco',
-      'vascao': 'vasco', // Sem acento
-      'fluminense': 'fluminense',
-      'flu': 'fluminense',
-      'palmeiras': 'palmeiras',
-      'verdão': 'palmeiras',
-      'verdao': 'palmeiras', // Sem acento
-      'corinthians': 'corinthians',
-      'timão': 'corinthians',
-      'timao': 'corinthians', // Sem acento
-      'são paulo': 'sao paulo',
-      'sao paulo': 'sao paulo', // Sem acento
-      'spfc': 'sao paulo',
-      'santos': 'santos',
-      'peixe': 'santos'
-    };
 
-    // Primeiro, verificar aliases específicos
-    // Ordenar aliases por comprimento (maiores primeiro) para evitar conflitos
-    const sortedAliases = Object.entries(teamAliases).sort((a, b) => b[0].length - a[0].length);
+    // Buscar diretamente nos nomes de times carregados do banco (incluindo aliases)
+    // Ordenar por comprimento (maiores primeiro) para evitar conflitos
+    const sortedTeamNames = this.teamNames.sort((a, b) => b.length - a.length);
     
-    for (const [alias, teamName] of sortedAliases) {
-      // Para aliases com hífen, usar correspondência mais precisa
-      if (alias.includes('-')) {
-        const regex = new RegExp(`\\b${alias.replace('-', '[-\\s]?')}\\b`, 'i');
+    for (const teamName of sortedTeamNames) {
+      let matched = false;
+      
+      // Para nomes curtos (<=3 chars), ser mais restritivo com word boundaries
+      if (teamName.length <= 3) {
+        const regex = new RegExp(`\\b${teamName}\\b`, 'i');
         if (regex.test(message)) {
-          if (this.teamNames.includes(teamName)) {
-            return teamName;
-          }
-        }
-      } else {
-        // Para aliases simples, usar includes normal
-        if (lowerMessage.includes(alias)) {
-          if (this.teamNames.includes(teamName)) {
-            return teamName;
-          }
-        }
-      }
-    }
-
-    // Depois, verificar nomes exatos
-    for (const team of this.teamNames) {
-      // Para siglas curtas (<=3 chars), ser mais restritivo
-      if (team.length <= 3) {
-        const regex = new RegExp(`\\b${team}\\b`, 'i');
-        if (regex.test(message)) {
-          return team;
+          matched = true;
         }
       } else {
         // Para nomes longos, usar busca normal
-        if (lowerMessage.includes(team.toLowerCase())) {
-          return team;
+        if (lowerMessage.includes(teamName.toLowerCase())) {
+          matched = true;
         }
+      }
+      
+      if (matched) {
+        // Retornar o nome/alias encontrado para manter compatibilidade
+        // O findTeam no ChatbotService vai resolver para o time real
+        return teamName;
       }
     }
     

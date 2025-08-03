@@ -332,6 +332,25 @@ export class ChatbotController {
     return await this.chatbotService.debugMatchesToday();
   }
 
+  @Post('reload-teams')
+  async reloadTeamNames() {
+    try {
+      const result = await this.chatbotService.reloadTeamNames();
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('❌ Erro ao recarregar nomes de times:', error);
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
   @Post('debug-test')
   async debugTest(@Body() body: { message: string; phoneNumber?: string }) {
     try {

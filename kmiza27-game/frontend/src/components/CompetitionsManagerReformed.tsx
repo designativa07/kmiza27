@@ -30,7 +30,11 @@ interface FullStandings {
   total_teams: number;
 }
 
-export default function CompetitionsManagerReformed() {
+interface CompetitionsManagerReformedProps {
+  onSeasonEnd?: (seasonResult: any) => void;
+}
+
+export default function CompetitionsManagerReformed({ onSeasonEnd }: CompetitionsManagerReformedProps) {
   const { selectedTeam } = useGameStore();
   const [progress, setProgress] = useState<SeasonProgress | null>(null);
   const [upcomingMatches, setUpcomingMatches] = useState<SeasonMatch[]>([]);
@@ -40,6 +44,29 @@ export default function CompetitionsManagerReformed() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'standings' | 'upcoming' | 'recent' | 'opponents'>('standings');
+  const [checkingSeasonEnd, setCheckingSeasonEnd] = useState(false);
+  const [simulatingMatch, setSimulatingMatch] = useState<string | null>(null);
+
+  // Verificar se temporada terminou
+  const checkSeasonEnd = async (currentProgress: SeasonProgress) => {
+    if (currentProgress.games_played >= 38 && currentProgress.season_status === 'active') {
+      try {
+        setCheckingSeasonEnd(true);
+        console.log('🏁 Detectado fim de temporada, verificando...');
+        
+        const checkResult = await gameApiReformed.checkSeasonEnd(selectedTeam?.owner_id || '');
+        
+        if (checkResult.success && checkResult.seasonEnded && onSeasonEnd) {
+          console.log('🎉 Temporada finalizada automaticamente:', checkResult.result);
+          onSeasonEnd(checkResult.result);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar fim de temporada:', error);
+      } finally {
+        setCheckingSeasonEnd(false);
+      }
+    }
+  };
 
   // Carregar dados da temporada
   const loadSeasonData = async () => {
@@ -54,6 +81,9 @@ export default function CompetitionsManagerReformed() {
       setProgress(currentProgress);
 
       if (currentProgress) {
+        // Verificar se temporada terminou
+        await checkSeasonEnd(currentProgress);
+
         // Buscar partidas e classificação completa
         const [upcoming, recent, machineTeams, standings] = await Promise.all([
           gameApiReformed.getUserUpcomingMatches(selectedTeam.owner_id, 5),
@@ -78,6 +108,53 @@ export default function CompetitionsManagerReformed() {
   useEffect(() => {
     loadSeasonData();
   }, [selectedTeam]);
+
+  // Simular partida
+  const simulateMatch = async (matchId: string) => {
+    if (!selectedTeam || simulatingMatch) return;
+    
+    try {
+      setSimulatingMatch(matchId);
+      console.log(`⚽ Simulando partida ${matchId}...`);
+      
+      // Buscar informações da partida antes da simulação
+      const matchToSimulate = upcomingMatches.find(m => m.id === matchId);
+      
+      const result = await gameApiReformed.simulateMatch(matchId, selectedTeam?.owner_id || '');
+      
+      if (result.success) {
+        console.log('✅ Partida simulada com sucesso:', result);
+        
+        // Recarregar dados da temporada
+        await loadSeasonData();
+        
+        // Construir mensagem com nomes dos times
+        let alertMessage = '';
+        if (matchToSimulate) {
+          const isHome = matchToSimulate.home_team_id !== null;
+          const opponent = isHome ? matchToSimulate.away_machine?.name : matchToSimulate.home_machine?.name;
+          const teamName = selectedTeam.name;
+          
+          if (isHome) {
+            alertMessage = `🏟️ Jogo disputado!\n${teamName} ${result.data.home_score || 0} x ${result.data.away_score || 0} ${opponent}`;
+          } else {
+            alertMessage = `🏟️ Jogo disputado!\n${opponent} ${result.data.home_score || 0} x ${result.data.away_score || 0} ${teamName}`;
+          }
+        } else {
+          alertMessage = `🏟️ Jogo disputado! ${result.data.home_score || 0} x ${result.data.away_score || 0}`;
+        }
+        
+        alert(alertMessage);
+      } else {
+        throw new Error(result?.error || 'Erro ao simular partida');
+      }
+    } catch (error) {
+      console.error('Erro ao simular partida:', error);
+      alert('Erro ao simular partida: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    } finally {
+      setSimulatingMatch(null);
+    }
+  };
 
   const getTierName = (tier: number): string => {
     const tierNames: Record<number, string> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
@@ -166,6 +243,12 @@ export default function CompetitionsManagerReformed() {
             <div className="text-sm text-gray-600">
               {getPositionDescription(progress.position, progress.current_tier)}
             </div>
+            {checkingSeasonEnd && (
+              <div className="text-xs text-blue-600 mt-1 flex items-center">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                Processando fim de temporada...
+              </div>
+            )}
           </div>
         </div>
 
@@ -176,8 +259,13 @@ export default function CompetitionsManagerReformed() {
             <div className="text-sm text-gray-600">Pontos</div>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-600">{progress.games_played}</div>
+            <div className="text-2xl font-bold text-gray-600">{progress.games_played}/38</div>
             <div className="text-sm text-gray-600">Jogos</div>
+            {progress.games_played >= 38 && (
+              <div className="text-xs text-green-600 font-semibold mt-1">
+                ✅ Temporada Completa
+              </div>
+            )}
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">{progress.goals_for}</div>
@@ -339,7 +427,7 @@ export default function CompetitionsManagerReformed() {
                 <p className="text-gray-600 text-center py-8">Nenhuma partida agendada.</p>
               ) : (
                 <div className="space-y-3">
-                  {upcomingMatches.map((match) => {
+                  {upcomingMatches.map((match, index) => {
                     const isHome = match.home_team_id !== null;
                     const opponent = isHome ? match.away_machine?.name : match.home_machine?.name;
                     const venue = isHome ? selectedTeam.stadium_name : match.home_machine?.stadium_name || match.away_machine?.stadium_name;
@@ -347,7 +435,7 @@ export default function CompetitionsManagerReformed() {
                     return (
                       <div key={match.id} className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1">
                             <div className="font-semibold">
                               Rodada {match.round_number}: {isHome ? 'Casa' : 'Fora'} vs {opponent}
                             </div>
@@ -363,12 +451,36 @@ export default function CompetitionsManagerReformed() {
                               🏟️ {venue}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className={`px-3 py-1 rounded-full text-sm ${
-                              match.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {match.status === 'scheduled' ? 'Agendada' : match.status}
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <div className={`px-3 py-1 rounded-full text-sm ${
+                                match.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {match.status === 'scheduled' ? 'Agendada' : match.status}
+                              </div>
                             </div>
+                            
+                            {/* Botão JOGAR para a próxima partida */}
+                            {index === 0 && match.status === 'scheduled' && (
+                              <button
+                                onClick={() => simulateMatch(match.id)}
+                                disabled={!!simulatingMatch}
+                                className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+                                  simulatingMatch === match.id
+                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                }`}
+                              >
+                                {simulatingMatch === match.id ? (
+                                  <div className="flex items-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Simulando...
+                                  </div>
+                                ) : (
+                                  '⚽ JOGAR'
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -389,9 +501,10 @@ export default function CompetitionsManagerReformed() {
                 <div className="space-y-3">
                   {recentMatches.map((match) => {
                     const isHome = match.home_team_id !== null;
-                    const opponent = isHome ? match.away_machine?.name : match.home_machine?.name;
+                    const opponent = isHome ? match.away_machine?.name || 'Adversário' : match.home_machine?.name || 'Adversário';
                     const userScore = isHome ? match.home_score : match.away_score;
                     const opponentScore = isHome ? match.away_score : match.home_score;
+                    const teamName = selectedTeam?.name || 'Seu Time';
                     
                     let result = '';
                     let resultColor = '';
@@ -409,20 +522,28 @@ export default function CompetitionsManagerReformed() {
                     return (
                       <div key={match.id} className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1">
                             <div className="font-semibold">
                               Rodada {match.round_number}: {isHome ? 'Casa' : 'Fora'} vs {opponent}
                             </div>
+                            <div className="text-lg font-bold my-2">
+                              🏟️ {isHome ? `${teamName} ${userScore} x ${opponentScore} ${opponent}` : `${opponent} ${opponentScore} x ${userScore} ${teamName}`}
+                            </div>
                             <div className="text-sm text-gray-600">
-                              📅 {new Date(match.match_date).toLocaleDateString('pt-BR')}
+                              📅 {new Date(match.match_date).toLocaleDateString('pt-BR', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-lg font-bold">
-                              {userScore} x {opponentScore}
-                            </div>
-                            <div className={`text-sm font-semibold ${resultColor}`}>
+                            <div className={`text-xl font-bold ${resultColor}`}>
                               {result}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {match.status === 'finished' ? 'Finalizada' : 'Disputada'}
                             </div>
                           </div>
                         </div>

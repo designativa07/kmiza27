@@ -55,6 +55,31 @@ export class ChatbotService {
   ) {}
 
   /**
+   * Recarrega os nomes de times no OpenAI Service
+   */
+  async reloadTeamNames(): Promise<{ message: string; totalNames: number }> {
+    await this.openAIService.reloadTeamNames();
+    
+    // Obter informações sobre quantos nomes foram carregados
+    const teamsResult = await this.teamsRepository.find();
+    let totalNames = 0;
+    
+    for (const team of teamsResult) {
+      totalNames++; // nome principal
+      if (team.short_name) totalNames++;
+      if (team.slug) totalNames++;
+      if (team.aliases && Array.isArray(team.aliases)) {
+        totalNames += team.aliases.length;
+      }
+    }
+    
+    return {
+      message: 'Nomes de times recarregados com sucesso',
+      totalNames
+    };
+  }
+
+  /**
    * Cria uma URL curta para um jogo específico
    */
   private async createMatchShortUrl(match: Match): Promise<string> {
@@ -757,24 +782,44 @@ ${shortUrl}
   private async getTeamPosition(teamName: string): Promise<string> {
     try {
       console.log(`🔍 DEBUG getTeamPosition: Buscando time "${teamName}"`);
-      console.log(`🔍 DEBUG getTeamPosition: INÍCIO DA FUNÇÃO`);
-      console.log(`🔍 DEBUG getTeamPosition: FUNÇÃO CHAMADA!`);
-      console.log(`🔍 DEBUG getTeamPosition: TESTE DE LOG`);
-      console.log(`🔍 DEBUG getTeamPosition: TESTE FINAL`);
-      console.log(`🔍 DEBUG getTeamPosition: ULTIMO TESTE`);
-      console.log(`🔍 DEBUG getTeamPosition: TESTE DEFINITIVO`);
       
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .getOne();
+      // Usar o método findTeam que suporta sugestões
+      const result = await this.findTeam(teamName);
 
-      if (!team) {
+      if (!result.team) {
         console.log(`❌ DEBUG getTeamPosition: Time "${teamName}" não encontrado`);
         return `❌ Time "${teamName}" não encontrado.`;
       }
 
+      // Se há sugestões, significa que múltiplos times foram encontrados
+      if (result.suggestions && result.suggestions.length > 0) {
+        console.log(`🔍 DEBUG getTeamPosition: Múltiplos times encontrados para "${teamName}"`);
+        let suggestionText = `🔍 Encontrei mais de um time com "${teamName}". Qual você quer saber?\n\n`;
+        
+        // Adicionar o time principal (primeiro resultado)
+        suggestionText += `1️⃣ ${result.team.name}`;
+        if (result.team.city && result.team.state) {
+          suggestionText += ` (${result.team.city}/${result.team.state})`;
+        }
+        suggestionText += '\n';
+        
+        // Adicionar as sugestões
+        result.suggestions.forEach((team, index) => {
+          const number = index + 2; // Começar do 2 porque o 1 é o time principal
+          const emoji = ['2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'][index] || `${number}️⃣`;
+          suggestionText += `${emoji} ${team.name}`;
+          if (team.city && team.state) {
+            suggestionText += ` (${team.city}/${team.state})`;
+          }
+          suggestionText += '\n';
+        });
+        
+        suggestionText += '\n💡 Digite o nome completo ou seja mais específico (ex: "Barcelona-ESP" ou "Barcelona da Espanha").';
+        
+        return suggestionText;
+      }
+
+      const team = result.team;
       console.log(`✅ DEBUG getTeamPosition: Time encontrado: ${team.name} (ID: ${team.id})`);
 
       // Buscar competições em que o time participa
@@ -2540,16 +2585,44 @@ Digite sua pergunta ou comando! ⚽`;
 
   private async getTeamSquad(teamName: string): Promise<string> {
     this.logger.log(`🔍 Procurando elenco para o time: ${teamName}`);
-    const team = await this.teamsRepository
-      .createQueryBuilder('team')
-      .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-      .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-      .getOne();
+    
+    // Usar o método findTeam que suporta sugestões
+    const result = await this.findTeam(teamName);
 
-    if (!team) {
+    if (!result.team) {
       this.logger.warn(`Time "${teamName}" não encontrado para listar o elenco.`);
       return `❌ Time "${teamName}" não encontrado. Tente novamente com um nome de time válido.`;
     }
+
+    // Se há sugestões, significa que múltiplos times foram encontrados
+    if (result.suggestions && result.suggestions.length > 0) {
+      this.logger.log(`🔍 Múltiplos times encontrados para elenco de "${teamName}"`);
+      let suggestionText = `🔍 Encontrei mais de um time com "${teamName}". De qual você quer ver o elenco?\n\n`;
+      
+      // Adicionar o time principal (primeiro resultado)
+      suggestionText += `1️⃣ ${result.team.name}`;
+      if (result.team.city && result.team.state) {
+        suggestionText += ` (${result.team.city}/${result.team.state})`;
+      }
+      suggestionText += '\n';
+      
+      // Adicionar as sugestões
+      result.suggestions.forEach((team, index) => {
+        const number = index + 2; // Começar do 2 porque o 1 é o time principal
+        const emoji = ['2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'][index] || `${number}️⃣`;
+        suggestionText += `${emoji} ${team.name}`;
+        if (team.city && team.state) {
+          suggestionText += ` (${team.city}/${team.state})`;
+        }
+        suggestionText += '\n';
+      });
+      
+      suggestionText += '\n💡 Digite o nome completo ou seja mais específico (ex: "elenco Barcelona-ESP").';
+      
+      return suggestionText;
+    }
+
+    const team = result.team;
 
     const players = await this.playerTeamHistoryRepository
       .createQueryBuilder('pth')
@@ -2963,60 +3036,80 @@ ${competitionLine}ዙ Rodada: ${roundName}
   }
 
   private async findTeam(name: string): Promise<{ team: Team | null; suggestions?: Team[] }> {
-    // Mapeamento de prioridade para times conhecidos
-    const priorityTeams = {
-      'botafogo': 'botafogo', // Prioriza Botafogo-RJ
-      'botafogo-pb': 'botafogo-pb', // Botafogo da Paraíba
-      'botafogo-sp': 'botafogo-sp', // Botafogo de São Paulo
-      'flamengo': 'flamengo',
-      'vasco': 'vasco',
-      'fluminense': 'fluminense',
-      'palmeiras': 'palmeiras',
-      'corinthians': 'corinthians',
-      'são paulo': 'são paulo',
-      'santos': 'santos'
-    };
-
-    const lowerName = name.toLowerCase();
-    
-    // Se é um time prioritário, buscar pelo nome exato primeiro
-    if (priorityTeams[lowerName]) {
-      const priorityTeam = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('LOWER(team.name) = LOWER(:name)', { name: priorityTeams[lowerName] })
-        .getOne();
-      
-      if (priorityTeam) {
-        return { team: priorityTeam };
-      }
-    }
-
-    // Busca normal se não encontrou ou não é prioritário
     // Normalizar acentos na busca
-    const normalizedName = this.normalizeString(name);
+    const normalizedName = this.normalizeString(name.toLowerCase());
     
+    // Buscar todos os times do banco com suas aliases
     const teams = await this.teamsRepository
         .createQueryBuilder('team')
         .getMany();
     
     // Filtrar times que correspondem à busca (com normalização de acentos)
     const filteredTeams = teams.filter(team => {
-      const normalizedTeamName = this.normalizeString(team.name);
-      const normalizedShortName = this.normalizeString(team.short_name || '');
+      const normalizedTeamName = this.normalizeString(team.name.toLowerCase());
+      const normalizedShortName = this.normalizeString((team.short_name || '').toLowerCase());
       
-      return normalizedTeamName.includes(normalizedName) || 
-             normalizedShortName.includes(normalizedName);
+      // Verificar correspondência exata primeiro (prioridade)
+      if (normalizedTeamName === normalizedName || normalizedShortName === normalizedName) {
+        return true;
+      }
+      
+      // Verificar aliases dinâmicas se existirem (correspondência exata)
+      if (team.aliases && Array.isArray(team.aliases)) {
+        const exactAliasMatch = team.aliases.some(alias => {
+          const normalizedAlias = this.normalizeString(alias.toLowerCase());
+          return normalizedAlias === normalizedName;
+        });
+        if (exactAliasMatch) {
+          return true;
+        }
+      }
+      
+      return false;
     });
 
+    // Se não encontrou correspondência exata, tentar busca parcial
     if (filteredTeams.length === 0) {
-      return { team: null };
+      const partialMatches = teams.filter(team => {
+        const normalizedTeamName = this.normalizeString(team.name.toLowerCase());
+        const normalizedShortName = this.normalizeString((team.short_name || '').toLowerCase());
+        
+        // Verificar se corresponde parcialmente ao nome ou short_name
+        if (normalizedTeamName.includes(normalizedName) || normalizedShortName.includes(normalizedName)) {
+          return true;
+        }
+        
+        // Verificar aliases dinâmicas se existirem (correspondência parcial)
+        if (team.aliases && Array.isArray(team.aliases)) {
+          return team.aliases.some(alias => {
+            const normalizedAlias = this.normalizeString(alias.toLowerCase());
+            return normalizedAlias.includes(normalizedName);
+          });
+        }
+        
+        return false;
+      });
+      
+      if (partialMatches.length === 0) {
+        return { team: null };
+      }
+      
+      if (partialMatches.length === 1) {
+        return { team: partialMatches[0] };
+      }
+
+      // Se múltiplas correspondências parciais, retornar como sugestões
+      return { 
+        team: partialMatches[0], 
+        suggestions: partialMatches.slice(1) 
+      };
     }
 
     if (filteredTeams.length === 1) {
       return { team: filteredTeams[0] };
     }
 
-    // Se encontrou múltiplos times, retornar o primeiro como principal e os outros como sugestões
+    // Se encontrou múltiplos times com correspondência exata, retornar como sugestões
     return { 
       team: filteredTeams[0], 
       suggestions: filteredTeams.slice(1) 
