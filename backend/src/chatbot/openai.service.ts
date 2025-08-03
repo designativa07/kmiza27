@@ -324,17 +324,18 @@ export class OpenAIService implements OnModuleInit {
     const lowerMessage = message.toLowerCase();
     
     // Mapeamento de aliases para times específicos
+    // IMPORTANTE: aliases mais específicos devem vir ANTES dos genéricos
     const teamAliases = {
-      'botafogo': 'botafogo', // Prioriza Botafogo-RJ
+      'botafogo-pb': 'botafogo-pb', // Botafogo da Paraíba - DEVE VIR ANTES
+      'botafogo-sp': 'botafogo-sp', // Botafogo de São Paulo - DEVE VIR ANTES  
+      'botafogo-rj': 'botafogo',    // Botafogo do Rio
+      'botafogo': 'botafogo',       // Prioriza Botafogo-RJ (genérico)
       'bota': 'botafogo',
       'fogão': 'botafogo',
       'fogao': 'botafogo', // Sem acento
       'estrela': 'botafogo', // Abreviação de "estrela solitária"
       'solitária': 'botafogo', // Abreviação de "estrela solitária"
       'solitaria': 'botafogo', // Sem acento
-      'botafogo-rj': 'botafogo',
-      'botafogo-sp': 'botafogo-sp',
-      'botafogo-pb': 'botafogo-pb',
       'flamengo': 'flamengo',
       'mengão': 'flamengo',
       'mengao': 'flamengo', // Sem acento
@@ -358,11 +359,24 @@ export class OpenAIService implements OnModuleInit {
     };
 
     // Primeiro, verificar aliases específicos
-    for (const [alias, teamName] of Object.entries(teamAliases)) {
-      if (lowerMessage.includes(alias)) {
-        // Verificar se o time existe na lista
-        if (this.teamNames.includes(teamName)) {
-          return teamName;
+    // Ordenar aliases por comprimento (maiores primeiro) para evitar conflitos
+    const sortedAliases = Object.entries(teamAliases).sort((a, b) => b[0].length - a[0].length);
+    
+    for (const [alias, teamName] of sortedAliases) {
+      // Para aliases com hífen, usar correspondência mais precisa
+      if (alias.includes('-')) {
+        const regex = new RegExp(`\\b${alias.replace('-', '[-\\s]?')}\\b`, 'i');
+        if (regex.test(message)) {
+          if (this.teamNames.includes(teamName)) {
+            return teamName;
+          }
+        }
+      } else {
+        // Para aliases simples, usar includes normal
+        if (lowerMessage.includes(alias)) {
+          if (this.teamNames.includes(teamName)) {
+            return teamName;
+          }
         }
       }
     }

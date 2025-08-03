@@ -170,9 +170,28 @@ export default function MatchSimulator() {
   const startSimulation = async (matchId: string) => {
     try {
       setSimulating(true);
-      // TODO: Implementar no sistema reformulado
-      // const result = await gameApiReformed.simulateMatch(matchId);
-      throw new Error('Simulação de partidas será implementada no sistema reformulado');
+      
+      // Obter userId do usuário logado
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('gameUser') : null;
+      const userData = savedUser ? JSON.parse(savedUser) : null;
+      const userId = userData?.id;
+      
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log(`⚽ Simulando partida ${matchId} para usuário ${userId}`);
+      
+      const result = await gameApiReformed.simulateMatch(matchId, userId);
+      
+      if (result && result.success) {
+        alert(`🎉 Partida simulada! ${result.message}`);
+        
+        // Recarregar as partidas para mostrar o resultado atualizado
+        await loadMatches();
+      } else {
+        throw new Error(result?.error || 'Erro ao simular partida');
+      }
       
     } catch (error) {
       console.error('Erro ao simular partida:', error);

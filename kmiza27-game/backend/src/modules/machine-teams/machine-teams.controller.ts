@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
 import { MachineTeamsService } from './machine-teams.service';
 
-@Controller('api/v2/machine-teams')
+@Controller('machine-teams')
 export class MachineTeamsController {
   private readonly logger = new Logger(MachineTeamsController.name);
 

@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Query, Body, Param, Logger } from '@nestjs/common';
 import { SeasonsService } from './seasons.service';
+import { supabase } from '../../config/supabase.config';
 
-@Controller('api/v2/seasons')
+@Controller('seasons')
 export class SeasonsController {
   private readonly logger = new Logger(SeasonsController.name);
 
@@ -324,6 +325,113 @@ export class SeasonsController {
       };
     } catch (error) {
       this.logger.error('Error in getUserSeasonHistory:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Simular uma partida específica
+   * POST /api/v2/seasons/simulate-match
+   */
+  @Post('simulate-match')
+  async simulateMatch(@Body() body: { matchId: string; userId: string }) {
+    try {
+      const { matchId, userId } = body;
+
+      if (!matchId || !userId) {
+        throw new Error('matchId e userId são obrigatórios');
+      }
+
+      this.logger.log(`⚽ Simulando partida ${matchId} para usuário ${userId}`);
+
+      const result = await this.seasonsService.simulateMatch(matchId, userId);
+
+      return {
+        success: true,
+        data: result,
+        message: result.message
+      };
+    } catch (error) {
+      this.logger.error('Error in simulateMatch:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Buscar classificação completa da série do usuário
+   * GET /api/v2/seasons/full-standings?userId=123&seasonYear=2025
+   */
+  @Get('full-standings')
+  async getFullStandings(@Query('userId') userId: string, @Query('seasonYear') seasonYear?: string) {
+    try {
+      if (!userId) {
+        throw new Error('userId é obrigatório');
+      }
+
+      const year = seasonYear ? parseInt(seasonYear) : new Date().getFullYear();
+
+      this.logger.log(`📊 Buscando classificação completa para usuário ${userId} (${year})`);
+
+      const standings = await this.seasonsService.getFullStandings(userId, year);
+
+      return {
+        success: true,
+        data: standings,
+        meta: {
+          generated_at: new Date().toISOString(),
+          season_year: year
+        }
+      };
+    } catch (error) {
+      this.logger.error('Error in getFullStandings:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Debug: Buscar TODOS os registros de progresso (sem filtros)
+   * GET /api/v2/seasons/debug-progress?userId=123
+   */
+  @Get('debug-progress')
+  async debugUserProgress(@Query('userId') userId: string) {
+    try {
+      if (!userId) {
+        throw new Error('userId é obrigatório');
+      }
+
+      this.logger.log(`🔍 DEBUG: Buscando TODOS os registros de progresso para ${userId}`);
+
+      const { data, error } = await supabase
+        .from('game_user_competition_progress')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        throw new Error(`Error fetching debug progress: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        data: data || [],
+        meta: {
+          total_records: data?.length || 0,
+          user_id: userId
+        }
+      };
+    } catch (error) {
+      this.logger.error('Error in debugUserProgress:', error);
       return {
         success: false,
         error: error.message,

@@ -1,63 +1,48 @@
-const { getSupabaseClient } = require('../config/supabase-connection');
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+
+// Configurar Supabase
+const supabaseUrl = 'https://eqgtjgchitqjlqsctcsf.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZ3RqZ2NoaXRxamxxc2N0Y3NmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM1OTQ0MjQsImV4cCI6MjA0OTE3MDQyNH0.VhvfXDM7z2EqyRhJOwFnSFqx3KO5fJY8rlPTyRN8Cgw';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function addFinishedAtColumn() {
+  console.log('🔧 ADICIONANDO COLUNA finished_at');
+  
   try {
-    console.log('🔧 Adicionando coluna finished_at à tabela game_matches...');
+    // Verificar se a coluna já existe
+    console.log('🔍 Verificando se a coluna finished_at já existe...');
     
-    const supabase = getSupabaseClient('vps');
+    const { data: columns, error: columnsError } = await supabase
+      .from('information_schema.columns')
+      .select('column_name')
+      .eq('table_name', 'game_season_matches')
+      .eq('column_name', 'finished_at');
     
-    // Tentar adicionar a coluna finished_at
-    const { error } = await supabase
-      .from('game_matches')
-      .select('id')
-      .limit(1);
-    
-    if (error) {
-      console.error('❌ Erro ao acessar tabela game_matches:', error);
+    if (columnsError) {
+      console.error('❌ Erro ao verificar colunas:', columnsError);
       return;
     }
     
-    console.log('✅ Tabela game_matches está acessível');
+    if (columns && columns.length > 0) {
+      console.log('⚠️ Coluna finished_at já existe!');
+      return;
+    }
     
-    // Como não podemos executar DDL via Supabase client, vamos criar um script SQL
-    console.log('📝 Criando script SQL para adicionar a coluna...');
+    // Adicionar a coluna via RPC (precisa de uma função no banco)
+    console.log('➕ Adicionando coluna finished_at...');
     
-    const sqlScript = `
--- Script para adicionar coluna finished_at
--- Execute este script no Supabase SQL Editor
-
--- Adicionar coluna finished_at se não existir
-ALTER TABLE game_matches 
-ADD COLUMN IF NOT EXISTS finished_at TIMESTAMP WITH TIME ZONE;
-
--- Verificar se a coluna foi adicionada
-SELECT 
-    column_name, 
-    data_type, 
-    is_nullable
-FROM information_schema.columns 
-WHERE table_name = 'game_matches' 
-AND column_name = 'finished_at';
-
--- Mensagem de sucesso
-SELECT '✅ Coluna finished_at adicionada com sucesso!' as status;
-    `;
-    
-    console.log('📄 Script SQL criado:');
-    console.log('='.repeat(50));
-    console.log(sqlScript);
-    console.log('='.repeat(50));
+    // Como não podemos executar DDL diretamente, vamos usar o SQL editor do Supabase
+    console.log('📋 Execute este SQL no Supabase Studio:');
     console.log('');
-    console.log('💡 Para aplicar esta correção:');
-    console.log('1. Acesse o Supabase Dashboard');
-    console.log('2. Vá para SQL Editor');
-    console.log('3. Cole o script acima');
-    console.log('4. Execute o script');
-    console.log('5. Teste o simulador novamente');
+    console.log('ALTER TABLE game_season_matches ADD COLUMN finished_at TIMESTAMP WITH TIME ZONE;');
+    console.log('');
+    console.log('✅ Depois execute novamente este script para verificar.');
     
   } catch (error) {
-    console.error('❌ Erro geral:', error);
+    console.error('❌ Erro ao adicionar coluna:', error);
   }
 }
 
-addFinishedAtColumn(); 
+addFinishedAtColumn();

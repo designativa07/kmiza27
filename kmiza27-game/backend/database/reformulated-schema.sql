@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS game_season_matches (
   
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  finished_at TIMESTAMP WITH TIME ZONE, -- Data/hora quando a partida foi finalizada
   
   -- Garantir que ou é usuário vs máquina ou máquina vs usuário
   CHECK (

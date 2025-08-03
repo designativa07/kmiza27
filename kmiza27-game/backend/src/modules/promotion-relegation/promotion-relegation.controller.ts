@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Query, Body, Param, Logger } from '@nestjs/common';
 import { PromotionRelegationService } from './promotion-relegation.service';
 
-@Controller('api/v2/promotion-relegation')
+@Controller('promotion-relegation')
 export class PromotionRelegationController {
   private readonly logger = new Logger(PromotionRelegationController.name);
 
