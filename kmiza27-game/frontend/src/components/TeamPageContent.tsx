@@ -4,31 +4,86 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { GameTeam } from '@/lib/supabase';
-import StadiumExpansion from '@/components/StadiumExpansion';
-import TeamPlayers from '@/components/TeamPlayers';
-import YouthAcademy from '@/components/YouthAcademy';
-import FinanceManager from '@/components/FinanceManager';
-import MatchSimulator from '@/components/MatchSimulator';
 import CompetitionsManagerReformed from '@/components/CompetitionsManagerReformed';
 import SeasonEndModal from '@/components/SeasonEndModal';
+import { gameApiReformed, SeasonMatch } from '@/services/gameApiReformed';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Landmark, Users, Star, HeartHandshake, Play, Calendar, Swords, Trophy, GraduationCap, ShieldAlert, Settings, Building } from 'lucide-react';
+import TeamPlayers from './TeamPlayers';
+import StadiumExpansion from './StadiumExpansion';
+import YouthAcademy from './YouthAcademy';
+import FinanceManager from './FinanceManager';
+
+type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'finances';
 
 export default function TeamPageContent() {
   const params = useParams();
   const router = useRouter();
   const { userTeams, selectedTeam, loadTeams, setSelectedTeam, deleteTeam, isLoading, error } = useGameStore();
   const [team, setTeam] = useState<GameTeam | null>(null);
-  const [activeTab, setActiveTab] = useState('competition');
   const [isDeleting, setIsDeleting] = useState(false);
   const [seasonEndModal, setSeasonEndModal] = useState<{
     isOpen: boolean;
     seasonResult: any;
   }>({ isOpen: false, seasonResult: null });
+  const [upcomingMatches, setUpcomingMatches] = useState<SeasonMatch[]>([]);
+  const [simulatingMatch, setSimulatingMatch] = useState<string | null>(null);
+  const [recentMatches, setRecentMatches] = useState<SeasonMatch[]>([]);
+  const [competitionData, setCompetitionData] = useState<any>(null);
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const teamId = params.teamId as string;
+
+  const loadData = async () => {
+    if (!selectedTeam) return;
+    try {
+      const [matches, recent, progress] = await Promise.all([
+        gameApiReformed.getUserUpcomingMatches(selectedTeam.owner_id, 10),
+        gameApiReformed.getUserRecentMatches(selectedTeam.owner_id, 10),
+        gameApiReformed.getUserCurrentProgress(selectedTeam.owner_id)
+      ]);
+      setUpcomingMatches(matches);
+      setRecentMatches(recent);
+      setCompetitionData(progress);
+    } catch (error) {
+      console.error('Erro ao carregar dados do time:', error);
+    }
+  };
+  
+  const simulateMatch = async (matchId: string) => {
+    if (!selectedTeam) return;
+    try {
+      setSimulatingMatch(matchId);
+      await gameApiReformed.simulateMatch(matchId, selectedTeam.owner_id);
+      
+      // Aguardar um pouco para garantir que o backend processou
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Recarregar todos os dados
+      await loadData();
+      
+      // Forçar atualização do componente
+      setRefreshKey(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Erro ao simular partida:', error);
+      alert('Erro ao simular partida. Tente novamente.');
+    } finally {
+      setSimulatingMatch(null);
+    }
+  };
 
   useEffect(() => {
     loadTeams();
   }, [loadTeams]);
+
+  useEffect(() => {
+    if (selectedTeam) {
+      loadData();
+    }
+  }, [selectedTeam, refreshKey]);
 
   useEffect(() => {
     if (userTeams.length > 0) {
@@ -37,289 +92,189 @@ export default function TeamPageContent() {
         setTeam(foundTeam);
         setSelectedTeam(foundTeam);
       } else {
-        // Se o time não for encontrado, redirecionar para a página inicial
         router.push('/');
       }
     }
   }, [userTeams, teamId, setSelectedTeam, router]);
+  
+  const renderContent = () => {
+    switch (activeView) {
+      case 'players':
+        return <TeamPlayers teamId={team!.id} teamName={team!.name} />;
+      case 'stadium':
+        return <StadiumExpansion team={team!} />;
+      case 'academy':
+        return <YouthAcademy />;
+      case 'finances':
+        return <FinanceManager />;
+      default:
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+            {/* Coluna Esquerda */}
+            <div className="lg:col-span-7 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {upcomingMatches.length > 0 && (
+                  <Card className="bg-emerald-600 border-emerald-700 shadow-md text-white">
+                    <CardHeader>
+                      <CardTitle className="text-xl text-white flex items-center">
+                        <Calendar className="h-5 w-5 mr-2" /> Próxima Partida
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-col h-full justify-between">
+                        <div>
+                          <p className="text-lg font-semibold flex items-center">
+                            <Swords className="h-5 w-5 mr-2 opacity-80" />
+                            {upcomingMatches[0].home_team_id === team!.id ? 'Casa' : 'Fora'} vs {upcomingMatches[0].home_team_id === team!.id ? upcomingMatches[0].away_machine?.name : upcomingMatches[0].home_machine?.name}
+                          </p>
+                          <p className="text-sm opacity-90 mt-1 ml-7">Rodada {upcomingMatches[0].round_number}</p>
+                          <p className="text-sm opacity-80 ml-7">{new Date(upcomingMatches[0].match_date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                        </div>
+                        {upcomingMatches[0].status === 'scheduled' && (
+                          <Button size="lg" onClick={() => simulateMatch(upcomingMatches[0].id)} disabled={simulatingMatch === upcomingMatches[0].id} className="w-full mt-4 text-md font-bold bg-white text-emerald-700 hover:bg-slate-50">
+                            <Play className="h-5 w-5 mr-2" />{simulatingMatch === upcomingMatches[0].id ? 'Jogando...' : 'JOGAR'}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                                       {recentMatches.length > 0 && (
+                         <Card className="bg-white border-slate-200 shadow-md">
+                           <CardHeader className="pb-3">
+                             <CardTitle className="text-lg flex items-center text-slate-700"><Calendar className="h-4 w-4 mr-2" />Última Partida</CardTitle>
+                           </CardHeader>
+                           <CardContent className="text-center space-y-2">
+                             <p className="text-sm text-slate-600 font-medium">{recentMatches[0].home_team_id === team!.id ? 'Casa' : 'Fora'} vs {recentMatches[0].home_team_id === team!.id ? recentMatches[0].away_machine?.name : recentMatches[0].home_machine?.name}</p>
+                             <div className="text-3xl font-bold text-slate-800 bg-slate-50 rounded-lg px-3 py-1 border border-slate-200">
+                               {recentMatches[0].home_team_id === team!.id ? recentMatches[0].home_score : recentMatches[0].away_score} - {recentMatches[0].home_team_id === team!.id ? recentMatches[0].away_score : recentMatches[0].home_score}
+                             </div>
+                             <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                               recentMatches[0].home_team_id === team!.id ?
+                                 (recentMatches[0].home_score > recentMatches[0].away_score ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : recentMatches[0].home_score < recentMatches[0].away_score ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-amber-100 text-amber-700 border border-amber-300') :
+                                 (recentMatches[0].away_score > recentMatches[0].home_score ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : recentMatches[0].away_score < recentMatches[0].home_score ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-amber-100 text-amber-700 border border-amber-300')
+                             }`}>
+                               {recentMatches[0].home_team_id === team!.id ? 
+                                 (recentMatches[0].home_score > recentMatches[0].away_score ? 'Vitória' : recentMatches[0].home_score < recentMatches[0].away_score ? 'Derrota' : 'Empate') :
+                                 (recentMatches[0].away_score > recentMatches[0].home_score ? 'Vitória' : recentMatches[0].away_score < recentMatches[0].home_score ? 'Derrota' : 'Empate')
+                               }
+                             </div>
+                             <p className="text-xs text-slate-500 font-medium">Forma Recente: V-D-E-V-V</p>
+                           </CardContent>
+                         </Card>
+                       )}
+              </div>
+              <Card className="bg-white border-slate-200 shadow-md">
+                <CardContent className="p-0">
+                  <CompetitionsManagerReformed 
+                    onSeasonEnd={(seasonResult) => setSeasonEndModal({ isOpen: true, seasonResult })}
+                    refreshKey={refreshKey}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+            {/* Coluna Direita */}
+            <div className="lg:col-span-3 space-y-6">
+              <Card className="bg-white border-slate-200 shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center text-slate-700"><Landmark className="h-5 w-5 mr-2" />Visão Geral</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  {/* Card Orçamento */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                      <span className="text-emerald-700 flex items-center"><Landmark className="h-4 w-4 mr-2" /> Orçamento</span>
+                      <span className="font-bold text-emerald-700">R$ {(team!.budget || 0).toLocaleString()}</span>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50" onClick={() => setActiveView('finances')}>
+                      Gerenciar Finanças
+                    </Button>
+                  </div>
 
-  if (isLoading) {
-    return (
-      <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
-            <p className="mt-4 text-gray-700 text-lg">Carregando seu time...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+                  {/* Card Estádio */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-700 flex items-center"><Building className="h-4 w-4 mr-2" /> Estádio</span>
+                      <span className="font-semibold text-slate-700">{(team!.stadium_capacity || 0).toLocaleString()} lugares</span>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full text-slate-700 border-slate-300 hover:bg-slate-50" onClick={() => setActiveView('stadium')}>
+                      Gerenciar Estádio
+                    </Button>
+                  </div>
 
-  if (error) {
-    return (
-      <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+                  {/* Card Elenco */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <span className="text-blue-700 flex items-center"><Users className="h-4 w-4 mr-2" /> Elenco</span>
+                      <span className="font-semibold text-blue-700">23 jogadores</span>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>
+                      Jogadores
+                    </Button>
+                  </div>
+
+                  {/* Cards sem botões */}
+                  <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg border border-amber-200">
+                    <span className="text-amber-700 flex items-center"><Star className="h-4 w-4 mr-2" /> Reputação</span>
+                    <span className="font-semibold text-amber-700">{team!.reputation || 0}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 bg-rose-50 rounded-lg border border-rose-200">
+                    <span className="text-rose-700 flex items-center"><HeartHandshake className="h-4 w-4 mr-2" /> Torcida</span>
+                    <span className="font-semibold text-rose-700">{(team!.fan_base || 0).toLocaleString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-slate-200 shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center text-slate-700"><Users className="h-5 w-5 mr-2" />Status da Equipe</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200"><span className="text-blue-700 flex items-center"><GraduationCap className="h-4 w-4 mr-2" /> Academia</span><span className="font-semibold text-blue-700">Nível 1</span></div>
+                  <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg border border-orange-200"><span className="text-orange-700 flex items-center"><HeartHandshake className="h-4 w-4 mr-2" /> Moral da Equipe</span><span className="font-semibold text-orange-700">Neutra</span></div>
+                  <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200"><span className="text-red-700 flex items-center"><ShieldAlert className="h-4 w-4 mr-2" /> Suspensos</span><span className="font-semibold text-red-700">0</span></div>
+                  <Button variant="outline" size="sm" className="w-full mt-4 text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>Gerenciar Jogadores</Button>
+                  <Button variant="outline" size="sm" className="w-full text-orange-700 border-orange-300 hover:bg-orange-50" onClick={() => setActiveView('academy')}>Gerenciar Academia</Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+    }
+  };
 
-  if (!team) {
-    return (
-      <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-20">
-            <p className="text-gray-700 text-lg">Time não encontrado</p>
-            <button 
-              onClick={() => router.push('/')}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Voltar ao Início
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div><p className="mt-4 text-lg">Carregando...</p></div>;
+  if (error) return <div className="p-4 bg-red-100 text-red-700 rounded">{error}</div>;
+  if (!team) return <div className="text-center py-20"><p>Time não encontrado.</p><Button onClick={() => router.push('/')}>Início</Button></div>;
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <header className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <button 
-              onClick={() => router.push('/')}
-              className="text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              ← Voltar
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900 text-center">
-              {team.name}
-            </h1>
-            <button 
-              onClick={async () => {
-                if (confirm(`Tem certeza que deseja deletar o time "${team.name}"? Esta ação não pode ser desfeita.`)) {
-                  try {
-                    setIsDeleting(true);
-                    await deleteTeam(team.id);
-                    alert('Time deletado com sucesso!');
-                    router.push('/');
-                  } catch (error) {
-                    alert(`Erro ao deletar time: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-                  } finally {
-                    setIsDeleting(false);
-                  }
-                }
-              }}
-              disabled={isDeleting}
-              className={`transition-colors ${
-                isDeleting 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-red-400 hover:text-red-300'
-              }`}
-              title={isDeleting ? 'Deletando...' : 'Deletar time'}
-            >
-              {isDeleting ? '⏳' : '🗑️'}
-            </button>
-          </div>
-          
-          {/* Card Principal do Time */}
-          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center space-x-4 mb-6">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-2xl"
-                style={{
-                  backgroundColor: team.colors?.primary || '#3b82f6',
-                  color: team.colors?.secondary || '#ffffff'
-                }}
-              >
-                {team.short_name || (team.name ? team.name.charAt(0).toUpperCase() : '?')}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{team.name}</h2>
-                <p className="text-gray-600">{team.stadium_name || 'Sem estádio'}</p>
-                <p className="text-sm text-gray-500">Criado em {new Date(team.created_at).toLocaleDateString('pt-BR')}</p>
-              </div>
+          <div className="flex items-center justify-between bg-white rounded-xl shadow-sm p-4 border border-slate-200">
+            <Button variant="outline" onClick={() => activeView !== 'dashboard' ? setActiveView('dashboard') : router.push('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {activeView !== 'dashboard' ? 'Voltar ao Painel' : 'Voltar'}
+            </Button>
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-slate-800">{team.name}</h1>
+              <p className="text-sm text-slate-500 mt-1">Seu Clube de Futebol</p>
             </div>
-            
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">R$ {(team.budget || 0).toLocaleString()}</div>
-                <div className="text-sm text-gray-600">Orçamento</div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{(team.stadium_capacity || 0).toLocaleString()}</div>
-                <div className="text-sm text-gray-600">Lugares</div>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{team.reputation || 0}</div>
-                <div className="text-sm text-gray-600">Reputação</div>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">{(team.fan_base || 0).toLocaleString()}</div>
-                <div className="text-sm text-gray-600">Torcida</div>
-              </div>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-md border-4 border-white" style={{ backgroundColor: team.colors?.primary || '#1e88e5', color: team.colors?.secondary || '#ffffff' }} title={team.name}>
+              {team.short_name || (team.name ? team.name.charAt(0).toUpperCase() : '?')}
             </div>
           </div>
         </header>
 
-        {/* Tabs */}
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="border-b border-gray-200">
-              <nav className="flex flex-wrap space-x-2 md:space-x-8 px-6">
-                {[
-                  { id: 'competition', label: 'Competição', icon: '🏆' },
-                  { id: 'overview', label: 'Visão Geral', icon: '📊' },
-                  { id: 'players', label: 'Jogadores', icon: '⚽' },
-                  { id: 'stadium', label: 'Estádio', icon: '🏟️' },
-                  { id: 'academy', label: 'Academia', icon: '🏃' },
-                  { id: 'finances', label: 'Finanças', icon: '💰' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="mr-2">{tab.icon}</span>
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
+        {renderContent()}
 
-            {/* Tab Content */}
-            <div className="p-6">
-              {activeTab === 'competition' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">🏆 Competição</h3>
-                  <CompetitionsManagerReformed 
-                    onSeasonEnd={(seasonResult) => {
-                      console.log('🎉 Fim de temporada detectado:', seasonResult);
-                      setSeasonEndModal({ 
-                        isOpen: true, 
-                        seasonResult: seasonResult 
-                      });
-                    }}
-                  />
-                </div>
-              )}
-
-              {activeTab === 'overview' && (
-                <div className="space-y-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Visão Geral</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-2">Próximas Ações</h4>
-                      <div className="space-y-2">
-                        <button 
-                          onClick={() => setActiveTab('competition')}
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-                        >
-                          🏆 Ver Competição
-                        </button>
-                        <button 
-                          onClick={() => setActiveTab('stadium')}
-                          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
-                        >
-                          🏟️ Expandir Estádio
-                        </button>
-                        <button 
-                          onClick={() => setActiveTab('academy')}
-                          className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors"
-                        >
-                          🏃 Realizar Peneira
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-2">Status do Time</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Academia de Base:</span>
-                          <span className="font-semibold">Nível 1</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Jogadores na Base:</span>
-                          <span className="font-semibold">0</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Próxima Partida:</span>
-                          <span className="font-semibold">Nenhuma agendada</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Última Atualização:</span>
-                          <span className="font-semibold">Hoje</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'stadium' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Gerenciamento do Estádio</h3>
-                  <StadiumExpansion team={team} />
-                </div>
-              )}
-
-              {activeTab === 'academy' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Academia de Base</h3>
-                  <YouthAcademy />
-                </div>
-              )}
-
-              {activeTab === 'players' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Jogadores</h3>
-                  <TeamPlayers teamId={team.id} teamName={team.name} />
-                </div>
-              )}
-
-
-
-              {activeTab === 'finances' && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Finanças</h3>
-                  <FinanceManager />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Modal de Fim de Temporada */}
         <SeasonEndModal
           isOpen={seasonEndModal.isOpen}
           seasonResult={seasonEndModal.seasonResult}
           onContinue={async () => {
-            console.log('🚀 Continuando para próxima temporada...');
-            try {
-              // A nova temporada já foi criada pelo backend
-              setSeasonEndModal({ isOpen: false, seasonResult: null });
-              
-              // Recarregar dados da nova temporada
-              window.location.reload();
-            } catch (error) {
-              console.error('Erro ao continuar para próxima temporada:', error);
-              alert('Erro ao continuar para próxima temporada. Tente novamente.');
-            }
+            setSeasonEndModal({ isOpen: false, seasonResult: null });
+            await loadData();
+            window.location.reload(); // Para garantir atualização completa
           }}
           onClose={() => setSeasonEndModal({ isOpen: false, seasonResult: null })}
         />

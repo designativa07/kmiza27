@@ -1,0 +1,143 @@
+-- =====================================================
+-- SCRIPT: Corrigir conflito entre TypeORM entities e tabelas existentes
+-- =====================================================
+
+-- 1. Remover tabelas existentes que estão causando conflito
+DROP TABLE IF EXISTS pool_predictions CASCADE;
+DROP TABLE IF EXISTS pool_participants CASCADE;  
+DROP TABLE IF EXISTS pool_matches CASCADE;
+DROP TABLE IF EXISTS pools CASCADE;
+
+-- 2. Remover tipos/enums se existirem
+DROP TYPE IF EXISTS pool_status CASCADE;
+DROP TYPE IF EXISTS pool_type CASCADE;
+
+-- 3. Recriar tudo do zero seguindo exatamente a estrutura do TypeORM
+
+-- Criar enum para status do bolão
+CREATE TYPE pool_status AS ENUM ('draft', 'open', 'closed', 'finished');
+
+-- Criar enum para tipo do bolão  
+CREATE TYPE pool_type AS ENUM ('round', 'custom');
+
+-- Tabela principal dos bolões (usando 'name' ao invés de 'title')
+CREATE TABLE pools (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,  -- Campo correto: 'name' não 'title'
+    description TEXT,
+    status pool_status DEFAULT 'draft',
+    type pool_type DEFAULT 'custom',
+    competition_id INTEGER REFERENCES competitions(id) ON DELETE SET NULL,
+    round_id INTEGER REFERENCES rounds(id) ON DELETE SET NULL,
+    created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    prediction_deadline TIMESTAMP,
+    scoring_rules JSONB DEFAULT '{"exact_score": 10, "correct_result": 5, "goal_difference": 3}'::jsonb,
+    settings JSONB DEFAULT '{}'::jsonb,
+    is_public BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de jogos associados aos bolões
+CREATE TABLE pool_matches (
+    id SERIAL PRIMARY KEY,
+    pool_id INTEGER NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(pool_id, match_id)
+);
+
+-- Tabela de participantes dos bolões
+CREATE TABLE pool_participants (
+    id SERIAL PRIMARY KEY,
+    pool_id INTEGER NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    total_points INTEGER DEFAULT 0,
+    ranking_position INTEGER,
+    predictions_count INTEGER DEFAULT 0,
+    exact_predictions INTEGER DEFAULT 0,
+    correct_results INTEGER DEFAULT 0,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(pool_id, user_id)
+);
+
+-- Tabela de palpites dos usuários
+CREATE TABLE pool_predictions (
+    id SERIAL PRIMARY KEY,
+    pool_id INTEGER NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    home_score_prediction INTEGER,
+    away_score_prediction INTEGER,
+    score INTEGER DEFAULT 0,
+    predicted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(pool_id, user_id, match_id)
+);
+
+-- Criar índices para performance
+CREATE INDEX idx_pools_status ON pools(status);
+CREATE INDEX idx_pools_type ON pools(type);
+CREATE INDEX idx_pools_created_by ON pools(created_by_user_id);
+CREATE INDEX idx_pools_public ON pools(is_public);
+
+CREATE INDEX idx_pool_matches_pool ON pool_matches(pool_id);
+CREATE INDEX idx_pool_matches_match ON pool_matches(match_id);
+
+CREATE INDEX idx_pool_participants_pool ON pool_participants(pool_id);
+CREATE INDEX idx_pool_participants_user ON pool_participants(user_id);
+CREATE INDEX idx_pool_participants_score ON pool_participants(total_points DESC);
+
+CREATE INDEX idx_pool_predictions_pool ON pool_predictions(pool_id);
+CREATE INDEX idx_pool_predictions_user ON pool_predictions(user_id);
+CREATE INDEX idx_pool_predictions_match ON pool_predictions(match_id);
+
+-- Inserir um bolão de exemplo (apenas se existir pelo menos um usuário)
+DO $$
+DECLARE
+    first_user_id INTEGER;
+BEGIN
+    -- Buscar o primeiro usuário disponível
+    SELECT id INTO first_user_id FROM users ORDER BY id LIMIT 1;
+    
+    -- Se existir um usuário, criar o bolão de exemplo
+    IF first_user_id IS NOT NULL THEN
+        INSERT INTO pools (
+            name, 
+            description, 
+            type, 
+            status, 
+            created_by_user_id, 
+            is_public,
+            scoring_rules
+        ) VALUES (
+            'Bolão Teste - Brasileirão 2024',
+            'Bolão de exemplo para testar o sistema',
+            'custom',
+            'open',
+            first_user_id,
+            true,
+            '{"exact_score": 10, "correct_result": 5, "goal_difference": 3}'::jsonb
+        );
+        
+        RAISE NOTICE 'Bolão de exemplo criado com usuário ID: %', first_user_id;
+    ELSE
+        RAISE NOTICE 'Nenhum usuário encontrado. Bolão de exemplo não foi criado.';
+    END IF;
+END $$;
+
+-- Verificar se as tabelas foram criadas
+SELECT 
+    table_name,
+    table_type
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+    AND table_name IN ('pools', 'pool_matches', 'pool_participants', 'pool_predictions')
+ORDER BY table_name;
+
+-- Mensagem final
+SELECT '✅ Tabelas do sistema de bolão recriadas com sucesso!' as status;

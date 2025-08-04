@@ -211,4 +211,72 @@ export class UsersService {
 
     return { total, active, withFavoriteTeam, recentInteractions, admins };
   }
+
+  async getUserProfileStats(userId: number): Promise<any> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      // Estatísticas de bolões (mockado por enquanto, será implementado quando o módulo de pools estiver disponível)
+      const poolStats = {
+        pools_participated: 0,
+        pools_won: 0,
+        total_predictions: 0,
+        exact_predictions: 0,
+        total_points: 0
+      };
+
+      return {
+        ...poolStats,
+        amateur_competitions: 0, // Será implementado quando necessário
+        whatsapp_conversations: 0, // Será implementado quando necessário
+        game_sessions: 0, // Será implementado quando necessário
+      };
+    } catch (error) {
+      console.error('Erro ao obter estatísticas do perfil:', error);
+      return {
+        pools_participated: 0,
+        pools_won: 0,
+        total_predictions: 0,
+        exact_predictions: 0,
+        total_points: 0,
+        amateur_competitions: 0,
+        whatsapp_conversations: 0,
+        game_sessions: 0,
+      };
+    }
+  }
+
+  async updateProfile(userId: number, updateData: any): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      // Campos que podem ser atualizados
+      const allowedFields = ['name', 'email', 'preferences'];
+      const updateFields: any = {};
+
+      for (const field of allowedFields) {
+        if (updateData[field] !== undefined) {
+          updateFields[field] = updateData[field];
+        }
+      }
+
+      await this.userRepository.update(userId, updateFields);
+      
+      // Retornar usuário atualizado
+      const updatedUser = await this.findOne(userId);
+      if (!updatedUser) {
+        throw new Error('Usuário não encontrado após atualização');
+      }
+      return updatedUser;
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      throw error;
+    }
+  }
 } 

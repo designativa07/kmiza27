@@ -165,8 +165,8 @@ class GameApiReformedService {
    * Buscar progresso atual da temporada
    */
   async getUserCurrentProgress(userId: string, seasonYear?: number): Promise<SeasonProgress | null> {
-    const year = seasonYear || new Date().getFullYear();
-    const response = await this.request<any>(`/api/v2/seasons/progress?userId=${userId}&seasonYear=${year}`);
+    const params = seasonYear ? `userId=${userId}&seasonYear=${seasonYear}` : `userId=${userId}`;
+    const response = await this.request<any>(`/api/v2/seasons/progress?${params}`);
     return response.data;
   }
 
@@ -345,6 +345,16 @@ class GameApiReformedService {
   async getApiStatus(): Promise<any> {
     const response = await this.request<any>('/api/v2/game-teams/status');
     return response.data;
+  }
+
+  /**
+   * Iniciar nova temporada (mesma série, pontos zerados)
+   */
+  async startNewSeason(userId: string): Promise<any> {
+    return this.request<any>('/api/v2/seasons/start-new-season', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
   }
 }
 

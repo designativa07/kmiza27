@@ -319,6 +319,20 @@ export default function Home() {
                    </Link>
                  </div>
                </div>
+
+               <div>
+                 <h4 className="font-bold text-gray-900 mb-1 px-1 text-sm">Bolões</h4>
+                 <div className="grid grid-cols-1 gap-2">
+                   <Link href="/pools" className="group block p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                     <div className="flex items-center justify-center">
+                       <div className="p-1 bg-purple-100 rounded-full">
+                         <Target className="h-4 w-4 text-purple-600" />
+                       </div>
+                       <p className="ml-1 font-medium text-xs text-gray-700">Ver Bolões Disponíveis</p>
+                     </div>
+                   </Link>
+                 </div>
+               </div>
             </div>
           </div>
         </div>

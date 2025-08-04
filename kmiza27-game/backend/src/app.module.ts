@@ -8,6 +8,7 @@ import { GameTeamsReformedModule } from './modules/game-teams/game-teams-reforme
 import { MachineTeamsModule } from './modules/machine-teams/machine-teams.module';
 import { SeasonsModule } from './modules/seasons/seasons.module';
 import { PromotionRelegationModule } from './modules/promotion-relegation/promotion-relegation.module';
+import { PlayersModule } from './modules/players/players.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PromotionRelegationModule } from './modules/promotion-relegation/promot
     MachineTeamsModule,
     SeasonsModule,
     PromotionRelegationModule,
+    PlayersModule,
   ],
   controllers: [AppController],
   providers: [SupabaseService],

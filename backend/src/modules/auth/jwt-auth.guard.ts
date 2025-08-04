@@ -6,25 +6,30 @@ import { Request } from 'express';
 export class JwtAuthGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
-      throw new UnauthorizedException('Token não fornecido');
+      throw new UnauthorizedException('Token de acesso não fornecido');
     }
-    
+
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET || 'kmiza27_secret_key_admin',
+      });
+      
+      // Anexar informações do usuário à requisição
       request['user'] = payload;
-      return true;
     } catch (error) {
-      throw new UnauthorizedException('Token inválido');
+      throw new UnauthorizedException('Token de acesso inválido');
     }
+
+    return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
-} 
+}

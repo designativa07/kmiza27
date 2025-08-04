@@ -173,7 +173,11 @@ export class GameTeamsReformedService {
         new Date().getFullYear()
       );
 
+      // NOVO: Criar estatísticas zeradas para todos os times da máquina da Série D
+      await this.createZeroStatsForMachineTeams(userId, 4, new Date().getFullYear());
+
       this.logger.log(`✅ REFORM: Temporada inicializada com ${seasonData.calendar.matches.length} partidas`);
+      this.logger.log(`✅ REFORM: Estatísticas zeradas criadas para 19 times da máquina`);
       this.logger.log(`🎯 REFORM: Usuário pronto para jogar contra 19 times da máquina na Série D`);
       
       return seasonData;
@@ -181,6 +185,84 @@ export class GameTeamsReformedService {
       this.logger.error('❌ REFORM: Error initializing season:', error);
       throw error;
     }
+  }
+
+  /**
+   * Criar estatísticas zeradas para todos os times da máquina da série
+   */
+  private async createZeroStatsForMachineTeams(userId: string, tier: number, seasonYear: number) {
+    try {
+      this.logger.log(`📊 REFORM: Criando estatísticas zeradas para usuário ${userId} na Série ${this.getTierName(tier)}`);
+      
+      // Buscar todos os times da máquina da série
+      const { data: machineTeams, error: teamsError } = await supabase
+        .from('game_machine_teams')
+        .select('id, name')
+        .eq('tier', tier)
+        .eq('is_active', true);
+      
+      if (teamsError) {
+        throw new Error(`Erro ao buscar times da máquina: ${teamsError.message}`);
+      }
+      
+      if (!machineTeams || machineTeams.length === 0) {
+        this.logger.warn(`⚠️ REFORM: Nenhum time da máquina encontrado para Série ${this.getTierName(tier)}`);
+        return;
+      }
+      
+      this.logger.log(`🔍 REFORM: Encontrados ${machineTeams.length} times da máquina para criar estatísticas zeradas`);
+      
+      let created = 0;
+      let existing = 0;
+      
+      // Criar estatísticas zeradas para cada time da máquina
+      for (const team of machineTeams) {
+        const { data, error: insertError } = await supabase
+          .from('game_user_machine_team_stats')
+          .insert({
+            user_id: userId,
+            team_id: team.id,
+            team_name: team.name,
+            season_year: seasonYear,
+            tier: tier,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          })
+          .select();
+        
+        if (insertError) {
+          if (insertError.code === '23505') {
+            // Registro já existe
+            existing++;
+            this.logger.log(`   ⚠️ ${team.name} - estatísticas já existem`);
+          } else {
+            this.logger.error(`   ❌ ${team.name} - erro:`, insertError.message);
+          }
+        } else {
+          created++;
+          this.logger.log(`   ✅ ${team.name} - estatísticas zeradas criadas`);
+        }
+      }
+      
+      this.logger.log(`📊 REFORM: ${created} estatísticas criadas, ${existing} já existiam`);
+      
+    } catch (error) {
+      this.logger.error('❌ REFORM: Erro ao criar estatísticas zeradas:', error);
+      // Não falhar a criação do time se isso der erro
+    }
+  }
+
+  /**
+   * Converte tier numérico para nome da série
+   */
+  private getTierName(tier: number): string {
+    const names = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+    return names[tier] || tier.toString();
   }
 
   // ===== CRIAÇÃO DE JOGADORES (MANTIDO) =====
@@ -502,10 +584,13 @@ export class GameTeamsReformedService {
       // 3. Deletar progresso da temporada atual
       await this.deleteUserProgress(userId, teamId);
 
-      // 4. Deletar histórico de temporadas (opcional - vou manter por enquanto)
+      // 4. Deletar estatísticas dos times da máquina do usuário
+      await this.deleteUserMachineTeamStats(userId, teamId);
+
+      // 5. Deletar histórico de temporadas (opcional - vou manter por enquanto)
       // await this.deleteSeasonHistory(userId, teamId);
 
-      // 5. Deletar jogadores do time
+      // 6. Deletar jogadores do time
       await this.deleteTeamPlayers(teamId);
 
       // 6. Deletar o time
@@ -573,6 +658,26 @@ export class GameTeamsReformedService {
       }
     } catch (error) {
       this.logger.warn('⚠️ Erro ao deletar progresso:', error);
+    }
+  }
+
+  /**
+   * Deletar estatísticas dos times da máquina do usuário
+   */
+  private async deleteUserMachineTeamStats(userId: string, teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('game_user_machine_team_stats')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar estatísticas dos times da máquina: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Estatísticas dos times da máquina deletadas');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar estatísticas dos times da máquina:', error);
     }
   }
 

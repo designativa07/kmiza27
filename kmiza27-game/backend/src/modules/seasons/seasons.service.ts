@@ -14,17 +14,20 @@ export class SeasonsService {
    * Inicializa temporada para um usuário que acabou de criar um time
    * Automaticamente inscreve na Série D e cria calendário completo
    */
-  async initializeUserSeason(userId: string, teamId: string, seasonYear: number = new Date().getFullYear()) {
+  async initializeUserSeason(userId: string, teamId: string, seasonYear: number = new Date().getFullYear(), tier: number = 4) {
     try {
-      this.logger.log(`🏁 Inicializando temporada ${seasonYear} para usuário ${userId} (time: ${teamId})`);
+      this.logger.log(`🏁 Inicializando temporada ${seasonYear} para usuário ${userId} (time: ${teamId}) na Série ${this.getTierName(tier)}`);
 
-      // 1. Criar registro de progresso na Série D
-      const userProgress = await this.createUserProgress(userId, teamId, 4, seasonYear);
+      // 1. Criar registro de progresso na série especificada
+      const userProgress = await this.createUserProgress(userId, teamId, tier, seasonYear);
       
       // 2. Gerar calendário completo da temporada
-      const calendar = await this.generateSeasonCalendar(userId, teamId, 4, seasonYear);
+      const calendar = await this.generateSeasonCalendar(userId, teamId, tier, seasonYear);
       
-      // 3. Atualizar progresso com informações iniciais (TODOS COMEÇAM ZERADOS)
+      // 3. Zerar/criar stats dos times da máquina para o usuário/temporada
+      await this.createZeroStatsForMachineTeams(userId, seasonYear, tier);
+      
+      // 4. Atualizar progresso com informações iniciais (TODOS COMEÇAM ZERADOS)
       await this.updateUserProgress(userId, teamId, seasonYear, {
         position: 1, // Todos começam na mesma posição
         season_status: 'active'
@@ -36,8 +39,8 @@ export class SeasonsService {
         user_progress: userProgress,
         calendar: calendar,
         season_info: {
-          tier: 4,
-          tier_name: 'Série D',
+          tier: tier,
+          tier_name: this.getTierName(tier),
           season_year: seasonYear,
           total_matches: calendar.matches.length,
           opponents: calendar.opponents.length
@@ -249,23 +252,41 @@ export class SeasonsService {
   /**
    * Busca progresso atual do usuário
    */
-  async getUserCurrentProgress(userId: string, seasonYear: number = new Date().getFullYear()) {
+  async getUserCurrentProgress(userId: string, seasonYear?: number) {
     try {
-      // Buscar todos os registros ativos e pegar o mais recente (último time criado)
-      const { data, error } = await supabase
+      this.logger.log(`📊 Buscando progresso do usuário ${userId}${seasonYear ? ` para temporada ${seasonYear}` : ' (temporada mais recente)'}`);
+      
+      let query = supabase
         .from('game_user_competition_progress')
         .select(`
           *,
           team:game_teams(id, name, colors, logo_url)
         `)
         .eq('user_id', userId)
-        .eq('season_year', seasonYear)
         .eq('season_status', 'active')
+        .order('season_year', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1);
 
+      // Se seasonYear foi especificado, filtrar por ele
+      if (seasonYear) {
+        query = query.eq('season_year', seasonYear);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
         throw new Error(`Error fetching user progress: ${error.message}`);
+      }
+
+      // Debug: mostrar todas as temporadas encontradas
+      if (data && data.length > 0) {
+        this.logger.log(`✅ Encontradas ${data.length} temporadas ativas:`);
+        data.forEach((progress, index) => {
+          this.logger.log(`   ${index + 1}. Temporada ${progress.season_year}: ${progress.points} pts, ${progress.games_played} jogos`);
+        });
+      } else {
+        this.logger.log('❌ Nenhuma temporada ativa encontrada');
       }
 
       // Retornar o primeiro (mais recente) ou null se não houver nenhum
@@ -419,7 +440,10 @@ export class SeasonsService {
         }
       }
 
-      // Atualizar progresso
+      // Calcular posição atual na classificação
+      const currentPosition = await this.calculateUserPosition(userId, seasonYear, points, goalsFor, goalsAgainst);
+
+      // Atualizar progresso incluindo a posição
       const updatedProgress = await this.updateUserProgress(userId, userTeamId, seasonYear, {
         points,
         games_played: matches?.length || 0,
@@ -427,10 +451,11 @@ export class SeasonsService {
         draws,
         losses,
         goals_for: goalsFor,
-        goals_against: goalsAgainst
+        goals_against: goalsAgainst,
+        position: currentPosition
       });
 
-      this.logger.log(`✅ Classificação atualizada: ${points} pontos em ${matches?.length || 0} jogos`);
+      this.logger.log(`✅ Classificação atualizada: ${points} pontos em ${matches?.length || 0} jogos, posição ${currentPosition}`);
       
       return updatedProgress;
     } catch (error) {
@@ -461,9 +486,9 @@ export class SeasonsService {
   /**
    * Busca classificação completa da série do usuário
    */
-  async getFullStandings(userId: string, seasonYear: number = new Date().getFullYear()) {
+  async getFullStandings(userId: string, seasonYear?: number) {
     try {
-      this.logger.log(`📊 Gerando classificação completa para usuário ${userId}`);
+      this.logger.log(`📊 Gerando classificação completa para usuário ${userId}${seasonYear ? ` para temporada ${seasonYear}` : ' (temporada mais recente)'}`);
 
       // 1. Buscar progresso atual do usuário para saber a série
       const userProgress = await this.getUserCurrentProgress(userId, seasonYear);
@@ -473,103 +498,58 @@ export class SeasonsService {
       }
 
       const tier = userProgress.current_tier;
+      const actualSeasonYear = userProgress.season_year; // Usar a temporada real do progresso
       
-      // 2. Buscar todos os times da máquina da mesma série
+      // 2. NOVO: Simular automaticamente todas as rodadas pendentes
+      // await this.simulateAllPendingRounds(userId, actualSeasonYear, tier);
+      
+      // 3. Buscar todos os times da máquina da mesma série
       const machineTeams = await this.machineTeamsService.getMachineTeamsForSeason(tier, userId);
       
-      // 3. Simular estatísticas realistas dos times da máquina
-      const machineStandings = machineTeams.map((team, index) => {
-        // Usar mesma quantidade de jogos que o usuário para consistência
-        const games = userProgress.games_played || 1;
-        
-        // Calcular força do time baseada na posição (1º = mais forte, 19º = mais fraco)
-        const teamStrength = (19 - index) / 19; // 0.95 para o 1º, 0.05 para o 19º
-        
-        // Simular resultados baseados na força do time
-        let wins = 0;
-        let draws = 0;
-        let losses = 0;
-        let goalsFor = 0;
-        let goalsAgainst = 0;
-        
-        // Simular cada jogo baseado na força
-        for (let game = 0; game < games; game++) {
-          const random = Math.random();
-          const strengthFactor = teamStrength + (Math.random() - 0.5) * 0.3; // Adicionar variação
-          
-          if (strengthFactor > 0.7) {
-            // Time forte tem mais chance de vitória
-            if (random < 0.6) {
-              wins++;
-              goalsFor += 1 + Math.floor(Math.random() * 3); // 1-3 gols
-              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
-            } else if (random < 0.8) {
-              draws++;
-              const goals = Math.floor(Math.random() * 3); // 0-2 gols
-              goalsFor += goals;
-              goalsAgainst += goals;
-            } else {
-              losses++;
-              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
-              goalsAgainst += 1 + Math.floor(Math.random() * 2); // 1-2 gols
-            }
-          } else if (strengthFactor > 0.4) {
-            // Time médio tem resultados equilibrados
-            if (random < 0.4) {
-              wins++;
-              goalsFor += 1 + Math.floor(Math.random() * 2); // 1-2 gols
-              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
-            } else if (random < 0.7) {
-              draws++;
-              const goals = Math.floor(Math.random() * 3); // 0-2 gols
-              goalsFor += goals;
-              goalsAgainst += goals;
-            } else {
-              losses++;
-              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
-              goalsAgainst += 1 + Math.floor(Math.random() * 3); // 1-3 gols
-            }
-          } else {
-            // Time fraco tem mais chance de derrota
-            if (random < 0.25) {
-              wins++;
-              goalsFor += 1 + Math.floor(Math.random() * 2); // 1-2 gols
-              goalsAgainst += Math.floor(Math.random() * 2); // 0-1 gols
-            } else if (random < 0.5) {
-              draws++;
-              const goals = Math.floor(Math.random() * 2); // 0-1 gols
-              goalsFor += goals;
-              goalsAgainst += goals;
-            } else {
-              losses++;
-              goalsFor += Math.floor(Math.random() * 2); // 0-1 gols
-              goalsAgainst += 1 + Math.floor(Math.random() * 3); // 1-3 gols
-            }
-          }
-        }
-        
-        // Calcular pontos corretamente: vitória = 3, empate = 1, derrota = 0
-        const points = (wins * 3) + (draws * 1);
-        
-        return {
-          position: index + 1, // Posição temporária, será reordenada depois
-          team_name: team.name,
-          team_colors: team.colors,
-          team_type: 'machine',
-          team_id: team.id,
-          points: points,
-          games_played: games,
-          wins: wins,
-          draws: draws,
-          losses: losses,
-          goals_for: goalsFor,
-          goals_against: goalsAgainst,
-          goal_difference: goalsFor - goalsAgainst,
-          stadium_name: team.stadium_name
-        };
-      });
+      // 4. Buscar estatísticas ISOLADAS POR USUÁRIO dos times da máquina
+      const machineStandings = await Promise.all(
+        machineTeams.map(async (team, index) => {
+          // Buscar estatísticas específicas do usuário da tabela game_user_machine_team_stats
+          const { data: stats, error } = await supabase
+            .from('game_user_machine_team_stats')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('team_id', team.id)
+            .eq('season_year', actualSeasonYear)
+            .eq('tier', tier)
+            .single();
 
-      // 4. Adicionar o time do usuário
+          // Se não encontrar estatísticas do usuário, usar valores zerados (novo usuário)
+          const teamStats = stats || {
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          };
+
+          return {
+            position: index + 1, // Posição temporária, será reordenada depois
+            team_name: team.name,
+            team_colors: team.colors,
+            team_type: 'machine',
+            team_id: team.id,
+            points: teamStats.points,
+            games_played: teamStats.games_played,
+            wins: teamStats.wins,
+            draws: teamStats.draws,
+            losses: teamStats.losses,
+            goals_for: teamStats.goals_for,
+            goals_against: teamStats.goals_against,
+            goal_difference: teamStats.goals_for - teamStats.goals_against,
+            stadium_name: team.stadium_name
+          };
+        })
+      );
+
+      // 5. Adicionar o time do usuário
       const userStanding = {
         position: userProgress.position || 20,
         team_name: userProgress.team?.name || 'Seu Time',
@@ -587,7 +567,7 @@ export class SeasonsService {
         stadium_name: 'Seu Estádio'
       };
 
-      // 5. Combinar e ordenar todos os times
+      // 6. Combinar e ordenar todos os times
       const allStandings = [...machineStandings, userStanding];
       
       // Ordenar por: pontos DESC, saldo de gols DESC, gols feitos DESC
@@ -597,7 +577,7 @@ export class SeasonsService {
         return b.goals_for - a.goals_for;
       });
 
-      // 6. Atualizar posições baseadas na ordenação
+      // 7. Atualizar posições baseadas na ordenação
       allStandings.forEach((team, index) => {
         team.position = index + 1;
       });
@@ -726,23 +706,326 @@ export class SeasonsService {
   }
 
   /**
-   * NOVO: Simular toda a rodada (todos os jogos entre times da máquina)
+   * NOVO: Simular automaticamente todas as rodadas pendentes
    */
-  private async simulateEntireRound(userId: string, roundNumber: number, seasonYear: number, tier: number) {
+  private async simulateAllPendingRounds(userId: string, seasonYear: number, tier: number) {
     try {
-      this.logger.log(`🎮 Simulando rodada completa ${roundNumber} da temporada ${seasonYear}`);
+      this.logger.log(`🎮 Verificando rodadas pendentes para usuário ${userId} na temporada ${seasonYear}`);
+      
+      // Buscar todas as partidas do usuário para determinar quantas rodadas já foram jogadas
+      const { data: userMatches, error } = await supabase
+        .from('game_season_matches')
+        .select('round_number')
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .eq('status', 'finished')
+        .order('round_number', { ascending: true });
 
-      // Buscar todas as outras partidas da rodada (entre times da máquina)
-      // Por enquanto, vamos apenas simular um comportamento básico
-      // Em uma implementação completa, teríamos todas as partidas entre times da máquina também
+      if (error) {
+        this.logger.error('Erro ao buscar partidas do usuário:', error);
+        return;
+      }
 
-      // Para o sistema reformulado simplificado, vamos apenas simular o conceito
-      // que toda a rodada foi processada
-      this.logger.log(`✅ Rodada ${roundNumber} simulada completamente`);
+      // Determinar a última rodada jogada pelo usuário
+      const playedRounds = userMatches?.map(m => m.round_number) || [];
+      const lastPlayedRound = playedRounds.length > 0 ? Math.max(...playedRounds) : 0;
+
+      this.logger.log(`📊 Usuário jogou até a rodada ${lastPlayedRound}`);
+
+      if (lastPlayedRound === 0) {
+        this.logger.log(`ℹ️ Usuário ainda não jogou nenhuma partida, não há rodadas para simular`);
+        return;
+      }
+
+      // Verificar se já existem partidas simuladas entre times da máquina para as rodadas até lastPlayedRound
+      const { data: existingMachineMatches, error: checkError } = await supabase
+        .from('game_season_matches')
+        .select('round_number')
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .eq('status', 'finished')
+        .not('home_machine_team_id', 'is', null) // Partidas entre times da máquina (home_machine_team_id não é null)
+        .not('away_machine_team_id', 'is', null) // Partidas entre times da máquina (away_machine_team_id não é null)
+        .order('round_number', { ascending: true });
+
+      if (checkError) {
+        this.logger.error('Erro ao verificar partidas existentes:', checkError);
+        return;
+      }
+
+      const simulatedRounds = existingMachineMatches?.map(m => m.round_number) || [];
+      this.logger.log(`📊 Rodadas já simuladas: ${simulatedRounds.join(', ')}`);
+
+      // Para cada rodada até a última rodada jogada pelo usuário,
+      // simular apenas se ainda não foi simulada
+      for (let round = 1; round <= lastPlayedRound; round++) {
+        if (!simulatedRounds.includes(round)) {
+          this.logger.log(`🎮 Simulando rodada ${round} (ainda não simulada)`);
+          
+          // Define uma data base para a rodada (ex: sábado às 16h, variando a semana)
+          const baseDate = new Date(seasonYear, 0, 1); // 1º de janeiro da temporada
+          baseDate.setDate(baseDate.getDate() + (7 * (round - 1))); // cada rodada uma semana depois
+          baseDate.setHours(16, 0, 0, 0);
+          
+          await this.simulateEntireRoundInternal(userId, round, seasonYear, tier, baseDate);
+        } else {
+          this.logger.log(`ℹ️ Rodada ${round} já foi simulada, pulando`);
+        }
+      }
+
+      this.logger.log(`✅ Verificação de rodadas concluída: usuário jogou até rodada ${lastPlayedRound}`);
+    } catch (error) {
+      this.logger.error('Erro ao simular rodadas pendentes:', error);
+      // Não parar o processo se a simulação falhar
+    }
+  }
+
+  /**
+   * Simular rodada com data passada (para rodadas anteriores)
+   */
+  private async simulateEntireRoundWithPastDate(userId: string, roundNumber: number, seasonYear: number, tier: number) {
+    try {
+      this.logger.log(`🎮 Simulando rodada ${roundNumber} com data passada`);
+      
+      // Calcular data passada (7 dias atrás por rodada)
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - (7 * (roundNumber + 1)));
+      
+      await this.simulateEntireRoundInternal(userId, roundNumber, seasonYear, tier, pastDate);
+      
+    } catch (error) {
+      this.logger.error('Erro ao simular rodada com data passada:', error);
+    }
+  }
+
+  /**
+   * Simular rodada com data atual (para última rodada)
+   */
+  private async simulateEntireRoundWithCurrentDate(userId: string, roundNumber: number, seasonYear: number, tier: number) {
+    try {
+      this.logger.log(`🎮 Simulando rodada ${roundNumber} com data atual`);
+      
+      const currentDate = new Date();
+      await this.simulateEntireRoundInternal(userId, roundNumber, seasonYear, tier, currentDate);
+      
+    } catch (error) {
+      this.logger.error('Erro ao simular rodada com data atual:', error);
+    }
+  }
+
+  /**
+   * Função interna para simular rodada com data específica
+   */
+  private async simulateEntireRoundInternal(userId: string, roundNumber: number, seasonYear: number, tier: number, matchDate: Date) {
+    try {
+      this.logger.log(`🎮 Simulando rodada ${roundNumber} com data ${matchDate.toISOString()}`);
+
+      // 1. Buscar todos os times da máquina da série
+      const machineTeams = await this.machineTeamsService.getMachineTeamsForSeason(tier, userId);
+      
+      if (machineTeams.length < 19) {
+        this.logger.warn(`⚠️ Série tem apenas ${machineTeams.length} times da máquina, esperado 19`);
+        return;
+      }
+
+      // 2. Simular partidas entre times da máquina baseado na rodada
+      const machineMatches = this.generateMachineMatchesForRound(machineTeams, roundNumber);
+      
+      // 3. Simular cada partida e atualizar estatísticas
+      for (const match of machineMatches) {
+        const result = this.simulateMachineVsMachine(match.homeTeam, match.awayTeam);
+        
+        // Atualizar estatísticas dos times da máquina (ISOLADO POR USUÁRIO)
+        await this.updateMachineTeamStats(match.homeTeam.id, result.homeGoals, result.awayGoals, seasonYear, tier, userId);
+        await this.updateMachineTeamStats(match.awayTeam.id, result.awayGoals, result.homeGoals, seasonYear, tier, userId);
+      }
+
+      this.logger.log(`✅ Rodada ${roundNumber} simulada completamente - ${machineMatches.length} partidas entre times da máquina`);
       
     } catch (error) {
       this.logger.error('Error simulating entire round:', error);
       // Não parar o processo se a simulação da rodada falhar
+    }
+  }
+
+  /**
+   * NOVO: Simular toda a rodada (todos os jogos entre times da máquina)
+   */
+  private async simulateEntireRound(userId: string, roundNumber: number, seasonYear: number, tier: number) {
+    // Usar data atual por padrão
+    await this.simulateEntireRoundInternal(userId, roundNumber, seasonYear, tier, new Date());
+  }
+
+  /**
+   * Gera partidas entre times da máquina para uma rodada específica
+   * Algoritmo round-robin simples para 19 times - garante número igual de jogos
+   */
+  private generateMachineMatchesForRound(machineTeams: any[], roundNumber: number) {
+    const matches = [];
+    const teamsCount = machineTeams.length; // 19 times
+    
+    if (teamsCount !== 19) {
+      this.logger.warn(`⚠️ Algoritmo otimizado para 19 times, mas encontrou ${teamsCount}`);
+      return matches;
+    }
+    
+    // Com 19 times: cada rodada 1 time descansa, 18 jogam (9 partidas)
+    // Ao longo de 38 rodadas: cada time descansa 2x, joga 36x
+    
+    const isReturno = roundNumber > 19;
+    const actualRound = isReturno ? roundNumber - 19 : roundNumber;
+    
+    // Determinar qual time descansa nesta rodada (rotação simples)
+    const restingTeamIndex = (actualRound - 1) % teamsCount;
+    
+    // Times que jogam (todos exceto o que descansa)
+    const playingTeams = machineTeams.filter((_, index) => index !== restingTeamIndex);
+    
+    // Gerar exatamente 9 partidas com os 18 times
+    for (let i = 0; i < 9; i++) {
+      let homeTeam = playingTeams[i];
+      let awayTeam = playingTeams[17 - i]; // 18 - 1 - i
+      
+      // No returno, inverter mando de campo
+      if (isReturno) {
+        [homeTeam, awayTeam] = [awayTeam, homeTeam];
+      }
+      
+      matches.push({
+        homeTeam: homeTeam,
+        awayTeam: awayTeam
+      });
+    }
+    
+    this.logger.debug(`🎯 Rodada ${roundNumber}: ${matches.length} partidas, time descansando: ${machineTeams[restingTeamIndex]?.name || 'N/A'}`);
+    
+    return matches;
+  }
+
+  /**
+   * Simula partida entre dois times da máquina
+   */
+  private simulateMachineVsMachine(homeTeam: any, awayTeam: any) {
+    // Calcular força dos times
+    const homeStrength = this.machineTeamsService.calculateMachineTeamStrength(homeTeam, true);
+    const awayStrength = this.machineTeamsService.calculateMachineTeamStrength(awayTeam, false);
+    
+    // Diferença de força
+    const strengthDiff = homeStrength - awayStrength;
+    
+    // Probabilidades baseadas na diferença
+    let homeWinChance = 40 + (strengthDiff * 2); // 40% base + ajuste
+    let drawChance = 30;
+    let awayWinChance = 100 - homeWinChance - drawChance;
+    
+    // Limitar probabilidades
+    homeWinChance = Math.max(15, Math.min(70, homeWinChance));
+    awayWinChance = Math.max(15, 100 - homeWinChance - drawChance);
+    
+    // Sorteio do resultado
+    const random = Math.random() * 100;
+    let homeGoals, awayGoals;
+    
+    if (random < homeWinChance) {
+      // Vitória do mandante
+      homeGoals = 1 + Math.floor(Math.random() * 3); // 1-3 gols
+      awayGoals = Math.floor(Math.random() * homeGoals); // 0 a homeGoals-1
+    } else if (random < homeWinChance + drawChance) {
+      // Empate
+      const goals = Math.floor(Math.random() * 4); // 0-3 gols
+      homeGoals = goals;
+      awayGoals = goals;
+    } else {
+      // Vitória do visitante
+      awayGoals = 1 + Math.floor(Math.random() * 3); // 1-3 gols
+      homeGoals = Math.floor(Math.random() * awayGoals); // 0 a awayGoals-1
+    }
+    
+    return { homeGoals, awayGoals };
+  }
+
+  /**
+   * Atualiza estatísticas de um time da máquina após uma partida (ISOLADO POR USUÁRIO)
+   */
+  private async updateMachineTeamStats(teamId: string, goalsFor: number, goalsAgainst: number, seasonYear: number, tier: number, userId: string) {
+    try {
+      // Determinar resultado (W/D/L)
+      let wins = 0, draws = 0, losses = 0, points = 0;
+      
+      if (goalsFor > goalsAgainst) {
+        wins = 1;
+        points = 3;
+      } else if (goalsFor === goalsAgainst) {
+        draws = 1;
+        points = 1;
+      } else {
+        losses = 1;
+        points = 0;
+      }
+
+      // Buscar estatísticas atuais do time PARA O USUÁRIO ESPECÍFICO
+      const { data: currentStats, error: fetchError } = await supabase
+        .from('game_user_machine_team_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('team_id', teamId)
+        .eq('season_year', seasonYear)
+        .eq('tier', tier)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        this.logger.error(`Erro ao buscar stats do time ${teamId} para usuário ${userId}:`, fetchError);
+        return;
+      }
+
+      if (currentStats) {
+        // Atualizar estatísticas existentes do usuário
+        const { error: updateError } = await supabase
+          .from('game_user_machine_team_stats')
+          .update({
+            games_played: currentStats.games_played + 1,
+            wins: currentStats.wins + wins,
+            draws: currentStats.draws + draws,
+            losses: currentStats.losses + losses,
+            goals_for: currentStats.goals_for + goalsFor,
+            goals_against: currentStats.goals_against + goalsAgainst,
+            points: currentStats.points + points,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('team_id', teamId)
+          .eq('season_year', seasonYear)
+          .eq('tier', tier);
+
+        if (updateError) {
+          this.logger.error(`Erro ao atualizar stats do time ${teamId} para usuário ${userId}:`, updateError);
+        }
+      } else {
+        // Criar novas estatísticas para o usuário
+        const { error: insertError } = await supabase
+          .from('game_user_machine_team_stats')
+          .insert({
+            user_id: userId,
+            team_id: teamId,
+            season_year: seasonYear,
+            tier: tier,
+            games_played: 1,
+            wins: wins,
+            draws: draws,
+            losses: losses,
+            goals_for: goalsFor,
+            goals_against: goalsAgainst,
+            points: points,
+            created_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          this.logger.error(`Erro ao criar stats do time ${teamId} para usuário ${userId}:`, insertError);
+        }
+      }
+      
+    } catch (error) {
+      this.logger.error(`Erro ao atualizar estatísticas do time ${teamId} para usuário ${userId}:`, error);
     }
   }
 
@@ -867,7 +1150,10 @@ export class SeasonsService {
         }
       }
 
-      // Atualizar progresso (goal_difference é calculada automaticamente)
+      // Calcular posição atual na classificação
+      const currentPosition = await this.calculateUserPosition(userId, seasonYear, points, goalsFor, goalsAgainst);
+
+      // Atualizar progresso incluindo a posição
       await this.updateUserProgress(userId, teamId, seasonYear, {
         points,
         games_played: matches?.length || 0,
@@ -875,13 +1161,343 @@ export class SeasonsService {
         draws,
         losses,
         goals_for: goalsFor,
-        goals_against: goalsAgainst
+        goals_against: goalsAgainst,
+        position: currentPosition
       });
 
-      this.logger.log(`📊 Estatísticas atualizadas: ${points} pontos em ${matches?.length || 0} jogos`);
+      this.logger.log(`📊 Estatísticas atualizadas: ${points} pontos em ${matches?.length || 0} jogos, posição ${currentPosition}`);
       
     } catch (error) {
       this.logger.error('Error recalculating standings after match:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calcula a posição atual do usuário na classificação de uma temporada.
+   * Isso é necessário porque a posição pode mudar durante a temporada.
+   */
+  private async calculateUserPosition(userId: string, seasonYear: number, points: number, goalsFor: number, goalsAgainst: number) {
+    try {
+      this.logger.log(`📊 Calculando posição do usuário ${userId} na temporada ${seasonYear}`);
+
+      // Buscar progresso atual do usuário para saber a série
+      const userProgress = await this.getUserCurrentProgress(userId, seasonYear);
+      
+      if (!userProgress) {
+        this.logger.warn(`⚠️ Progresso do usuário ${userId} não encontrado para temporada ${seasonYear}`);
+        return 1; // Fallback
+      }
+
+      const tier = userProgress.current_tier;
+
+      // Buscar todos os times da máquina da série
+      const machineTeams = await this.machineTeamsService.getMachineTeamsForSeason(tier, userId);
+      
+      if (machineTeams.length === 0) {
+        this.logger.warn(`⚠️ Não há times da máquina na Série ${this.getTierName(tier)} para calcular posição do usuário ${userId}`);
+        return 1; // Se não houver times, o usuário é o primeiro
+      }
+
+      // Buscar estatísticas de todos os times da máquina da série
+      const { data: machineStats, error: standingsError } = await supabase
+        .from('game_user_machine_team_stats')
+        .select('team_id, points, goals_for, goals_against')
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .eq('tier', tier);
+
+      if (standingsError) {
+        this.logger.error(`Erro ao buscar estatísticas de times da máquina para posição: ${standingsError.message}`);
+        return 1; // Fallback
+      }
+
+      // Criar array com todos os times (usuário + máquina)
+      const allStandings = [];
+
+      // Adicionar o time do usuário
+      allStandings.push({
+        team_id: userProgress.team_id,
+        team_type: 'user',
+        points: points,
+        goals_for: goalsFor,
+        goals_against: goalsAgainst,
+        goal_difference: goalsFor - goalsAgainst
+      });
+
+      // Adicionar times da máquina
+      for (const team of machineTeams) {
+        const teamStats = machineStats?.find(stat => stat.team_id === team.id);
+        const stats = teamStats || {
+          points: 0,
+          goals_for: 0,
+          goals_against: 0
+        };
+
+        allStandings.push({
+          team_id: team.id,
+          team_type: 'machine',
+          points: stats.points,
+          goals_for: stats.goals_for,
+          goals_against: stats.goals_against,
+          goal_difference: stats.goals_for - stats.goals_against
+        });
+      }
+
+      // Ordenar por: pontos DESC, saldo de gols DESC, gols feitos DESC
+      allStandings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
+        return b.goals_for - a.goals_for;
+      });
+
+      // Encontrar a posição do usuário
+      const userPosition = allStandings.findIndex(standing => standing.team_type === 'user') + 1;
+
+      this.logger.log(`✅ Posição do usuário ${userId} na temporada ${seasonYear}: ${userPosition} de ${allStandings.length}`);
+      return userPosition;
+    } catch (error) {
+      this.logger.error('Error calculating user position:', error);
+      return 1; // Fallback
+    }
+  }
+
+  /**
+   * Iniciar nova temporada na mesma série (pontos zerados)
+   */
+  async startNewSeason(userId: string): Promise<any> {
+    try {
+      this.logger.log(`🔄 Iniciando nova temporada para usuário ${userId}`);
+      
+      // Buscar progresso atual
+      const currentProgress = await this.getUserCurrentProgress(userId);
+      if (!currentProgress) {
+        throw new Error('Usuário não tem temporada ativa');
+      }
+
+      const currentTier = currentProgress.current_tier;
+      const teamId = currentProgress.team_id;
+      const nextSeasonYear = currentProgress.season_year + 1;
+
+      this.logger.log(`📅 Nova temporada: ${nextSeasonYear}, Série: ${this.getTierName(currentTier)}`);
+
+      // 1. Verificar se já existe progresso para a nova temporada
+      const { data: existingProgress } = await supabase
+        .from('game_user_competition_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('season_year', nextSeasonYear)
+        .eq('current_tier', currentTier);
+
+      if (existingProgress && existingProgress.length > 0) {
+        // Se já existe, apenas zerar os dados
+        await supabase
+          .from('game_user_competition_progress')
+          .update({
+            position: 0,
+            points: 0,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            season_status: 'active'
+          })
+          .eq('user_id', userId)
+          .eq('season_year', nextSeasonYear)
+          .eq('current_tier', currentTier);
+      } else {
+        // Se não existe, criar novo progresso zerado
+        await supabase
+          .from('game_user_competition_progress')
+          .insert({
+            user_id: userId,
+            team_id: teamId,
+            current_tier: currentTier,
+            season_year: nextSeasonYear,
+            position: 0,
+            points: 0,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            season_status: 'active'
+          });
+      }
+
+      // 2. Verificar e zerar estatísticas dos times da máquina
+      const { data: existingStats } = await supabase
+        .from('game_user_machine_team_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('tier', currentTier)
+        .eq('season_year', nextSeasonYear);
+
+      if (existingStats && existingStats.length > 0) {
+        // Se já existem estatísticas, apenas zerar
+        await supabase
+          .from('game_user_machine_team_stats')
+          .update({
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          })
+          .eq('user_id', userId)
+          .eq('tier', currentTier)
+          .eq('season_year', nextSeasonYear);
+      } else {
+        // Se não existem, deletar e criar novas
+        await supabase
+          .from('game_user_machine_team_stats')
+          .delete()
+          .eq('user_id', userId)
+          .eq('tier', currentTier)
+          .eq('season_year', nextSeasonYear);
+
+        // Criar estatísticas zeradas para os times da máquina
+        const machineTeams = await supabase
+          .from('game_machine_teams')
+          .select('*')
+          .eq('tier', currentTier);
+
+        if (machineTeams.data) {
+          const zeroStats = machineTeams.data.map(team => ({
+            user_id: userId,
+            team_id: team.id,
+            team_name: team.name,
+            season_year: nextSeasonYear,
+            tier: currentTier,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          }));
+
+          await supabase
+            .from('game_user_machine_team_stats')
+            .insert(zeroStats);
+        }
+      }
+
+      // 4. Verificar se já existem partidas para a nova temporada
+      const { data: existingMatches } = await supabase
+        .from('game_season_matches')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('season_year', nextSeasonYear)
+        .eq('tier', currentTier);
+
+      if (existingMatches && existingMatches.length > 0) {
+        // Se já existem partidas, resetar as que foram jogadas
+        const finishedMatches = existingMatches.filter(m => m.status === 'finished' || m.status === 'simulated');
+        if (finishedMatches.length > 0) {
+          await supabase
+            .from('game_season_matches')
+            .update({
+              status: 'scheduled',
+              home_score: 0,
+              away_score: 0
+            })
+            .eq('user_id', userId)
+            .eq('season_year', nextSeasonYear)
+            .eq('tier', currentTier)
+            .in('status', ['finished', 'simulated']);
+        }
+      } else {
+        // Se não existem partidas, gerar calendário
+        await this.generateSeasonCalendar(userId, teamId, currentTier, nextSeasonYear);
+      }
+
+      // 5. CORREÇÃO: NÃO simular automaticamente a primeira rodada
+      // As partidas entre times da máquina devem ser simuladas apenas quando o usuário jogar
+      // Isso garante que todos os times comecem zerados na nova temporada
+      this.logger.log(`📅 Nova temporada criada - todos os times começam zerados (incluindo times da máquina)`);
+      this.logger.log(`🎯 As partidas entre times da máquina serão simuladas conforme o usuário for jogando`);
+
+      this.logger.log(`✅ Nova temporada iniciada com sucesso para usuário ${userId}`);
+      
+      return {
+        success: true,
+        message: 'Nova temporada iniciada com sucesso',
+        data: {
+          season_year: nextSeasonYear,
+          tier: currentTier,
+          tier_name: this.getTierName(currentTier)
+        }
+      };
+
+    } catch (error) {
+      this.logger.error(`❌ Erro ao iniciar nova temporada para usuário ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Zera estatísticas de todos os times da máquina para um usuário e temporada específicos.
+   */
+  private async createZeroStatsForMachineTeams(userId: string, seasonYear: number, tier: number) {
+    try {
+      this.logger.log(`💾 Zerando estatísticas de todos os times da máquina para usuário ${userId} na temporada ${seasonYear} na Série ${this.getTierName(tier)}`);
+
+      // Primeiro, deletar estatísticas existentes para o usuário/temporada/série
+      const { error: deleteError } = await supabase
+        .from('game_user_machine_team_stats')
+        .delete()
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .eq('tier', tier);
+
+      if (deleteError) {
+        this.logger.error(`Erro ao deletar estatísticas existentes: ${deleteError.message}`);
+        // Continue to create new ones, but log the error
+      }
+
+      // Buscar todos os times da máquina da série
+      const { data: machineTeams } = await supabase
+        .from('game_machine_teams')
+        .select('*')
+        .eq('tier', tier);
+
+      if (machineTeams && machineTeams.length > 0) {
+        const zeroStats = machineTeams.map(team => ({
+          user_id: userId,
+          team_id: team.id,
+          team_name: team.name,
+          season_year: seasonYear,
+          tier: tier,
+          games_played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goals_for: 0,
+          goals_against: 0,
+          points: 0
+        }));
+
+        const { error: insertError } = await supabase
+          .from('game_user_machine_team_stats')
+          .insert(zeroStats);
+
+        if (insertError) {
+          this.logger.error(`Erro ao criar estatísticas zeradas para times da máquina: ${insertError.message}`);
+        } else {
+          this.logger.log(`✅ Estatísticas zeradas criadas para ${zeroStats.length} times da máquina`);
+        }
+      } else {
+        this.logger.warn(`⚠️ Não há times da máquina na Série ${this.getTierName(tier)} para criar estatísticas zeradas.`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Erro ao zerar estatísticas de times da máquina para usuário ${userId}:`, error);
       throw error;
     }
   }

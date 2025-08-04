@@ -89,7 +89,7 @@ export default function SeasonEndModal({ isOpen, seasonResult, onContinue, onClo
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+        <div className="bg-emerald-600 text-white p-6 rounded-t-lg">
           <div className="text-center">
             <div className="text-6xl mb-4">{getResultIcon()}</div>
             <h2 className="text-3xl font-bold mb-2">{getResultTitle()}</h2>
@@ -149,14 +149,14 @@ export default function SeasonEndModal({ isOpen, seasonResult, onContinue, onClo
           </div>
 
           {/* Transição */}
-          <div className="bg-blue-50 rounded-lg p-6 mb-6 text-center">
-            <h4 className="font-bold text-blue-900 mb-2">
+          <div className="bg-slate-50 rounded-lg p-6 mb-6 text-center border border-slate-200">
+            <h4 className="font-bold text-slate-800 mb-2">
               🆕 Próxima Temporada
             </h4>
-            <p className="text-blue-800">
+            <p className="text-slate-700">
               Você jogará na <strong>Série {getTierName(seasonResult.next_tier)}</strong> na temporada {new Date().getFullYear() + 1}
             </p>
-            <p className="text-sm text-blue-600 mt-2">
+            <p className="text-sm text-slate-600 mt-2">
               Um novo calendário será gerado automaticamente com 19 times da máquina desta série.
             </p>
           </div>
@@ -176,7 +176,7 @@ export default function SeasonEndModal({ isOpen, seasonResult, onContinue, onClo
               className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors ${
                 isProcessing
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
               {isProcessing ? (

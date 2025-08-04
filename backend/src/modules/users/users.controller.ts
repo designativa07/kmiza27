@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Post, Body, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Patch, Delete, UseGuards, Request, Put } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -23,6 +24,24 @@ export class UsersController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(+id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getProfile(@Request() req) {
+    return this.usersService.findOne(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  async updateProfile(@Request() req, @Body() updateData: any) {
+    return this.usersService.updateProfile(req.user.id, updateData);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile/stats')
+  async getProfileStats(@Request() req) {
+    return this.usersService.getUserProfileStats(req.user.id);
   }
 
   @Get('phone/:phone')

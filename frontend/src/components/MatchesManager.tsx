@@ -477,7 +477,7 @@ export default function MatchesManager() {
   const fetchData = async () => {
     try {
       const [matchesRes, teamsRes, competitionsRes, channelsRes] = await Promise.all([
-        fetch(API_ENDPOINTS.matches.list(1, 1000)),
+        fetch(API_ENDPOINTS.matches.list(1, 5000)),
         fetch(`${API_ENDPOINTS.teams.list()}?limit=1000`),
         fetch(`${API_ENDPOINTS.competitions.list()}?active=true`),
         fetch(API_ENDPOINTS.channels.list())
