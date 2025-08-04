@@ -48,6 +48,7 @@ import StatusContent from './StatusContent'
 import StadiumsManager from './StadiumsManager'
 import TitlesPage from '../app/titles/page'
 import ProfilePage from '../app/profile/page'
+import PoolsManager from './PoolsManager'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -109,6 +110,7 @@ export default function Dashboard() {
         'jogos': 'Jogos',
         'classificacoes': 'Classificações',
         'artilharia': 'Artilharia',
+        'boloes': 'Bolões',
         'canais': 'Canais',
         'usuarios': 'Usuários',
         'administradores': 'Administradores',
@@ -173,7 +175,7 @@ export default function Dashboard() {
         fetch(API_ENDPOINTS.whatsapp.status()),
         fetch(API_ENDPOINTS.users.list()),
         fetch(API_ENDPOINTS.teams.list()),
-        fetch(API_ENDPOINTS.matches.list(1, 1000)),
+        fetch(API_ENDPOINTS.matches.list(1, 5000)),
         fetch(`${API_ENDPOINTS.competitions.list()}?active=true`),
         fetch(API_ENDPOINTS.channels.list()),
         fetch(API_ENDPOINTS.stadiums.list()),
@@ -556,6 +558,8 @@ export default function Dashboard() {
         return <MatchesManager />
       case 'Classificações':
         return <StandingsManager />
+      case 'Bolões':
+        return <PoolsManager />
       case 'Canais':
         return <ChannelsManager />
       case 'Usuários':
@@ -603,6 +607,7 @@ export default function Dashboard() {
     { name: 'Competições', icon: TrophyIcon, page: 'Competições' },
     { name: 'Jogos', icon: CalendarIcon, page: 'Jogos' },
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
+    { name: 'Bolões', icon: TrophyIcon, page: 'Bolões' },
     { name: 'Canais', icon: TvIcon, page: 'Canais' },
     { 
       name: 'Usuários', 

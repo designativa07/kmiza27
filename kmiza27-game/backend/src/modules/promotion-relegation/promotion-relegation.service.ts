@@ -255,25 +255,86 @@ export class PromotionRelegationService {
     try {
       this.logger.log(`🆕 Criando nova temporada na Série ${this.getTierName(newTier)}`);
 
-      // Usar o SeasonsService para inicializar a nova temporada
-      await this.seasonsService.initializeUserSeason(userId, teamId, seasonYear);
+      // Usar o SeasonsService para inicializar a nova temporada com o tier correto
+      await this.seasonsService.initializeUserSeason(userId, teamId, seasonYear, newTier);
 
-      // Atualizar o tier no progresso
-      const { error } = await supabase
-        .from('game_user_competition_progress')
-        .update({ current_tier: newTier })
-        .eq('user_id', userId)
-        .eq('team_id', teamId)
-        .eq('season_year', seasonYear);
-
-      if (error) {
-        throw new Error(`Error updating tier: ${error.message}`);
-      }
+      // Criar estatísticas zeradas para os times da máquina da nova série
+      await this.createZeroStatsForMachineTeams(userId, newTier, seasonYear);
 
       this.logger.log(`✅ Nova temporada criada na Série ${this.getTierName(newTier)}`);
     } catch (error) {
       this.logger.error('Error creating new season in new tier:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Criar estatísticas zeradas para todos os times da máquina da série
+   */
+  private async createZeroStatsForMachineTeams(userId: string, tier: number, seasonYear: number) {
+    try {
+      this.logger.log(`📊 Criando estatísticas zeradas para usuário ${userId} na Série ${this.getTierName(tier)}`);
+      
+      // Buscar todos os times da máquina da série
+      const { data: machineTeams, error: teamsError } = await supabase
+        .from('game_machine_teams')
+        .select('id, name')
+        .eq('tier', tier)
+        .eq('is_active', true);
+      
+      if (teamsError) {
+        throw new Error(`Erro ao buscar times da máquina: ${teamsError.message}`);
+      }
+      
+      if (!machineTeams || machineTeams.length === 0) {
+        this.logger.warn(`⚠️ Nenhum time da máquina encontrado para Série ${this.getTierName(tier)}`);
+        return;
+      }
+      
+      this.logger.log(`🔍 Encontrados ${machineTeams.length} times da máquina para criar estatísticas zeradas`);
+      
+      let created = 0;
+      let existing = 0;
+      
+      // Criar estatísticas zeradas para cada time da máquina
+      for (const team of machineTeams) {
+        const { data, error: insertError } = await supabase
+          .from('game_user_machine_team_stats')
+          .insert({
+            user_id: userId,
+            team_id: team.id,
+            team_name: team.name,
+            season_year: seasonYear,
+            tier: tier,
+            games_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            points: 0
+          })
+          .select();
+        
+        if (insertError) {
+          if (insertError.code === '23505') {
+            // Registro já existe
+            existing++;
+            this.logger.log(`   ⚠️ ${team.name} - estatísticas já existem`);
+          } else {
+            this.logger.error(`   ❌ ${team.name} - erro:`, insertError.message);
+          }
+        } else {
+          created++;
+          this.logger.log(`   ✅ ${team.name} - estatísticas zeradas criadas`);
+        }
+      }
+      
+      this.logger.log(`📊 ${created} estatísticas criadas, ${existing} já existiam`);
+      
+    } catch (error) {
+      this.logger.error('❌ Erro ao criar estatísticas zeradas:', error);
+      // Não falhar a criação da temporada se isso der erro
     }
   }
 
@@ -288,7 +349,7 @@ export class PromotionRelegationService {
       await this.finishCurrentSeason(userId, teamId, seasonYear - 1);
 
       // Criar nova temporada na mesma série
-      await this.seasonsService.initializeUserSeason(userId, teamId, seasonYear);
+      await this.seasonsService.initializeUserSeason(userId, teamId, seasonYear, tier);
 
       this.logger.log('✅ Progresso resetado para nova temporada');
     } catch (error) {
@@ -339,11 +400,38 @@ export class PromotionRelegationService {
         return false;
       }
 
-      // Temporada pode ser finalizada se todas as partidas foram jogadas
+      // Verificar se todas as partidas foram finalizadas
       const finishedMatches = matches.filter(m => m.status === 'finished').length;
       const totalMatches = matches.length;
+      const allMatchesFinished = finishedMatches === totalMatches && totalMatches > 0;
 
-      return finishedMatches === totalMatches && totalMatches > 0;
+      if (!allMatchesFinished) {
+        return false;
+      }
+
+      // Verificar se o usuário está em posição de promoção ou rebaixamento
+      const progress = await this.seasonsService.getUserCurrentProgress(userId, seasonYear);
+      if (!progress) {
+        return false;
+      }
+
+      const currentTier = progress.current_tier;
+      const position = progress.position;
+
+      // Verificar se está em posição de promoção (1-4) ou rebaixamento (17-20)
+      const inPromotionZone = position >= 1 && position <= 4;
+      const inRelegationZone = position >= 17 && position <= 20;
+      const canBePromoted = currentTier > 1; // Série A não pode ser promovida
+      const canBeRelegated = currentTier < 4; // Série D não pode ser rebaixada
+
+      // Temporada pode ser finalizada se:
+      // 1. Todas as partidas foram jogadas
+      // 2. E o usuário está em posição de promoção OU rebaixamento
+      const canFinish = (inPromotionZone && canBePromoted) || (inRelegationZone && canBeRelegated);
+
+      this.logger.log(`🔍 Verificação fim de temporada para usuário ${userId}: posição ${position}, série ${currentTier}, pode finalizar: ${canFinish}`);
+
+      return canFinish;
     } catch (error) {
       this.logger.error('Error checking if season can be finished:', error);
       return false;

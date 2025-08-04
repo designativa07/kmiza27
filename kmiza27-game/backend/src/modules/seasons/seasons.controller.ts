@@ -55,11 +55,13 @@ export class SeasonsController {
         throw new Error('userId é obrigatório');
       }
 
-      const year = seasonYear ? parseInt(seasonYear) : new Date().getFullYear();
+      const year = seasonYear ? parseInt(seasonYear) : undefined;
 
-      this.logger.log(`📊 Buscando progresso do usuário ${userId} na temporada ${year}`);
+      this.logger.log(`🔍 API: Buscando progresso do usuário ${userId}${year ? ` na temporada ${year}` : ' (temporada mais recente)'}`);
 
       const progress = await this.seasonsService.getUserCurrentProgress(userId, year);
+
+      this.logger.log(`✅ API: Progresso encontrado - Temporada: ${progress?.season_year}, Pontos: ${progress?.points}, Jogos: ${progress?.games_played}`);
 
       if (!progress) {
         return {
@@ -73,7 +75,7 @@ export class SeasonsController {
         success: true,
         data: progress,
         meta: {
-          season_year: year,
+          season_year: progress.season_year,
           tier_name: `Série ${this.getTierName(progress.current_tier)}`
         }
       };
@@ -376,9 +378,9 @@ export class SeasonsController {
         throw new Error('userId é obrigatório');
       }
 
-      const year = seasonYear ? parseInt(seasonYear) : new Date().getFullYear();
+      const year = seasonYear ? parseInt(seasonYear) : undefined;
 
-      this.logger.log(`📊 Buscando classificação completa para usuário ${userId} (${year})`);
+      this.logger.log(`📊 Buscando classificação completa para usuário ${userId}${year ? ` (${year})` : ' (temporada mais recente)'}`);
 
       const standings = await this.seasonsService.getFullStandings(userId, year);
 
@@ -436,6 +438,28 @@ export class SeasonsController {
         success: false,
         error: error.message,
         data: []
+      };
+    }
+  }
+
+  @Post('start-new-season')
+  async startNewSeason(@Body() body: { userId: string }) {
+    try {
+      this.logger.log('🔄 Iniciando nova temporada...');
+      
+      const result = await this.seasonsService.startNewSeason(body.userId);
+      
+      this.logger.log('✅ Nova temporada iniciada com sucesso');
+      return {
+        success: true,
+        message: 'Nova temporada iniciada com sucesso',
+        data: result
+      };
+    } catch (error) {
+      this.logger.error('❌ Erro ao iniciar nova temporada:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       };
     }
   }

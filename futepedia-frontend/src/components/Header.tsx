@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Menu, X, Home, Trophy, MapPin, Users, Shield, Building, User, MessageCircle, ListOrdered, Star, Tv } from 'lucide-react';
+import { Search, Menu, X, Home, Trophy, MapPin, Users, Shield, Building, User, MessageCircle, ListOrdered, Star, Tv, Target } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { getApiUrl } from '@/lib/config';
 import { getFutepediaLogoUrl } from '@/lib/cdn';
@@ -211,6 +211,17 @@ export function Header({ currentCompetition, showBackToHome = true, futepediaLog
                       >
                         <Trophy className="h-4 w-4" aria-hidden="true" />
                         <span>Títulos</span>
+                      </Link>
+
+                      <Link
+                        href="/pools"
+                        className="flex items-center space-x-3 px-5 py-2.5 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                        onClick={() => setIsMenuOpen(false)}
+                        aria-label="Ir para Bolões"
+                        role="menuitem"
+                      >
+                        <Target className="h-4 w-4" aria-hidden="true" />
+                        <span>Bolões</span>
                       </Link>
                       
                       {currentCompetition && (

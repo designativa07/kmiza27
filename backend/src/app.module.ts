@@ -26,7 +26,11 @@ import {
   MatchBroadcast,
   Player,
   PlayerTeamHistory,
-  Card
+  Card,
+  Pool,
+  PoolMatch,
+  PoolParticipant,
+  PoolPrediction
 } from './entities';
 import { BotConfig } from './entities/bot-config.entity';
 import { WhatsAppMenuConfig } from './entities/whatsapp-menu-config.entity';
@@ -56,6 +60,7 @@ import { RoundsModule } from './modules/rounds/rounds.module';
 import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module';
 import { TitlesModule } from './modules/titles/titles.module';
 import { AmateurModule } from './modules/amateur/amateur.module';
+import { PoolsModule } from './modules/pools/pools.module';
 
 @Module({
   imports: [
@@ -91,6 +96,7 @@ import { AmateurModule } from './modules/amateur/amateur.module';
     UrlShortenerModule,
     TitlesModule,
     AmateurModule,
+    PoolsModule,
   ],
   controllers: [AppController],
   providers: [

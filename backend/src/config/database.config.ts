@@ -10,7 +10,7 @@ export const databaseConfig = (): TypeOrmModuleOptions => {
     type: 'postgres' as const,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-    synchronize: false,
+    synchronize: false, // Desabilitado - usar migrações SQL manuais
     logging: loggingLevels,
     schema: 'public',
     extra: {

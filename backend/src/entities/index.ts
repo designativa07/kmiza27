@@ -16,4 +16,10 @@ export * from './bot-config.entity';
 export * from './player.entity';
 export * from './player-team-history.entity';
 export * from './card.entity';
-export * from './title.entity'; 
+export * from './title.entity';
+
+// Pool entities
+export * from './pool.entity';
+export * from './pool-match.entity';
+export * from './pool-participant.entity';
+export * from './pool-prediction.entity'; 

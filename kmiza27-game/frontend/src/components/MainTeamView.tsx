@@ -76,7 +76,7 @@ export default function MainTeamView() {
       
       {/* Card do Time - Clicável */}
       <div 
-        className="mb-6 p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 cursor-pointer hover:from-blue-100 hover:to-blue-200 transition-all duration-200"
+        className="mb-6 p-4 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm"
         onClick={() => handleTeamClick(selectedTeam)}
       >
         <div className="flex items-center space-x-3 mb-3">
@@ -137,7 +137,7 @@ export default function MainTeamView() {
           onClick={() => handleTeamClick(selectedTeam)}
           className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors"
         >
-          ⚽ Simular Partida
+          ⚽ Jogar
         </button>
       </div>
       
