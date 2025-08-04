@@ -260,7 +260,9 @@ export class MatchesService {
     limit: number = 20, 
     fromDate?: string, 
     toDate?: string, 
-    status?: string
+    status?: string,
+    competitionId?: number,
+    roundId?: number
   ): Promise<{ data: Match[], total: number }> {
     try {
       const queryBuilder = this.matchRepository.createQueryBuilder('match')
@@ -286,6 +288,14 @@ export class MatchesService {
       
       if (status) {
         queryBuilder.andWhere('match.status = :status', { status });
+      }
+      
+      if (competitionId) {
+        queryBuilder.andWhere('match.competition_id = :competitionId', { competitionId });
+      }
+      
+      if (roundId) {
+        queryBuilder.andWhere('match.round_id = :roundId', { roundId });
       }
 
       const [data, total] = await queryBuilder.getManyAndCount();
