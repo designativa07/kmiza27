@@ -109,12 +109,14 @@ export class MatchesController {
     @Query('limit') limit: string = '20',
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
+    @Query('competition_id') competitionId?: string,
+    @Query('round_id') roundId?: string
   ) {
     try {
       const pageNumber = parseInt(page, 10);
       const limitNumber = parseInt(limit, 10);
-      const result = await this.matchesService.findAll(pageNumber, limitNumber, fromDate, toDate, status);
+      const result = await this.matchesService.findAll(pageNumber, limitNumber, fromDate, toDate, status, competitionId ? +competitionId : undefined, roundId ? +roundId : undefined);
       return result; // Retornar o objeto completo com data e total
     } catch (error) {
       console.error('❌ Controller: Erro ao buscar matches:', error);

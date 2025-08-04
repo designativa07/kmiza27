@@ -1588,6 +1588,10 @@ export default function MatchesManager() {
                     <tr key={match.id}>
                       <td className="px-6 py-3 whitespace-nowrap">
                         <div className="grid grid-cols-3 items-center gap-2">
+                          {/* ID da partida - pequeno e discreto */}
+                          <div className="col-span-3 text-xs text-gray-400 mb-1">
+                            ID: {match.id}
+                          </div>
                           {/* Time da casa - Alinhado à direita */}
                           <div className="flex items-center justify-end space-x-2">
                             <span className="text-sm font-medium text-gray-900 text-right">{match.home_team?.name || 'Time não encontrado'}</span>

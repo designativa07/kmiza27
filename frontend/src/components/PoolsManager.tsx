@@ -154,6 +154,9 @@ export default function PoolsManager() {
     prediction_deadline: ''
   })
   
+  // Campo para adicionar jogo por ID
+  const [gameIdInput, setGameIdInput] = useState('')
+  
   // Dados auxiliares
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [rounds, setRounds] = useState<Round[]>([])
@@ -227,13 +230,18 @@ export default function PoolsManager() {
         url += `&round_id=${roundId}`
       }
       
+      console.log('🔍 Buscando jogos:', url) // Debug
       const response = await fetch(apiUrl(url))
       if (response.ok) {
         const data = await response.json()
-        setAvailableMatches(data)
+        console.log('✅ Jogos encontrados:', data) // Debug
+        // A API retorna { data: Match[], total: number }
+        setAvailableMatches(data.data || data)
+      } else {
+        console.error('❌ Erro na resposta:', response.status)
       }
     } catch (error) {
-      console.error('Erro ao buscar jogos:', error)
+      console.error('❌ Erro ao buscar jogos:', error)
     }
   }
 
@@ -381,6 +389,7 @@ export default function PoolsManager() {
       prediction_deadline: ''
     })
     setSelectedCompetition('')
+    setGameIdInput('')
     setRounds([])
     setAvailableMatches([])
   }
@@ -409,6 +418,34 @@ export default function PoolsManager() {
       match_ids: prev.match_ids.includes(matchId)
         ? prev.match_ids.filter(id => id !== matchId)
         : [...prev.match_ids, matchId]
+    }))
+  }
+  
+  const handleAddGameById = () => {
+    const gameId = parseInt(gameIdInput)
+    if (!gameId || isNaN(gameId)) {
+      alert('Por favor, insira um ID válido')
+      return
+    }
+    
+    if (formData.match_ids.includes(gameId)) {
+      alert('Este jogo já foi adicionado')
+      return
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      match_ids: [...prev.match_ids, gameId]
+    }))
+    
+    setGameIdInput('')
+    console.log('✅ Jogo adicionado por ID:', gameId)
+  }
+  
+  const removeGameById = (gameId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      match_ids: prev.match_ids.filter(id => id !== gameId)
     }))
   }
 
@@ -735,32 +772,127 @@ export default function PoolsManager() {
                     </div>
                   )}
 
+                  {/* Debug: mostrar informações */}
+                  {formData.type === 'custom' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-4 text-xs">
+                      <p><strong>Debug:</strong></p>
+                      <p>Competição selecionada: {selectedCompetition}</p>
+                      <p>Jogos disponíveis: {availableMatches.length}</p>
+                      <p>Tipo: {formData.type}</p>
+                    </div>
+                  )}
+
                   {/* Seleção de Jogos (para tipo 'custom') */}
-                  {formData.type === 'custom' && availableMatches.length > 0 && (
+                  {formData.type === 'custom' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Selecionar Jogos ({formData.match_ids.length} selecionados)
                       </label>
-                      <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-2">
-                        {availableMatches.map(match => (
-                          <label key={match.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={formData.match_ids.includes(match.id)}
-                              onChange={() => handleMatchToggle(match.id)}
-                              className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                            />
-                            <div className="flex-1 text-sm">
-                              <div className="font-medium">
-                                {match.home_team.name} vs {match.away_team.name}
-                              </div>
-                              <div className="text-gray-500">
-                                {new Date(match.match_date).toLocaleString('pt-BR')}
-                              </div>
-                            </div>
-                          </label>
-                        ))}
+                      
+                      {availableMatches.length === 0 && selectedCompetition && (
+                        <div className="text-sm text-gray-500 mb-2 p-2 bg-gray-50 rounded">
+                          Nenhum jogo encontrado para esta competição. Selecione uma competição diferente ou verifique se há jogos cadastrados.
+                        </div>
+                      )}
+                      
+                      {availableMatches.length === 0 && !selectedCompetition && (
+                        <div className="text-sm text-blue-600 mb-2 p-2 bg-blue-50 rounded">
+                          Selecione uma competição acima para ver os jogos disponíveis.
+                        </div>
+                      )}
+                      {/* Campo para adicionar por ID */}
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+                        <label className="block text-sm font-medium text-blue-900 mb-2">
+                          Adicionar Jogo por ID
+                        </label>
+                        <div className="flex space-x-2">
+                          <input
+                            type="number"
+                            value={gameIdInput}
+                            onChange={(e) => setGameIdInput(e.target.value)}
+                            placeholder="Digite o ID do jogo"
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddGameById}
+                            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            Adicionar
+                          </button>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Use este campo para adicionar jogos específicos pelo ID. Útil quando há muitos jogos na lista.
+                        </p>
                       </div>
+                      
+                      {/* Lista de jogos selecionados */}
+                      {formData.match_ids.length > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded p-3 mb-4">
+                          <label className="block text-sm font-medium text-green-900 mb-2">
+                            Jogos Selecionados ({formData.match_ids.length})
+                          </label>
+                          <div className="space-y-1">
+                            {formData.match_ids.map(gameId => {
+                              const match = availableMatches.find(m => m.id === gameId)
+                              return (
+                                <div key={gameId} className="flex items-center justify-between p-2 bg-white rounded border">
+                                  <div className="text-sm">
+                                    <span className="font-medium text-green-800">ID: {gameId}</span>
+                                    {match && (
+                                      <span className="text-gray-600 ml-2">
+                                        - {match.home_team?.name} vs {match.away_team?.name}
+                                      </span>
+                                    )}
+                                    {!match && (
+                                      <span className="text-orange-600 ml-2">
+                                        - Jogo não encontrado na lista atual
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeGameById(gameId)}
+                                    className="text-red-600 hover:text-red-800 text-sm"
+                                    title="Remover jogo"
+                                  >
+                                    ❌
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Lista de jogos disponíveis */}
+                      {availableMatches.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ou selecione da lista abaixo:
+                          </label>
+                          <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-2">
+                            {availableMatches.map(match => (
+                              <label key={match.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.match_ids.includes(match.id)}
+                                  onChange={() => handleMatchToggle(match.id)}
+                                  className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                />
+                                <div className="flex-1 text-sm">
+                                  <div className="font-medium">
+                                    {match.home_team?.name || 'Time não encontrado'} vs {match.away_team?.name || 'Time não encontrado'}
+                                  </div>
+                                  <div className="text-gray-500 text-xs">
+                                    ID: {match.id} | {new Date(match.match_date).toLocaleString('pt-BR')}
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -976,9 +1108,14 @@ export default function PoolsManager() {
                           .map((poolMatch) => (
                             <div key={poolMatch.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
                               <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium">
-                                  {poolMatch.match.home_team.name} vs {poolMatch.match.away_team.name}
-                                </span>
+                                <div className="text-sm">
+                                  <div className="font-medium">
+                                    {poolMatch.match.home_team.name} vs {poolMatch.match.away_team.name}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    ID: {poolMatch.match.id}
+                                  </div>
+                                </div>
                               </div>
                               <div className="text-xs text-gray-500">
                                 {new Date(poolMatch.match.match_date).toLocaleString('pt-BR')}

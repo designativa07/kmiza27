@@ -9,7 +9,7 @@ import {
   PhoneIcon,
   TrophyIcon,
   ChatBubbleLeftRightIcon,
-  GameIcon,
+  PuzzlePieceIcon,
   CogIcon,
   EyeIcon,
   PencilIcon,
@@ -464,7 +464,7 @@ export default function ProfilePage() {
                   {stats.amateur_competitions > 0 && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <GameIcon className="h-5 w-5 text-red-600 mr-2" />
+                        <PuzzlePieceIcon className="h-5 w-5 text-red-600 mr-2" />
                         <span className="text-sm text-gray-700">Competições Amadoras</span>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{stats.amateur_competitions}</span>
@@ -509,7 +509,7 @@ export default function ProfilePage() {
                   href="/amadores"
                   className="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  <GameIcon className="h-5 w-5 text-red-600 mr-3" />
+                  <PuzzlePieceIcon className="h-5 w-5 text-red-600 mr-3" />
                   Competições Amadoras
                 </a>
               </div>
