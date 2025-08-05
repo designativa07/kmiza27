@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { HeaderWithLogo } from '@/components/HeaderWithLogo'
 import { 
   TrophyIcon, 
   UsersIcon, 
@@ -78,36 +79,33 @@ export default function PoolsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Bolões</h1>
-              <p className="mt-2 text-gray-600">
-                Participe dos nossos bolões e teste seus conhecimentos de futebol!
-              </p>
-            </div>
-            
-            {!isAuthenticated && (
-              <div className="text-center">
-                <p className="text-sm text-gray-500 mb-2">
-                  Faça login para participar dos bolões
-                </p>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Fazer Login
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Lista de Bolões */}
+      {/* Header padrão do Futepédia */}
+      <HeaderWithLogo />
+      
+      {/* Conteúdo da página */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Bolões</h1>
+          <p className="mt-2 text-gray-600">
+            Participe dos nossos bolões e teste seus conhecimentos de futebol!
+          </p>
+          
+          {!isAuthenticated && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 mb-2">
+                Faça login para participar dos bolões
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Fazer Login
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Lista de Bolões */}
         {pools.length === 0 ? (
           <div className="text-center py-12">
             <TrophyIcon className="mx-auto h-24 w-24 text-gray-400" />

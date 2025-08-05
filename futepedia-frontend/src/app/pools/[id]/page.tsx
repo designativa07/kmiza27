@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { HeaderWithLogo } from '@/components/HeaderWithLogo'
 import { 
   TrophyIcon, 
   UsersIcon, 
@@ -314,46 +315,46 @@ export default function PoolDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <nav className="flex" aria-label="Breadcrumb">
-              <ol className="flex items-center space-x-4">
-                <li>
-                  <Link href="/pools" className="text-gray-400 hover:text-gray-500">
-                    Bolões
-                  </Link>
-                </li>
-                <li className="flex items-center">
-                  <svg className="flex-shrink-0 h-5 w-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="ml-4 text-gray-500 truncate">{pool.title}</span>
-                </li>
-              </ol>
-            </nav>
-            
-            <div className="mt-4 flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{pool.title}</h1>
-                {pool.description && (
-                  <p className="mt-2 text-gray-600">{pool.description}</p>
-                )}
-                <p className="mt-1 text-sm text-gray-500">
-                  Criado por {pool.creator.name} em {new Date(pool.created_at).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-              
-              <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${statusColors[pool.status]}`}>
-                {statusLabels[pool.status]}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Header padrão do Futepédia */}
+      <HeaderWithLogo />
+      
+      {/* Conteúdo da página */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <nav className="flex mb-6" aria-label="Breadcrumb">
+          <ol className="flex items-center space-x-4">
+            <li>
+              <Link href="/pools" className="text-gray-400 hover:text-gray-500">
+                Bolões
+              </Link>
+            </li>
+            <li className="flex items-center">
+              <svg className="flex-shrink-0 h-5 w-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+              <span className="ml-4 text-gray-500 truncate">{pool.title}</span>
+            </li>
+          </ol>
+        </nav>
+        
+        {/* Informações do Bolão */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{pool.title}</h1>
+              {pool.description && (
+                <p className="mt-2 text-gray-600">{pool.description}</p>
+              )}
+              <p className="mt-1 text-sm text-gray-500">
+                Criado por {pool.creator.name} em {new Date(pool.created_at).toLocaleDateString('pt-BR')}
+              </p>
+            </div>
+            
+            <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${statusColors[pool.status]}`}>
+              {statusLabels[pool.status]}
+            </span>
+          </div>
+                </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Coluna Principal */}
           <div className="lg:col-span-2">

@@ -129,6 +129,13 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
+  // Detectar se estamos na rota /pools e automaticamente selecionar Bolões
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/pools') {
+      setCurrentPage('Bolões')
+    }
+  }, [])
+
   // Função para fazer logout
   const handleLogout = () => {
     logout()
