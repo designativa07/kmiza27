@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { scheduleConfig } from './config/schedule.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
@@ -69,7 +69,7 @@ import { PoolsModule } from './modules/pools/pools.module';
       envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
     }),
     TypeOrmModule.forRoot(databaseConfig()),
-    ScheduleModule.forRoot(),
+    scheduleConfig,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
