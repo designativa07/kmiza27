@@ -96,7 +96,7 @@ export default function PoolsPage() {
                 Faça login para participar dos bolões
               </p>
               <Link
-                href="/login"
+                href={`/login?redirect=${encodeURIComponent('/pools')}`}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
                 Fazer Login
@@ -188,7 +188,7 @@ export default function PoolsPage() {
                   {/* Informação adicional para não logados */}
                   {!isAuthenticated && (
                     <p className="mt-3 text-xs text-gray-500 text-center">
-                      <Link href="/login" className="text-blue-600 hover:text-blue-700">
+                      <Link href={`/login?redirect=${encodeURIComponent('/pools')}`} className="text-blue-600 hover:text-blue-700">
                         Faça login
                       </Link>
                       {' '}para participar deste bolão

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,13 @@ export default function LoginPage() {
         const data = await response.json();
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/admin-amadores');
+        
+        // Redirecionar para a URL de origem se especificada, senão para admin-amadores
+        if (redirectUrl) {
+          router.push(redirectUrl);
+        } else {
+          router.push('/admin-amadores');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Erro ao fazer login');
@@ -60,10 +68,10 @@ export default function LoginPage() {
                 <Shield className="h-8 w-8 text-indigo-600" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Área do Amador</h1>
-            <p className="text-gray-600 text-sm">
-              Faça login para administrar suas competições amadoras
-            </p>
+                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Área do Membro</h1>
+             <p className="text-gray-600 text-sm">
+               Faça login para administrar sua conta
+             </p>
           </div>
         </div>
 
