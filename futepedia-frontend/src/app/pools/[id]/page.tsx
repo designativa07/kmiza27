@@ -93,10 +93,13 @@ const statusColors = {
 export default function PoolDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { user } = useAuth()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [pool, setPool] = useState<Pool | null>(null)
   const [loading, setLoading] = useState(true)
   const [isParticipant, setIsParticipant] = useState(false)
+  const [predictions, setPredictions] = useState<{ [key: number]: { home: number; away: number } }>({})
+  const [saving, setSaving] = useState<{ [key: number]: boolean }>({})
 
   const poolId = params.id as string
 
@@ -104,13 +107,37 @@ export default function PoolDetailsPage() {
     if (poolId) {
       fetchPool()
     }
+    
+    // Verificar autenticação
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+    setIsAuthenticated(!!token)
   }, [poolId])
 
   useEffect(() => {
-    if (pool && user) {
-              setIsParticipant(pool.participants?.some(p => p.user.id === user.id) || false)
+    if (pool) {
+      // Verificar se o usuário participa usando o token
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          const userId = payload.sub
+          
+          const isParticipating = pool.participants?.some((p: any) => {
+            // Verificar tanto user_id quanto user.id
+            const participantUserId = p.user_id || p.user?.id
+            return participantUserId === userId || participantUserId === parseInt(userId)
+          })
+          
+          setIsParticipant(isParticipating || false)
+        } catch (error) {
+          console.error('Erro ao decodificar token:', error)
+          setIsParticipant(false)
+        }
+      } else {
+        setIsParticipant(false)
+      }
     }
-  }, [pool, user])
+  }, [pool])
 
   const fetchPool = async () => {
     try {
@@ -136,7 +163,7 @@ export default function PoolDetailsPage() {
     }
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
       const response = await fetch(`/api/pools/${poolId}/join`, {
         method: 'POST',
         headers: {
@@ -149,11 +176,68 @@ export default function PoolDetailsPage() {
         alert('Você entrou no bolão com sucesso!')
       } else {
         const error = await response.json()
-        alert('Erro ao entrar no bolão: ' + error.message)
+        console.log('Erro do backend:', error)
+        
+        // Se o erro for que já participa, mostrar mensagem apropriada
+        if (error.message?.includes('já participa') || error.error?.includes('já participa')) {
+          alert('Você já participa deste bolão!')
+        } else {
+          alert('Erro ao entrar no bolão: ' + (error.message || error.error || 'Erro desconhecido'))
+        }
       }
     } catch (error) {
       console.error('Erro ao entrar no bolão:', error)
       alert('Erro ao entrar no bolão')
+    }
+  }
+
+  const handlePredictionChange = (matchId: number, team: 'home' | 'away', value: string) => {
+    // Permitir 0 e valores vazios
+    const numValue = value === '' ? undefined : parseInt(value)
+    setPredictions(prev => ({
+      ...prev,
+      [matchId]: {
+        ...prev[matchId],
+        [team]: numValue,
+      }
+    }))
+  }
+
+  const savePrediction = async (matchId: number) => {
+    const prediction = predictions[matchId]
+    if (!prediction || prediction.home === undefined || prediction.away === undefined) {
+      alert('Por favor, preencha ambos os placares')
+      return
+    }
+
+    setSaving(prev => ({ ...prev, [matchId]: true }))
+
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      const response = await fetch(`/api/pools/${poolId}/predictions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          match_id: matchId,
+          predicted_home_score: prediction.home,
+          predicted_away_score: prediction.away,
+        }),
+      })
+
+      if (response.ok) {
+        alert('Palpite salvo com sucesso!')
+      } else {
+        const error = await response.json()
+        alert('Erro ao salvar palpite: ' + (error.message || error.error || 'Erro desconhecido'))
+      }
+    } catch (error) {
+      console.error('Erro ao salvar palpite:', error)
+      alert('Erro ao salvar palpite')
+    } finally {
+      setSaving(prev => ({ ...prev, [matchId]: false }))
     }
   }
 
@@ -312,52 +396,110 @@ export default function PoolDetailsPage() {
                 Jogos do Bolão ({pool.pool_matches?.length || 0})
               </h2>
               
-              <div className="space-y-4">
-                {pool.pool_matches
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((poolMatch) => (
-                    <div key={poolMatch.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 flex-1">
-                          <div className="text-center min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Time Casa</th>
+                      <th className="text-center py-2 px-1 text-xs font-medium text-gray-500 uppercase tracking-wider">Placar</th>
+                      <th className="text-center py-2 px-1 text-xs font-medium text-gray-500 uppercase tracking-wider">VS</th>
+                      <th className="text-center py-2 px-1 text-xs font-medium text-gray-500 uppercase tracking-wider">Placar</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Time Visitante</th>
+                      <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                      <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Salvar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {pool.pool_matches
+                      .sort((a, b) => a.order_index - b.order_index)
+                      .map((poolMatch) => (
+                        <tr key={poolMatch.id} className="hover:bg-gray-50">
+                          {/* Coluna 1: Time Casa */}
+                          <td className="py-2 px-3">
+                            <p className="font-medium text-gray-900 truncate text-sm">
                               {poolMatch.match.home_team.name}
                             </p>
-                          </div>
+                          </td>
                           
-                          <div className="text-center px-4">
-                            {poolMatch.match.status === 'finished' ? (
-                              <div className="text-lg font-bold text-gray-900">
-                                {poolMatch.match.home_score} - {poolMatch.match.away_score}
-                              </div>
+                          {/* Coluna 2: Placar Casa */}
+                          <td className="py-2 px-1 text-center">
+                            {isParticipant && poolMatch.match.status === 'scheduled' ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max="99"
+                                className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
+                                placeholder="0"
+                                value={predictions[poolMatch.match.id]?.home || ''}
+                                onChange={(e) => handlePredictionChange(poolMatch.match.id, 'home', e.target.value)}
+                              />
+                            ) : poolMatch.match.status === 'finished' ? (
+                              <span className="text-sm font-bold text-gray-900">
+                                {poolMatch.match.home_score}
+                              </span>
                             ) : (
-                              <div className="text-sm text-gray-500">
-                                vs
-                              </div>
+                              <span className="text-xs text-gray-400">-</span>
                             )}
-                          </div>
+                          </td>
                           
-                          <div className="text-center min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">
+                          {/* Coluna 3: VS */}
+                          <td className="py-2 px-1 text-center">
+                            <span className="text-xs text-gray-500">vs</span>
+                          </td>
+                          
+                          {/* Coluna 4: Placar Visitante */}
+                          <td className="py-2 px-1 text-center">
+                            {isParticipant && poolMatch.match.status === 'scheduled' ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max="99"
+                                className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
+                                placeholder="0"
+                                value={predictions[poolMatch.match.id]?.away || ''}
+                                onChange={(e) => handlePredictionChange(poolMatch.match.id, 'away', e.target.value)}
+                              />
+                            ) : poolMatch.match.status === 'finished' ? (
+                              <span className="text-sm font-bold text-gray-900">
+                                {poolMatch.match.away_score}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                          
+                          {/* Coluna 5: Time Visitante */}
+                          <td className="py-2 px-3">
+                            <p className="font-medium text-gray-900 truncate text-sm">
                               {poolMatch.match.away_team.name}
                             </p>
-                          </div>
-                        </div>
-                        
-                        <div className="ml-4 text-right">
-                          <p className="text-sm text-gray-500">
-                            {new Date(poolMatch.match.match_date).toLocaleDateString('pt-BR')}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(poolMatch.match.match_date).toLocaleTimeString('pt-BR', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </td>
+                          
+                          {/* Coluna 6: Data */}
+                          <td className="py-2 px-2 text-center">
+                            <p className="text-xs text-gray-500">
+                              {new Date(poolMatch.match.match_date).toLocaleDateString('pt-BR')}
+                            </p>
+                          </td>
+                          
+                          {/* Coluna 7: Salvar */}
+                          <td className="py-2 px-2 text-center">
+                            {isParticipant && poolMatch.match.status === 'scheduled' ? (
+                              <button
+                                onClick={() => savePrediction(poolMatch.match.id)}
+                                disabled={saving[poolMatch.match.id]}
+                                className="px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {saving[poolMatch.match.id] ? 'Salvando...' : 'Salvar'}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -368,6 +510,8 @@ export default function PoolDetailsPage() {
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações</h2>
               
+
+
               {!isAuthenticated ? (
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-4">
@@ -389,22 +533,11 @@ export default function PoolDetailsPage() {
                     </p>
                   </div>
                   
-                  {pool.status === 'open' && (
-                    <Link
-                      href={`/pools/${pool.id}/predictions`}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      <PlayIcon className="h-4 w-4 mr-2" />
-                      Fazer Palpites
-                    </Link>
-                  )}
-                  
-                  <Link
-                    href={`/pools/${pool.id}/my-predictions`}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    Ver Meus Palpites
-                  </Link>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium">
+                      Use os campos abaixo dos jogos para fazer seus palpites!
+                    </p>
+                  </div>
                 </div>
               ) : pool.status === 'open' ? (
                 <button

@@ -190,7 +190,12 @@ export default function PoolsManager() {
       console.log('Response status:', response.status) // Debug
       if (response.ok) {
         const data = await response.json()
-        setPools(data)
+        // Mapear name para title para compatibilidade com a interface
+        const mappedData = data.map((pool: any) => ({
+          ...pool,
+          title: pool.name // Mapear name para title
+        }))
+        setPools(mappedData)
       }
     } catch (error) {
       console.error('Erro ao buscar bolões:', error)
@@ -277,8 +282,13 @@ export default function PoolsManager() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.title, // Mapear title para name
+          description: formData.description,
+          type: formData.type,
           round_id: formData.round_id ? parseInt(formData.round_id) : undefined,
+          match_ids: formData.match_ids,
+          scoring_rules: formData.scoring_rules,
+          is_public: formData.settings.public,
           start_date: formData.start_date ? new Date(formData.start_date).toISOString() : undefined,
           end_date: formData.end_date ? new Date(formData.end_date).toISOString() : undefined,
           prediction_deadline: formData.prediction_deadline ? new Date(formData.prediction_deadline).toISOString() : undefined

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   CheckCircleIcon,
   ClockIcon,
@@ -64,13 +64,17 @@ export default function PredictionsPage() {
   const poolId = params.id as string
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Verificar se há token no localStorage
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+    
+    if (!token) {
       router.push('/login')
       return
     }
+    
     fetchPool()
     fetchMyPredictions()
-  }, [poolId, isAuthenticated])
+  }, [poolId])
 
   useEffect(() => {
     if (pool) {
@@ -101,7 +105,7 @@ export default function PredictionsPage() {
 
   const fetchMyPredictions = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
       const response = await fetch(`/api/pools/${poolId}/my-predictions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -147,7 +151,7 @@ export default function PredictionsPage() {
     setSaving(prev => ({ ...prev, [matchId]: true }))
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
       const response = await fetch(`/api/pools/${poolId}/predictions`, {
         method: 'POST',
         headers: {

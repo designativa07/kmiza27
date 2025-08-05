@@ -39,6 +39,10 @@ export class PoolsService {
 
     try {
       // Validações
+      if (!createPoolDto.name || createPoolDto.name.trim() === '') {
+        throw new BadRequestException('Nome do bolão é obrigatório');
+      }
+
       if (createPoolDto.type === PoolType.ROUND && !createPoolDto.round_id) {
         throw new BadRequestException('Round ID é obrigatório para bolões de rodada');
       }
@@ -49,6 +53,7 @@ export class PoolsService {
 
       // Verificar se usuário existe e é admin
       const creator = await this.userRepository.findOne({ where: { id: creatorUserId } });
+      
       if (!creator || !creator.is_admin) {
         throw new ForbiddenException('Apenas administradores podem criar bolões');
       }
@@ -59,7 +64,7 @@ export class PoolsService {
         description: createPoolDto.description,
         type: createPoolDto.type,
         round_id: createPoolDto.round_id,
-        created_by: creatorUserId,
+        created_by_user_id: creatorUserId,
         start_date: createPoolDto.start_date,
         end_date: createPoolDto.end_date,
         scoring_rules: createPoolDto.scoring_rules || {
@@ -134,10 +139,12 @@ export class PoolsService {
     type?: PoolType;
     userId?: number;
     includeParticipants?: boolean;
+    publicOnly?: boolean;
   }): Promise<Pool[]> {
     const query = this.poolRepository.createQueryBuilder('pool')
       .leftJoinAndSelect('pool.creator', 'creator')
       .leftJoinAndSelect('pool.round', 'round')
+      .leftJoinAndSelect('round.competition', 'round_competition')
       .leftJoinAndSelect('pool.pool_matches', 'pool_matches')
       .leftJoinAndSelect('pool_matches.match', 'match')
       .leftJoinAndSelect('match.home_team', 'home_team')
@@ -164,28 +171,40 @@ export class PoolsService {
         .andWhere('participant.user_id = :userId', { userId: filters.userId });
     }
 
+    // Filtrar apenas bolões públicos se solicitado
+    if (filters?.publicOnly) {
+      query.andWhere("pool.settings->>'public' = 'true'");
+    }
+
     return query.orderBy('pool.created_at', 'DESC').getMany();
   }
 
   async findOne(id: number): Promise<Pool> {
-    const pool = await this.poolRepository.findOne({
-      where: { id },
-      relations: [
-        'creator',
-        'round',
-        'pool_matches',
-        'pool_matches.match',
-        'pool_matches.match.home_team',
-        'pool_matches.match.away_team',
-        'pool_matches.match.competition',
-        'participants',
-        'participants.user',
-      ],
-    });
+    // Primeiro buscar o bolão sem participantes
+    const pool = await this.poolRepository.createQueryBuilder('pool')
+      .leftJoinAndSelect('pool.creator', 'creator')
+      .leftJoinAndSelect('pool.round', 'round')
+      .leftJoinAndSelect('round.competition', 'round_competition')
+      .leftJoinAndSelect('pool.pool_matches', 'pool_matches')
+      .leftJoinAndSelect('pool_matches.match', 'match')
+      .leftJoinAndSelect('match.home_team', 'home_team')
+      .leftJoinAndSelect('match.away_team', 'away_team')
+      .leftJoinAndSelect('match.competition', 'competition')
+      .where('pool.id = :id', { id })
+      .getOne();
 
     if (!pool) {
       throw new NotFoundException('Bolão não encontrado');
     }
+
+    // Depois buscar os participantes separadamente
+    const participants = await this.poolParticipantRepository.find({
+      where: { pool_id: id },
+      relations: ['user'],
+      order: { ranking_position: 'ASC' }
+    });
+
+    pool.participants = participants;
 
     return pool;
   }
@@ -194,7 +213,7 @@ export class PoolsService {
     const pool = await this.findOne(id);
 
     // Verificar permissões
-    if (pool.created_by !== userId) {
+    if (pool.created_by_user_id !== userId) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user?.is_admin) {
         throw new ForbiddenException('Apenas o criador ou administradores podem editar este bolão');
@@ -214,7 +233,7 @@ export class PoolsService {
     const pool = await this.findOne(id);
 
     // Verificar permissões
-    if (pool.created_by !== userId) {
+    if (pool.created_by_user_id !== userId) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user?.is_admin) {
         throw new ForbiddenException('Apenas o criador ou administradores podem excluir este bolão');
@@ -372,7 +391,7 @@ export class PoolsService {
   async publishPool(poolId: number, userId: number): Promise<Pool> {
     const pool = await this.findOne(poolId);
 
-    if (pool.created_by !== userId) {
+    if (pool.created_by_user_id !== userId) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user?.is_admin) {
         throw new ForbiddenException('Apenas o criador ou administradores podem publicar este bolão');
@@ -394,7 +413,7 @@ export class PoolsService {
   async closePool(poolId: number, userId: number): Promise<Pool> {
     const pool = await this.findOne(poolId);
 
-    if (pool.created_by !== userId) {
+    if (pool.created_by_user_id !== userId) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user?.is_admin) {
         throw new ForbiddenException('Apenas o criador ou administradores podem fechar este bolão');

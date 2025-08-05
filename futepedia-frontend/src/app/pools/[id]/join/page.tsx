@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
 import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 export default function JoinPoolPage() {
   const params = useParams()
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already_joined'>('loading')
   const [message, setMessage] = useState('')
   const [poolName, setPoolName] = useState('')
@@ -17,13 +15,16 @@ export default function JoinPoolPage() {
   const poolId = params.id as string
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Verificar se há token no localStorage
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+    
+    if (!token) {
       router.push(`/login?redirect=/pools/${poolId}/join`)
       return
     }
     
     joinPool()
-  }, [poolId, isAuthenticated])
+  }, [poolId])
 
   const joinPool = async () => {
     try {
@@ -40,15 +41,37 @@ export default function JoinPoolPage() {
       const poolData = await poolResponse.json()
       setPoolName(poolData.name)
       
+      // Obter token uma vez
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
       // Verificar se já participa
-      if (poolData.participants?.some((p: any) => p.user.id === user?.id)) {
-        setStatus('already_joined')
-        setMessage('Você já participa deste bolão!')
-        return
+      if (token) {
+        // Decodificar o token para obter o user ID
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          const userId = payload.sub
+          
+          console.log('Verificando participação - User ID:', userId)
+          console.log('Participantes do bolão:', poolData.participants)
+          
+          // Verificar se já participa (mais robusto)
+          const isAlreadyParticipating = poolData.participants?.some((p: any) => {
+            const participantUserId = p.user_id || p.user?.id || p.user_id
+            console.log('Participante:', p, 'User ID:', participantUserId)
+            return participantUserId === userId || participantUserId === parseInt(userId)
+          })
+          
+          if (isAlreadyParticipating) {
+            setStatus('already_joined')
+            setMessage('Você já participa deste bolão!')
+            return
+          }
+        } catch (error) {
+          console.error('Erro ao decodificar token:', error)
+        }
       }
 
       // Tentar participar
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/pools/${poolId}/join`, {
         method: 'POST',
         headers: {
@@ -66,8 +89,16 @@ export default function JoinPoolPage() {
         }, 2000)
       } else {
         const error = await response.json()
-        setStatus('error')
-        setMessage(error.message || 'Erro ao entrar no bolão')
+        console.log('Erro do backend:', error)
+        
+        // Se o erro for que já participa, mostrar como sucesso
+        if (error.message?.includes('já participa') || error.error?.includes('já participa')) {
+          setStatus('already_joined')
+          setMessage('Você já participa deste bolão!')
+        } else {
+          setStatus('error')
+          setMessage(error.message || error.error || 'Erro ao entrar no bolão')
+        }
       }
     } catch (error) {
       console.error('Erro ao entrar no bolão:', error)

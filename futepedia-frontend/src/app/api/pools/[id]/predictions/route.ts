@@ -8,12 +8,12 @@ export async function POST(
 ) {
   try {
     const poolId = params.id;
-    const authHeader = request.headers.get('authorization');
     const body = await request.json();
-    
+    const authHeader = request.headers.get('authorization');
+
     if (!authHeader) {
       return NextResponse.json(
-        { error: 'Token de acesso não fornecido' },
+        { error: 'Token de autorização não fornecido' },
         { status: 401 }
       );
     }
