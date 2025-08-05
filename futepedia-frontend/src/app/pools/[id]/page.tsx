@@ -129,6 +129,11 @@ export default function PoolDetailsPage() {
           })
           
           setIsParticipant(isParticipating || false)
+          
+          // Se for participante, carregar palpites existentes
+          if (isParticipating) {
+            fetchExistingPredictions()
+          }
         } catch (error) {
           console.error('Erro ao decodificar token:', error)
           setIsParticipant(false)
@@ -153,6 +158,35 @@ export default function PoolDetailsPage() {
       router.push('/pools')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchExistingPredictions = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/pools/${poolId}/my-predictions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const predictionsMap: { [key: number]: { home: number; away: number } } = {}
+        
+        data.forEach((prediction: any) => {
+          predictionsMap[prediction.match_id] = {
+            home: prediction.predicted_home_score,
+            away: prediction.predicted_away_score,
+          }
+        })
+        
+        setPredictions(predictionsMap)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar palpites existentes:', error)
     }
   }
 
@@ -228,6 +262,14 @@ export default function PoolDetailsPage() {
       })
 
       if (response.ok) {
+        // Atualizar o estado local para refletir que foi salvo
+        setPredictions(prev => ({
+          ...prev,
+          [matchId]: {
+            home: prediction.home,
+            away: prediction.away,
+          }
+        }))
         alert('Palpite salvo com sucesso!')
       } else {
         const error = await response.json()
@@ -430,7 +472,7 @@ export default function PoolDetailsPage() {
                                 max="99"
                                 className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
                                 placeholder="0"
-                                value={predictions[poolMatch.match.id]?.home || ''}
+                                value={predictions[poolMatch.match.id]?.home !== undefined ? predictions[poolMatch.match.id].home : ''}
                                 onChange={(e) => handlePredictionChange(poolMatch.match.id, 'home', e.target.value)}
                               />
                             ) : poolMatch.match.status === 'finished' ? (
@@ -456,7 +498,7 @@ export default function PoolDetailsPage() {
                                 max="99"
                                 className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
                                 placeholder="0"
-                                value={predictions[poolMatch.match.id]?.away || ''}
+                                value={predictions[poolMatch.match.id]?.away !== undefined ? predictions[poolMatch.match.id].away : ''}
                                 onChange={(e) => handlePredictionChange(poolMatch.match.id, 'away', e.target.value)}
                               />
                             ) : poolMatch.match.status === 'finished' ? (
