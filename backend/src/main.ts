@@ -1,3 +1,16 @@
+// 🔧 CORREÇÃO CRYPTO: Garantir que o objeto crypto esteja disponível globalmente
+// Necessário para o @nestjs/schedule funcionar corretamente
+// DEVE ser executado ANTES de qualquer importação
+if (typeof globalThis.crypto === 'undefined') {
+  try {
+    const { webcrypto } = require('crypto');
+    globalThis.crypto = webcrypto;
+    console.log('✅ Crypto global configurado com sucesso');
+  } catch (error) {
+    console.warn('⚠️ Aviso: Não foi possível carregar crypto globalmente:', error.message);
+  }
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
