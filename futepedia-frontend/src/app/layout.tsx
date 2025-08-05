@@ -7,6 +7,7 @@ import FutebotChat from "@/components/FutebotChat";
 import { getApiUrl } from "@/lib/config";
 import { getFutepediaOgImageUrl } from "@/lib/cdn";
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,14 +50,16 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={inter.className}>
         <ErrorBoundary>
-          {children}
-          
-          {/* Widget do Futebot - aparece em todas as páginas */}
           <ClientOnly>
-            <FutebotChat 
-              isWidget={true} 
-              apiUrl={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'} 
-            />
+            <AuthProvider>
+              {children}
+              
+              {/* Widget do Futebot - aparece em todas as páginas */}
+              <FutebotChat 
+                isWidget={true} 
+                apiUrl={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'} 
+              />
+            </AuthProvider>
           </ClientOnly>
         </ErrorBoundary>
         {process.env.NEXT_PUBLIC_GA_ID && (

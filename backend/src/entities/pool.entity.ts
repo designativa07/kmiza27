@@ -56,7 +56,7 @@ export class Pool {
   creator: User;
 
   @Column({ name: 'created_by_user_id' })
-  created_by: number;
+  created_by_user_id: number;
 
   @Column({ type: 'timestamp', nullable: true })
   start_date: Date;

@@ -30,6 +30,7 @@ export class PoolsController {
     return this.poolsService.findAll({
       status: status || PoolStatus.OPEN,
       includeParticipants: true,
+      publicOnly: true,
     });
   }
 
@@ -59,8 +60,10 @@ export class PoolsController {
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() createPoolDto: any, @Request() req) {
-    return this.poolsService.create(createPoolDto, req.user.id);
+    return this.poolsService.create(createPoolDto, req.user?.id || req.user?.sub);
   }
+
+
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -71,7 +74,7 @@ export class PoolsController {
     } else {
       return this.poolsService.findAll({
         ...filters,
-        userId: req.user.id,
+        userId: req.user?.id || req.user?.sub,
       });
     }
   }
@@ -79,7 +82,7 @@ export class PoolsController {
   @UseGuards(JwtAuthGuard)
   @Get('my-pools')
   async findMyPools(@Request() req) {
-    return this.poolsService.findAll({ userId: req.user.id });
+    return this.poolsService.findAll({ userId: req.user?.id || req.user?.sub });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -89,8 +92,9 @@ export class PoolsController {
     
     // Verificar se o usuário tem acesso ao bolão
     if (!pool.settings?.public) {
-      const isParticipant = pool.participants.some(p => p.user_id === req.user.id);
-      const isCreator = pool.created_by === req.user.id;
+      const userId = req.user?.id || req.user?.sub;
+      const isParticipant = pool.participants.some(p => p.user_id === userId);
+      const isCreator = pool.created_by_user_id === userId;
       const isAdmin = req.user.is_admin;
 
       if (!isParticipant && !isCreator && !isAdmin) {
@@ -108,13 +112,13 @@ export class PoolsController {
     @Body() updatePoolDto: any,
     @Request() req,
   ) {
-    return this.poolsService.update(id, updatePoolDto, req.user.id);
+    return this.poolsService.update(id, updatePoolDto, req.user?.id || req.user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    await this.poolsService.delete(id, req.user.id);
+    await this.poolsService.delete(id, req.user?.id || req.user?.sub);
     return { message: 'Bolão excluído com sucesso' };
   }
 
@@ -122,13 +126,13 @@ export class PoolsController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/join')
   async joinPool(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.poolsService.joinPool(id, req.user.id);
+    return this.poolsService.joinPool(id, req.user?.id || req.user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/leave')
   async leavePool(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    await this.poolsService.leavePool(id, req.user.id);
+    await this.poolsService.leavePool(id, req.user?.id || req.user?.sub);
     return { message: 'Saída do bolão realizada com sucesso' };
   }
 
@@ -149,27 +153,27 @@ export class PoolsController {
         pool_id: poolId,
         ...predictionDto,
       },
-      req.user.id,
+      req.user?.id || req.user?.sub,
     );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/my-predictions')
   async getMyPredictions(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.poolsService.getUserPredictions(id, req.user.id);
+    return this.poolsService.getUserPredictions(id, req.user?.id || req.user?.sub);
   }
 
   // Gerenciamento de status (apenas criador/admin)
   @UseGuards(JwtAuthGuard)
   @Post(':id/publish')
   async publishPool(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.poolsService.publishPool(id, req.user.id);
+    return this.poolsService.publishPool(id, req.user?.id || req.user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/close')
   async closePool(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.poolsService.closePool(id, req.user.id);
+    return this.poolsService.closePool(id, req.user?.id || req.user?.sub);
   }
 
   // Atualização manual de pontuações (apenas admin)
