@@ -44,7 +44,7 @@ const statusColors = {
 };
 
 export default function PoolsPage() {
-  const { isAuthenticated, requireAuth } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [pools, setPools] = useState<Pool[]>([])
   const [loading, setLoading] = useState(true)
 

@@ -46,7 +46,7 @@ interface UserStats {
 }
 
 export default function ProfilePage() {
-  const { isAuthenticated, user, requireAuth } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)

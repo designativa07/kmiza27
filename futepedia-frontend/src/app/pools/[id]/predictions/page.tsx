@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { 
   CheckCircleIcon,
   ClockIcon,
@@ -54,7 +54,7 @@ interface Prediction {
 export default function PredictionsPage() {
   const params = useParams()
   const router = useRouter()
-  const { isAuthenticated, requireAuth } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [pool, setPool] = useState<Pool | null>(null)
   const [predictions, setPredictions] = useState<{ [key: number]: Prediction }>({})
   const [loading, setLoading] = useState(true)
