@@ -135,6 +135,17 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
         
         // Recarregar dados da temporada
         await loadSeasonData();
+
+        // Atualizar torcida com base no resultado simples (win/draw/loss)
+        try {
+          const homeScore = result?.data?.home_score ?? 0;
+          const awayScore = result?.data?.away_score ?? 0;
+          const userIsHome = !!result?.data?.user_plays_home;
+          const didWin = userIsHome ? homeScore > awayScore : awayScore > homeScore;
+          const didDraw = homeScore === awayScore;
+          const outcome: 'win' | 'draw' | 'loss' = didDraw ? 'draw' : didWin ? 'win' : 'loss';
+          await gameApiReformed.applyFansMatch({ teamId: selectedTeam.id, result: outcome });
+        } catch {}
         
         // Mensagem simples sem complexidade de placar
         alert('🏟️ Jogo disputado!');

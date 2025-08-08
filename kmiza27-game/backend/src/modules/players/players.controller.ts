@@ -34,6 +34,24 @@ export class PlayersController {
   }
 
   /**
+   * Buscar jogadores via query param (compatibilidade do frontend)
+   * GET /api/v2/players?teamId=...
+   */
+  @Get()
+  async getPlayersByQuery(@Query('teamId') teamId?: string) {
+    try {
+      if (!teamId) {
+        return { success: false, error: 'teamId é obrigatório', data: [] };
+      }
+      const players = await this.playersService.getTeamPlayers(teamId);
+      return { success: true, data: players, count: players.length };
+    } catch (error) {
+      this.logger.error('❌ Erro ao buscar jogadores (query):', error);
+      return { success: false, error: error.message, data: [] };
+    }
+  }
+
+  /**
    * Criar plantel inicial para um time
    * POST /api/v2/players/create-squad
    */

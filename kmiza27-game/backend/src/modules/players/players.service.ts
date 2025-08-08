@@ -253,19 +253,33 @@ export class PlayersService {
    */
   async getTeamPlayers(teamId: string): Promise<Player[]> {
     try {
-      const { data: players, error } = await supabase
-        .from('game_players_detailed') // View com dados calculados
+      // Buscar diretamente na tabela base (mais confiável no setup inicial)
+      let { data: players, error } = await supabase
+        .from('game_players')
         .select('*')
         .eq('team_id', teamId)
         .eq('team_type', 'first_team')
-        .order('position')
-        .order('current_ability', { ascending: false });
+        .order('position');
+
+      // Se vazio, criar plantel inicial automaticamente
+      if (!players || players.length === 0) {
+        this.logger.warn(`⚠️ Nenhum jogador encontrado para time ${teamId}. Criando plantel inicial.`);
+        await this.createInitialSquad(teamId);
+        const fb2 = await supabase
+          .from('game_players')
+          .select('*')
+          .eq('team_id', teamId)
+          .eq('team_type', 'first_team')
+          .order('position');
+        players = fb2.data as any[] | null;
+        error = fb2.error;
+      }
 
       if (error) {
         throw new Error(`Erro ao buscar jogadores: ${error.message}`);
       }
 
-      return players || [];
+      return (players || []) as any;
 
     } catch (error) {
       this.logger.error('❌ Erro ao buscar jogadores do time:', error);
@@ -466,12 +480,14 @@ export class PlayersService {
    * Calcular taxa de desenvolvimento baseada na idade
    */
   private calculateDevelopmentRate(age: number): number {
-    if (age <= 18) return this.randomBetween(0.8, 1.0);
-    if (age <= 21) return this.randomBetween(0.7, 0.9);
-    if (age <= 24) return this.randomBetween(0.5, 0.8);
-    if (age <= 27) return this.randomBetween(0.3, 0.6);
-    if (age <= 30) return this.randomBetween(0.1, 0.4);
-    return this.randomBetween(0.05, 0.2);
+    // Gera valores de ponto flutuante dentro do intervalo, respeitando [0,1]
+    const rf = (min: number, max: number) => Math.min(1, Math.max(0, min + Math.random() * (max - min)));
+    if (age <= 18) return rf(0.8, 1.0);
+    if (age <= 21) return rf(0.7, 0.9);
+    if (age <= 24) return rf(0.5, 0.8);
+    if (age <= 27) return rf(0.3, 0.6);
+    if (age <= 30) return rf(0.1, 0.4);
+    return rf(0.05, 0.2);
   }
 
   /**
@@ -518,7 +534,7 @@ export class PlayersService {
         
         const currentValue = player[attr];
         if (currentValue < player.potential) {
-          const improvement = Math.min(remainingPoints, this.randomBetween(0.1, 0.5));
+          const improvement = Math.min(remainingPoints, this.randomFloatBetween(0.1, 0.5));
           const newValue = Math.min(player.potential, currentValue + improvement);
           
           improvements[attr] = newValue - currentValue;
@@ -653,6 +669,12 @@ export class PlayersService {
   }
 
   private randomBetween(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    // Inteiros (inclusive)
+    return Math.floor(Math.random() * (Math.floor(max) - Math.ceil(min) + 1)) + Math.ceil(min);
+  }
+
+  private randomFloatBetween(min: number, max: number): number {
+    // Flutuantes (inclusive em min, exclusivo em max por padrão)
+    return min + Math.random() * (max - min);
   }
 }

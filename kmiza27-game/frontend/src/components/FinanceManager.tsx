@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { gameApiReformed } from '@/services/gameApiReformed';
 
 interface FinancialReport {
   month: string;
@@ -47,8 +48,8 @@ export default function FinanceManager() {
     
     setLoading(true);
     try {
-      // TODO: Implementar chamadas para API
-      // Dados mockados por enquanto
+      // Patrocínios reais (stub backend)
+      const spons = await gameApiReformed.getSponsorships(selectedTeam.id);
       const mockReports: FinancialReport[] = [
         {
           month: 'Janeiro 2025',
@@ -84,27 +85,11 @@ export default function FinanceManager() {
         }
       ];
 
-      const mockSponsorships: Sponsorship[] = [
-        {
-          id: '1',
-          name: 'TechCorp',
-          amount: 50000,
-          duration: 12,
-          type: 'shirt',
-          status: 'active'
-        },
-        {
-          id: '2',
-          name: 'EnergyDrink',
-          amount: 30000,
-          duration: 6,
-          type: 'stadium',
-          status: 'active'
-        }
-      ];
+      const mockSponsorships: Sponsorship[] = (spons.contracts || []).map((c: any) => ({ id: c.id || c.slot, name: c.name, amount: c.amountPerMonth || c.amount_per_month, duration: c.durationMonths || c.duration_months, type: (c.slot || 'general') as any, status: c.status || 'active' }));
 
       setFinancialReports(mockReports);
       setSponsorships(mockSponsorships);
+      setOffers((spons.offers || []).map((o: any) => ({ id: o.id, name: o.name, amount: o.amountPerMonth, duration: o.durationMonths, type: o.slot || 'general', status: 'negotiating' })));
     } catch (error) {
       console.error('Erro ao carregar dados financeiros:', error);
     } finally {
@@ -112,14 +97,18 @@ export default function FinanceManager() {
     }
   };
 
-  const negotiateSponsorship = async () => {
-    // TODO: Implementar negociação de patrocínio
-    alert('Funcionalidade de negociação de patrocínio em desenvolvimento...');
+  const [offers, setOffers] = useState<Sponsorship[]>([]);
+  const negotiateSponsorship = async (slot: 'shirt'|'stadium'|'sleeve'|'shorts', months: number) => {
+    if (!selectedTeam) return;
+    await gameApiReformed.negotiateSponsorship({ teamId: selectedTeam.id, slot, months });
+    await loadFinancialData();
+    alert('Patrocínio negociado!');
   };
 
   const makeInvestment = async (type: string) => {
-    // TODO: Implementar investimento
-    alert(`Investimento em ${type} em desenvolvimento...`);
+    if (!selectedTeam) return;
+    await gameApiReformed.invest({ teamId: selectedTeam.id, itemId: type });
+    alert('Investimento aplicado!');
   };
 
   if (!selectedTeam) {
@@ -338,6 +327,21 @@ export default function FinanceManager() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-6">
+                <h4 className="font-semibold text-gray-900 mb-2">Ofertas</h4>
+                <div className="space-y-2">
+                  {offers.map((o) => (
+                    <div key={o.id} className="flex items-center justify-between border rounded p-3">
+                      <div>
+                        <div className="font-medium">{o.name}</div>
+                        <div className="text-sm text-gray-600">Slot: {o.type} • R$ {o.amount.toLocaleString()}/mês • {o.duration} meses</div>
+                      </div>
+                      <button onClick={() => negotiateSponsorship(o.type as any, o.duration)} className="btn-primary">Assinar</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

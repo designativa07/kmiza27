@@ -369,3 +369,123 @@ FROM game_competitions_fixed gcf
 LEFT JOIN game_machine_teams gmt ON gcf.tier = gmt.tier
 GROUP BY gcf.tier, gcf.name, gcf.promotion_spots, gcf.relegation_spots
 ORDER BY gcf.tier;
+
+-- =====================================================
+-- ➕ NOVAS TABELAS (ACADEMIA, TORCIDA, TÁTICAS, PATROCÍNIOS, INVESTIMENTOS, NOTÍCIAS)
+-- =====================================================
+
+-- Campos adicionais em game_players (idempotente)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='salary'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN salary numeric DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='morale'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN morale integer DEFAULT 60;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='is_in_academy'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN is_in_academy boolean DEFAULT false;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='training_focus'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN training_focus text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='training_intensity'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN training_intensity text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name='game_players' AND column_name='avatar_url'
+  ) THEN
+    ALTER TABLE game_players ADD COLUMN avatar_url text;
+  END IF;
+  -- Ajustar constraints se existirem para aceitar números decimais entre 0 e 1
+  -- Tenta remover a constraint antiga se causar conflitos
+  BEGIN
+    ALTER TABLE game_players DROP CONSTRAINT IF EXISTS game_players_development_rate_check;
+  EXCEPTION WHEN others THEN
+    -- ignore
+  END;
+  -- Recriar constraint padronizada
+  BEGIN
+    ALTER TABLE game_players
+    ADD CONSTRAINT game_players_development_rate_check CHECK (development_rate >= 0 AND development_rate <= 1);
+  EXCEPTION WHEN others THEN
+    -- ignore se já existir com mesma semântica
+  END;
+END $$;
+
+-- Logs de academia
+CREATE TABLE IF NOT EXISTS game_academy_logs (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id uuid NOT NULL,
+  player_id uuid NOT NULL,
+  week integer NOT NULL,
+  focus text,
+  intensity text,
+  delta_attributes jsonb DEFAULT '{}'::jsonb,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Torcida
+CREATE TABLE IF NOT EXISTS game_fanbase (
+  team_id uuid PRIMARY KEY,
+  fans_count integer NOT NULL DEFAULT 5000,
+  mood integer NOT NULL DEFAULT 50,
+  trend integer NOT NULL DEFAULT 0,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Táticas
+CREATE TABLE IF NOT EXISTS game_tactics (
+  team_id uuid PRIMARY KEY,
+  formation text NOT NULL DEFAULT '4-4-2',
+  style text DEFAULT 'equilibrado',
+  pressing text DEFAULT 'média',
+  width text DEFAULT 'normal',
+  tempo text DEFAULT 'normal',
+  roles jsonb DEFAULT '{}'::jsonb,
+  lineup jsonb DEFAULT '[]'::jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Patrocínios
+CREATE TABLE IF NOT EXISTS game_sponsorships (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id uuid NOT NULL,
+  slot text NOT NULL,
+  name text NOT NULL,
+  amount_per_month numeric NOT NULL,
+  duration_months integer NOT NULL,
+  status text NOT NULL DEFAULT 'active',
+  started_at date DEFAULT now(),
+  ends_at date
+);
+
+-- Investimentos
+CREATE TABLE IF NOT EXISTS game_investments (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id uuid NOT NULL,
+  item_id text NOT NULL,
+  cost numeric NOT NULL,
+  applied_at timestamptz DEFAULT now()
+);
+
+-- Notícias
+CREATE TABLE IF NOT EXISTS game_news (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id uuid,
+  type text NOT NULL,
+  title text NOT NULL,
+  message text,
+  created_at timestamptz DEFAULT now()
+);

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-// import { gameApiReformed } from '@/services/gameApiReformed';
+import { gameApiReformed } from '@/services/gameApiReformed';
+import PlayerGrid from './players/PlayerGrid';
 
 interface Player {
   id: string;
@@ -27,6 +28,9 @@ interface Player {
   status: string;
   contract_date: string;
   created_at: string;
+  overall?: number;
+  age?: number;
+  salary?: number;
 }
 
 interface TeamPlayersProps {
@@ -47,16 +51,57 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Sistema reformulado: Gestão de jogadores em desenvolvimento');
-      
-      // TODO: Implementar no sistema reformulado
-      // const playersData = await gameApiReformed.getTeamPlayers(teamId);
-      
-      // Por enquanto, mostrar mensagem informativa
-      setPlayers([]);
-      setError('Gestão de jogadores será implementada em próxima versão do sistema reformulado');
+      const response = await gameApiReformed.getPlayers(teamId);
+      const normalized: Player[] = (response || []).map((p: any) => {
+        // Detectar formatos possíveis e normalizar
+        const hasNested = !!p.attributes;
+        const attrs = hasNested
+          ? p.attributes
+          : {
+              pace: Math.round(((p.speed ?? 0) + (p.stamina ?? 0)) / 2),
+              shooting: Math.round(((p.shooting ?? 0) + (p.finishing ?? 0)) / 2),
+              passing: p.passing ?? 0,
+              dribbling: p.dribbling ?? 0,
+              defending: Math.round(((p.defending ?? 0) + (p.tackling ?? 0)) / 2),
+              physical: Math.round(((p.strength ?? 0) + (p.stamina ?? 0) + (p.jumping ?? 0)) / 3),
+            };
+
+        const overall = Math.round(
+          (attrs.pace + attrs.shooting + attrs.passing + attrs.dribbling + attrs.defending + attrs.physical) / 6,
+        );
+
+        const salary = p.salary_monthly ?? p.salary ?? 0;
+        const dob = p.date_of_birth || '2000-01-01';
+        const age = p.age ?? Math.max(16, new Date().getFullYear() - new Date(dob).getFullYear());
+
+        return {
+          id: p.id,
+          name: p.name,
+          position: p.position || p.role || 'CM',
+          date_of_birth: dob,
+          nationality: p.nationality || 'BRA',
+          attributes: attrs,
+          potential: p.potential
+            ? {
+                pace: attrs.pace + 5,
+                shooting: attrs.shooting + 5,
+                passing: attrs.passing + 5,
+                dribbling: attrs.dribbling + 5,
+                defending: attrs.defending + 5,
+                physical: attrs.physical + 5,
+              }
+            : { ...attrs },
+          status: 'Ativo',
+          contract_date: p.contract_end_date || p.contract_date || '',
+          created_at: p.created_at || new Date().toISOString(),
+          overall,
+          age,
+          salary,
+        } as Player;
+      });
+      setPlayers(normalized);
     } catch (err) {
-      setError('Funcionalidade não implementada no sistema reformulado');
+      setError('Erro ao carregar jogadores');
       console.error('Error loading players:', err);
       setPlayers([]);
     } finally {
@@ -91,8 +136,8 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
 
   const calculateOverall = (attributes: any) => {
     return Math.round(
-      (attributes.pace + attributes.shooting + attributes.passing + 
-       attributes.dribbling + attributes.defending + attributes.physical) / 6
+      (attributes.pace + attributes.shooting + attributes.passing +
+        attributes.dribbling + attributes.defending + attributes.physical) / 6,
     );
   };
 
@@ -135,82 +180,8 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
   return (
     <div className="card">
       <h3 className="text-lg font-semibold mb-4">👥 Jogadores do {teamName}</h3>
-      
-      {/* Estatísticas */}
-      <div className="mb-6">
-        <h4 className="text-md font-medium mb-2">📊 Distribuição por Posição</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {Object.entries(positions).map(([position, count]) => (
-            <div key={position} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-              <span className="text-sm">{position}</span>
-              <span className="font-semibold text-blue-600">{count}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-             {/* Lista de Jogadores */}
-       <div className="space-y-3">
-         {(players || []).map((player) => (
-          <div key={player.id} className="border rounded-lg p-4 hover:bg-gray-50">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h4 className="font-semibold text-lg">{player.name}</h4>
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPositionColor(player.position)}`}>
-                  {player.position}
-                </span>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">
-                  {calculateOverall(player.attributes)}
-                </div>
-                <div className="text-xs text-gray-500">Overall</div>
-              </div>
-            </div>
-            
-            {/* Atributos */}
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Velocidade</div>
-                <div className="font-semibold">{player.attributes.pace}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Finalização</div>
-                <div className="font-semibold">{player.attributes.shooting}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Passe</div>
-                <div className="font-semibold">{player.attributes.passing}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Drible</div>
-                <div className="font-semibold">{player.attributes.dribbling}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Defesa</div>
-                <div className="font-semibold">{player.attributes.defending}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Físico</div>
-                <div className="font-semibold">{player.attributes.physical}</div>
-              </div>
-            </div>
-
-            {/* Informações adicionais */}
-            <div className="mt-3 text-xs text-gray-500">
-              <div>Idade: {new Date().getFullYear() - new Date(player.date_of_birth).getFullYear()} anos</div>
-              <div>Nacionalidade: {player.nationality}</div>
-              <div>Status: {player.status}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {players.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          Nenhum jogador encontrado para este time.
-        </div>
-      )}
+      <PlayerGrid players={(players as any)} />
+      {players.length === 0 && (<div className="text-center py-8 text-gray-500">Nenhum jogador encontrado para este time.</div>)}
     </div>
   );
 } 
