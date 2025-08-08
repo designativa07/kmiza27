@@ -9,11 +9,13 @@ import SeasonEndModal from '@/components/SeasonEndModal';
 import { gameApiReformed, SeasonMatch } from '@/services/gameApiReformed';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Landmark, Users, Star, HeartHandshake, Play, Calendar, Swords, Trophy, GraduationCap, ShieldAlert, Settings, Building } from 'lucide-react';
+import { ArrowLeft, Landmark, Users, Star, Play, Calendar, Swords, Trophy, GraduationCap, ShieldAlert, Settings, Building, Newspaper, Dumbbell, Target, Heart } from 'lucide-react';
 import TeamPlayers from './TeamPlayers';
 import StadiumExpansion from './StadiumExpansion';
 import YouthAcademy from './YouthAcademy';
 import FinanceManager from './FinanceManager';
+import FansWidget from './FansWidget';
+import NewsFeed from './NewsFeed';
 
 type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'finances';
 
@@ -33,6 +35,7 @@ export default function TeamPageContent() {
   const [competitionData, setCompetitionData] = useState<any>(null);
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [playersCount, setPlayersCount] = useState<number>(0);
 
   const teamId = params.teamId as string;
 
@@ -47,6 +50,10 @@ export default function TeamPageContent() {
       setUpcomingMatches(matches);
       setRecentMatches(recent);
       setCompetitionData(progress);
+      try {
+        const plist = await gameApiReformed.getPlayers(selectedTeam.id);
+        setPlayersCount(Array.isArray(plist) ? plist.length : 0);
+      } catch {}
     } catch (error) {
       console.error('Erro ao carregar dados do time:', error);
     }
@@ -206,7 +213,7 @@ export default function TeamPageContent() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200">
                       <span className="text-blue-700 flex items-center"><Users className="h-4 w-4 mr-2" /> Elenco</span>
-                      <span className="font-semibold text-blue-700">23 jogadores</span>
+                      <span className="font-semibold text-blue-700">{playersCount} jogadores</span>
                     </div>
                     <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>
                       Jogadores
@@ -218,20 +225,32 @@ export default function TeamPageContent() {
                     <span className="text-amber-700 flex items-center"><Star className="h-4 w-4 mr-2" /> Reputação</span>
                     <span className="font-semibold text-amber-700">{team!.reputation || 0}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center p-2 bg-rose-50 rounded-lg border border-rose-200">
-                    <span className="text-rose-700 flex items-center"><HeartHandshake className="h-4 w-4 mr-2" /> Torcida</span>
-                    <span className="font-semibold text-rose-700">{(team!.fan_base || 0).toLocaleString()}</span>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-slate-200 shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center text-slate-700"><Target className="h-5 w-5 mr-2" /> Ações Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <Button variant="outline" onClick={() => setActiveView('dashboard')} className="justify-start"><Trophy className="h-4 w-4 mr-2" /> Competição</Button>
+                    <Button variant="outline" onClick={() => setActiveView('players')} className="justify-start"><Users className="h-4 w-4 mr-2" /> Elenco</Button>
+                    <Button variant="outline" onClick={() => setActiveView('academy')} className="justify-start"><Dumbbell className="h-4 w-4 mr-2" /> Academia</Button>
+                    <a href={`/team/${team!.id}/tactics`} className="px-3 py-2 border rounded flex items-center hover:bg-slate-50"><Settings className="h-4 w-4 mr-2" /> Área Técnica</a>
+                    <Button variant="outline" onClick={() => setActiveView('finances')} className="justify-start"><Landmark className="h-4 w-4 mr-2" /> Finanças</Button>
+                    <a href="#news" className="px-3 py-2 border rounded flex items-center hover:bg-slate-50"><Newspaper className="h-4 w-4 mr-2" /> Notícias</a>
                   </div>
                 </CardContent>
               </Card>
+              <FansWidget />
+              <NewsFeed />
               <Card className="bg-white border-slate-200 shadow-md">
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center text-slate-700"><Users className="h-5 w-5 mr-2" />Status da Equipe</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200"><span className="text-blue-700 flex items-center"><GraduationCap className="h-4 w-4 mr-2" /> Academia</span><span className="font-semibold text-blue-700">Nível 1</span></div>
-                  <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg border border-orange-200"><span className="text-orange-700 flex items-center"><HeartHandshake className="h-4 w-4 mr-2" /> Moral da Equipe</span><span className="font-semibold text-orange-700">Neutra</span></div>
+                  <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg border border-orange-200"><span className="text-orange-700 flex items-center"><Heart className="h-4 w-4 mr-2" /> Moral da Equipe</span><span className="font-semibold text-orange-700">Neutra</span></div>
                   <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200"><span className="text-red-700 flex items-center"><ShieldAlert className="h-4 w-4 mr-2" /> Suspensos</span><span className="font-semibold text-red-700">0</span></div>
                   <Button variant="outline" size="sm" className="w-full mt-4 text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>Gerenciar Jogadores</Button>
                   <Button variant="outline" size="sm" className="w-full text-orange-700 border-orange-300 hover:bg-orange-50" onClick={() => setActiveView('academy')}>Gerenciar Academia</Button>

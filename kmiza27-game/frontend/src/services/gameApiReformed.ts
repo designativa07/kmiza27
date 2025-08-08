@@ -356,6 +356,98 @@ class GameApiReformedService {
       body: JSON.stringify({ userId }),
     });
   }
+
+  // ===== NEW STUB ENDPOINTS (Players/Academy/Fans/Tactics/Sponsorships/Investments/News) =====
+
+  async getPlayers(teamId: string): Promise<any[]> {
+    try {
+      const response = await this.request<any>(`/api/v2/players?teamId=${teamId}`);
+      const list = response.data || [];
+      if (Array.isArray(list) && list.length >= 11) return list;
+      // Fallback para rota alternativa
+      try {
+        const alt = await this.request<any>(`/api/v2/players/team/${teamId}`);
+        return alt.data || list || [];
+      } catch (_) {
+        return list || [];
+      }
+    } catch (_) {
+      try {
+        const alt = await this.request<any>(`/api/v2/players/team/${teamId}`);
+        return alt.data || [];
+      } catch (e) {
+        return [];
+      }
+    }
+  }
+
+  async setTraining(payload: { playerId: string; focus: string; intensity?: 'low'|'normal'|'high'; inAcademy?: boolean }): Promise<any> {
+    return this.request<any>('/api/v2/academy/set-training', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async applyTrainingWeek(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/academy/apply-week?teamId=${teamId}`, { method: 'POST' });
+  }
+
+  async getAcademyLogs(teamId: string): Promise<any[]> {
+    const response = await this.request<any>(`/api/v2/academy/logs?teamId=${teamId}`);
+    return response.logs || response.data || [];
+  }
+  async getAcademyPlayers(teamId: string): Promise<any[]> {
+    const response = await this.request<any>(`/api/v2/academy/players?teamId=${teamId}`);
+    return response.data || [];
+  }
+
+  async getFans(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/fans/summary?teamId=${teamId}`);
+  }
+
+  async applyFansMatch(payload: any): Promise<any> {
+    return this.request<any>('/api/v2/fans/apply-match', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getTactics(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/tactics/current?teamId=${teamId}`);
+  }
+
+  async saveTactics(payload: any): Promise<any> {
+    return this.request<any>('/api/v2/tactics', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getSponsorships(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/sponsorships/list?teamId=${teamId}`);
+  }
+
+  async negotiateSponsorship(payload: any): Promise<any> {
+    return this.request<any>('/api/v2/sponsorships/negotiate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getInvestments(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/investments/catalog?teamId=${teamId}`);
+  }
+
+  async invest(payload: any): Promise<any> {
+    return this.request<any>('/api/v2/investments/invest', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getNews(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/news/feed?teamId=${teamId}`);
+  }
 }
 
 export const gameApiReformed = new GameApiReformedService();

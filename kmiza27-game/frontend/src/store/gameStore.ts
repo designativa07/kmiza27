@@ -32,6 +32,18 @@ interface GameState {
   createTeam: (teamData: CreateTeamData) => Promise<void>;
   loadTeams: () => Promise<void>;
   
+  // Novas funcionalidades (stubs)
+  fetchPlayers?: (teamId: string) => Promise<any[]>;
+  setTraining?: (payload: { playerId: string; focus: string; intensity?: 'low'|'normal'|'high'; inAcademy?: boolean }) => Promise<any>;
+  applyTrainingWeek?: (teamId: string) => Promise<any>;
+  fetchFans?: (teamId: string) => Promise<any>;
+  getTactics?: (teamId: string) => Promise<any>;
+  saveTactics?: (payload: any) => Promise<any>;
+  getSponsorships?: (teamId: string) => Promise<any>;
+  negotiateSponsorship?: (payload: any) => Promise<any>;
+  getInvestments?: (teamId: string) => Promise<any>;
+  invest?: (payload: any) => Promise<any>;
+  
   // Métodos não implementados no sistema reformulado (futuras funcionalidades)
   updateTeamBudget: (teamId: string, amount: number, operation: 'add' | 'subtract') => Promise<void>;
   expandStadium: (teamId: string, capacityIncrease: number, cost: number) => Promise<void>;
@@ -90,14 +102,33 @@ export const useGameStore = create<GameState>((set, get) => ({
       
       // No sistema reformulado, o time já é inscrito automaticamente na Série D
       const createdTeam = result.data.team;
+      const actualUserId: string | undefined = result.data.actualUserId || result.data.actual_user_id;
       
-      // Adicionar o novo time à lista
+      // Sincronizar o userId real retornado pelo backend (evita criar usuário novo a cada requisição)
+      if (actualUserId) {
+        // Persistir no localStorage
+        if (typeof window !== 'undefined') {
+          const stored = { id: actualUserId };
+          localStorage.setItem('gameUser', JSON.stringify(stored));
+        }
+        // Atualizar estado de autenticação
+        set({ userId: actualUserId, isAuthenticated: true });
+      }
+      
+      // Atualizar times localmente e garantir recarregamento da lista a partir da API
       const currentTeams = get().userTeams;
       set({ 
         userTeams: [...currentTeams, createdTeam],
         selectedTeam: createdTeam,
         isLoading: false 
       });
+      
+      // Recarregar a lista completa do backend para refletir imediatamente
+      try {
+        await get().loadTeams();
+      } catch (_) {
+        // Se falhar o refresh, manter o estado local
+      }
       
     } catch (error) {
       console.error('Error creating team:', error);
@@ -239,4 +270,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       throw error;
     }
   },
+  
+  // ===== Stubs que chamam a API reformulada =====
+  fetchPlayers: async (teamId: string) => {
+    const players = await gameApiReformed.getPlayers(teamId);
+    return players;
+  },
+  setTraining: async (payload) => gameApiReformed.setTraining(payload),
+  applyTrainingWeek: async (teamId) => gameApiReformed.applyTrainingWeek(teamId),
+  fetchFans: async (teamId) => gameApiReformed.getFans(teamId),
+  getTactics: async (teamId) => gameApiReformed.getTactics(teamId),
+  saveTactics: async (payload) => gameApiReformed.saveTactics(payload),
+  getSponsorships: async (teamId) => gameApiReformed.getSponsorships(teamId),
+  negotiateSponsorship: async (payload) => gameApiReformed.negotiateSponsorship(payload),
+  getInvestments: async (teamId) => gameApiReformed.getInvestments(teamId),
+  invest: async (payload) => gameApiReformed.invest(payload),
 })); 

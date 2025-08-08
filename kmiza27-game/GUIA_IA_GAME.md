@@ -161,6 +161,138 @@ Athletico PR, Coritiba, Cuiabá
 
 ---
 
+## 🧩 NOVO CONJUNTO DE SISTEMAS (DIVERTIDO)
+
+### Jogadores e Elenco (Administração)
+- Cards compactos e modernos com avatar, posição, idade, overall/potencial, salário e barras de atributos.
+- Ações rápidas: Titular/Reserva, Enviar para Academia, Foco/Intensidade do treino, Colocar à venda.
+- Filtros: posição, idade, em academia, salário, texto.
+
+### Academia de Base (Treino e Evolução)
+- Treino semanal com foco (PAC/SHO/PAS/DRI/DEF/PHY/GK) e intensidade (baixa/normal/alta).
+- Fórmula de evolução balanceada por idade, potencial, moral e intensidade (ver seção Algoritmos).
+- Logs semanais por jogador e painel de progresso.
+- Risco de lesão leve em intensidade alta; bloqueia treino por 1–2 semanas.
+
+### Salários Dinâmicos
+- Salário semanal baseado em série, posição, idade e overall.
+- Exposto nos cards e somado na folha do time.
+
+### Torcida (Fans) – tamanho e humor
+- Humor varia por resultado, sequência, posição e eventos especiais.
+- Aumenta/diminui `fans_count` e presença em jogos (receita de bilheteria).
+
+### Área Técnica (Escalação + Táticas)
+- Formações: 4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2.
+- Instruções: estilo, pressão, largura, ritmo; funções por posição.
+- Impacto direto na simulação via pesos de atributos por função.
+
+### Patrocínios e Investimentos
+- Patrocínios por slots (camisa, estádio, manga, calção) com ofertas e contratos.
+- Investimentos em instalações: Estádio, Academia, Centro Médico, Centro de Treinamento.
+- Todos influenciam receitas, evolução e lesões.
+
+### Notícias e Eventos
+- Feed com acontecimentos: destaques da base, recordes, lesões, prêmios.
+- Integra com moral do jogador e humor da torcida.
+
+---
+
+## 🧱 MODELO DE DADOS (EXTENSÕES)
+
+- `game_players`: `avatar_url`, `salary`, `morale`, `form`, `is_in_academy`, `training_focus`, `training_intensity`, `last_training_ts`, `traits`, `fatigue`, `injury_until`
+- `game_academy_logs`: `id`, `team_id`, `player_id`, `week`, `focus`, `intensity`, `delta_attributes` json, `notes`
+- `game_fanbase`: `team_id`, `fans_count`, `mood`, `trend`
+- `game_tactics`: `team_id`, `formation`, `style`, `pressing`, `width`, `tempo`, `roles` json, `lineup` json
+- `game_sponsorships`: `id`, `team_id`, `slot`, `name`, `amount_per_month`, `duration_months`, `status`, `started_at`, `ends_at`
+- `game_investments`: histórico com `team_id`, `item_id`, `cost`, `applied_at`
+- `game_news`: `id`, `team_id`, `type`, `title`, `message`, `created_at`
+
+---
+
+## 🔌 API v2 – ENDPOINTS (STUBS PRONTOS)
+
+- Jogadores: `GET /api/v2/players?teamId=...`
+- Academia:
+  - `POST /api/v2/academy/apply-week?teamId=...`
+  - `GET /api/v2/academy/logs?teamId=...`
+  - `POST /api/v2/academy/set-training` { playerId, focus, intensity, inAcademy }
+- Torcida:
+  - `GET /api/v2/fans/summary?teamId=...`
+  - `POST /api/v2/fans/apply-match` { teamId, result, goals_for, goals_against, opponent_prestige, is_derby }
+- Táticas:
+  - `GET /api/v2/tactics/current?teamId=...`
+  - `PUT /api/v2/tactics` { teamId, formation, style, pressing, width, tempo, roles, lineup }
+- Patrocínios:
+  - `GET /api/v2/sponsorships/list?teamId=...`
+  - `POST /api/v2/sponsorships/negotiate` { teamId, slot, months }
+- Investimentos:
+  - `GET /api/v2/investments/catalog?teamId=...`
+  - `POST /api/v2/investments/invest` { teamId, itemId }
+- Notícias:
+  - `GET /api/v2/news/feed?teamId=...`
+  - `POST /api/v2/news/publish` { teamId, type, title, message }
+
+Os controladores/módulos stubs já foram criados no backend para todas as seções acima.
+
+---
+
+## 🖥️ FRONTEND – COMPONENTES E STORE (STUBS)
+
+### Serviços (`frontend/src/services/gameApiReformed.ts`)
+- Adicionados métodos: `getPlayers`, `setTraining`, `applyTrainingWeek`, `getAcademyLogs`, `getFans`, `applyFansMatch`, `getTactics`, `saveTactics`, `getSponsorships`, `negotiateSponsorship`, `getInvestments`, `invest`, `getNews`.
+
+### Store (`frontend/src/store/gameStore.ts`)
+- Novas ações stubs: `fetchPlayers`, `setTraining`, `applyTrainingWeek`, `fetchFans`, `getTactics`, `saveTactics`, `getSponsorships`, `negotiateSponsorship`, `getInvestments`, `invest`.
+
+### UI (a implementar)
+- `PlayerCard`/`PlayerGrid` compactos com barras e avatar.
+- `AcademyPanel`, `FansWidget`, `TacticsBoard`, `SponsorshipsPanel`, `InvestmentsPanel`.
+
+---
+
+## ⚙️ ALGORITMOS DE JOGO (DETALHES)
+
+### Evolução Semanal (Academia)
+Pontos de treino = `2.0 * potential_factor * age_factor * intensity_factor * morale_factor`.
+- `potential_factor = clamp((potential - overall)/20, 0.4, 1.6)`
+- `age_factor`: ≤21: 1.3; 22–27: 1.0; 28–32: 0.7; ≥33: 0.4
+- `intensity_factor`: baixa 0.7, normal 1.0, alta 1.3
+- `morale_factor = 0.8 + morale/250`
+- 80% no atributo foco, 20% em correlatos; soft cap próximo ao potencial; risco de lesão 2% em alta.
+
+### Salário
+`salary = base_tier[tier] * (overall/60)^1.8 * position_factor[pos] * age_factor` (arredondado/semana).
+
+### Torcida
+Humor +/- por resultado, sequência e posição; impacto em `attendance` e receita.
+
+### Táticas
+Formação + instruções modificam pesos de atributos por função e coesão.
+
+---
+
+## 🎭 PERSONALIDADE, EVENTOS E QUÍMICA (NOVO)
+
+- Personalidades: Trabalhador (+10% treino), Preguiçoso (-10% treino, -5 moral com treino alto), Líder (+moral equipe), Temperamental (oscila), Vidrado em Academia (+15% foco), Frágil (+20% chance de lesão leve).
+- Notícias: geração automática (destaque semanal, lesões, prêmios) com reflexos em moral e humor da torcida.
+- Química de Linhas: bônus pequeno quando defesa/meio/ataque jogam juntos repetidamente.
+- Premiações e Objetivos: prêmios de rodada, metas de temporada (pontos, artilharia) que rendem bônus financeiro e moral.
+- Lesões e Fadiga: controle simples por probabilidade/tempo e fadiga acumulada reduzindo atributos temporariamente.
+
+---
+
+## 🗺️ ROADMAP (ENTREGA)
+- Semana 1: Academia + Elenco + Salários (backend + UI mínima).
+- Semana 2: Torcida + Táticas + Patrocínios/Investimentos (UI + integração simulação).
+- Semana 3: Notícias/Personalidade/Química, polimento visual e balanceamento.
+
+---
+
+## 🔗 INTEGRAÇÃO NO CÓDIGO
+- Backend: módulos criados em `backend/src/modules/{youth-academy,fans,tactics,sponsorships,investments,news}` e registrados em `app.module.ts`.
+- Frontend: novos métodos adicionados no `gameApiReformed` e ações stubs no `gameStore`.
+
 ## ⚙️ **CONFIGURAÇÕES DE AMBIENTE**
 
 ### **Ambientes (Mantidos)**

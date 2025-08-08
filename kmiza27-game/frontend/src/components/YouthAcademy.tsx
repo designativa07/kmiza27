@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { gameApiReformed } from '@/services/gameApiReformed';
+import YouthAcademyLogs from './YouthAcademyLogs';
 
 interface YouthPlayer {
   id: string;
@@ -13,6 +15,8 @@ interface YouthPlayer {
   category: string;
   scouted_date: string;
   is_promoted: boolean;
+  training_focus?: string;
+  training_intensity?: 'low'|'normal'|'high';
   attributes: {
     pace: number;
     shooting: number;
@@ -43,6 +47,8 @@ export default function YouthAcademy() {
   const [academyInfo, setAcademyInfo] = useState<AcademyInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'players' | 'tryouts' | 'facilities'>('players');
+  const [processingWeek, setProcessingWeek] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
     if (selectedTeam) {
@@ -55,8 +61,38 @@ export default function YouthAcademy() {
     
     setLoading(true);
     try {
-      // TODO: Implementar chamadas para API
-      // Dados mockados por enquanto
+      // Carregar jogadores reais em academia e logs (quando disponíveis)
+      try {
+        const realPlayers = await gameApiReformed.getAcademyPlayers(selectedTeam.id);
+        if (Array.isArray(realPlayers) && realPlayers.length > 0) {
+          setYouthPlayers(realPlayers.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            position: p.position,
+            age: p.age,
+            overall: Math.round(((p.speed ?? 0) + (p.stamina ?? 0) + (p.strength ?? 0) + (p.passing ?? 0) + (p.shooting ?? 0) + (p.dribbling ?? 0) + (p.defending ?? 0)) / 7),
+            potential: p.potential ?? 75,
+            category: p.age <= 17 ? 'Sub-17' : 'Sub-18',
+            scouted_date: new Date().toISOString().slice(0,10),
+            is_promoted: false,
+            training_focus: p.training_focus || 'PAS',
+            training_intensity: (p.training_intensity as any) || 'normal',
+            attributes: {
+              pace: Math.round(((p.speed ?? 0) + (p.stamina ?? 0)) / 2),
+              shooting: p.shooting ?? 0,
+              passing: p.passing ?? 0,
+              dribbling: p.dribbling ?? 0,
+              defending: p.defending ?? 0,
+              physical: Math.round(((p.strength ?? 0) + (p.stamina ?? 0)) / 2),
+            },
+          })));
+        }
+      } catch {}
+
+      try {
+        const academyLogs = await gameApiReformed.getAcademyLogs(selectedTeam.id);
+        setLogs(academyLogs);
+      } catch {}
       const mockAcademyInfo: AcademyInfo = {
         level: 1,
         facilities: {
@@ -131,6 +167,22 @@ export default function YouthAcademy() {
     alert('Funcionalidade de promoção em desenvolvimento...');
   };
 
+  const setTraining = async (playerId: string, focus: string, intensity: 'low'|'normal'|'high' = 'normal') => {
+    await gameApiReformed.setTraining({ playerId, focus, intensity, inAcademy: true });
+    await loadAcademyData();
+  };
+
+  const applyWeek = async () => {
+    if (!selectedTeam) return;
+    setProcessingWeek(true);
+    try {
+      await gameApiReformed.applyTrainingWeek(selectedTeam.id);
+      await loadAcademyData();
+    } finally {
+      setProcessingWeek(false);
+    }
+  };
+
   const upgradeFacility = async (facility: string) => {
     // TODO: Implementar upgrade de instalação
     alert(`Upgrade de ${facility} em desenvolvimento...`);
@@ -194,7 +246,12 @@ export default function YouthAcademy() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">Jogadores da Base</h3>
-                <span className="text-sm text-gray-700">{youthPlayers.length} jogadores</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={applyWeek} disabled={processingWeek} className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                    {processingWeek ? 'Processando...' : 'Aplicar Semana'}
+                  </button>
+                  <span className="text-sm text-gray-700">{youthPlayers.length} jogadores</span>
+                </div>
               </div>
               
               <div className="grid gap-4">
@@ -222,6 +279,25 @@ export default function YouthAcademy() {
                         </div>
                         <div className="text-sm text-gray-600">
                           Potencial: {player.potential}
+                        </div>
+                        <div className="mt-2 flex gap-1 justify-end">
+                          {['PAC','SHO','PAS','DRI','DEF','PHY'].map((f) => (
+                            <button key={f} onClick={() => setTraining(player.id, f as any)} className="px-2 py-1 border rounded text-xs">
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-2">
+                          <label className="text-[11px] text-gray-600 mr-2">Intensidade</label>
+                          <select
+                            value={player.training_intensity || 'normal'}
+                            onChange={(e) => setTraining(player.id, player.training_focus || 'PAS', e.target.value as any)}
+                            className="text-xs border rounded px-2 py-1"
+                          >
+                            <option value="low">Baixa</option>
+                            <option value="normal">Normal</option>
+                            <option value="high">Alta</option>
+                          </select>
                         </div>
                         {player.overall >= 70 && (
                           <button
@@ -263,6 +339,17 @@ export default function YouthAcademy() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">📘 Logs Recentes (geral)</h4>
+                  <YouthAcademyLogs logs={logs} limit={12} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">📗 Logs do Jogador Selecionado</h4>
+                  <YouthAcademyLogs logs={logs.filter(l => l.player_id === (youthPlayers[0]?.id))} compact limit={8} />
+                </div>
               </div>
             </div>
           )}
