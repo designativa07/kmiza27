@@ -407,20 +407,6 @@ BEGIN
   ) THEN
     ALTER TABLE game_players ADD COLUMN avatar_url text;
   END IF;
-  -- Ajustar constraints se existirem para aceitar números decimais entre 0 e 1
-  -- Tenta remover a constraint antiga se causar conflitos
-  BEGIN
-    ALTER TABLE game_players DROP CONSTRAINT IF EXISTS game_players_development_rate_check;
-  EXCEPTION WHEN others THEN
-    -- ignore
-  END;
-  -- Recriar constraint padronizada
-  BEGIN
-    ALTER TABLE game_players
-    ADD CONSTRAINT game_players_development_rate_check CHECK (development_rate >= 0 AND development_rate <= 1);
-  EXCEPTION WHEN others THEN
-    -- ignore se já existir com mesma semântica
-  END;
 END $$;
 
 -- Logs de academia
