@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowUpRight } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import ImageWithFallback from './ImageWithFallback';
 
@@ -34,6 +34,13 @@ export default function UpcomingMatchesCarousel() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visibleCount, setVisibleCount] = useState(3);
+  const [cardWidth, setCardWidth] = useState(224);
+  const NAV_BUTTON_WIDTH = 24; // px, deve corresponder a w-6
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragDelta, setDragDelta] = useState(0);
+  const cancelClickRef = useRef(false);
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -56,14 +63,20 @@ export default function UpcomingMatchesCarousel() {
   }, []);
 
   useEffect(() => {
-    // Ajustar número de jogos visíveis baseado no tamanho da tela
+    // Ajustar número de jogos visíveis e largura do card baseado no tamanho da tela
     const updateVisibleCount = () => {
       if (window.innerWidth < 640) {
-        setVisibleCount(1); // Mobile: 1 jogo
+        // Mobile: 2 jogos com cards mais estreitos
+        setVisibleCount(2);
+        setCardWidth(136);
       } else if (window.innerWidth < 1024) {
-        setVisibleCount(2); // Tablet: 2 jogos
+        // Tablet: 2 jogos com cards médios
+        setVisibleCount(2);
+        setCardWidth(200);
       } else {
-        setVisibleCount(3); // Desktop: 3 jogos
+        // Desktop: 3 jogos com cards padrão
+        setVisibleCount(3);
+        setCardWidth(224);
       }
     };
 
@@ -161,93 +174,124 @@ export default function UpcomingMatchesCarousel() {
         <button
           onClick={prevSlide}
           disabled={!canGoPrev}
-          className={`absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center z-10 transition-colors ${
+          className={`absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center z-10 transition-colors ${
             canGoPrev 
               ? 'bg-gray-100 hover:bg-gray-200 cursor-pointer' 
               : 'bg-gray-50 cursor-not-allowed opacity-50'
           }`}
           aria-label="Jogos anteriores"
         >
-          <ChevronLeft className={`h-5 w-5 ${canGoPrev ? 'text-gray-600' : 'text-gray-400'}`} />
+          <ChevronLeft className={`h-4 w-4 ${canGoPrev ? 'text-gray-600' : 'text-gray-400'}`} />
         </button>
 
         {/* Botão Próximo - Sempre visível, desativado quando não pode navegar */}
         <button
           onClick={nextSlide}
           disabled={!canGoNext}
-          className={`absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center z-10 transition-colors ${
+          className={`absolute right-0 top-0 bottom-0 w-6 flex items-center justify-center z-10 transition-colors ${
             canGoNext 
               ? 'bg-gray-100 hover:bg-gray-200 cursor-pointer' 
               : 'bg-gray-50 cursor-not-allowed opacity-50'
           }`}
           aria-label="Próximos jogos"
         >
-          <ChevronRight className={`h-5 w-5 ${canGoNext ? 'text-gray-600' : 'text-gray-400'}`} />
+          <ChevronRight className={`h-4 w-4 ${canGoNext ? 'text-gray-600' : 'text-gray-400'}`} />
         </button>
 
         {/* Container do carrossel com padding interno */}
-        <div className="px-8">
+        <div className="px-0 select-none" style={{ paddingLeft: NAV_BUTTON_WIDTH, paddingRight: NAV_BUTTON_WIDTH }}>
           {/* Carrossel de Jogos com animação */}
           <div className="overflow-hidden">
             <div 
-              className="flex transition-transform duration-300 ease-in-out"
+              ref={trackRef}
+              className={`flex ${isDragging ? 'transition-none cursor-grabbing' : 'transition-transform duration-300 ease-in-out cursor-grab'} touch-pan-y`}
               style={{ 
-                transform: `translateX(-${currentIndex * 224}px)`
+                transform: `translateX(${-(currentIndex * cardWidth) + dragDelta}px)`
               }}
+              onPointerDown={(e) => {
+                setIsDragging(true);
+                setDragStartX(e.clientX);
+                setDragDelta(0);
+                cancelClickRef.current = false;
+                try { (e.target as Element).setPointerCapture?.(e.pointerId); } catch {}
+              }}
+              onPointerMove={(e) => {
+                if (!isDragging) return;
+                const delta = e.clientX - dragStartX;
+                setDragDelta(delta);
+                if (Math.abs(delta) > 3) {
+                  cancelClickRef.current = true;
+                }
+              }}
+              onPointerUp={(e) => {
+                if (!isDragging) return;
+                setIsDragging(false);
+                const threshold = cardWidth / 3;
+                let next = currentIndex;
+                if (Math.abs(dragDelta) > threshold) {
+                  const moveBy = Math.max(1, Math.round(Math.abs(dragDelta) / cardWidth));
+                  // delta negativo -> avança; delta positivo -> volta
+                  next = dragDelta < 0 ? currentIndex + moveBy : currentIndex - moveBy;
+                }
+                const clamped = Math.max(0, Math.min(next, maxIndex));
+                setCurrentIndex(clamped);
+                setDragDelta(0);
+                // Evitar clique após arrasto
+                setTimeout(() => { cancelClickRef.current = false; }, 50);
+              }}
+              onPointerCancel={() => { setIsDragging(false); setDragDelta(0); }}
+              onPointerLeave={() => { if (isDragging) { setIsDragging(false); setDragDelta(0); } }}
             >
               {matches.map((match, index) => (
-                <div key={match.id} className="w-56 flex-shrink-0 relative">
+                <div
+                  key={match.id}
+                  className="flex-shrink-0 relative"
+                  style={{ width: `${cardWidth}px` }}
+                >
                   <Link 
                     href={`/jogos/${match.id}`}
                     className="block bg-gray-50 p-3 hover:bg-white transition-colors cursor-pointer"
+                    draggable={false}
+                    onClick={(e) => {
+                      if (cancelClickRef.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                   >
-                    {/* Cabeçalho com competição */}
-                    <div className="flex items-center justify-center mb-3">
-                      <div className="flex items-center space-x-2">
-                        <ImageWithFallback
-                          src={match.competition.logo_url}
-                          alt={match.competition.name}
-                          fallbackType="competition"
-                          size="xs"
-                          className="h-4 w-4"
-                        />
-                        <span className="text-xs text-gray-600 font-medium truncate">
-                          {match.competition.name}
-                        </span>
-                      </div>
+                    {/* Cabeçalho com nome da competição (sem logo) */}
+                    <div className="flex items-center justify-center mb-2">
+                      <span className="text-xs text-gray-600 font-medium truncate">
+                        {match.competition.name}
+                      </span>
                     </div>
 
-                    {/* Times na mesma linha */}
-                    <div className="flex items-center justify-center mb-3">
-                      {/* Time da Casa */}
-                      <div className="flex items-center space-x-2 flex-1 justify-end">
-                        <span className="text-sm font-medium text-gray-900 truncate">
-                          {match.home_team.short_name || match.home_team.name}
-                        </span>
+                    {/* Times empilhados (mandante em cima, visitante embaixo) */}
+                    <div className="flex flex-col items-center gap-1.5 mb-2">
+                      {/* Mandante */}
+                      <div className="flex items-center gap-2">
                         <ImageWithFallback
                           src={match.home_team.logo_url}
                           alt={match.home_team.name}
                           fallbackType="team"
                           size="xs"
-                          className="h-6 w-6 flex-shrink-0"
+                          className="h-5 w-5 flex-shrink-0"
                         />
+                        <span className="text-sm font-medium text-gray-900 truncate max-w-[104px] text-left">
+                          {match.home_team.short_name || match.home_team.name}
+                        </span>
                       </div>
 
-                      {/* VS */}
-                      <div className="mx-4">
-                        <span className="text-xs text-gray-400 font-medium">VS</span>
-                      </div>
-
-                      {/* Time Visitante */}
-                      <div className="flex items-center space-x-2 flex-1 justify-start">
+                      {/* Visitante */}
+                      <div className="flex items-center gap-2">
                         <ImageWithFallback
                           src={match.away_team.logo_url}
                           alt={match.away_team.name}
                           fallbackType="team"
                           size="xs"
-                          className="h-6 w-6 flex-shrink-0"
+                          className="h-5 w-5 flex-shrink-0"
                         />
-                        <span className="text-sm font-medium text-gray-900 truncate">
+                        <span className="text-sm font-medium text-gray-900 truncate max-w-[104px] text-left">
                           {match.away_team.short_name || match.away_team.name}
                         </span>
                       </div>
