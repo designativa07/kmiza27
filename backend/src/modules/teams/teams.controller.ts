@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, HttpException, HttpStatus, UsePipes, ValidationPipe, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, HttpException, HttpStatus, UsePipes, ValidationPipe, HttpCode, Query, Put } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TeamsService, PaginatedTeamsResult } from './teams.service';
 import { Team } from '../../entities';
@@ -62,6 +62,35 @@ export class TeamsController {
   @Get('all')
   findAllForAutocomplete(): Promise<Team[]> {
     return this.teamsService.findAllForAutocomplete();
+  }
+
+  @Get('international')
+  async getInternationalTeams(): Promise<Team[]> {
+    return this.teamsService.getInternationalTeams();
+  }
+
+  @Post(':id/international')
+  async addInternationalTeam(
+    @Param('id') id: string,
+    @Body('order') order: number
+  ): Promise<{ message: string }> {
+    await this.teamsService.addInternationalTeam(+id, order);
+    return { message: 'Time adicionado à lista internacional' };
+  }
+
+  @Delete(':id/international')
+  async removeInternationalTeam(@Param('id') id: string): Promise<{ message: string }> {
+    await this.teamsService.removeInternationalTeam(+id);
+    return { message: 'Time removido da lista internacional' };
+  }
+
+  @Put(':id/international/order')
+  async updateInternationalTeamOrder(
+    @Param('id') id: string,
+    @Body('order') order: number
+  ): Promise<{ message: string }> {
+    await this.teamsService.updateInternationalTeamOrder(+id, order);
+    return { message: 'Ordem do time internacional atualizada' };
   }
 
   @Get(':id')

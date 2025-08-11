@@ -17,6 +17,7 @@ export * from './player.entity';
 export * from './player-team-history.entity';
 export * from './card.entity';
 export * from './title.entity';
+export * from './international-team.entity';
 
 // Pool entities
 export * from './pool.entity';

@@ -8,6 +8,7 @@ import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { TeamsCard } from '@/components/TeamsCard';
 import ImageWithFallback from '@/components/ImageWithFallback';
 import { useRouter } from 'next/navigation';
+import UpcomingMatchesCarousel from '@/components/UpcomingMatchesCarousel';
 
 interface Competition {
   id: number;
@@ -93,73 +94,96 @@ export default function Home() {
   const internationalCompetitions = competitions.filter(c => c.country !== 'Brasil' && c.category !== 'amateur');
   const topAmateurCompetitions = amateurCompetitions.slice(0, 10);
 
-  const renderCompetitionList = (comps: Competition[], title: string, showViewAll = false, viewAllLink = '') => (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
-      <div className="p-3 sm:p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-gray-900">{title}</h2>
-          {showViewAll && comps.length > 0 && (
-            <Link 
-              href={viewAllLink} 
-              className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
-            >
-              Ver todos
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          )}
-        </div>
-      </div>
-      <div className="divide-y divide-gray-100">
-        {comps.map((comp) => (
-          <div key={comp.id} className="p-3 sm:px-4 hover:bg-gray-50 transition-colors duration-200">
-            <div className="flex items-center justify-between">
+  const renderCompetitionList = (comps: Competition[], title: string, showViewAll = false, viewAllLink = '') => {
+    // Definir cores baseadas no título
+    const getHeaderColors = (title: string) => {
+      switch (title) {
+        case 'Nacional':
+          return { bg: 'bg-blue-100', text: 'text-blue-700' };
+        case 'Internacional':
+          return { bg: 'bg-gray-100', text: 'text-gray-700' };
+        case 'Amador':
+          return { bg: 'bg-orange-100', text: 'text-orange-700' };
+        default:
+          return { bg: 'bg-gray-100', text: 'text-gray-700' };
+      }
+    };
+
+    const colors = getHeaderColors(title);
+    
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
+        <div className={`${colors.bg} rounded-t-lg`}>
+          <div className="flex items-center justify-between">
+            <h2 className={`text-sm font-bold ${colors.text} leading-tight px-4 py-1`}>{title.toUpperCase()}</h2>
+            {showViewAll && comps.length > 0 && (
               <Link 
-                href={comp.category === 'amateur' ? `/amadores/${comp.slug}/jogos` : `/${comp.slug}/jogos`} 
-                className="flex items-center space-x-3 flex-1"
+                href={viewAllLink} 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 text-sm font-medium transition-colors flex items-center"
               >
-                <ImageWithFallback
-                  src={comp.logo_url}
-                  alt={comp.name}
-                  fallbackType="competition"
-                  size="xs"
-                  className="h-7 w-7"
-                />
-                <span className="text-base text-gray-800">{comp.name}</span>
+                Ver mais
+                <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
-              <div className="flex items-center space-x-2 text-gray-400">
-                <Link 
-                  href={comp.category === 'amateur' ? `/amadores/${comp.slug}/classificacao` : `/${comp.slug}/classificacao`} 
-                  title="Classificação" 
-                  className="hover:text-blue-600 transition-colors"
-                >
-                  <ListOrdered className="h-5 w-5" />
-                </Link>
+            )}
+          </div>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {comps.map((comp) => (
+            <div key={comp.id} className="p-3 sm:px-4 hover:bg-gray-50 transition-colors duration-200">
+              <div className="flex items-center justify-between">
                 <Link 
                   href={comp.category === 'amateur' ? `/amadores/${comp.slug}/jogos` : `/${comp.slug}/jogos`} 
-                  title="Jogos" 
-                  className="hover:text-green-600 transition-colors"
+                  className="flex items-center space-x-3 flex-1"
                 >
-                  <CalendarDays className="h-5 w-5" />
+                  <ImageWithFallback
+                    src={comp.logo_url}
+                    alt={comp.name}
+                    fallbackType="competition"
+                    size="xs"
+                    className="h-7 w-7"
+                  />
+                  <span className="text-base text-gray-800">{comp.name}</span>
                 </Link>
-                <Link 
-                  href={comp.category === 'amateur' ? `/amadores/${comp.slug}/artilharia` : `/${comp.slug}/artilharia`} 
-                  title="Artilharia" 
-                  className="hover:text-red-600 transition-colors"
-                >
-                  <Target className="h-5 w-5" />
-                </Link>
+                <div className="flex items-center space-x-2 text-gray-400">
+                  <Link 
+                    href={comp.category === 'amateur' ? `/amadores/${comp.slug}/classificacao` : `/${comp.slug}/classificacao`} 
+                    title="Classificação" 
+                    className="hover:text-blue-600 transition-colors"
+                  >
+                    <ListOrdered className="h-5 w-5" />
+                  </Link>
+                  <Link 
+                    href={comp.category === 'amateur' ? `/amadores/${comp.slug}/jogos` : `/${comp.slug}/jogos`} 
+                    title="Jogos" 
+                    className="hover:text-green-600 transition-colors"
+                  >
+                    <CalendarDays className="h-5 w-5" />
+                  </Link>
+                  <Link 
+                    href={comp.category === 'amateur' ? `/amadores/${comp.slug}/artilharia` : `/${comp.slug}/artilharia`} 
+                    title="Artilharia" 
+                    className="hover:text-red-600 transition-colors"
+                  >
+                    <Target className="h-5 w-5" />
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <HeaderWithLogo />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Carrossel de Próximos Jogos - Ocupa as duas colunas */}
+        <div className="mb-6">
+          <UpcomingMatchesCarousel />
+        </div>
+        
         <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4">
           {/* Coluna Principal: Competições */}
           <div className="lg:col-span-3 order-2 lg:order-1">

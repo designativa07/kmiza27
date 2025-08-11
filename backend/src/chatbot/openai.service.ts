@@ -51,11 +51,15 @@ export class OpenAIService implements OnModuleInit {
   }
 
   private removeAccents(str: string): string {
-    return str.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+    const result = str.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+    console.log(`🔍 removeAccents: "${str}" -> "${result}"`);
+    return result;
   }
 
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
     try {
+      console.log(`🔍 analyzeMessage chamada com: "${message}"`);
+      
       // Análise simples por enquanto (pode ser expandida com OpenAI real)
       const lowerMessage = this.removeAccents(message.toLowerCase());
       console.log(`🔍 Analisando mensagem: "${message}" -> "${lowerMessage}"`);
@@ -140,8 +144,12 @@ export class OpenAIService implements OnModuleInit {
       if (lowerMessage.includes('estatísticas') || lowerMessage.includes('estatisticas') ||
           lowerMessage.includes('stats') || lowerMessage.includes('números') ||
           lowerMessage.includes('numeros') || lowerMessage.includes('desempenho')) {
+        console.log(`🔍 Detecção de estatísticas ativada para: "${lowerMessage}"`);
+        
         const team = this.extractTeamName(lowerMessage);
         const competition = this.extractCompetitionName(lowerMessage);
+        
+        console.log(`🔍 Debug estatísticas - team: ${team}, competition: ${competition}`);
         
         if (team) {
           console.log(`✅ Detectado estatísticas para time: ${team}`);
@@ -158,6 +166,8 @@ export class OpenAIService implements OnModuleInit {
             confidence: 0.90
           };
         }
+        
+        console.log(`❌ Nenhum time ou competição detectado para estatísticas`);
       }
 
       // Detectar artilheiros
@@ -359,11 +369,15 @@ export class OpenAIService implements OnModuleInit {
   }
   
   private extractCompetitionName(message: string): string | undefined {
+    console.log(`🔍 extractCompetitionName: "${message}"`);
+    
     if (message.includes('libertadores')) return 'libertadores';
-    if (message.includes('copa do brasil')) return 'copa-do-brasil';
-    if (message.includes('brasileirão') || message.includes('brasileirao')) return 'brasileirao';
-    if (message.includes('série a') || message.includes('serie a')) return 'brasileirao';
-    if (message.includes('série b') || message.includes('serie b')) return 'brasileiro-serie-b';
+    if (message.includes('copa do brasil')) return 'copa do brasil';
+    if (message.includes('brasileirão') || message.includes('brasileirao')) return 'brasileirão';
+    if (message.includes('série a') || message.includes('serie a')) return 'brasileirão';
+    if (message.includes('série b') || message.includes('serie b')) return 'brasileiro série b';
+    if (message.includes('série c') || message.includes('serie c')) return 'brasileiro série c';
+    if (message.includes('série d') || message.includes('serie d')) return 'brasileiro série d';
     if (message.includes('sul-americana')) return 'sul-americana';
     if (message.includes('champions')) return 'champions-league';
     

@@ -118,6 +118,7 @@ export default function PoolDetailsPage() {
     if (pool) {
       // Verificar se o usuário participa usando o token
       const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
       if (token) {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]))
@@ -464,52 +465,52 @@ export default function PoolDetailsPage() {
                             </p>
                           </td>
                           
-                          {/* Coluna 2: Placar Casa */}
-                          <td className="py-2 px-1 text-center">
-                            {isParticipant && poolMatch.match.status === 'scheduled' ? (
-                              <input
-                                type="number"
-                                min="0"
-                                max="99"
-                                className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
-                                placeholder="0"
-                                value={predictions[poolMatch.match.id]?.home !== undefined ? predictions[poolMatch.match.id].home : ''}
-                                onChange={(e) => handlePredictionChange(poolMatch.match.id, 'home', e.target.value)}
-                              />
-                            ) : poolMatch.match.status === 'finished' ? (
-                              <span className="text-sm font-bold text-gray-900">
-                                {poolMatch.match.home_score}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
-                          </td>
+                                                     {/* Coluna 2: Placar Casa */}
+                           <td className="py-2 px-1 text-center">
+                             {isParticipant && poolMatch.match.status === 'scheduled' ? (
+                               <input
+                                 type="number"
+                                 min="0"
+                                 max="99"
+                                 className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
+                                 placeholder="0"
+                                 value={predictions[poolMatch.match.id]?.home !== undefined ? predictions[poolMatch.match.id].home : ''}
+                                 onChange={(e) => handlePredictionChange(poolMatch.match.id, 'home', e.target.value)}
+                               />
+                             ) : poolMatch.match.status === 'finished' ? (
+                               <span className="text-sm font-bold text-gray-900">
+                                 {poolMatch.match.home_score}
+                               </span>
+                             ) : (
+                               <span className="text-xs text-gray-400">-</span>
+                             )}
+                           </td>
                           
                           {/* Coluna 3: VS */}
                           <td className="py-2 px-1 text-center">
                             <span className="text-xs text-gray-500">vs</span>
                           </td>
                           
-                          {/* Coluna 4: Placar Visitante */}
-                          <td className="py-2 px-1 text-center">
-                            {isParticipant && poolMatch.match.status === 'scheduled' ? (
-                              <input
-                                type="number"
-                                min="0"
-                                max="99"
-                                className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
-                                placeholder="0"
-                                value={predictions[poolMatch.match.id]?.away !== undefined ? predictions[poolMatch.match.id].away : ''}
-                                onChange={(e) => handlePredictionChange(poolMatch.match.id, 'away', e.target.value)}
-                              />
-                            ) : poolMatch.match.status === 'finished' ? (
-                              <span className="text-sm font-bold text-gray-900">
-                                {poolMatch.match.away_score}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
-                          </td>
+                                                     {/* Coluna 4: Placar Visitante */}
+                           <td className="py-2 px-1 text-center">
+                             {isParticipant && poolMatch.match.status === 'scheduled' ? (
+                               <input
+                                 type="number"
+                                 min="0"
+                                 max="99"
+                                 className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs"
+                                 placeholder="0"
+                                 value={predictions[poolMatch.match.id]?.away !== undefined ? predictions[poolMatch.match.id].away : ''}
+                                 onChange={(e) => handlePredictionChange(poolMatch.match.id, 'away', e.target.value)}
+                               />
+                             ) : poolMatch.match.status === 'finished' ? (
+                               <span className="text-sm font-bold text-gray-900">
+                                 {poolMatch.match.away_score}
+                               </span>
+                             ) : (
+                               <span className="text-xs text-gray-400">-</span>
+                             )}
+                           </td>
                           
                           {/* Coluna 5: Time Visitante */}
                           <td className="py-2 px-3">

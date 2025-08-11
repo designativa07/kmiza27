@@ -25,7 +25,8 @@ import {
   UserIcon,
   ShieldCheckIcon,
   CpuChipIcon,
-  ComputerDesktopIcon
+  ComputerDesktopIcon,
+  HomeIcon
 } from '@heroicons/react/24/outline'
 import StatsCards from './StatsCards'
 
@@ -49,6 +50,7 @@ import StadiumsManager from './StadiumsManager'
 import TitlesPage from '../app/titles/page'
 import ProfilePage from '../app/profile/page'
 import PoolsManager from './PoolsManager'
+import HomepagePage from '../app/homepage/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -282,8 +284,7 @@ export default function Dashboard() {
                 Painel de controle do sistema Kmiza27 Chatbot
               </p>
             </div>
-
-            {/* Cards de estatísticas principais */}
+            
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {/* Card Usuários */}
               <div 
@@ -553,6 +554,10 @@ export default function Dashboard() {
             {/* <DashboardOverview /> */}
           </div>
         )
+      
+      case 'Homepage':
+        return <HomepagePage />
+        
       case 'Times':
         return <TeamsManager />
       case 'Jogadores':
@@ -599,6 +604,7 @@ export default function Dashboard() {
 
   const menuItems = [
     { name: 'Dashboard', icon: ChartBarIcon, page: 'Dashboard' },
+    { name: 'Homepage', icon: HomeIcon, page: 'Homepage' },
     { name: 'Times', icon: ShieldCheckIcon, page: 'Times' },
     { 
       name: 'Jogadores', 

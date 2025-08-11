@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Like, FindManyOptions } from 'typeorm';
-import { Team, Match, CompetitionTeam, Player, PlayerTeamHistory } from '../../entities';
+import { Team, Match, CompetitionTeam, Player, PlayerTeamHistory, InternationalTeam } from '../../entities';
 import { MatchStatus } from '../../entities/match.entity';
 
 export interface PaginatedTeamsResult {
@@ -22,6 +22,8 @@ export class TeamsService {
     private playerRepository: Repository<Player>,
     @InjectRepository(PlayerTeamHistory)
     private playerTeamHistoryRepository: Repository<PlayerTeamHistory>,
+    @InjectRepository(InternationalTeam)
+    private internationalTeamRepository: Repository<InternationalTeam>,
   ) {}
 
   async findAll(
@@ -527,5 +529,70 @@ export class TeamsService {
       order: { match_date: 'ASC' },
       take: 3,
     });
+  }
+
+  // Métodos para times internacionais
+  async getInternationalTeams(): Promise<Team[]> {
+    try {
+      const internationalTeams = await this.internationalTeamRepository.find({
+        relations: ['team'],
+        order: { displayOrder: 'ASC' }
+      });
+      
+      return internationalTeams.map(it => it.team);
+    } catch (error) {
+      console.error('Erro ao buscar times internacionais:', error);
+      // Se houver erro, retornar array vazio
+      return [];
+    }
+  }
+
+  async addInternationalTeam(teamId: number, order: number): Promise<void> {
+    // Verificar se o time já é internacional
+    const existing = await this.internationalTeamRepository.findOneBy({ teamId });
+    if (existing) {
+      throw new BadRequestException('Time já está na lista internacional');
+    }
+
+    // Verificar limite de 20 times
+    const count = await this.internationalTeamRepository.count();
+    if (count >= 20) {
+      throw new BadRequestException('Limite máximo de 20 times internacionais atingido');
+    }
+
+    // Verificar se o time existe
+    const team = await this.teamRepository.findOneBy({ id: teamId });
+    if (!team) {
+      throw new NotFoundException('Time não encontrado');
+    }
+
+    // Criar entrada na tabela de times internacionais
+    await this.internationalTeamRepository.save({
+      teamId,
+      displayOrder: order
+    });
+  }
+
+  async removeInternationalTeam(teamId: number): Promise<void> {
+    const internationalTeam = await this.internationalTeamRepository.findOneBy({ teamId });
+    if (!internationalTeam) {
+      throw new BadRequestException('Time não está na lista internacional');
+    }
+
+    await this.internationalTeamRepository.remove(internationalTeam);
+  }
+
+  async updateInternationalTeamOrder(teamId: number, newOrder: number): Promise<void> {
+    const internationalTeam = await this.internationalTeamRepository.findOneBy({ teamId });
+    if (!internationalTeam) {
+      throw new BadRequestException('Time não está na lista internacional');
+    }
+
+    internationalTeam.displayOrder = newOrder;
+    await this.internationalTeamRepository.save(internationalTeam);
+  }
+
+  async getInternationalTeamsCount(): Promise<number> {
+    return this.internationalTeamRepository.count();
   }
 } 

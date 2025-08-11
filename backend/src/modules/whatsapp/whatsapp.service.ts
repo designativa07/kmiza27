@@ -82,14 +82,7 @@ export class WhatsAppService {
   ) {}
 
   async sendMessage(data: WhatsAppMessage): Promise<WhatsAppResponse> {
-    this.logger.log(`🚀 INICIANDO ENVIO DE MENSAGEM`);
-    this.logger.log(`📱 Para: ${data.to}`);
-    this.logger.log(`📝 Mensagem: ${data.message}`);
-    this.logger.log(`🏷️ Título: ${data.title || 'Sem título'}`);
-    this.logger.log(`⚙️ WhatsApp habilitado: ${evolutionConfig.enabled}`);
-
     if (!evolutionConfig.enabled) {
-      this.logger.warn('⚠️ WhatsApp está desabilitado. Simulando envio...');
       return {
         success: true,
         messageId: `simulated_${Date.now()}`,
@@ -112,11 +105,6 @@ export class WhatsAppService {
         text: fullMessage
       };
 
-      this.logger.log(`🌐 URL da requisição: ${url}`);
-      this.logger.log(`📞 Número formatado: ${phoneNumber}`);
-      this.logger.log(`📄 Payload completo:`, JSON.stringify(payload, null, 2));
-      this.logger.log(`🔑 API Key: ${evolutionConfig.apiKey ? '***SET***' : 'NOT_SET'}`);
-
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -127,28 +115,8 @@ export class WhatsAppService {
         body: JSON.stringify(payload),
       });
 
-      this.logger.log(`📡 Status da resposta: ${response.status}`);
-      this.logger.log(`📋 Headers da resposta:`, Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`❌ ERRO NA EVOLUTION API:`);
-        this.logger.error(`🔢 Status: ${response.status}`);
-        this.logger.error(`📄 Resposta: ${errorText}`);
-        this.logger.error(`🌐 URL: ${url}`);
-        this.logger.error(`📤 Headers enviados:`, {
-          'Content-Type': 'application/json',
-          'apikey': evolutionConfig.apiKey ? '***HIDDEN***' : 'NOT_SET',
-        });
-        
-        // Tentar parsear o erro como JSON para mais detalhes
-        try {
-          const errorJson = JSON.parse(errorText);
-          this.logger.error(`🔍 Detalhes do erro:`, errorJson);
-        } catch (e) {
-          this.logger.error(`📝 Erro em texto puro: ${errorText}`);
-        }
-        
         return {
           success: false,
           error: `HTTP ${response.status}: ${errorText}`,
@@ -156,17 +124,12 @@ export class WhatsAppService {
       }
 
       const result = await response.json();
-      this.logger.log(`✅ MENSAGEM ENVIADA COM SUCESSO!`);
-      this.logger.log(`📞 Para: ${phoneNumber}`);
-      this.logger.log(`📋 Resposta completa:`, JSON.stringify(result, null, 2));
-
       return {
         success: true,
         messageId: result.key?.id || result.messageId || result.id || `sent_${Date.now()}`,
       };
 
     } catch (error) {
-      this.logger.error('Erro ao enviar mensagem via WhatsApp:', error);
       return {
         success: false,
         error: error.message || 'Erro desconhecido',

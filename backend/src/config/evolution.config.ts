@@ -7,26 +7,7 @@ const apiUrl = process.env.EVOLUTION_API_URL || 'https://evolution.kmiza27.com';
 const apiKey = process.env.EVOLUTION_API_KEY || '';
 const instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'Kmiza27';
 
-// Log das configurações (mascarando a API Key por segurança)
-logger.log('🔧 Configurações da Evolution API carregadas:');
-logger.log(`📡 URL: ${apiUrl}`);
-logger.log(`🤖 Instância: ${instanceName}`);
-logger.log(`🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...` : 'NÃO DEFINIDA'}`);
-logger.log(`🔍 API Key length: ${apiKey?.length || 0}`);
-
-// Validar se as configurações obrigatórias estão presentes
-if (!apiKey) {
-  logger.error('❌ EVOLUTION_API_KEY não está definida!');
-  logger.error('💡 Defina a variável de ambiente EVOLUTION_API_KEY no Easypanel');
-}
-
-if (!apiUrl) {
-  logger.error('❌ EVOLUTION_API_URL não está definida!');
-}
-
-if (!instanceName) {
-  logger.error('❌ EVOLUTION_INSTANCE_NAME não está definida!');
-}
+// Logs removidos completamente - apenas validar silenciosamente
 
 export const evolutionConfig = {
   apiUrl,
@@ -46,13 +27,8 @@ export const evolutionConfig = {
     return !!(apiUrl && apiKey && instanceName);
   },
   
-  // Método para obter configurações com logs de debug
+  // Método para obter configurações sem logs
   getConfig() {
-    logger.log('🔍 Obtendo configurações da Evolution API:');
-    logger.log(`📡 URL: ${apiUrl}`);
-    logger.log(`🤖 Instância: ${instanceName}`);
-    logger.log(`🔑 API Key definida: ${!!apiKey}`);
-    
     return {
       apiUrl,
       apiKey,
@@ -61,13 +37,4 @@ export const evolutionConfig = {
   }
 };
 
-// Log de inicialização
-if (evolutionConfig.isValid()) {
-  logger.log('✅ Configurações da Evolution API válidas');
-} else {
-  logger.error('❌ Configurações da Evolution API inválidas');
-  logger.error('💡 Verifique as variáveis de ambiente no Easypanel:');
-  logger.error('   - EVOLUTION_API_URL');
-  logger.error('   - EVOLUTION_API_KEY');
-  logger.error('   - EVOLUTION_INSTANCE_NAME');
-} 
+// Logs de inicialização removidos completamente 

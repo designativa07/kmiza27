@@ -51,6 +51,9 @@ export const API_ENDPOINTS = {
     all: () => apiUrl('teams/all'),
     byId: (id: number) => apiUrl(`teams/${id}`),
     uploadLogo: (id: number) => apiUrl(`teams/${id}/upload-escudo`),
+    international: () => apiUrl('teams/international'),
+    toggleInternational: (id: number) => apiUrl(`teams/${id}/international`),
+    updateInternationalOrder: (id: number) => apiUrl(`teams/${id}/international/order`),
   },
   
   // Matches

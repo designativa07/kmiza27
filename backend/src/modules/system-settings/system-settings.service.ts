@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemSetting } from '../../entities/system-setting.entity';
+import { shouldLog } from '../../config/logging.config';
 
 @Injectable()
 export class SystemSettingsService {
@@ -175,17 +176,22 @@ export class SystemSettingsService {
       const ogImageSetting = await this.systemSettingRepository.findOne({ where: { key: 'futepedia_og_image_url' } });
       const headerLogoSetting = await this.systemSettingRepository.findOne({ where: { key: 'futepedia_header_logo_url' } });
 
-      console.log('🔍 Configurações carregadas do DB:', {
-        ogImageSetting: ogImageSetting ? { key: ogImageSetting.key, value: ogImageSetting.value } : null,
-        headerLogoSetting: headerLogoSetting ? { key: headerLogoSetting.key, value: headerLogoSetting.value } : null,
-      });
+      if (shouldLog('enableConfigLogs')) {
+        console.log('🔍 Configurações carregadas do DB:', {
+          ogImageSetting: ogImageSetting ? { key: ogImageSetting.key, value: ogImageSetting.value } : null,
+          headerLogoSetting: headerLogoSetting ? { key: headerLogoSetting.key, value: headerLogoSetting.value } : null,
+        });
+      }
 
       const result = {
         ogImageUrl: ogImageSetting ? ogImageSetting.value : null,
         headerLogoUrl: headerLogoSetting ? headerLogoSetting.value : null,
       };
 
-      console.log('📤 Retornando para frontend:', result);
+      if (shouldLog('enableConfigLogs')) {
+        console.log('📤 Retornando para frontend:', result);
+      }
+      
       return result;
     } catch (error) {
       this.logger.error('❌ Erro ao buscar configurações de imagens da Futepédia:', error);
@@ -200,36 +206,48 @@ export class SystemSettingsService {
 
   async updateFutepediaImagesSettings(ogImageUrl: string, futepediaLogoUrl: string) {
     try {
-      console.log('💾 Salvando configurações:', { ogImageUrl, futepediaLogoUrl });
+      if (shouldLog('enableConfigLogs')) {
+        console.log('💾 Salvando configurações:', { ogImageUrl, futepediaLogoUrl });
+      }
       
       // Só atualizar se a URL não for null/undefined/vazia
       if (ogImageUrl && ogImageUrl.trim() !== '') {
-        console.log('🖼️ Atualizando OG Image URL:', ogImageUrl);
+        if (shouldLog('enableConfigLogs')) {
+          console.log('🖼️ Atualizando OG Image URL:', ogImageUrl);
+        }
         await this.updateSetting(
           'futepedia_og_image_url',
           ogImageUrl,
           'URL da imagem Open Graph padrão para a Futepédia'
         );
       } else {
-        console.log('⏭️ OG Image URL não fornecida, mantendo valor atual');
+        if (shouldLog('enableConfigLogs')) {
+          console.log('⏭️ OG Image URL não fornecida, mantendo valor atual');
+        }
       }
       
       if (futepediaLogoUrl && futepediaLogoUrl.trim() !== '') {
-        console.log('🏠 Atualizando Header Logo URL:', futepediaLogoUrl);
+        if (shouldLog('enableConfigLogs')) {
+          console.log('🏠 Atualizando Header Logo URL:', futepediaLogoUrl);
+        }
         await this.updateSetting(
           'futepedia_header_logo_url',
           futepediaLogoUrl,
           'URL da logo do cabeçalho da Futepédia'
         );
       } else {
-        console.log('⏭️ Header Logo URL não fornecida, mantendo valor atual');
+        if (shouldLog('enableConfigLogs')) {
+          console.log('⏭️ Header Logo URL não fornecida, mantendo valor atual');
+        }
       }
 
       this.logger.log('🔧 Configurações de imagens da Futepédia atualizadas');
       
       // Verificar se foi salvo corretamente
       const savedSettings = await this.getFutepediaImagesSettings();
-      console.log('✅ Configurações salvas verificadas:', savedSettings);
+      if (shouldLog('enableConfigLogs')) {
+        console.log('✅ Configurações salvas verificadas:', savedSettings);
+      }
       
       return { success: true, message: 'Configurações de imagens atualizadas com sucesso' };
     } catch (error) {

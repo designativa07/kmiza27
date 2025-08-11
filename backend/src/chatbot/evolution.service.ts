@@ -14,15 +14,6 @@ export class EvolutionService {
       // Verificar e reconectar a instância se necessário
       await this.ensureInstanceConnected();
       
-      this.logger.log(`🚀 ENVIANDO MENSAGEM VIA EVOLUTION API`);
-      this.logger.log(`📱 Para: ${phoneNumber}`);
-      this.logger.log(`📝 Mensagem: ${message.substring(0, 100)}...`);
-      this.logger.log(`🌐 URL: ${this.evolutionUrl}`);
-      this.logger.log(`🤖 Instância: ${this.instanceName}`);
-      this.logger.log(`🔑 API Key: ${this.apiKey ? '***SET***' : 'NOT_SET'}`);
-      this.logger.log(`🔍 API Key length: ${this.apiKey?.length || 0}`);
-      this.logger.log(`🔍 API Key starts with: ${this.apiKey?.substring(0, 8) || 'N/A'}...`);
-
       const url = `${this.evolutionUrl}/message/sendText/${this.instanceName}`;
       
       const formattedNumber = this.formatPhoneNumber(phoneNumber);
@@ -31,10 +22,6 @@ export class EvolutionService {
         number: formattedNumber,
         text: message,
       };
-
-      this.logger.log(`🌐 URL completa: ${url}`);
-      this.logger.log(`📞 Número formatado: ${formattedNumber}`);
-      this.logger.log(`📄 Payload:`, JSON.stringify(payload, null, 2));
 
       const response = await fetch(url, {
         method: 'POST',
@@ -45,36 +32,13 @@ export class EvolutionService {
         body: JSON.stringify(payload),
       });
 
-      this.logger.log(`📡 Status da resposta: ${response.status}`);
-
-      if (response.ok) {
-        const result = await response.json();
-        this.logger.log(`✅ MENSAGEM ENVIADA COM SUCESSO!`);
-        this.logger.log(`📞 Para: ${formattedNumber}`);
-        this.logger.log(`📋 Resposta:`, JSON.stringify(result, null, 2));
-        return true;
-      } else {
-        const errorText = await response.text();
-        this.logger.error(`❌ ERRO AO ENVIAR MENSAGEM:`);
-        this.logger.error(`🔢 Status: ${response.status}`);
-        this.logger.error(`📄 Resposta: ${errorText}`);
-        this.logger.error(`🌐 URL: ${url}`);
-        this.logger.error(`🔍 Headers enviados:`, {
-          'Content-Type': 'application/json',
-          'apikey': this.apiKey?.substring(0, 8) + '...' || 'NOT_SET',
-        });
-        
-        try {
-          const errorJson = JSON.parse(errorText);
-          this.logger.error(`🔍 Detalhes do erro:`, errorJson);
-        } catch (e) {
-          this.logger.error(`📝 Erro em texto puro: ${errorText}`);
-        }
-        
+      if (!response.ok) {
         return false;
       }
+
+      return true;
+
     } catch (error) {
-      this.logger.error('❌ Erro na Evolution API:', error);
       return false;
     }
   }
