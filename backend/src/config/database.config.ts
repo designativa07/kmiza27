@@ -4,7 +4,8 @@ import { LogLevel } from 'typeorm';
 export const databaseConfig = (): TypeOrmModuleOptions => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  const loggingLevels: LogLevel[] = isDevelopment ? ['error'] : ['error'];
+  // Desabilitar logs do TypeORM completamente
+  const loggingLevels: LogLevel[] = [];
 
   const baseConfig = {
     type: 'postgres' as const,

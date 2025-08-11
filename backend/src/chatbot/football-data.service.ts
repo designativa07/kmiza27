@@ -246,8 +246,11 @@ export class FootballDataService {
 
   async getCompetitionStats(competitionName: string): Promise<string> {
     try {
+      console.log(`🔍 getCompetitionStats chamado com: "${competitionName}"`);
+      
       // Usar a mesma lógica de busca melhorada dos artilheiros
       const normalizedCompName = competitionName.toLowerCase();
+      console.log(`🔍 Nome normalizado: "${normalizedCompName}"`);
       
       // Buscar todas as competições
       const allCompetitions = await this.competitionsRepository.find();
@@ -261,11 +264,13 @@ export class FootballDataService {
           return true;
         }
         
-        // Mapeamentos específicos
+        // Mapeamentos específicos - corrigidos para corresponder aos valores de extractCompetitionName
         const searchMappings = [
           { search: ['série b', 'serie b'], comp: ['série b', 'serie b', 'brasileiro série b', 'brasileiro serie b'] },
-          { search: ['série a', 'serie a', 'brasileir'], comp: ['brasileir'] },
-          { search: ['libertador'], comp: ['libertador'] },
+          { search: ['série a', 'serie a'], comp: ['série a', 'serie a', 'brasileirão', 'brasileirao'] },
+          { search: ['série c', 'serie c'], comp: ['série c', 'serie c', 'brasileiro série c', 'brasileiro serie c'] },
+          { search: ['série d', 'serie d'], comp: ['série d', 'serie d', 'brasileiro série d', 'brasileiro serie d'] },
+          { search: ['libertadores'], comp: ['libertadores', 'libertador'] },
           { search: ['copa do brasil', 'copa brasil'], comp: ['copa do brasil', 'copa brasil'] },
           { search: ['sul-americana', 'sulamericana'], comp: ['sul-americana', 'sulamericana'] }
         ];
@@ -281,7 +286,7 @@ export class FootballDataService {
         return false;
       });
       
-              // Priorizar correspondência específica (como nos artilheiros)
+        // Priorizar correspondência específica (como nos artilheiros)
         if (normalizedCompName.includes('série b') || normalizedCompName.includes('serie b')) {
           const serieBMatches = matchingCompetitions.filter(comp => 
             comp.name.toLowerCase().includes('série b') || comp.name.toLowerCase().includes('serie b') ||
@@ -291,6 +296,44 @@ export class FootballDataService {
             matchingCompetitions = serieBMatches;
           }
         }
+        
+        // Priorizar correspondência específica para série A
+        if (normalizedCompName.includes('série a') || normalizedCompName.includes('serie a')) {
+          const serieAMatches = matchingCompetitions.filter(comp => 
+            comp.name.toLowerCase().includes('série a') || comp.name.toLowerCase().includes('serie a') ||
+            comp.name.toLowerCase().includes('brasileirão') || comp.name.toLowerCase().includes('brasileirao')
+          );
+          if (serieAMatches.length > 0) {
+            matchingCompetitions = serieAMatches;
+          }
+        }
+        
+        // Priorizar correspondência específica para série C
+        if (normalizedCompName.includes('série c') || normalizedCompName.includes('serie c')) {
+          const serieCMatches = matchingCompetitions.filter(comp => 
+            comp.name.toLowerCase().includes('série c') || comp.name.toLowerCase().includes('serie c') ||
+            comp.name.toLowerCase().includes('brasileiro série c') || comp.name.toLowerCase().includes('brasileiro serie c')
+          );
+          if (serieCMatches.length > 0) {
+            matchingCompetitions = serieCMatches;
+          }
+        }
+        
+        // Priorizar correspondência específica para série D
+        if (normalizedCompName.includes('série d') || normalizedCompName.includes('serie d')) {
+          const serieDMatches = matchingCompetitions.filter(comp => 
+            comp.name.toLowerCase().includes('série d') || comp.name.toLowerCase().includes('serie d') ||
+            comp.name.toLowerCase().includes('brasileiro série d') || comp.name.toLowerCase().includes('brasileiro serie d')
+          );
+          if (serieDMatches.length > 0) {
+            matchingCompetitions = serieDMatches;
+          }
+        }
+      
+      console.log(`🔍 Competições encontradas: ${matchingCompetitions.length}`);
+      matchingCompetitions.forEach((comp, index) => {
+        console.log(`  ${index + 1}. ${comp.name} (ID: ${comp.id})`);
+      });
       
       if (matchingCompetitions.length === 0) {
         return `❌ Competição "${competitionName}" não encontrada.`;
@@ -300,6 +343,8 @@ export class FootballDataService {
       const competition = matchingCompetitions[0];
       
       console.log(`📊 Estatísticas para: ${competition.name}`);
+      console.log(`🔍 Competição encontrada com ID: ${competition.id}`);
+      console.log(`🔍 Nome da competição: ${competition.name}`);
 
       // Buscar estatísticas da competição
       const totalMatches = await this.matchesRepository
@@ -326,12 +371,12 @@ export class FootballDataService {
         .andWhere('match.away_score IS NOT NULL')
         .getRawOne();
 
-      const totalGoals = (parseInt(matchResults.home_goals) || 0) + (parseInt(matchResults.away_goals) || 0);
+      const totalGoals = (parseInt(matchResults?.home_goals || '0') || 0) + (parseInt(matchResults?.away_goals || '0') || 0);
       const avgGoalsPerMatch = finishedMatches > 0 ? (totalGoals / finishedMatches).toFixed(2) : '0.00';
 
       const teamsCount = await this.competitionTeamsRepository
         .createQueryBuilder('ct')
-        .where('ct.competition = :competitionId', { competitionId: competition.id })
+        .where('ct.competition_id = :competitionId', { competitionId: competition.id })
         .getCount();
 
       // Buscar partida com mais gols

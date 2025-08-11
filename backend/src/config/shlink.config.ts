@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { shouldLog } from './logging.config';
 
 const logger = new Logger('ShlinkConfig');
 
@@ -7,12 +8,14 @@ const apiUrl = process.env.SHLINK_API_URL || 'https://kmiza27-shlink.h4xd66.easy
 const apiKey = process.env.SHLINK_API_KEY || '';
 const baseDomain = process.env.SHLINK_BASE_DOMAIN || 'link.kmiza27.com';
 
-// Log das configurações (mascarando a API Key por segurança)
-logger.log('🔧 Configurações do Shlink carregadas:');
-logger.log(`📡 URL: ${apiUrl}`);
-logger.log(`🌐 Domínio Base: ${baseDomain}`);
-logger.log(`🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...` : 'NÃO DEFINIDA'}`);
-logger.log(`🔍 API Key length: ${apiKey?.length || 0}`);
+// Log das configurações apenas se configLogs estiver habilitado
+if (shouldLog('enableConfigLogs')) {
+  logger.log('🔧 Configurações do Shlink carregadas:');
+  logger.log(`📡 URL: ${apiUrl}`);
+  logger.log(`🌐 Domínio Base: ${baseDomain}`);
+  logger.log(`🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...` : 'NÃO DEFINIDA'}`);
+  logger.log(`🔍 API Key length: ${apiKey?.length || 0}`);
+}
 
 // Validar se as configurações obrigatórias estão presentes
 if (!apiKey) {
@@ -70,10 +73,12 @@ export const shlinkConfig = {
   
   // Método para obter configurações com logs de debug
   getConfig() {
-    logger.log('🔍 Obtendo configurações do Shlink:');
-    logger.log(`📡 URL: ${apiUrl}`);
-    logger.log(`🌐 Domínio Base: ${baseDomain}`);
-    logger.log(`🔑 API Key definida: ${!!apiKey}`);
+    if (shouldLog('enableConfigLogs')) {
+      logger.log('🔍 Obtendo configurações do Shlink:');
+      logger.log(`📡 URL: ${apiUrl}`);
+      logger.log(`🌐 Domínio Base: ${baseDomain}`);
+      logger.log(`🔑 API Key definida: ${!!apiKey}`);
+    }
     
     return {
       apiUrl,
@@ -98,7 +103,9 @@ export const shlinkConfig = {
 
 // Log de inicialização
 if (shlinkConfig.isValid()) {
-  logger.log('✅ Configurações do Shlink válidas');
+  if (shouldLog('enableConfigLogs')) {
+    logger.log('✅ Configurações do Shlink válidas');
+  }
 } else {
   logger.error('❌ Configurações do Shlink inválidas');
   logger.error('💡 Verifique as variáveis de ambiente no Easypanel:');

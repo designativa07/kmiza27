@@ -19,7 +19,7 @@ import * as fs from 'fs';
 
 // Carregar variáveis de ambiente manualmente
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-const envPath = join(__dirname, '..', '..', 'backend', envFile);
+const envPath = join(__dirname, '..', envFile);
 
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -36,7 +36,10 @@ if (fs.existsSync(envPath)) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Configurar logging do NestJS para ser extremamente restritivo
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error'], // Apenas erros críticos
+  });
   
   // Prefixo global removido - usando domínio api.kmiza27.com
   // app.setGlobalPrefix('api');

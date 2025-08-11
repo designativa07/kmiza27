@@ -80,6 +80,7 @@ export default function TeamsManager() {
   const [showAliasesModal, setShowAliasesModal] = useState(false)
   const [managingTeamAliases, setManagingTeamAliases] = useState<Team | null>(null)
   
+  const [activeTab, setActiveTab] = useState('serie-a')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
   const [stateFilter, setStateFilter] = useState('')
@@ -119,6 +120,13 @@ export default function TeamsManager() {
   useEffect(() => {
     applyPagination()
   }, [filteredTeams, currentPage])
+
+  // Efeito para reagir às mudanças de aba
+  useEffect(() => {
+    const filtered = getTeamsByTab()
+    setFilteredTeams(filtered)
+    setCurrentPage(1) // Resetar para primeira página ao mudar de aba
+  }, [activeTab, debouncedSearchTerm, stateFilter, countryFilter, teams])
 
   const fetchTeamPlayers = async (teamId: number) => {
     try {
@@ -180,33 +188,8 @@ export default function TeamsManager() {
   const applyFilters = () => {
     if (!teams.length && filteredTeams.length === 0) return;
     
-    let filtered = [...teams]
-
-    // Filtro por termo de busca
-    if (debouncedSearchTerm) {
-      filtered = filtered.filter(team => 
-        team.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        team.short_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        team.city?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        team.state?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        team.country?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-      )
-    }
-
-    // Filtro por estado
-    if (stateFilter) {
-      filtered = filtered.filter(team => 
-        team.state?.toLowerCase() === stateFilter.toLowerCase()
-      )
-    }
-
-    // Filtro por país
-    if (countryFilter) {
-      filtered = filtered.filter(team => 
-        team.country?.toLowerCase() === countryFilter.toLowerCase()
-      )
-    }
-
+    // Usar a função getTeamsByTab que já inclui todos os filtros
+    const filtered = getTeamsByTab()
     setFilteredTeams(filtered)
     if (currentPage !== 1) {
       setCurrentPage(1)
@@ -231,6 +214,7 @@ export default function TeamsManager() {
     setSearchTerm('')
     setStateFilter('')
     setCountryFilter('')
+    setActiveTab('serie-a') // Resetar para primeira aba
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
@@ -250,6 +234,73 @@ export default function TeamsManager() {
       if (team.country) countries.add(team.country)
     })
     return Array.from(countries).sort()
+  }
+
+  const getTeamsByTab = () => {
+    let filtered = [...teams] // Começar com todos os times, não com filteredTeams
+    
+    // Aplicar filtros de busca e país/estado primeiro
+    if (debouncedSearchTerm) {
+      filtered = filtered.filter(team => 
+        team.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.short_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.city?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.state?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        team.country?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      )
+    }
+
+    if (stateFilter) {
+      filtered = filtered.filter(team => 
+        team.state?.toLowerCase() === stateFilter.toLowerCase()
+      )
+    }
+
+    if (countryFilter) {
+      filtered = filtered.filter(team => 
+        team.country?.toLowerCase() === countryFilter.toLowerCase()
+      )
+    }
+    
+    // Depois aplicar filtro da aba
+    switch (activeTab) {
+      case 'serie-a':
+        // Filtrar times da Série A (Brasil)
+        filtered = filtered.filter(team => 
+          team.country === 'Brasil' && 
+          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
+        )
+        break
+      case 'serie-b':
+        // Filtrar times da Série B (Brasil)
+        filtered = filtered.filter(team => 
+          team.country === 'Brasil' && 
+          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
+        )
+        break
+      case 'serie-c':
+        // Filtrar times da Série C (Brasil)
+        filtered = filtered.filter(team => 
+          team.country === 'Brasil' && 
+          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
+        )
+        break
+      case 'serie-d':
+        // Filtrar times da Série D (Brasil)
+        filtered = filtered.filter(team => 
+          team.country === 'Brasil' && 
+          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
+        )
+        break
+      case 'internacional':
+        // Filtrar times internacionais (não Brasil)
+        filtered = filtered.filter(team => team.country !== 'Brasil')
+        break
+      default:
+        break
+    }
+    
+    return filtered
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -745,6 +796,62 @@ export default function TeamsManager() {
         </div>
       </div>
 
+      {/* Abas de navegação */}
+      <div className="mt-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('serie-a')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'serie-a'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Série A
+          </button>
+          <button
+            onClick={() => setActiveTab('serie-b')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'serie-b'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Série B
+          </button>
+          <button
+            onClick={() => setActiveTab('serie-c')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'serie-c'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Série C
+          </button>
+          <button
+            onClick={() => setActiveTab('serie-d')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'serie-d'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Série D
+          </button>
+          <button
+            onClick={() => setActiveTab('internacional')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'internacional'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Internacional
+          </button>
+        </nav>
+      </div>
+
       <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="relative lg:col-span-2">
           <input
@@ -797,7 +904,7 @@ export default function TeamsManager() {
 
       <div className="mb-4 flex justify-between items-center">
         <p className="text-sm text-gray-700">
-          Mostrando {paginatedTeams.length} de {filteredTeams.length} times
+          Mostrando {paginatedTeams.length} de {filteredTeams.length} times na aba {activeTab === 'serie-a' ? 'Série A' : activeTab === 'serie-b' ? 'Série B' : activeTab === 'serie-c' ? 'Série C' : activeTab === 'serie-d' ? 'Série D' : 'Internacional'}
         </p>
         <button
           onClick={clearFilters}
