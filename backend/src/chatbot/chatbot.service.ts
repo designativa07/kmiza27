@@ -1657,14 +1657,14 @@ Digite sua pergunta ou comando! ⚽`;
         rows: { id: string; title: string; description: string }[];
       }[] = [];
 
-      // Construir seções com IDs específicos para estatísticas
+      // Construir seções com IDs específicos para estatísticas (sem repetir a palavra "Estatísticas" nos títulos)
       if (nationalCompetitions.length > 0) {
         sections.push({
           title: '🇧🇷 Competições Nacionais',
           rows: nationalCompetitions.map(c => ({
             id: `STATS_${c.id}`,
-            title: `Estatísticas do ${c.name}`,
-            description: `Ver estatísticas do ${c.name}`
+            title: `${c.name}`,
+            description: `Ver estatísticas`
           }))
         });
       }
@@ -1674,8 +1674,8 @@ Digite sua pergunta ou comando! ⚽`;
           title: '🌎 Competições Internacionais',
           rows: internationalCompetitions.map(c => ({
             id: `STATS_${c.id}`,
-            title: `Estatísticas do ${c.name}`,
-            description: `Ver estatísticas do ${c.name}`
+            title: `${c.name}`,
+            description: `Ver estatísticas`
           }))
         });
       }
@@ -1685,8 +1685,8 @@ Digite sua pergunta ou comando! ⚽`;
           title: '🏆 Outras Competições',
           rows: otherCompetitions.map(c => ({
             id: `STATS_${c.id}`,
-            title: `Estatísticas do ${c.name}`,
-            description: `Ver estatísticas do ${c.name}`
+            title: `${c.name}`,
+            description: `Ver estatísticas`
           }))
         });
       }
@@ -1745,7 +1745,7 @@ Digite sua pergunta ou comando! ⚽`;
 
   private isButtonListId(message: string): boolean {
     // Verificar se a mensagem é um ID de botão de lista
-    const buttonPrefixes = ['MENU_', 'CMD_', 'COMP_', 'SUGGEST_INTENT_'];
+    const buttonPrefixes = ['MENU_', 'CMD_', 'COMP_', 'SCORERS_', 'STATS_', 'SUGGEST_INTENT_'];
     return buttonPrefixes.some(prefix => message.startsWith(prefix));
   }
 
