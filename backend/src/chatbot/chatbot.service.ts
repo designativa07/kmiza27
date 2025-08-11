@@ -301,7 +301,32 @@ export class ChatbotService {
             shouldSendMenu = true;
             break;
           }
-          
+
+          // Se confiança baixa ou intenção desconhecida, sugerir alternativas
+          const lowConfidence = analysis.intent === 'unknown' || (analysis.confidence ?? 0) < 0.6;
+          if (lowConfidence) {
+            const menuSections = await this.whatsAppMenuService.getMenuSections();
+            const allMenuRows = (menuSections || []).flatMap((s: any) => s.rows || []);
+            const suggestions = await this.openAIService.suggestAlternatives(message, allMenuRows);
+
+            if (suggestions.length > 0) {
+              await this.savePendingSuggestions(phoneNumber, suggestions);
+
+              response = '🤔 Você quis dizer?\n' +
+                suggestions.map((s, i) => `${i + 1}. ${s.label}`).join('\n') +
+                '\n\nResponda com o número da opção.';
+
+              shouldSendMenu = true;
+
+              if (userOrigin === 'whatsapp') {
+                this.scheduleSuggestionListSend(phoneNumber, suggestions);
+              } else {
+                await this.setUserConversationState(phoneNumber, 'waiting_suggestion_choice');
+              }
+              break;
+            }
+          }
+
           // Mensagem não reconhecida - enviar ajuda básica
           response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
           shouldSendMenu = true;
@@ -324,6 +349,46 @@ export class ChatbotService {
       console.error('Mensagem do erro:', error.message);
       return '❌ Desculpe, ocorreu um erro interno. Tente novamente em alguns instantes.';
     }
+  }
+
+  private async savePendingSuggestions(
+    phoneNumber: string,
+    suggestions: Array<{ label: string; id?: string; intent?: string }>
+  ): Promise<void> {
+    try {
+      const user = await this.usersService.findOrCreateUser(phoneNumber);
+      const preferences = user.preferences || {};
+      preferences.pendingSuggestions = suggestions;
+      preferences.conversationState = 'waiting_suggestion_choice';
+      await this.usersService.updateUser(user.id, { preferences });
+    } catch (error) {
+      console.error('Erro ao salvar sugestões pendentes:', error);
+    }
+  }
+
+  private scheduleSuggestionListSend(
+    phoneNumber: string,
+    suggestions: Array<{ label: string; id?: string; intent?: string }>
+  ): void {
+    setTimeout(async () => {
+      try {
+        const rows = suggestions.map((s, idx) => ({
+          id: s.id || `SUGGEST_INTENT_${s.intent || idx}`,
+          title: s.label,
+          description: s.intent ? `Ação: ${s.intent}` : 'Sugestão'
+        }));
+        await this.evolutionService.sendListMessage(
+          phoneNumber,
+          '🤔 Você quis dizer?',
+          'Escolha uma opção relacionada ao que você pediu:',
+          'Ver opções',
+          [{ title: 'Sugestões', rows }],
+          'Kmiza27 ⚽'
+        );
+      } catch (error) {
+        console.error('Erro ao enviar lista de sugestões:', error);
+      }
+    }, 1000);
   }
 
   private async findNextMatch(teamName: string): Promise<string> {
@@ -1680,7 +1745,7 @@ Digite sua pergunta ou comando! ⚽`;
 
   private isButtonListId(message: string): boolean {
     // Verificar se a mensagem é um ID de botão de lista
-    const buttonPrefixes = ['MENU_', 'CMD_', 'COMP_'];
+    const buttonPrefixes = ['MENU_', 'CMD_', 'COMP_', 'SUGGEST_INTENT_'];
     return buttonPrefixes.some(prefix => message.startsWith(prefix));
   }
 
@@ -1798,6 +1863,34 @@ Digite sua pergunta ou comando! ⚽`;
             return await this.getCompetitionStatsById(competitionId);
           }
 
+          if (buttonId.startsWith('SUGGEST_INTENT_')) {
+            const intent = buttonId.replace('SUGGEST_INTENT_', '');
+            switch (intent) {
+              case 'next_match':
+                return await this.findNextMatch('');
+              case 'matches_today':
+                return await this.getTodayMatches();
+              case 'matches_week':
+                return await this.getWeekMatches();
+              case 'last_match':
+                return await this.getLastMatch('');
+              case 'team_info':
+                return await this.getTeamInfo('');
+              case 'team_position':
+                return await this.getTeamPosition('');
+              case 'broadcast_info':
+                return await this.getBroadcastInfo('');
+              case 'top_scorers':
+                return await this.getTopScorers(undefined);
+              case 'team_squad':
+                return await this.getTeamSquad('');
+              case 'table':
+                return await this.getCompetitionTable('brasileirao');
+              case 'channels_info':
+                return await this.footballDataService.getChannelInfo();
+            }
+          }
+
           return '❌ Opção não reconhecida. Tente novamente ou digite "menu" para ver as opções.';
       }
     } catch (error) {
@@ -1863,6 +1956,57 @@ Digite sua pergunta ou comando! ⚽`;
         case 'waiting_team_for_favorite':
           response = await this.setFavoriteTeam(phoneNumber, message);
           break;
+
+        case 'waiting_suggestion_choice': {
+          const user = await this.usersService.findOrCreateUser(phoneNumber);
+          const suggestions = user.preferences?.pendingSuggestions || [];
+          // Limpar estado após leitura
+          await this.clearUserConversationState(phoneNumber);
+
+          let chosen: any = null;
+          const trimmed = (message || '').trim();
+          const idx = parseInt(trimmed, 10);
+          if (!isNaN(idx) && idx >= 1 && idx <= suggestions.length) {
+            chosen = suggestions[idx - 1];
+          } else {
+            chosen = suggestions.find((s: any) => (s.label || '').toLowerCase() === trimmed.toLowerCase());
+          }
+
+          if (!chosen) {
+            return '❌ Opção inválida. Responda com o número de 1 a ' + suggestions.length + '.';
+          }
+
+          if (chosen.id) {
+            return await this.processButtonListId(phoneNumber, chosen.id);
+          }
+
+          switch (chosen.intent) {
+            case 'next_match':
+              return await this.findNextMatch('');
+            case 'matches_today':
+              return await this.getTodayMatches();
+            case 'matches_week':
+              return await this.getWeekMatches();
+            case 'last_match':
+              return await this.getLastMatch('');
+            case 'team_info':
+              return await this.getTeamInfo('');
+            case 'team_position':
+              return await this.getTeamPosition('');
+            case 'broadcast_info':
+              return await this.getBroadcastInfo('');
+            case 'top_scorers':
+              return await this.getTopScorers(undefined);
+            case 'team_squad':
+              return await this.getTeamSquad('');
+            case 'table':
+              return await this.getCompetitionTable('brasileirao');
+            case 'channels_info':
+              return await this.footballDataService.getChannelInfo();
+          }
+
+          return '❌ Não foi possível executar a sugestão.';
+        }
 
         default:
           response = '❌ Estado da conversa não reconhecido. Tente novamente.';

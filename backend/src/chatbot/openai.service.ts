@@ -10,6 +10,13 @@ export interface MessageAnalysis {
   confidence: number;
 }
 
+export interface Suggestion {
+  label: string;
+  id?: string;
+  intent?: string;
+  confidence: number;
+}
+
 @Injectable()
 export class OpenAIService implements OnModuleInit {
   private teamNames: string[] = [];
@@ -333,6 +340,58 @@ export class OpenAIService implements OnModuleInit {
         confidence: 0.30
       };
     }
+  }
+
+  // Calcula similaridade simples baseada em interseção/união de tokens
+  private similarity(a: string, b: string): number {
+    const sa = new Set(a.split(/\s+/).filter(Boolean));
+    const sb = new Set(b.split(/\s+/).filter(Boolean));
+    const intersection = [...sa].filter(x => sb.has(x)).length;
+    const union = new Set([...sa, ...sb]).size;
+    return union ? intersection / union : 0;
+  }
+
+  // Gera até 5 sugestões combinando sinônimos de intenções com itens do menu atual
+  async suggestAlternatives(
+    message: string,
+    menuItems: Array<{ id: string; title: string; description?: string }>
+  ): Promise<Suggestion[]> {
+    const normalized = this.removeAccents(message.toLowerCase());
+
+    const intentSynonyms: Record<string, string[]> = {
+      next_match: ['próximo jogo', 'quando joga', 'agenda', 'calendário', 'horário do jogo'],
+      matches_today: ['jogos de hoje', 'hoje joga', 'partidas hoje'],
+      matches_week: ['jogos da semana', 'esta semana', 'rodada da semana'],
+      last_match: ['último jogo', 'como foi o jogo', 'placar passado', 'resultado recente'],
+      team_info: ['informações do time', 'info do time', 'dados do time'],
+      team_position: ['posição', 'classificação', 'tabela do time'],
+      broadcast_info: ['onde passa', 'transmissão', 'canal', 'tv', 'streaming'],
+      top_scorers: ['artilheiros', 'gols', 'goleadores'],
+      team_squad: ['elenco', 'jogadores do time'],
+      table: ['tabela', 'classificação da competição'],
+      channels_info: ['canais disponíveis', 'onde assistir', 'como assistir']
+    };
+
+    const intentSuggestions: Suggestion[] = Object.entries(intentSynonyms)
+      .map(([intent, keys]) => {
+        const best = Math.max(
+          ...keys.map(k => this.similarity(normalized, this.removeAccents(k)))
+        );
+        return { label: keys[0], intent, confidence: best } as Suggestion;
+      })
+      .filter(s => s.confidence >= 0.35);
+
+    const menuSuggestions: Suggestion[] = (menuItems || [])
+      .map(mi => {
+        const basis = `${mi.title} ${mi.description || ''}`.toLowerCase();
+        const score = this.similarity(normalized, this.removeAccents(basis));
+        return { label: mi.title, id: mi.id, confidence: score } as Suggestion;
+      })
+      .filter(s => s.confidence >= 0.35);
+
+    return [...intentSuggestions, ...menuSuggestions]
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5);
   }
   
   private extractTeamName(message: string): string | undefined {

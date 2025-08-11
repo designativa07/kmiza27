@@ -302,3 +302,27 @@ ORDER BY column_name;
   ```
 - **Logs:** Sistema de logging detalhado para debug de mensagens e processamento
 - **Status do Sistema:** Endpoint `/chatbot/status` para verificar saúde do sistema 
+
+### 9.1. Detecção de Intenção com Sugestões ("Você quis dizer?")
+- Objetivo: Reduzir respostas "não entendi" sugerindo ações reais do bot quando a confiança é baixa ou a intenção é desconhecida.
+- Componentes:
+  - `backend/src/chatbot/openai.service.ts`
+    - Novo tipo `Suggestion { label, id?, intent?, confidence }`
+    - Métodos novos: `similarity(a,b)` e `suggestAlternatives(message, menuItems)`
+  - `backend/src/chatbot/chatbot.service.ts`
+    - Ampliação no `processMessage`: quando `intent === 'unknown'` ou confiança < 0.6, gera sugestões.
+    - Persistência de sugestões em `preferences.pendingSuggestions` e estado `conversationState = 'waiting_suggestion_choice'`.
+    - Envio de lista interativa no WhatsApp via `scheduleSuggestionListSend` (título: "🤔 Você quis dizer?")
+    - Aceita IDs `SUGGEST_INTENT_*` em `processButtonListId` (mapeia para ações padrão).
+    - Novo case em `processConversationState`: `waiting_suggestion_choice` (usuário responde 1..N no site).
+- Regras de UX por origem:
+  - WhatsApp: resposta curta + envio de lista interativa com até 5 sugestões. Seleção chama diretamente a ação.
+  - Site: resposta enumerada (1..N) e aguarda número. Ao receber, mapeia para ação.
+- Fontes para sugestões:
+  - Sinônimos de intenções principais (ex.: próximo jogo, jogos hoje, tabela, transmissão, artilheiros, elenco, posição, canais).
+  - Itens do menu configurados em `whatsapp-menu` (reuso de `getMenuSections`).
+- IDs e Prefixos:
+  - Suporte a `SUGGEST_INTENT_` além de `CMD_`, `MENU_`, `COMP_`, `SCORERS_`, `STATS_`.
+- Observações:
+  - Mantém compatibilidade do backend; sem mudança de contrato com frontends.
+  - Fácil extensão: adicionar sinônimos no `intentSynonyms` e/ou novos itens no menu.
