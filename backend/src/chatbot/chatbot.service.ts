@@ -954,18 +954,36 @@ ${shortUrl}
             }
           } else {
             console.log(`📈 DEBUG getTeamPosition: Competição de pontos corridos`);
-            // Para competições de pontos corridos, usar StandingsService
+            // Para competições de pontos corridos (ou fase de grupos), usar StandingsService
             const standings = await this.standingsService.getCompetitionStandings(ct.competition.id);
-            
+
             // Encontrar a posição do time
             const teamStanding = standings.find(standing => standing.team.id === team.id);
-            
+
             if (teamStanding) {
               foundAnyData = true;
               response += `🏆 ${ct.competition.name}\n`;
               response += `📍 ${teamStanding.position}º lugar - ${teamStanding.points} pontos\n`;
               response += `⚽ J:${teamStanding.played} V:${teamStanding.won} E:${teamStanding.drawn} D:${teamStanding.lost}\n`;
-              response += `🥅 GP:${teamStanding.goals_for} GC:${teamStanding.goals_against} SG:${teamStanding.goal_difference}\n\n`;
+              response += `🥅 GP:${teamStanding.goals_for} GC:${teamStanding.goals_against} SG:${teamStanding.goal_difference}\n`;
+
+              // Detectar eliminação na fase de grupos para competições com grupos + mata-mata
+              if (ct.competition.type === 'grupos_e_mata_mata') {
+                const hasRemainingMatches = await this.matchesRepository
+                  .createQueryBuilder('m')
+                  .where('m.competition_id = :cId', { cId: ct.competition.id })
+                  .andWhere('(m.home_team_id = :tId OR m.away_team_id = :tId)', { tId: team.id })
+                  .andWhere('m.status = :scheduled', { scheduled: MatchStatus.SCHEDULED })
+                  .getCount();
+
+                // Heurística: se não há próximos jogos para o time nesta competição
+                // e ele terminou em 3º ou pior no grupo, considerar eliminado na fase de grupos
+                if (hasRemainingMatches === 0 && teamStanding.position > 2) {
+                  response += `\n🚫 Eliminado na fase de grupos\n`;
+                }
+              }
+
+              response += `\n`;
               console.log(`✅ DEBUG getTeamPosition: Posição encontrada na tabela`);
             } else {
               // Se não encontrou na classificação dinâmica, mostrar dados básicos
@@ -1101,8 +1119,8 @@ ${shortUrl}
           (lastMatch.round.name || lastMatch.round.phase) :
           (lastMatch.round.phase || lastMatch.round.name);
         
-        // Verificar se foi eliminado (perdeu o jogo ou foi derrotado)
-        const wasEliminated = this.checkIfEliminated(lastMatch, team);
+        // Verificar se foi eliminado (considera ida/volta, pênaltis e qualified_team)
+        const wasEliminated = await this.checkIfEliminated(lastMatch, team);
         
         if (wasEliminated) {
           response += `📍 O ${team.name} foi eliminado na fase "${phaseName}" da competição\n`;
@@ -1124,18 +1142,74 @@ ${shortUrl}
     }
   }
 
-  private checkIfEliminated(match: any, team: Team): boolean {
-    // Se não há placar definido, não podemos determinar eliminação
+  private async checkIfEliminated(match: any, team: Team): Promise<boolean> {
+    // 1) Se o TypeORM já registrou o classificado, confie nisso
+    if (typeof match.qualified_team_id === 'number') {
+      return match.qualified_team_id !== team.id;
+    }
+
+    // 2) Se não há placares, não dá para concluir
     if (match.home_score === null || match.away_score === null) {
       return false;
     }
-    
+
+    // 3) Empate com pênaltis em jogo único
     const isHomeTeam = match.home_team.id === team.id;
     const teamScore = isHomeTeam ? match.home_score : match.away_score;
     const opponentScore = isHomeTeam ? match.away_score : match.home_score;
-    
-    // Em mata-mata, se perdeu e é uma fase eliminatória, foi eliminado
-    return teamScore < opponentScore;
+
+    // 3.1) Partida única com pênaltis registrados
+    if (!match.tie_id) {
+      if (teamScore !== opponentScore) {
+        return teamScore < opponentScore;
+      }
+      const teamPens = isHomeTeam ? match.home_score_penalties : match.away_score_penalties;
+      const oppPens = isHomeTeam ? match.away_score_penalties : match.home_score_penalties;
+      if (teamPens !== null && oppPens !== null) {
+        return teamPens < oppPens;
+      }
+      return false;
+    }
+
+    // 4) Confrontos de ida e volta: somar agregados por tie_id
+    const legs = await this.matchesRepository
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.home_team', 'home_team')
+      .leftJoinAndSelect('m.away_team', 'away_team')
+      .where('m.tie_id = :tie', { tie: match.tie_id })
+      .andWhere('m.status = :finished', { finished: MatchStatus.FINISHED })
+      .orderBy('m.match_date', 'ASC')
+      .getMany();
+
+    if (!legs || legs.length === 0) {
+      // Sem pernas finalizadas suficientes para concluir
+      return false;
+    }
+
+    let teamAgg = 0;
+    let oppAgg = 0;
+    for (const leg of legs) {
+      const isHome = leg.home_team.id === team.id;
+      const t = isHome ? leg.home_score : leg.away_score;
+      const o = isHome ? leg.away_score : leg.home_score;
+      teamAgg += (t ?? 0);
+      oppAgg += (o ?? 0);
+    }
+
+    if (teamAgg !== oppAgg) {
+      return teamAgg < oppAgg;
+    }
+
+    // Empate no agregado: usar pênaltis da última perna, se houver
+    const lastLeg = legs[legs.length - 1];
+    const lastIsHome = lastLeg.home_team.id === team.id;
+    const teamPens = lastIsHome ? lastLeg.home_score_penalties : lastLeg.away_score_penalties;
+    const oppPens = lastIsHome ? lastLeg.away_score_penalties : lastLeg.home_score_penalties;
+    if (teamPens !== null && oppPens !== null) {
+      return teamPens < oppPens;
+    }
+
+    return false;
   }
 
   private async getLastMatch(teamName: string): Promise<string> {
