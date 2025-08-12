@@ -296,7 +296,7 @@ export default function FinanceManager() {
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">🤝 Patrocínios</h3>
                 <button
-                  onClick={negotiateSponsorship}
+                  onClick={() => alert('Selecione uma oferta abaixo para negociar um patrocínio.')}
                   className="btn-primary"
                 >
                   Negociar Patrocínio

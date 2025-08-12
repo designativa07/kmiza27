@@ -112,13 +112,18 @@ export interface MachineTeam {
 
 class GameApiReformedService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Cache busting - adiciona timestamp para evitar cache
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${API_BASE_URL}${endpoint}${separator}_t=${Date.now()}`;
     
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
         ...options.headers,
       },
+      cache: 'no-store',
       ...options,
     };
 

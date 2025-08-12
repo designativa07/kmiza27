@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from 'zustand';
 import { GameTeam, YouthAcademy, YouthPlayer } from '@/lib/supabase';
 import { gameApiReformed, CreateTeamData } from '@/services/gameApiReformed';

@@ -1,12 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { supabase } from '../../config/supabase.config';
+import { MatchSimulationService } from '../match-simulation/match-simulation.service';
+import { PlayerDevelopmentService } from '../player-development/player-development.service';
 import { MachineTeamsService } from '../machine-teams/machine-teams.service';
 
 @Injectable()
 export class SeasonsService {
   private readonly logger = new Logger(SeasonsService.name);
 
-  constructor(private readonly machineTeamsService: MachineTeamsService) {}
+  constructor(
+    private readonly machineTeamsService: MachineTeamsService,
+    private matchSimulationService: MatchSimulationService,
+    private playerDevelopmentService: PlayerDevelopmentService
+  ) {}
 
   // ===== GERENCIAMENTO DE TEMPORADAS =====
 
@@ -1499,6 +1505,202 @@ export class SeasonsService {
     } catch (error) {
       this.logger.error(`❌ Erro ao zerar estatísticas de times da máquina para usuário ${userId}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Simular partida com integração de táticas
+   */
+  async simulateMatchWithTactics(matchId: string, userId: string): Promise<any> {
+    try {
+      this.logger.log(`🎮 Simulando partida ${matchId} com táticas para usuário ${userId}`);
+
+      // 1. Buscar dados da partida
+      const { data: match, error: matchError } = await supabase
+        .from('game_season_matches')
+        .select(`
+          *,
+          home_team:game_teams!home_team_id(id, name, colors),
+          away_team:game_teams!away_team_id(id, name, colors),
+          home_machine:game_machine_teams!home_machine_team_id(id, name, attributes, stadium_name),
+          away_machine:game_machine_teams!away_machine_team_id(id, name, attributes, stadium_name)
+        `)
+        .eq('id', matchId)
+        .single();
+
+      if (matchError || !match) {
+        throw new Error(`Partida não encontrada: ${matchError?.message}`);
+      }
+
+      // 2. Determinar qual é o time do usuário
+      const isUserHome = match.home_team_id !== null;
+      const userTeamId = isUserHome ? match.home_team_id : match.away_team_id;
+      const machineTeam = isUserHome ? match.away_machine : match.home_machine;
+
+      // 3. Buscar jogadores do time do usuário
+      const { data: players, error: playersError } = await supabase
+        .from('game_players')
+        .select('*')
+        .eq('team_id', userTeamId);
+
+      if (playersError) {
+        throw new Error(`Erro ao buscar jogadores: ${playersError.message}`);
+      }
+
+      // 4. Buscar táticas do time
+      const { data: tactics, error: tacticsError } = await supabase
+        .from('game_tactics')
+        .select('*')
+        .eq('team_id', userTeamId)
+        .single();
+
+      if (tacticsError) {
+        this.logger.warn(`Táticas não encontradas, usando padrão: ${tacticsError.message}`);
+      }
+
+      // 5. Preparar dados para simulação
+      const userTeamData = {
+        players: players.map(p => ({
+          id: p.id,
+          name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          position: p.position || 'CM',
+          overall: p.current_ability || this.calculatePlayerOverall(p),
+          
+          passing: p.passing || 50,
+          shooting: p.shooting || 50,
+          dribbling: p.dribbling || 50,
+          defending: p.defending || 50,
+          speed: p.speed || 50,
+          stamina: p.stamina || 50,
+          strength: p.strength || 50,
+          
+          morale: p.morale || 60,
+          fitness: p.fitness || 80,
+          form: p.form || 5,
+          fatigue: p.fatigue || 0,
+          injury_severity: p.injury_severity || 0
+        })),
+        tactics: {
+          formation: tactics?.formation || '4-4-2',
+          style: tactics?.style || 'equilibrado',
+          pressing: tactics?.pressing || 'média',
+          width: tactics?.width || 'normal',
+          tempo: tactics?.tempo || 'normal',
+          lineup: tactics?.lineup || []
+        },
+        teamId: userTeamId
+      };
+
+      const machineTeamData = {
+        attributes: machineTeam.attributes || {
+          overall: 75,
+          attack: 75,
+          midfield: 75,
+          defense: 75,
+          goalkeeper: 75
+        },
+        name: machineTeam.name
+      };
+
+      // 6. Executar simulação
+      const simulationResult = await this.matchSimulationService.simulateMatch(
+        matchId,
+        userTeamData,
+        machineTeamData
+      );
+
+      // 7. Determinar resultado da partida
+      const matchResult = simulationResult.homeScore > simulationResult.awayScore ? 'win' :
+                         simulationResult.homeScore < simulationResult.awayScore ? 'loss' : 'draw';
+      
+      // Ajustar resultado se usuário joga fora
+      const userResult = isUserHome ? matchResult : 
+                        (matchResult === 'win' ? 'loss' : matchResult === 'loss' ? 'win' : 'draw');
+
+      // 8. Atualizar resultado da partida no banco de dados
+      const { error: updateError } = await supabase
+        .from('game_season_matches')
+        .update({
+          home_score: simulationResult.homeScore,
+          away_score: simulationResult.awayScore,
+          status: 'finished',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', matchId);
+
+      if (updateError) {
+        throw new Error(`Erro ao atualizar partida: ${updateError.message}`);
+      }
+
+      this.logger.log(`💾 Partida atualizada no banco: ${simulationResult.homeScore} x ${simulationResult.awayScore}`);
+
+      // 9. Aplicar experiência de jogo aos jogadores
+      for (const player of userTeamData.players) {
+        const rating = simulationResult.playerRatings[player.id] || 6.0;
+        const minutesPlayed = simulationResult.playerStats[player.id]?.minutesPlayed || 90;
+        
+        await this.playerDevelopmentService.applyMatchExperience(
+          player.id,
+          minutesPlayed,
+          rating,
+          userResult
+        );
+      }
+
+      // 10. Atualizar classificação
+      await this.recalculateUserStandings(userId, match.season_year);
+
+      // 11. Verificar fim de temporada
+      const isSeasonFinished = await this.checkSeasonEnd(userId, match.season_year);
+      
+      this.logger.log(`✅ Partida simulada: ${simulationResult.homeScore} x ${simulationResult.awayScore}`);
+      
+      return {
+        homeScore: simulationResult.homeScore,
+        awayScore: simulationResult.awayScore,
+        highlights: simulationResult.highlights,
+        playerRatings: simulationResult.playerRatings,
+        tacticalImpact: simulationResult.tacticalImpact,
+        userResult,
+        isSeasonFinished
+      };
+
+    } catch (error) {
+      this.logger.error('❌ Erro na simulação de partida com táticas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calcular overall do jogador baseado nos atributos
+   */
+  private calculatePlayerOverall(player: any): number {
+    const attributes = [
+      player.passing, player.shooting, player.dribbling,
+      player.defending, player.speed, player.stamina, player.strength
+    ];
+    
+    const validAttributes = attributes.filter(attr => typeof attr === 'number' && !isNaN(attr));
+    if (validAttributes.length === 0) return 50;
+    
+    return Math.round(validAttributes.reduce((sum, attr) => sum + attr, 0) / validAttributes.length);
+  }
+
+  /**
+   * Verificar se a temporada terminou
+   */
+  private async checkSeasonEnd(userId: string, seasonYear: number): Promise<boolean> {
+    try {
+      const { data: progress } = await supabase
+        .from('game_user_competition_progress')
+        .select('games_played')
+        .eq('user_id', userId)
+        .eq('season_year', seasonYear)
+        .single();
+
+      return progress?.games_played >= 38; // 38 jogos = temporada completa
+    } catch (error) {
+      return false;
     }
   }
 }

@@ -42,17 +42,28 @@ export default function TeamPageContent() {
   const loadData = async () => {
     if (!selectedTeam) return;
     try {
+      console.log('📊 Carregando dados do time...', selectedTeam.owner_id);
+      
       const [matches, recent, progress] = await Promise.all([
         gameApiReformed.getUserUpcomingMatches(selectedTeam.owner_id, 10),
         gameApiReformed.getUserRecentMatches(selectedTeam.owner_id, 10),
         gameApiReformed.getUserCurrentProgress(selectedTeam.owner_id)
       ]);
+      
+      console.log('📈 Dados recebidos:', {
+        progress: progress ? `${progress.points} pts, ${progress.games_played} jogos, posição ${progress.position}` : 'null',
+        upcomingMatches: matches.length,
+        recentMatches: recent.length
+      });
+      
       setUpcomingMatches(matches);
       setRecentMatches(recent);
       setCompetitionData(progress);
+      
       try {
         const plist = await gameApiReformed.getPlayers(selectedTeam.id);
         setPlayersCount(Array.isArray(plist) ? plist.length : 0);
+        console.log('👥 Jogadores:', Array.isArray(plist) ? plist.length : 0);
       } catch {}
     } catch (error) {
       console.error('Erro ao carregar dados do time:', error);
@@ -63,16 +74,26 @@ export default function TeamPageContent() {
     if (!selectedTeam) return;
     try {
       setSimulatingMatch(matchId);
+      console.log('🎮 Iniciando simulação de partida:', matchId);
+      
       await gameApiReformed.simulateMatch(matchId, selectedTeam.owner_id);
+      console.log('✅ Partida simulada, aguardando processamento...');
       
-      // Aguardar um pouco para garantir que o backend processou
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aguardar mais tempo para garantir que o backend processou completamente
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Recarregar todos os dados
-      await loadData();
+      // Múltiplas tentativas de atualização para garantir dados frescos
+      for (let i = 0; i < 3; i++) {
+        console.log(`🔄 Tentativa ${i + 1} de atualização de dados`);
+        await loadData();
+        setRefreshKey(prev => prev + 1);
+        
+        if (i < 2) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
       
-      // Forçar atualização do componente
-      setRefreshKey(prev => prev + 1);
+      console.log('🎉 Atualização completa!');
       
     } catch (error) {
       console.error('Erro ao simular partida:', error);
