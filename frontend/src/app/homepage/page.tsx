@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_ENDPOINTS, apiUrl } from '@/config/api';
 
 interface Team {
   id: number;
@@ -56,6 +56,18 @@ export default function Homepage() {
   const [internationalTeams, setInternationalTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Banner settings
+  const [bannerDesktopUrl, setBannerDesktopUrl] = useState<string>('');
+  const [bannerMobileUrl, setBannerMobileUrl] = useState<string>('');
+  const [bannerLinkUrl, setBannerLinkUrl] = useState<string>('');
+  const [bannerDesktopFile, setBannerDesktopFile] = useState<File | null>(null);
+  const [bannerMobileFile, setBannerMobileFile] = useState<File | null>(null);
+  // Sidebar banner settings
+  const [sidebarDesktopUrl, setSidebarDesktopUrl] = useState<string>('');
+  const [sidebarMobileUrl, setSidebarMobileUrl] = useState<string>('');
+  const [sidebarLinkUrl, setSidebarLinkUrl] = useState<string>('');
+  const [sidebarDesktopFile, setSidebarDesktopFile] = useState<File | null>(null);
+  const [sidebarMobileFile, setSidebarMobileFile] = useState<File | null>(null);
   
   // Estados para paginação e busca
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +77,8 @@ export default function Homepage() {
 
   useEffect(() => {
     fetchTeams();
+    fetchBannerSettings();
+    fetchSidebarBannerSettings();
   }, []);
 
   // Debug: monitorar mudanças no estado teams
@@ -89,6 +103,52 @@ export default function Homepage() {
       setCurrentPage(1);
     }
   }, [teams, searchTerm]);
+
+  const fetchBannerSettings = async () => {
+    const normalize = (data: any): string => {
+      if (!data) return '';
+      if (typeof data === 'string') return data;
+      if (typeof data === 'object' && 'value' in data) return data.value || '';
+      return '';
+    };
+    try {
+      const [d, m, l] = await Promise.all([
+        fetch(apiUrl('system-settings/homepage_banner_desktop_url')),
+        fetch(apiUrl('system-settings/homepage_banner_mobile_url')),
+        fetch(apiUrl('system-settings/homepage_banner_link_url')),
+      ]);
+      const dj = d.ok ? await d.json() : null;
+      const mj = m.ok ? await m.json() : null;
+      const lj = l.ok ? await l.json() : null;
+      setBannerDesktopUrl(normalize(dj));
+      setBannerMobileUrl(normalize(mj));
+      setBannerLinkUrl(normalize(lj));
+    } catch (e) {
+      // silencioso
+    }
+  };
+
+  const fetchSidebarBannerSettings = async () => {
+    const normalize = (data: any): string => {
+      if (!data) return '';
+      if (typeof data === 'string') return data;
+      if (typeof data === 'object' && 'value' in data) return data.value || '';
+      return '';
+    };
+    try {
+      const [d, m, l] = await Promise.all([
+        fetch(apiUrl('system-settings/homepage_sidebar_banner_desktop_url')),
+        fetch(apiUrl('system-settings/homepage_sidebar_banner_mobile_url')),
+        fetch(apiUrl('system-settings/homepage_sidebar_banner_link_url')),
+      ]);
+      const dj = d.ok ? await d.json() : null;
+      const mj = m.ok ? await m.json() : null;
+      const lj = l.ok ? await l.json() : null;
+      setSidebarDesktopUrl(normalize(dj));
+      setSidebarMobileUrl(normalize(mj));
+      setSidebarLinkUrl(normalize(lj));
+    } catch (_) {}
+  };
 
   const fetchTeams = async () => {
     try {
@@ -133,6 +193,40 @@ export default function Homepage() {
       console.error('Erro ao buscar times:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveSidebarBannerSettings = async () => {
+    setSaving(true);
+    try {
+      let desktopUrl = (sidebarDesktopUrl || '').trim();
+      let mobileUrl = (sidebarMobileUrl || '').trim();
+      const linkUrl = (sidebarLinkUrl || '').trim();
+
+      if (sidebarDesktopFile) {
+        desktopUrl = await handleBannerUpload(sidebarDesktopFile, 'desktop');
+      }
+      if (sidebarMobileFile) {
+        mobileUrl = await handleBannerUpload(sidebarMobileFile, 'mobile');
+      }
+
+      const isEmpty = (v: string) => v.length === 0;
+      const reqs: Promise<Response>[] = [];
+      if (isEmpty(desktopUrl)) reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_desktop_url'), { method: 'DELETE' }));
+      else reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_desktop_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: desktopUrl }) }));
+      if (isEmpty(mobileUrl)) reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_mobile_url'), { method: 'DELETE' }));
+      else reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_mobile_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: mobileUrl }) }));
+      if (isEmpty(linkUrl)) reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_link_url'), { method: 'DELETE' }));
+      else reqs.push(fetch(apiUrl('system-settings/homepage_sidebar_banner_link_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: linkUrl }) }));
+
+      await Promise.all(reqs);
+      setSidebarDesktopUrl(desktopUrl); setSidebarMobileUrl(mobileUrl); setSidebarLinkUrl(linkUrl);
+      setSidebarDesktopFile(null); setSidebarMobileFile(null);
+      alert('Banner lateral salvo com sucesso');
+    } catch (_) {
+      alert('Falha ao salvar banner lateral');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -234,6 +328,65 @@ export default function Homepage() {
     }
   };
 
+  const handleBannerUpload = async (file: File, kind: 'desktop' | 'mobile') => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('folder', 'homepage-banners');
+    form.append('fileName', `homepage-${kind}-${Date.now()}`);
+    const res = await fetch(apiUrl('system-settings/upload-image'), { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Upload falhou');
+    const data = await res.json();
+    return data.url as string;
+  };
+
+  const saveBannerSettings = async () => {
+    setSaving(true);
+    try {
+      let desktopUrl = (bannerDesktopUrl || '').trim();
+      let mobileUrl = (bannerMobileUrl || '').trim();
+      const linkUrl = (bannerLinkUrl || '').trim();
+
+      if (bannerDesktopFile) {
+        desktopUrl = await handleBannerUpload(bannerDesktopFile, 'desktop');
+      }
+      if (bannerMobileFile) {
+        mobileUrl = await handleBannerUpload(bannerMobileFile, 'mobile');
+      }
+
+      const isEmpty = (v: string) => v.length === 0;
+      const requests: Promise<Response>[] = [];
+
+      if (isEmpty(desktopUrl)) {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_desktop_url'), { method: 'DELETE' }));
+      } else {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_desktop_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: desktopUrl }) }));
+      }
+      if (isEmpty(mobileUrl)) {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_mobile_url'), { method: 'DELETE' }));
+      } else {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_mobile_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: mobileUrl }) }));
+      }
+      if (isEmpty(linkUrl)) {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_link_url'), { method: 'DELETE' }));
+      } else {
+        requests.push(fetch(apiUrl('system-settings/homepage_banner_link_url'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: linkUrl }) }));
+      }
+
+      await Promise.all(requests);
+
+      setBannerDesktopUrl(desktopUrl || '');
+      setBannerMobileUrl(mobileUrl || '');
+      setBannerLinkUrl(linkUrl || '');
+      setBannerDesktopFile(null);
+      setBannerMobileFile(null);
+      alert('Banner salvo com sucesso');
+    } catch (e) {
+      alert('Falha ao salvar banner');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const moveUp = (index: number) => {
     if (Array.isArray(internationalTeams) && index > 0) {
       const team = internationalTeams[index];
@@ -264,12 +417,70 @@ export default function Homepage() {
     <div className="space-y-8">
       {/* Título da página */}
       <div className="border-b border-gray-200 dark:border-slate-600 pb-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Gerenciar Times Internacionais
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Selecione até 20 times internacionais para exibir na aba "Internacional"
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Homepage</h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Configure o banner e gerencie os times internacionais exibidos na Futepédia.</p>
+      </div>
+
+      {/* Banner */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Banner da Homepage</h2>
+        <p className="text-sm text-gray-500 mb-3">Desktop: 896 px de largura. Mobile: ocupa 100% do container. Recomendo 640 px de largura para boa nitidez.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">URL do Banner (Desktop)</label>
+            <input type="url" value={bannerDesktopUrl} onChange={(e)=> setBannerDesktopUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://cdn.kmiza27.com/img/banners/home-desktop.jpg" />
+            <div className="mt-2">
+              <input type="file" accept="image/*" onChange={(e)=> setBannerDesktopFile(e.target.files?.[0] || null)} />
+            </div>
+            {bannerDesktopUrl && (<img src={bannerDesktopUrl} alt="Banner Desktop" className="mt-2 max-h-40 rounded border" />)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">URL do Banner (Mobile)</label>
+            <input type="url" value={bannerMobileUrl} onChange={(e)=> setBannerMobileUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://cdn.kmiza27.com/img/banners/home-mobile.jpg" />
+            <div className="mt-2">
+              <input type="file" accept="image/*" onChange={(e)=> setBannerMobileFile(e.target.files?.[0] || null)} />
+            </div>
+            {bannerMobileUrl && (<img src={bannerMobileUrl} alt="Banner Mobile" className="mt-2 max-h-40 rounded border" />)}
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Link do Banner</label>
+          <input type="url" value={bannerLinkUrl} onChange={(e)=> setBannerLinkUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://kmiza27.com/alguma-pagina" />
+        </div>
+        <div className="mt-4">
+          <button onClick={saveBannerSettings} disabled={saving} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar Banner'}</button>
+        </div>
+      </div>
+
+      {/* Banner Lateral (barra direita) */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Banner Lateral (Barra Direita)</h2>
+        <p className="text-sm text-gray-500 mb-3">Largura recomendada: 352 px no desktop (igual à coluna lateral). No mobile ocupa 100%, 640px de largura sugerida.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">URL do Banner (Desktop)</label>
+            <input type="url" value={sidebarDesktopUrl} onChange={(e)=> setSidebarDesktopUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://cdn.kmiza27.com/img/banners/sidebar-desktop.jpg" />
+            <div className="mt-2">
+              <input type="file" accept="image/*" onChange={(e)=> setSidebarDesktopFile(e.target.files?.[0] || null)} />
+            </div>
+            {sidebarDesktopUrl && (<img src={sidebarDesktopUrl} alt="Banner Lateral Desktop" className="mt-2 max-h-40 rounded border" />)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">URL do Banner (Mobile)</label>
+            <input type="url" value={sidebarMobileUrl} onChange={(e)=> setSidebarMobileUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://cdn.kmiza27.com/img/banners/sidebar-mobile.jpg" />
+            <div className="mt-2">
+              <input type="file" accept="image/*" onChange={(e)=> setSidebarMobileFile(e.target.files?.[0] || null)} />
+            </div>
+            {sidebarMobileUrl && (<img src={sidebarMobileUrl} alt="Banner Lateral Mobile" className="mt-2 max-h-40 rounded border" />)}
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Link do Banner</label>
+          <input type="url" value={sidebarLinkUrl} onChange={(e)=> setSidebarLinkUrl(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600" placeholder="https://kmiza27.com/alguma-pagina" />
+        </div>
+        <div className="mt-4">
+          <button onClick={saveSidebarBannerSettings} disabled={saving} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar Banner Lateral'}</button>
+        </div>
       </div>
 
       {/* Times Internacionais Atuais */}

@@ -41,6 +41,15 @@ export class SystemSettingsService {
     return setting;
   }
 
+  async deleteSetting(key: string) {
+    const setting = await this.systemSettingRepository.findOne({ where: { key } });
+    if (!setting) {
+      return { success: true, deleted: false };
+    }
+    await this.systemSettingRepository.remove(setting);
+    return { success: true, deleted: true };
+  }
+
   async getEvolutionApiSettings() {
     const settings = await this.systemSettingRepository.find({
       where: [
