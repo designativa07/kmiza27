@@ -887,7 +887,7 @@ ${shortUrl}
       const team = result.team;
       console.log(`✅ DEBUG getTeamPosition: Time encontrado: ${team.name} (ID: ${team.id})`);
 
-      // Buscar competições em que o time participa
+      // Buscar competições em que o time participa (registro oficial)
       const competitionTeams = await this.competitionTeamsRepository
         .createQueryBuilder('ct')
         .leftJoinAndSelect('ct.competition', 'competition')
@@ -897,8 +897,31 @@ ${shortUrl}
 
       console.log(`📊 DEBUG getTeamPosition: ${competitionTeams.length} competições encontradas`);
 
-      if (competitionTeams.length === 0) {
-        console.log(`❌ DEBUG getTeamPosition: Nenhuma competição ativa encontrada`);
+      // Complemento: também considerar competições detectadas por partidas (cobre casos sem registro em competition_teams)
+      const matchesForTeam = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .where('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
+        .andWhere('(match.status = :scheduled OR match.status = :finished)', {
+          scheduled: MatchStatus.SCHEDULED,
+          finished: MatchStatus.FINISHED,
+        })
+        .getMany();
+
+      const competitionsMap = new Map<number, { competition: any; ct?: any }>();
+      // Inserir as oficiais primeiro
+      for (const ct of competitionTeams) {
+        competitionsMap.set(ct.competition.id, { competition: ct.competition, ct });
+      }
+      // Inserir as derivadas de partidas, se não existirem
+      for (const m of matchesForTeam) {
+        if (m.competition && !competitionsMap.has(m.competition.id)) {
+          competitionsMap.set(m.competition.id, { competition: m.competition });
+        }
+      }
+
+      if (competitionsMap.size === 0) {
+        console.log(`❌ DEBUG getTeamPosition: Nenhuma competição ativa encontrada (nem por partidas)`);
         return `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊
 
 😔 O time não está participando de competições ativas no momento.`;
@@ -907,23 +930,25 @@ ${shortUrl}
       let response = `📊 POSIÇÃO DO ${team.name.toUpperCase()} 📊\n\n`;
       let foundAnyData = false;
 
-      for (const ct of competitionTeams) {
+      for (const item of competitionsMap.values()) {
+        const ct = item.ct;
+        const competition = item.competition;
         try {
-          console.log(`🏆 DEBUG getTeamPosition: Processando competição "${ct.competition.name}" (tipo: ${ct.competition.type})`);
+          console.log(`🏆 DEBUG getTeamPosition: Processando competição "${competition.name}" (tipo: ${competition.type})`);
           
           // Verificar se é competição de mata-mata ou grupos+mata-mata
-          console.log(`🔍 DEBUG getTeamPosition: Tipo da competição "${ct.competition.name}": ${ct.competition.type}`);
+          console.log(`🔍 DEBUG getTeamPosition: Tipo da competição "${competition.name}": ${competition.type}`);
           
           // Para grupos_e_mata_mata, verificar se está na fase de mata-mata
           let useKnockoutLogic = false;
-          if (ct.competition.type === 'mata_mata' || ct.competition.type === 'copa') {
+          if (competition.type === 'mata_mata' || competition.type === 'copa') {
             useKnockoutLogic = true;
-          } else if (ct.competition.type === 'grupos_e_mata_mata') {
+          } else if (competition.type === 'grupos_e_mata_mata') {
             // Verificar se há partidas futuras na fase de mata-mata ou se foi eliminado
             const knockoutMatch = await this.matchesRepository
               .createQueryBuilder('match')
               .leftJoinAndSelect('match.round', 'round')
-              .where('match.competition_id = :competitionId', { competitionId: ct.competition.id })
+              .where('match.competition_id = :competitionId', { competitionId: competition.id })
               .andWhere('(match.home_team_id = :teamId OR match.away_team_id = :teamId)', { teamId: team.id })
               .andWhere('(match.status = :scheduled OR match.status = :finished)', { 
                 scheduled: MatchStatus.SCHEDULED, 
@@ -946,7 +971,7 @@ ${shortUrl}
           if (useKnockoutLogic) {
             console.log(`⚽ DEBUG getTeamPosition: Competição de mata-mata detectada`);
             // Para competições de mata-mata, buscar fase atual e próxima partida
-            const knockoutInfo = await this.getKnockoutCompetitionInfo(team, ct.competition);
+            const knockoutInfo = await this.getKnockoutCompetitionInfo(team, competition);
             if (knockoutInfo) {
               foundAnyData = true;
               response += knockoutInfo;
@@ -955,23 +980,23 @@ ${shortUrl}
           } else {
             console.log(`📈 DEBUG getTeamPosition: Competição de pontos corridos`);
             // Para competições de pontos corridos (ou fase de grupos), usar StandingsService
-            const standings = await this.standingsService.getCompetitionStandings(ct.competition.id);
+            const standings = await this.standingsService.getCompetitionStandings(competition.id);
 
             // Encontrar a posição do time
             const teamStanding = standings.find(standing => standing.team.id === team.id);
 
             if (teamStanding) {
               foundAnyData = true;
-              response += `🏆 ${ct.competition.name}\n`;
+              response += `🏆 ${competition.name}\n`;
               response += `📍 ${teamStanding.position}º lugar - ${teamStanding.points} pontos\n`;
               response += `⚽ J:${teamStanding.played} V:${teamStanding.won} E:${teamStanding.drawn} D:${teamStanding.lost}\n`;
               response += `🥅 GP:${teamStanding.goals_for} GC:${teamStanding.goals_against} SG:${teamStanding.goal_difference}\n`;
 
               // Detectar eliminação na fase de grupos para competições com grupos + mata-mata
-              if (ct.competition.type === 'grupos_e_mata_mata') {
+              if (competition.type === 'grupos_e_mata_mata') {
                 const hasRemainingMatches = await this.matchesRepository
                   .createQueryBuilder('m')
-                  .where('m.competition_id = :cId', { cId: ct.competition.id })
+                  .where('m.competition_id = :cId', { cId: competition.id })
                   .andWhere('(m.home_team_id = :tId OR m.away_team_id = :tId)', { tId: team.id })
                   .andWhere('m.status = :scheduled', { scheduled: MatchStatus.SCHEDULED })
                   .getCount();
@@ -987,19 +1012,25 @@ ${shortUrl}
               console.log(`✅ DEBUG getTeamPosition: Posição encontrada na tabela`);
             } else {
               // Se não encontrou na classificação dinâmica, mostrar dados básicos
-              response += `🏆 ${ct.competition.name}\n`;
+              response += `🏆 ${competition.name}\n`;
               response += `📍 Posição a calcular - 0 pontos\n`;
               response += `⚽ Aguardando dados de partidas\n\n`;
               console.log(`⚠️ DEBUG getTeamPosition: Time não encontrado na tabela`);
             }
           }
         } catch (error) {
-          console.error(`❌ DEBUG getTeamPosition: Erro ao calcular classificação para ${ct.competition.name}:`, error);
+          console.error(`❌ DEBUG getTeamPosition: Erro ao calcular classificação para ${competition.name}:`, error);
           // Fallback para dados estáticos se houver erro
-          response += `🏆 ${ct.competition.name}\n`;
-          response += `📍 ${ct.position || 'TBD'}º lugar - ${ct.points} pontos\n`;
-          response += `⚽ J:${ct.played} V:${ct.won} E:${ct.drawn} D:${ct.lost}\n`;
-          response += `🥅 GP:${ct.goals_for} GC:${ct.goals_against} SG:${ct.goal_difference}\n\n`;
+          if (ct) {
+            response += `🏆 ${competition.name}\n`;
+            response += `📍 ${ct.position || 'TBD'}º lugar - ${ct.points} pontos\n`;
+            response += `⚽ J:${ct.played} V:${ct.won} E:${ct.drawn} D:${ct.lost}\n`;
+            response += `🥅 GP:${ct.goals_for} GC:${ct.goals_against} SG:${ct.goal_difference}\n\n`;
+          } else {
+            // Quando só temos partidas mas sem registro em competition_teams, ainda assim cite a competição
+            const knockoutInfo = await this.getKnockoutCompetitionInfo(team, competition);
+            response += knockoutInfo || `🏆 ${competition.name}\n📍 Participação registrada em partidas\n\n`;
+          }
         }
       }
 
