@@ -9,6 +9,8 @@ import { TeamsCard } from '@/components/TeamsCard';
 import ImageWithFallback from '@/components/ImageWithFallback';
 import { useRouter } from 'next/navigation';
 import UpcomingMatchesCarousel from '@/components/UpcomingMatchesCarousel';
+import HomepageBanner from '@/components/HomepageBanner';
+import SidebarBanner from '@/components/SidebarBanner';
 
 interface Competition {
   id: number;
@@ -183,6 +185,9 @@ export default function Home() {
         <div className="mb-6">
           <UpcomingMatchesCarousel />
         </div>
+
+        {/* Banner configurável entre Próximos Jogos e listas */}
+        <HomepageBanner />
         
         <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4">
           {/* Coluna Principal: Competições */}
@@ -213,6 +218,8 @@ export default function Home() {
           <div className="order-1 lg:order-2 lg:col-span-2">
             <div className="space-y-4">
               <TeamsCard />
+              {/* Banner lateral configurável abaixo de TIMES */}
+              <SidebarBanner />
 
                              <div>
                  <h4 className="font-bold text-gray-900 mb-1 px-1 text-sm">Jogos</h4>

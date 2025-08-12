@@ -70,7 +70,12 @@ export class StandingsService {
       matchesQuery.andWhere('match.group_name = :group', { group });
     }
 
-    const matches = await matchesQuery.getMany();
+    // Ordenar cronologicamente para que o campo `form` seja construído na ordem correta
+    // Isso evita que os "Últimos jogos" exibidos no frontend fiquem incorretos
+    const matches = await matchesQuery
+      .orderBy('match.match_date', 'ASC')
+      .addOrderBy('match.id', 'ASC')
+      .getMany();
 
     // Calcular estatísticas para cada time baseado nos jogos
     const teamStats = new Map<number, {
@@ -580,10 +585,16 @@ export class StandingsService {
   }
 
   private calculateForm(matches: Match[], teamId: number): string {
+    // Construir a sequência sempre em ordem cronológica (mais antigo -> mais recente)
+    // para que o frontend leia os últimos 5 jogos corretamente da esquerda para a direita.
     const recentMatches = matches
       .filter(m => m.status === MatchStatus.FINISHED)
-      .slice(0, 5)
-      .reverse(); // Mais antigo para mais recente
+      .sort((a, b) => {
+        const aTime = a.match_date ? new Date(a.match_date).getTime() : 0;
+        const bTime = b.match_date ? new Date(b.match_date).getTime() : 0;
+        return aTime - bTime;
+      })
+      .slice(-5); // pegar os 5 mais recentes já ordenados
 
     let form = '';
     recentMatches.forEach(match => {

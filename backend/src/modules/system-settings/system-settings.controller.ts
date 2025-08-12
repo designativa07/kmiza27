@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemSettingsService } from './system-settings.service';
 import { UploadCloudService } from '../upload/upload-cloud.service';
@@ -86,11 +86,18 @@ export class SystemSettingsController {
 
   @Get(':key')
   async getSetting(@Param('key') key: string) {
-    return this.systemSettingsService.getSetting(key);
+    const value = await this.systemSettingsService.getSetting(key);
+    // Para manter consistência com outras rotas, retornar objeto { key, value }
+    return { key, value };
   }
 
   @Put(':key')
   async updateSetting(@Param('key') key: string, @Body() data: { value: any; description?: string }) {
     return this.systemSettingsService.updateSetting(key, data.value, data.description);
+  }
+
+  @Delete(':key')
+  async deleteSetting(@Param('key') key: string) {
+    return this.systemSettingsService.deleteSetting(key);
   }
 } 
