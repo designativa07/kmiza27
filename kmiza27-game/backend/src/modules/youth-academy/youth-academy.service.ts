@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { supabase } from '../../config/supabase.config';
+import { PlayerDevelopmentService } from '../player-development/player-development.service';
 
 @Injectable()
 export class YouthAcademyService {

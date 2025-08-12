@@ -348,9 +348,9 @@ export class SeasonsController {
         throw new Error('matchId e userId são obrigatórios');
       }
 
-      this.logger.log(`⚽ Simulando partida ${matchId} para usuário ${userId}`);
+      this.logger.log(`⚽ Simulando partida ${matchId} para usuário ${userId} com táticas`);
 
-      const result = await this.seasonsService.simulateMatch(matchId, userId);
+      const result = await this.seasonsService.simulateMatchWithTactics(matchId, userId);
 
       return {
         success: true,

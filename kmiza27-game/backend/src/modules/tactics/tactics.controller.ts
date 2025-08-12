@@ -12,16 +12,7 @@ export class TacticsController {
   @Put()
   async saveTactics(
     @Body()
-    payload: {
-      teamId: string;
-      formation: string;
-      style?: string;
-      pressing?: string;
-      width?: string;
-      tempo?: string;
-      roles?: Record<string, string>;
-      lineup?: string[];
-    },
+    payload: any,
   ) {
     return this.service.save(payload);
   }

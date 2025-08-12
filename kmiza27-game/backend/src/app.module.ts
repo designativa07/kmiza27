@@ -15,6 +15,8 @@ import { TacticsModule } from './modules/tactics/tactics.module';
 import { SponsorshipsModule } from './modules/sponsorships/sponsorships.module';
 import { InvestmentsModule } from './modules/investments/investments.module';
 import { NewsModule } from './modules/news/news.module';
+import { MatchSimulationModule } from './modules/match-simulation/match-simulation.module';
+import { PlayerDevelopmentModule } from './modules/player-development/player-development.module';
 
 @Module({
   imports: [
@@ -36,6 +38,9 @@ import { NewsModule } from './modules/news/news.module';
     SponsorshipsModule,
     InvestmentsModule,
     NewsModule,
+    // Módulos avançados de simulação e desenvolvimento
+    MatchSimulationModule,
+    PlayerDevelopmentModule,
   ],
   controllers: [AppController],
   providers: [SupabaseService],

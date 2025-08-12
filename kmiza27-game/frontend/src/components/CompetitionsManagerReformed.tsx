@@ -78,11 +78,16 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
     setError(null);
     
     try {
-      console.log('🔄 Carregando dados da temporada...');
+      console.log('🔄 Carregando dados da temporada...', { userId: selectedTeam.owner_id, refreshKey });
       
       // Buscar progresso atual
       const currentProgress = await gameApiReformed.getUserCurrentProgress(selectedTeam.owner_id);
-      console.log('📊 Progresso carregado:', currentProgress);
+      console.log('📊 CompetitionsManager - Progresso carregado:', {
+        points: currentProgress?.points,
+        position: currentProgress?.position,
+        games_played: currentProgress?.games_played,
+        season_year: currentProgress?.season_year
+      });
       setProgress(currentProgress);
 
       if (currentProgress) {
@@ -114,6 +119,7 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
   };
 
   useEffect(() => {
+    console.log('🔄 CompetitionsManagerReformed: RefreshKey changed to', refreshKey);
     loadSeasonData();
   }, [selectedTeam, refreshKey]);
 
