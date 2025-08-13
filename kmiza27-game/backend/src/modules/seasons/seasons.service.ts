@@ -1647,10 +1647,29 @@ export class SeasonsService {
         );
       }
 
-      // 10. Atualizar classificação
+      // 9.5. ATUALIZAR ESTATÍSTICAS DO TIME DA MÁQUINA ADVERSÁRIO
+      const machineTeamId = machineTeam.id;
+      const machineGoalsFor = isUserHome ? simulationResult.awayScore : simulationResult.homeScore;
+      const machineGoalsAgainst = isUserHome ? simulationResult.homeScore : simulationResult.awayScore;
+      
+      await this.updateMachineTeamStats(
+        machineTeamId, 
+        machineGoalsFor, 
+        machineGoalsAgainst, 
+        match.season_year, 
+        match.tier, 
+        userId
+      );
+
+      this.logger.log(`📊 Estatísticas do time da máquina ${machineTeam.name} atualizadas: ${machineGoalsFor} gols pró, ${machineGoalsAgainst} gols contra`);
+
+      // 10. NOVO: Simular TODA A RODADA (estilo Elifoot) - TIMES DA MÁQUINA
+      await this.simulateEntireRound(userId, match.round_number, match.season_year, match.tier);
+
+      // 11. Atualizar classificação
       await this.recalculateUserStandings(userId, match.season_year);
 
-      // 11. Verificar fim de temporada
+      // 12. Verificar fim de temporada
       const isSeasonFinished = await this.checkSeasonEnd(userId, match.season_year);
       
       this.logger.log(`✅ Partida simulada: ${simulationResult.homeScore} x ${simulationResult.awayScore}`);

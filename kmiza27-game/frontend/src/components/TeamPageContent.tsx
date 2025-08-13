@@ -14,7 +14,7 @@ import TeamPlayers from './TeamPlayers';
 import StadiumExpansion from './StadiumExpansion';
 import YouthAcademy from './YouthAcademy';
 import FinanceManager from './FinanceManager';
-import FansWidget from './FansWidget';
+
 import NewsFeed from './NewsFeed';
 
 type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'finances';
@@ -203,80 +203,201 @@ export default function TeamPageContent() {
             </div>
             {/* Coluna Direita */}
             <div className="lg:col-span-3 space-y-6">
+              {/* PAINEL UNIFICADO - Visão Geral + Ações + Status */}
               <Card className="bg-white border-slate-200 shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center text-slate-700"><Landmark className="h-5 w-5 mr-2" />Visão Geral</CardTitle>
+                  <CardTitle className="text-xl flex items-center text-slate-700">
+                    <Target className="h-5 w-4 mr-2" />
+                    Painel do Clube
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                  {/* Card Orçamento */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                      <span className="text-emerald-700 flex items-center"><Landmark className="h-4 w-4 mr-2" /> Orçamento</span>
-                      <span className="font-bold text-emerald-700">R$ {(team!.budget || 0).toLocaleString()}</span>
+                <CardContent className="space-y-4">
+                  
+                  {/* SEÇÃO 1: ESTATÍSTICAS PRINCIPAIS */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">📊 Estatísticas</h4>
+                    
+                    {/* Orçamento */}
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                      <span className="text-emerald-700 flex items-center">
+                        <Landmark className="h-4 w-4 mr-2" /> 
+                        Orçamento
+                      </span>
+                      <span className="font-bold text-emerald-700">
+                        R$ {(team!.budget || 0).toLocaleString()}
+                      </span>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50" onClick={() => setActiveView('finances')}>
-                      Gerenciar Finanças
-                    </Button>
+
+                    {/* Estádio */}
+                    <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-700 flex items-center">
+                        <Building className="h-4 w-4 mr-2" /> 
+                        Estádio
+                      </span>
+                      <span className="font-semibold text-slate-700">
+                        {(team!.stadium_capacity || 0).toLocaleString()} lugares
+                      </span>
+                    </div>
+
+                    {/* Elenco */}
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <span className="text-blue-700 flex items-center">
+                        <Users className="h-4 w-4 mr-2" /> 
+                        Elenco
+                      </span>
+                      <span className="font-semibold text-blue-700">
+                        {playersCount} jogadores
+                      </span>
+                    </div>
+
+                    {/* Reputação */}
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <span className="text-amber-700 flex items-center">
+                        <Star className="h-4 w-4 mr-2" /> 
+                        Reputação
+                      </span>
+                      <span className="font-semibold text-amber-700">
+                        {team!.reputation || 0}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Card Estádio */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg border border-slate-200">
-                      <span className="text-slate-700 flex items-center"><Building className="h-4 w-4 mr-2" /> Estádio</span>
-                      <span className="font-semibold text-slate-700">{(team!.stadium_capacity || 0).toLocaleString()} lugares</span>
+                  {/* SEÇÃO 2: STATUS DA EQUIPE */}
+                  <div className="space-y-3 pt-2 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">⚽ Status</h4>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <span className="text-blue-700 flex items-center text-xs">
+                          <GraduationCap className="h-3 w-3 mr-1" /> 
+                          Academia
+                        </span>
+                        <span className="font-semibold text-blue-700 text-xs">Nível 1</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg border border-orange-200">
+                        <span className="text-orange-700 flex items-center text-xs">
+                          <Heart className="h-3 w-3 mr-1" /> 
+                          Moral
+                        </span>
+                        <span className="font-semibold text-orange-700 text-xs">Neutra</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200">
+                        <span className="text-red-700 flex items-center text-xs">
+                          <ShieldAlert className="h-3 w-3 mr-1" /> 
+                          Suspensos
+                        </span>
+                        <span className="font-semibold text-red-700 text-xs">0</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg border border-green-200">
+                        <span className="text-green-700 flex items-center text-xs">
+                          <Trophy className="h-3 w-3 mr-1" /> 
+                          Série
+                        </span>
+                        <span className="font-semibold text-green-700 text-xs">D</span>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full text-slate-700 border-slate-300 hover:bg-slate-50" onClick={() => setActiveView('stadium')}>
-                      Gerenciar Estádio
-                    </Button>
                   </div>
 
-                  {/* Card Elenco */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200">
-                      <span className="text-blue-700 flex items-center"><Users className="h-4 w-4 mr-2" /> Elenco</span>
-                      <span className="font-semibold text-blue-700">{playersCount} jogadores</span>
+                  {/* SEÇÃO 3: TORCIDA */}
+                  <div className="space-y-3 pt-2 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">🎟️ Torcida</h4>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg border border-purple-200">
+                        <span className="text-purple-700 flex items-center text-xs">
+                          <Heart className="h-3 w-3 mr-1" /> 
+                          Torcedores
+                        </span>
+                        <span className="font-semibold text-purple-700 text-xs">
+                          {(team!.fan_base || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-rose-50 rounded-lg border border-rose-200">
+                        <span className="text-rose-700 flex items-center text-xs">
+                          <Star className="h-3 w-3 mr-1" /> 
+                          Humor
+                        </span>
+                        <span className="font-semibold text-rose-700 text-xs">
+                          {team!.reputation || 0}
+                        </span>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>
-                      Jogadores
-                    </Button>
                   </div>
 
-                  {/* Cards sem botões */}
-                  <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg border border-amber-200">
-                    <span className="text-amber-700 flex items-center"><Star className="h-4 w-4 mr-2" /> Reputação</span>
-                    <span className="font-semibold text-amber-700">{team!.reputation || 0}</span>
+                  {/* SEÇÃO 4: AÇÕES RÁPIDAS */}
+                  <div className="space-y-3 pt-2 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">🚀 Ações</h4>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('dashboard')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Trophy className="h-3 w-3 mr-1" /> 
+                        Competição
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('players')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Users className="h-3 w-3 mr-1" /> 
+                        Elenco
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('academy')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Dumbbell className="h-3 w-3 mr-1" /> 
+                        Academia
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('stadium')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Building className="h-3 w-3 mr-1" /> 
+                        Estádio
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('finances')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Landmark className="h-3 w-3 mr-1" /> 
+                        Finanças
+                      </Button>
+                      
+                      <a 
+                        href={`/team/${team!.id}/tactics`} 
+                        className="px-3 py-2 border rounded flex items-center hover:bg-slate-50 text-xs h-9 justify-start"
+                      >
+                        <Settings className="h-3 w-3 mr-1" /> 
+                        Táticas
+                      </a>
+                    </div>
                   </div>
+
                 </CardContent>
               </Card>
-              <Card className="bg-white border-slate-200 shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center text-slate-700"><Target className="h-5 w-5 mr-2" /> Ações Rápidas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <Button variant="outline" onClick={() => setActiveView('dashboard')} className="justify-start"><Trophy className="h-4 w-4 mr-2" /> Competição</Button>
-                    <Button variant="outline" onClick={() => setActiveView('players')} className="justify-start"><Users className="h-4 w-4 mr-2" /> Elenco</Button>
-                    <Button variant="outline" onClick={() => setActiveView('academy')} className="justify-start"><Dumbbell className="h-4 w-4 mr-2" /> Academia</Button>
-                    <a href={`/team/${team!.id}/tactics`} className="px-3 py-2 border rounded flex items-center hover:bg-slate-50"><Settings className="h-4 w-4 mr-2" /> Área Técnica</a>
-                    <Button variant="outline" onClick={() => setActiveView('finances')} className="justify-start"><Landmark className="h-4 w-4 mr-2" /> Finanças</Button>
-                    <a href="#news" className="px-3 py-2 border rounded flex items-center hover:bg-slate-50"><Newspaper className="h-4 w-4 mr-2" /> Notícias</a>
-                  </div>
-                </CardContent>
-              </Card>
-              <FansWidget />
+
+              {/* WIDGET COMPLEMENTAR */}
               <NewsFeed />
-              <Card className="bg-white border-slate-200 shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center text-slate-700"><Users className="h-5 w-5 mr-2" />Status da Equipe</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg border border-blue-200"><span className="text-blue-700 flex items-center"><GraduationCap className="h-4 w-4 mr-2" /> Academia</span><span className="font-semibold text-blue-700">Nível 1</span></div>
-                  <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg border border-orange-200"><span className="text-orange-700 flex items-center"><Heart className="h-4 w-4 mr-2" /> Moral da Equipe</span><span className="font-semibold text-orange-700">Neutra</span></div>
-                  <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200"><span className="text-red-700 flex items-center"><ShieldAlert className="h-4 w-4 mr-2" /> Suspensos</span><span className="font-semibold text-red-700">0</span></div>
-                  <Button variant="outline" size="sm" className="w-full mt-4 text-blue-700 border-blue-300 hover:bg-blue-50" onClick={() => setActiveView('players')}>Gerenciar Jogadores</Button>
-                  <Button variant="outline" size="sm" className="w-full text-orange-700 border-orange-300 hover:bg-orange-50" onClick={() => setActiveView('academy')}>Gerenciar Academia</Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         );

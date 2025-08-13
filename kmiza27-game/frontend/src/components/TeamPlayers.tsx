@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { gameApiReformed } from '@/services/gameApiReformed';
-import PlayerGrid from './players/PlayerGrid';
+import PlayerCardCompact, { PlayerCardData } from './PlayerCardCompact';
 
 interface Player {
   id: string;
@@ -42,6 +42,9 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [pos, setPos] = useState<string>('ALL');
+  const [sort, setSort] = useState<'overall' | 'age' | 'salary'>('overall');
 
   useEffect(() => {
     loadPlayers();
@@ -141,6 +144,51 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
     );
   };
 
+  // Função para filtrar e ordenar jogadores
+  const getFilteredPlayers = () => {
+    const q = query.trim().toLowerCase();
+    let list = players.filter((p) =>
+      (!q || p.name.toLowerCase().includes(q)) && (pos === 'ALL' || positionMapping[p.position] === pos),
+    );
+    list = list.sort((a, b) => {
+      if (sort === 'age') return (a.age ?? 0) - (b.age ?? 0);
+      if (sort === 'salary') return (b.salary ?? 0) - (a.salary ?? 0);
+      return (b.overall ?? 0) - (a.overall ?? 0);
+    });
+    return list;
+  };
+
+  // Mapeamento de posições para o formato esperado pelo PlayerCardCompact
+  const positionMapping: Record<string, string> = {
+    // Português para inglês
+    'Goleiro': 'GK',
+    'Zagueiro': 'CB',
+    'Lateral Esquerdo': 'LB',
+    'Lateral Direito': 'RB',
+    'Volante': 'CDM',
+    'Meia Central': 'CM',
+    'Meia Ofensivo': 'CAM',
+    'Ponta Esquerda': 'LW',
+    'Ponta Direita': 'RW',
+    'Atacante': 'ST',
+    'Centroavante': 'CF',
+    // Inglês para inglês (caso já esteja no formato correto)
+    'GK': 'GK',
+    'CB': 'CB',
+    'LB': 'LB',
+    'RB': 'RB',
+    'CDM': 'CDM',
+    'CM': 'CM',
+    'CAM': 'CAM',
+    'LW': 'LW',
+    'RW': 'RW',
+    'ST': 'ST',
+    'CF': 'CF'
+  };
+
+  const posToPt: Record<string, string> = { GK: 'GOL', CB: 'ZAG', LB: 'LE', RB: 'LD', CDM: 'VOL', CM: 'MC', CAM: 'MO', LW: 'PE', RW: 'PD', CF: 'SA', ST: 'ATA' };
+  const availablePositions = ['ALL', 'GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'CF', 'ST'];
+
   if (loading) {
     return (
       <div className="card">
@@ -172,16 +220,185 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
     );
   }
 
-  const positions = (players || []).reduce((acc, player) => {
-    acc[player.position] = (acc[player.position] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const filteredPlayers = getFilteredPlayers();
 
   return (
     <div className="card">
       <h3 className="text-lg font-semibold mb-4">👥 Jogadores do {teamName}</h3>
-      <PlayerGrid players={(players as any)} />
-      {players.length === 0 && (<div className="text-center py-8 text-gray-500">Nenhum jogador encontrado para este time.</div>)}
+      
+      {/* Controles de filtro e ordenação */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input 
+          value={query} 
+          onChange={(e) => setQuery(e.target.value)} 
+          placeholder="Buscar jogador" 
+          className="border rounded px-2 py-1 text-sm" 
+        />
+        <select 
+          value={pos} 
+          onChange={(e) => setPos(e.target.value)} 
+          className="border rounded px-2 py-1 text-sm"
+        >
+          {availablePositions.map((p) => (
+            <option key={p} value={p}>{p === 'ALL' ? 'Todas' : (posToPt[p] || p)}</option>
+          ))}
+        </select>
+        <select 
+          value={sort} 
+          onChange={(e) => setSort(e.target.value as any)} 
+          className="border rounded px-2 py-1 text-sm"
+        >
+          <option value="overall">Ordenar por Overall</option>
+          <option value="age">Ordenar por Idade</option>
+          <option value="salary">Ordenar por Salário</option>
+        </select>
+        <div className="ml-auto text-sm text-gray-600">
+          Folha: R$ {filteredPlayers.reduce((s, p) => s + (p.salary || 0), 0).toLocaleString()}/mês
+        </div>
+      </div>
+
+      {/* Grid de jogadores compactos - 4-5 por linha */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+        {filteredPlayers.map((p) => (
+          <PlayerCardCompact 
+            key={p.id} 
+            player={{
+              id: p.id,
+              name: p.name,
+              position: positionMapping[p.position] || 'CM',
+              age: p.age || 0,
+              overall: p.overall || 0,
+              attributes: {
+                PAC: p.attributes.pace,
+                FIN: p.attributes.shooting,
+                PAS: p.attributes.passing,
+                DRI: p.attributes.dribbling,
+                DEF: p.attributes.defending,
+                FIS: p.attributes.physical,
+              },
+              salary: p.salary,
+            }}
+            size="small"
+          />
+        ))}
+      </div>
+      
+      {filteredPlayers.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          Nenhum jogador encontrado para este time.
+        </div>
+      )}
+
+      {/* LEGENDA DAS ESTATÍSTICAS E POSIÇÕES */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">📊 Legenda das Estatísticas</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-gray-600 mb-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">RIT</span>
+              <span>Ritmo (Velocidade + Aceleração)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">FIN</span>
+              <span>Finalização (Chute + Finalização)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">PAS</span>
+              <span>Passe</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">DRI</span>
+              <span>Drible</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">DEF</span>
+              <span>Defesa (Desarme + Marcação)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">FIS</span>
+              <span>Físico (Força + Resistência)</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">GOL</span>
+              <span>Goleiro (Apenas para GKs)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">Overall</span>
+              <span>Média geral dos atributos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">GOL</span>
+              <span>Goleiro</span>
+            </div>
+          </div>
+        </div>
+
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">⚽ Legenda das Posições</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-gray-600">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">GOL</span>
+              <span>Goleiro</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">ZAG</span>
+              <span>Zagueiro</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">LE</span>
+              <span>Lateral Esquerdo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">LD</span>
+              <span>Lateral Direito</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">VOL</span>
+              <span>Volante</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">MC</span>
+              <span>Meia Central</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">MO</span>
+              <span>Meia Ofensivo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">ME</span>
+              <span>Meia Esquerda</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">MD</span>
+              <span>Meia Direita</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">PE</span>
+              <span>Ponta Esquerda</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">PD</span>
+              <span>Ponta Direita</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">ATA</span>
+              <span>Atacante</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">SA</span>
+              <span>Centroavante</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 
