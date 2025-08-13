@@ -44,7 +44,7 @@ export default function PlayerGrid({ players }: Props) {
         </select>
         <div className="ml-auto text-sm text-gray-600">Folha: R$ {filtered.reduce((s, p) => s + (p.salary || 0), 0).toLocaleString()}/mês</div>
       </div>
-      <div className="grid gap-2">
+      <div className="grid gap-1">
         {filtered.map((p) => (
           <PlayerCard key={p.id} player={p} />
         ))}

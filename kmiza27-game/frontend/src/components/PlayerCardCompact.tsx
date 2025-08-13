@@ -13,6 +13,17 @@ export const ATTRIBUTE_LABELS = {
   GOL: 'Goleiro'       // Goalkeeping
 } as const;
 
+// Abreviaturas em português para exibição compacta
+export const ATTRIBUTE_ABBREVIATIONS = {
+  PAC: 'RIT',
+  FIN: 'FIN',
+  PAS: 'PAS',
+  DRI: 'DRI',
+  DEF: 'DEF',
+  FIS: 'FIS',
+  GOL: 'GOL'
+} as const;
+
 // Cores por faixa de overall
 export const OVERALL_COLORS = {
   90: { bg: 'bg-purple-500', text: 'text-purple-600' },
@@ -38,6 +49,23 @@ export const POSITION_COLORS = {
   RW: 'bg-green-500',
   ST: 'bg-purple-500',
   CF: 'bg-purple-400'
+} as const;
+
+// Abreviaturas em português para posições
+export const POSITION_ABBREVIATIONS = {
+  GK: 'GOL',
+  CB: 'ZAG',
+  LB: 'LE',
+  RB: 'LD',
+  CDM: 'VOL',
+  CM: 'MC',
+  CAM: 'MO',
+  LM: 'ME',
+  RM: 'MD',
+  LW: 'PE',
+  RW: 'PD',
+  ST: 'ATA',
+  CF: 'SA'
 } as const;
 
 export interface PlayerCardData {
@@ -182,9 +210,12 @@ export default function PlayerCardCompact({
     const percentage = (value / max) * 100;
     const barColor = value >= 80 ? 'bg-emerald-400' : value >= 70 ? 'bg-amber-400' : 'bg-gray-400';
     
+    // Usar abreviaturas em português
+    const abbreviation = ATTRIBUTE_ABBREVIATIONS[label as keyof typeof ATTRIBUTE_ABBREVIATIONS] || label;
+    
     return (
       <div className="flex items-center gap-1">
-        <span className={`font-medium ${classes.text} w-8 text-center`}>{label}</span>
+        <span className={`font-medium ${classes.text} w-8 text-center`}>{abbreviation}</span>
         <div className="flex-1 bg-gray-200 rounded-full h-2 relative">
           <div 
             className={`${barColor} h-2 rounded-full transition-all duration-300`}
@@ -215,7 +246,7 @@ export default function PlayerCardCompact({
         <div className="flex items-center gap-2">
           {/* Avatar com posição */}
           <div className={`${positionColor} ${classes.avatar} rounded-full flex items-center justify-center text-white font-bold`}>
-            {player.position}
+            {POSITION_ABBREVIATIONS[player.position as keyof typeof POSITION_ABBREVIATIONS] || player.position}
           </div>
           
           {/* Nome e informações básicas */}

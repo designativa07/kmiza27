@@ -1,37 +1,38 @@
-const { testConnection, listTables, getSupabaseClient } = require('../config/supabase-connection');
+const { createClient } = require('@supabase/supabase-js');
 
-async function testAllConnections() {
+console.log('🚀 Iniciando teste de conexão...');
+
+const supabase = createClient(
+  'https://kmiza27-supabase.h4xd66.easypanel.host/',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q'
+);
+
+console.log('✅ Cliente Supabase criado');
+
+async function testConnection() {
   try {
-    console.log('🧪 Testando todas as conexões...\n');
+    console.log('🔍 Testando conexão...');
     
-    // Testar VPS
-    console.log('📡 Testando VPS (Produção)...');
-    const vpsConnected = await testConnection('vps');
-    
-    if (vpsConnected) {
-      console.log('✅ VPS conectado com sucesso!');
-      
-      // Listar tabelas disponíveis
-      await listTables('vps');
-    } else {
-      console.log('❌ Falha na conexão com VPS');
+    const { data, error } = await supabase
+      .from('game_users')
+      .select('count')
+      .limit(1);
+
+    if (error) {
+      console.log('❌ Erro na conexão:', error.message);
+      return;
     }
-    
-    console.log('\n📡 Testando Local (Desenvolvimento)...');
-    const localConnected = await testConnection('local');
-    
-    if (localConnected) {
-      console.log('✅ Local conectado com sucesso!');
-      await listTables('local');
-    } else {
-      console.log('❌ Falha na conexão com Local (normal se não estiver rodando)');
-    }
-    
-    console.log('\n🎉 Teste de conexões concluído!');
+
+    console.log('✅ Conexão bem-sucedida!');
     
   } catch (error) {
-    console.error('💥 Erro no teste:', error);
+    console.error('❌ Erro geral:', error);
   }
 }
 
-testAllConnections().then(() => process.exit(0)).catch(() => process.exit(1)); 
+console.log('📞 Chamando função de teste...');
+testConnection().then(() => {
+  console.log('🏁 Script finalizado');
+}).catch((error) => {
+  console.error('💥 Erro no script:', error);
+}); 

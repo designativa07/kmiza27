@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameApiReformed } from '@/services/gameApiReformed';
 import YouthAcademyLogs from './YouthAcademyLogs';
+import PlayerCardCompact from './PlayerCardCompact';
 
-interface YouthPlayer {
+interface AcademyPlayer {
   id: string;
   name: string;
   position: string;
@@ -25,6 +26,13 @@ interface YouthPlayer {
     defending: number;
     physical: number;
   };
+  // Para jogadores profissionais
+  pace?: number;
+  shooting?: number;
+  passing?: number;
+  dribbling?: number;
+  defending?: number;
+  physical?: number;
 }
 
 interface AcademyInfo {
@@ -43,7 +51,7 @@ interface AcademyInfo {
 
 export default function YouthAcademy() {
   const { selectedTeam } = useGameStore();
-  const [youthPlayers, setYouthPlayers] = useState<YouthPlayer[]>([]);
+  const [academyPlayers, setAcademyPlayers] = useState<AcademyPlayer[]>([]);
   const [academyInfo, setAcademyInfo] = useState<AcademyInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'players' | 'tryouts' | 'facilities'>('players');
@@ -61,38 +69,88 @@ export default function YouthAcademy() {
     
     setLoading(true);
     try {
-      // Carregar jogadores reais em academia e logs (quando disponíveis)
+      // Carregar jogadores reais em academia e logs
       try {
         const realPlayers = await gameApiReformed.getAcademyPlayers(selectedTeam.id);
         if (Array.isArray(realPlayers) && realPlayers.length > 0) {
-          setYouthPlayers(realPlayers.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            position: p.position,
-            age: p.age,
-            overall: Math.round(((p.speed ?? 0) + (p.stamina ?? 0) + (p.strength ?? 0) + (p.passing ?? 0) + (p.shooting ?? 0) + (p.dribbling ?? 0) + (p.defending ?? 0)) / 7),
-            potential: p.potential ?? 75,
-            category: p.age <= 17 ? 'Sub-17' : 'Sub-18',
-            scouted_date: new Date().toISOString().slice(0,10),
-            is_promoted: false,
-            training_focus: p.training_focus || 'PAS',
-            training_intensity: (p.training_intensity as any) || 'normal',
-            attributes: {
-              pace: Math.round(((p.speed ?? 0) + (p.stamina ?? 0)) / 2),
-              shooting: p.shooting ?? 0,
-              passing: p.passing ?? 0,
-              dribbling: p.dribbling ?? 0,
-              defending: p.defending ?? 0,
-              physical: Math.round(((p.strength ?? 0) + (p.stamina ?? 0)) / 2),
-            },
-          })));
+          const mappedPlayers = realPlayers.map((p: any) => {
+            // Determinar se é jogador da base ou profissional
+            const isYouthPlayer = p.team_id && p.attributes;
+            const isProfessionalPlayer = p.pace !== undefined;
+            
+            let overall, category, attributes;
+            
+            if (isYouthPlayer) {
+              // Jogador da base
+              overall = Math.round(((p.attributes?.pace ?? 0) + (p.attributes?.shooting ?? 0) + (p.attributes?.passing ?? 0) + 
+                                   (p.attributes?.dribbling ?? 0) + (p.attributes?.defending ?? 0) + (p.attributes?.physical ?? 0)) / 6);
+              category = p.age <= 17 ? 'Sub-17' : 'Sub-18';
+              attributes = {
+                pace: p.attributes?.pace ?? 50,
+                shooting: p.attributes?.shooting ?? 50,
+                passing: p.attributes?.passing ?? 50,
+                dribbling: p.attributes?.dribbling ?? 50,
+                defending: p.attributes?.defending ?? 50,
+                physical: p.attributes?.physical ?? 50
+              };
+            } else if (isProfessionalPlayer) {
+              // Jogador profissional
+              overall = Math.round(((p.pace ?? 50) + (p.shooting ?? 50) + (p.passing ?? 50) + 
+                                   (p.dribbling ?? 50) + (p.defending ?? 50) + (p.physical ?? 50)) / 6);
+              category = p.age <= 23 ? 'Jovem' : 'Sênior';
+              attributes = {
+                pace: p.pace ?? 50,
+                shooting: p.shooting ?? 50,
+                passing: p.passing ?? 50,
+                dribbling: p.dribbling ?? 50,
+                defending: p.defending ?? 50,
+                physical: p.physical ?? 50
+              };
+            } else {
+              // Fallback
+              overall = 50;
+              category = 'Indefinido';
+              attributes = { pace: 50, shooting: 50, passing: 50, dribbling: 50, defending: 50, physical: 50 };
+            }
+            
+            return {
+              id: p.id,
+              name: p.name,
+              position: p.position,
+              age: p.age,
+              overall,
+              potential: p.potential ?? 75,
+              category,
+              scouted_date: new Date().toISOString().slice(0,10),
+              is_promoted: false,
+              training_focus: p.training_focus || 'PAS',
+              training_intensity: (p.training_intensity as any) || 'normal',
+              attributes,
+              // Para jogadores profissionais, incluir atributos diretos
+              ...(isProfessionalPlayer && {
+                pace: p.pace,
+                shooting: p.shooting,
+                passing: p.passing,
+                dribbling: p.dribbling,
+                defending: p.defending,
+                physical: p.physical
+              })
+            };
+          });
+          
+          setAcademyPlayers(mappedPlayers);
         }
-      } catch {}
+      } catch (error) {
+        console.error('Erro ao carregar jogadores da academia:', error);
+      }
 
       try {
         const academyLogs = await gameApiReformed.getAcademyLogs(selectedTeam.id);
         setLogs(academyLogs);
-      } catch {}
+      } catch (error) {
+        console.error('Erro ao carregar logs da academia:', error);
+      }
+
       const mockAcademyInfo: AcademyInfo = {
         level: 1,
         facilities: {
@@ -107,49 +165,7 @@ export default function YouthAcademy() {
         efficiency_multiplier: 1.0
       };
 
-      const mockYouthPlayers: YouthPlayer[] = [
-        {
-          id: '1',
-          name: 'Carlos Junior',
-          position: 'ST',
-          age: 17,
-          overall: 65,
-          potential: 85,
-          category: 'Sub-18',
-          scouted_date: '2024-01-15',
-          is_promoted: false,
-          attributes: {
-            pace: 75,
-            shooting: 70,
-            passing: 60,
-            dribbling: 75,
-            defending: 40,
-            physical: 70
-          }
-        },
-        {
-          id: '2',
-          name: 'Lucas Silva',
-          position: 'CM',
-          age: 16,
-          overall: 62,
-          potential: 82,
-          category: 'Sub-17',
-          scouted_date: '2024-02-20',
-          is_promoted: false,
-          attributes: {
-            pace: 70,
-            shooting: 60,
-            passing: 75,
-            dribbling: 70,
-            defending: 65,
-            physical: 65
-          }
-        }
-      ];
-
       setAcademyInfo(mockAcademyInfo);
-      setYouthPlayers(mockYouthPlayers);
     } catch (error) {
       console.error('Erro ao carregar dados da academia:', error);
     } finally {
@@ -168,8 +184,12 @@ export default function YouthAcademy() {
   };
 
   const setTraining = async (playerId: string, focus: string, intensity: 'low'|'normal'|'high' = 'normal') => {
-    await gameApiReformed.setTraining({ playerId, focus, intensity, inAcademy: true });
-    await loadAcademyData();
+    try {
+      await gameApiReformed.setTraining({ playerId, focus, intensity, inAcademy: true });
+      await loadAcademyData();
+    } catch (error) {
+      console.error('Erro ao configurar treinamento:', error);
+    }
   };
 
   const applyWeek = async () => {
@@ -178,6 +198,8 @@ export default function YouthAcademy() {
     try {
       await gameApiReformed.applyTrainingWeek(selectedTeam.id);
       await loadAcademyData();
+    } catch (error) {
+      console.error('Erro ao aplicar semana de treinamento:', error);
     } finally {
       setProcessingWeek(false);
     }
@@ -245,97 +267,84 @@ export default function YouthAcademy() {
           {activeTab === 'players' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Jogadores da Base</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Jogadores na Academia</h3>
                 <div className="flex items-center gap-2">
                   <button onClick={applyWeek} disabled={processingWeek} className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
                     {processingWeek ? 'Processando...' : 'Aplicar Semana'}
                   </button>
-                  <span className="text-sm text-gray-700">{youthPlayers.length} jogadores</span>
+                  <span className="text-sm text-gray-700">{academyPlayers.length} jogadores</span>
                 </div>
               </div>
               
-              <div className="grid gap-4">
-                {youthPlayers.map((player) => (
-                  <div key={player.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {player.position}
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{player.name}</h4>
-                          <p className="text-sm text-gray-700">
-                            {player.position} • {player.age} anos • {player.category}
-                          </p>
-                          <p className="text-xs text-blue-600">
-                            Overall: {player.overall} • Potencial: {player.potential}
-                          </p>
-                        </div>
+              {/* Grid de jogadores usando PlayerCardCompact */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                {academyPlayers.map((player) => (
+                  <div key={player.id} className="relative">
+                    <PlayerCardCompact
+                      player={{
+                        id: player.id,
+                        name: player.name,
+                        position: player.position,
+                        age: player.age,
+                        overall: player.overall,
+                        potential: player.potential,
+                        attributes: {
+                          PAC: player.pace || player.attributes.pace,
+                          FIN: player.shooting || player.attributes.shooting,
+                          PAS: player.passing || player.attributes.passing,
+                          DRI: player.dribbling || player.attributes.dribbling,
+                          DEF: player.defending || player.attributes.defending,
+                          FIS: player.physical || player.attributes.physical,
+                          GOL: player.position === 'GK' ? (player.pace || player.attributes.pace) : undefined
+                        }
+                      }}
+                      size="small"
+                    />
+                    
+                    {/* Controles de treinamento */}
+                    <div className="mt-2 space-y-2">
+                      {/* Foco de treinamento */}
+                      <div className="flex gap-1 justify-center">
+                        {['PAC','SHO','PAS','DRI','DEF','PHY'].map((focus) => (
+                          <button 
+                            key={focus} 
+                            onClick={() => setTraining(player.id, focus as any)} 
+                            className={`px-2 py-1 text-xs rounded border ${
+                              player.training_focus === focus 
+                                ? 'bg-blue-600 text-white border-blue-600' 
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {focus}
+                          </button>
+                        ))}
                       </div>
                       
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600">
-                          {player.overall}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Potencial: {player.potential}
-                        </div>
-                        <div className="mt-2 flex gap-1 justify-end">
-                          {['PAC','SHO','PAS','DRI','DEF','PHY'].map((f) => (
-                            <button key={f} onClick={() => setTraining(player.id, f as any)} className="px-2 py-1 border rounded text-xs">
-                              {f}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-2">
-                          <label className="text-[11px] text-gray-600 mr-2">Intensidade</label>
-                          <select
-                            value={player.training_intensity || 'normal'}
-                            onChange={(e) => setTraining(player.id, player.training_focus || 'PAS', e.target.value as any)}
-                            className="text-xs border rounded px-2 py-1"
-                          >
-                            <option value="low">Baixa</option>
-                            <option value="normal">Normal</option>
-                            <option value="high">Alta</option>
-                          </select>
-                        </div>
-                        {player.overall >= 70 && (
+                      {/* Intensidade */}
+                      <div className="flex items-center justify-center gap-2">
+                        <label className="text-xs text-gray-600">Intensidade:</label>
+                        <select
+                          value={player.training_intensity || 'normal'}
+                          onChange={(e) => setTraining(player.id, player.training_focus || 'PAS', e.target.value as any)}
+                          className="text-xs border rounded px-2 py-1"
+                        >
+                          <option value="low">Baixa</option>
+                          <option value="normal">Normal</option>
+                          <option value="high">Alta</option>
+                        </select>
+                      </div>
+                      
+                      {/* Botão de promoção para jogadores da base */}
+                      {player.category.includes('Sub-') && player.overall >= 70 && (
+                        <div className="text-center">
                           <button
                             onClick={() => promotePlayer(player.id)}
-                            className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                           >
                             Promover
                           </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Atributos */}
-                    <div className="mt-3 grid grid-cols-6 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="font-semibold">PAC</div>
-                        <div>{player.attributes.pace}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">SHO</div>
-                        <div>{player.attributes.shooting}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">PAS</div>
-                        <div>{player.attributes.passing}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">DRI</div>
-                        <div>{player.attributes.dribbling}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">DEF</div>
-                        <div>{player.attributes.defending}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold">PHY</div>
-                        <div>{player.attributes.physical}</div>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -348,7 +357,7 @@ export default function YouthAcademy() {
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">📗 Logs do Jogador Selecionado</h4>
-                  <YouthAcademyLogs logs={logs.filter(l => l.player_id === (youthPlayers[0]?.id))} compact limit={8} />
+                  <YouthAcademyLogs logs={logs.filter(l => l.player_id === (academyPlayers[0]?.id))} compact limit={8} />
                 </div>
               </div>
             </div>

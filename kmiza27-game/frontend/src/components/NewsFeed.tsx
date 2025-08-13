@@ -35,15 +35,22 @@ export default function NewsFeed() {
       ) : items.length === 0 ? (
         <div className="text-sm text-gray-600">Sem notícias ainda.</div>
       ) : (
-        <ul className="space-y-2">
-          {items.map((n, idx) => (
-            <li key={idx} className="border rounded p-2">
-              <div className="text-xs text-gray-500">{new Date(n.created_at).toLocaleString('pt-BR')}</div>
-              <div className="text-sm font-medium">{n.title}</div>
-              {n.message && <div className="text-sm text-gray-700">{n.message}</div>}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-2">
+            {items.slice(0, 2).map((n, idx) => (
+              <li key={idx} className="border rounded p-2">
+                <div className="text-xs text-gray-500">{new Date(n.created_at).toLocaleString('pt-BR')}</div>
+                <div className="text-sm font-medium">{n.title}</div>
+                {n.message && <div className="text-sm text-gray-700">{n.message}</div>}
+              </li>
+            ))}
+          </ul>
+          {items.length > 2 && (
+            <div className="text-xs text-gray-500 text-center mt-2 pt-2 border-t">
+              +{items.length - 2} notícias anteriores
+            </div>
+          )}
+        </>
       )}
     </div>
   );

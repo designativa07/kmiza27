@@ -9,7 +9,7 @@ export class NewsService {
       .select('*')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(2);
     if (error) throw new Error(error.message);
     return data || [];
   }

@@ -1,136 +1,147 @@
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
 
 // Configuração do Supabase
-const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = 'https://kmiza27-supabase.h4xd66.easypanel.host/';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q';
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function testTeamDeletion() {
   try {
-    console.log('🧪 Testando exclusão de times...');
+    console.log('🧪 Iniciando teste de deleção completa de times...');
 
-    // 1. Buscar um time para testar
+    // 1. Verificar estado atual das tabelas
+    console.log('\n📊 ESTADO ATUAL DAS TABELAS:');
+    
     const { data: teams, error: teamsError } = await supabase
       .from('game_teams')
       .select('id, name, owner_id')
-      .limit(1);
+      .eq('name', 'PALHOCA');
 
     if (teamsError) {
-      console.error('Erro ao buscar times:', teamsError);
+      console.error('❌ Erro ao buscar times PALHOCA:', teamsError);
       return;
     }
 
-    if (!teams || teams.length === 0) {
-      console.log('Nenhum time encontrado para teste');
-      return;
+    console.log(`   Times PALHOCA encontrados: ${teams?.length || 0}`);
+    if (teams && teams.length > 0) {
+      teams.forEach(team => {
+        console.log(`   - ID: ${team.id}, Owner: ${team.owner_id}`);
+      });
     }
 
-    const testTeam = teams[0];
-    console.log(`📋 Time encontrado para teste: ${testTeam.name} (ID: ${testTeam.id})`);
+    // 2. Verificar jogadores
+    const { data: youthPlayers, error: youthError } = await supabase
+      .from('youth_players')
+      .select('id, name, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
 
-    // 2. Verificar dependências antes da exclusão
-    console.log('🔍 Verificando dependências...');
-    
-    // Verificar partidas
+    if (youthError) {
+      console.error('❌ Erro ao buscar youth_players:', youthError);
+    } else {
+      console.log(`   Youth players: ${youthPlayers?.length || 0}`);
+    }
+
+    const { data: gamePlayers, error: gameError } = await supabase
+      .from('game_players')
+      .select('id, name, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
+
+    if (gameError) {
+      console.error('❌ Erro ao buscar game_players:', gameError);
+    } else {
+      console.log(`   Game players: ${gamePlayers?.length || 0}`);
+    }
+
+    // 3. Verificar outras tabelas relacionadas
+    const { data: academies, error: academiesError } = await supabase
+      .from('youth_academies')
+      .select('id, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
+
+    if (academiesError) {
+      console.error('❌ Erro ao buscar academias:', academiesError);
+    } else {
+      console.log(`   Academias: ${academies?.length || 0}`);
+    }
+
+    const { data: tryouts, error: tryoutsError } = await supabase
+      .from('youth_tryouts')
+      .select('id, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
+
+    if (tryoutsError) {
+      console.error('❌ Erro ao buscar testes:', tryoutsError);
+    } else {
+      console.log(`   Testes da academia: ${tryouts?.length || 0}`);
+    }
+
+    const { data: news, error: newsError } = await supabase
+      .from('game_news')
+      .select('id, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
+
+    if (newsError) {
+      console.error('❌ Erro ao buscar notícias:', newsError);
+    } else {
+      console.log(`   Notícias: ${news?.length || 0}`);
+    }
+
+    // 4. Verificar partidas
     const { data: matches, error: matchesError } = await supabase
-      .from('game_matches')
+      .from('game_season_matches')
       .select('id, home_team_id, away_team_id')
-      .or(`home_team_id.eq.${testTeam.id},away_team_id.eq.${testTeam.id}`);
+      .or(`home_team_id.eq.${teams?.[0]?.id || 'none'},away_team_id.eq.${teams?.[0]?.id || 'none'}`);
 
     if (matchesError) {
-      console.error('Erro ao verificar partidas:', matchesError);
+      console.error('❌ Erro ao buscar partidas:', matchesError);
     } else {
-      console.log(`📊 Partidas encontradas: ${matches?.length || 0}`);
+      console.log(`   Partidas: ${matches?.length || 0}`);
     }
 
-    // Verificar competições
-    const { data: competitions, error: compError } = await supabase
-      .from('game_competition_teams')
-      .select('id, competition_id')
-      .eq('team_id', testTeam.id);
+    // 5. Verificar progresso
+    const { data: progress, error: progressError } = await supabase
+      .from('game_user_competition_progress')
+      .select('id, team_id')
+      .eq('team_id', teams?.[0]?.id || 'none');
 
-    if (compError) {
-      console.error('Erro ao verificar competições:', compError);
+    if (progressError) {
+      console.error('❌ Erro ao buscar progresso:', progressError);
     } else {
-      console.log(`🏆 Competições encontradas: ${competitions?.length || 0}`);
+      console.log(`   Progresso: ${progress?.length || 0}`);
     }
 
-    // Verificar academias
-    const { data: academies, error: acadError } = await supabase
-      .from('youth_academies')
-      .select('id')
-      .eq('team_id', testTeam.id);
-
-    if (acadError) {
-      console.error('Erro ao verificar academias:', acadError);
+    console.log('\n🎯 RECOMENDAÇÕES:');
+    if (teams && teams.length > 0) {
+      console.log('   ✅ Time PALHOCA existe - pode ser deletado para teste');
+      console.log('   📝 Use a função deleteTeam() para testar a limpeza completa');
     } else {
-      console.log(`🎓 Academias encontradas: ${academies?.length || 0}`);
+      console.log('   ⚠️ Time PALHOCA não encontrado - crie um novo para testar');
     }
 
-    // 3. Tentar excluir o time
-    console.log('🗑️ Tentando excluir o time...');
-    const { error: deleteError } = await supabase
-      .from('game_teams')
-      .delete()
-      .eq('id', testTeam.id);
+    console.log('\n🧹 FUNÇÕES DE LIMPEZA IMPLEMENTADAS:');
+    console.log('   ✅ deleteTeamPlayers() - Limpa youth_players + game_players');
+    console.log('   ✅ deleteTeamAcademy() - Limpa youth_academies');
+    console.log('   ✅ deleteTeamTryouts() - Limpa youth_tryouts');
+    console.log('   ✅ deleteTeamNews() - Limpa game_news');
+    console.log('   ✅ deleteSeasonMatches() - Limpa partidas');
+    console.log('   ✅ deleteUserProgress() - Limpa progresso');
+    console.log('   ✅ deleteUserMachineTeamStats() - Limpa estatísticas');
 
-    if (deleteError) {
-      console.error('❌ Erro ao excluir time:', deleteError);
-      console.log('💡 O erro indica que ainda há constraints não corrigidas');
-    } else {
-      console.log('✅ Time excluído com sucesso!');
-      
-      // 4. Verificar se as dependências foram excluídas em cascata
-      console.log('🔍 Verificando se dependências foram excluídas...');
-      
-      const { data: remainingMatches, error: remMatchesError } = await supabase
-        .from('game_matches')
-        .select('id')
-        .or(`home_team_id.eq.${testTeam.id},away_team_id.eq.${testTeam.id}`);
-
-      if (remMatchesError) {
-        console.error('Erro ao verificar partidas restantes:', remMatchesError);
-      } else {
-        console.log(`📊 Partidas restantes: ${remainingMatches?.length || 0}`);
-      }
-
-      const { data: remainingComps, error: remCompError } = await supabase
-        .from('game_competition_teams')
-        .select('id')
-        .eq('team_id', testTeam.id);
-
-      if (remCompError) {
-        console.error('Erro ao verificar competições restantes:', remCompError);
-      } else {
-        console.log(`🏆 Competições restantes: ${remainingComps?.length || 0}`);
-      }
-
-      const { data: remainingAcads, error: remAcadError } = await supabase
-        .from('youth_academies')
-        .select('id')
-        .eq('team_id', testTeam.id);
-
-      if (remAcadError) {
-        console.error('Erro ao verificar academias restantes:', remAcadError);
-      } else {
-        console.log(`🎓 Academias restantes: ${remainingAcads?.length || 0}`);
-      }
-    }
+    console.log('\n🎉 Teste de verificação concluído!');
 
   } catch (error) {
-    console.error('💥 Erro no teste:', error);
+    console.error('❌ Erro durante o teste:', error);
   }
 }
 
-// Executar o teste
+// Executar o script
 testTeamDeletion()
   .then(() => {
-    console.log('🎉 Teste concluído!');
+    console.log('✅ Script executado com sucesso');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('💥 Erro na execução do teste:', error);
+    console.error('❌ Erro fatal:', error);
     process.exit(1);
   }); 

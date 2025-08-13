@@ -386,7 +386,13 @@ class GameApiReformedService {
     }
   }
 
-  async setTraining(payload: { playerId: string; focus: string; intensity?: 'low'|'normal'|'high'; inAcademy?: boolean }): Promise<any> {
+  async setTraining(payload: { 
+    playerId: string; 
+    focus: string; 
+    intensity?: 'low'|'normal'|'high'; 
+    inAcademy?: boolean;
+    trainingType?: 'youth'|'professional'|'mixed';
+  }): Promise<any> {
     return this.request<any>('/api/v2/academy/set-training', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -398,12 +404,31 @@ class GameApiReformedService {
   }
 
   async getAcademyLogs(teamId: string): Promise<any[]> {
-    const response = await this.request<any>(`/api/v2/academy/logs?teamId=${teamId}`);
-    return response.logs || response.data || [];
+    try {
+      const response = await this.request<any>(`/api/v2/academy/overview?teamId=${teamId}`);
+      return response.data?.recentLogs || [];
+    } catch (error) {
+      console.error('Erro ao buscar logs da academia:', error);
+      return [];
+    }
   }
+
   async getAcademyPlayers(teamId: string): Promise<any[]> {
-    const response = await this.request<any>(`/api/v2/academy/players?teamId=${teamId}`);
-    return response.data || [];
+    try {
+      const response = await this.request<any>(`/api/v2/academy/overview?teamId=${teamId}`);
+      return response.data?.players || [];
+    } catch (error) {
+      console.error('Erro ao buscar jogadores da academia:', error);
+      return [];
+    }
+  }
+
+  async getAcademyStats(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/academy/stats?teamId=${teamId}`);
+  }
+
+  async getAcademyOverview(teamId: string): Promise<any> {
+    return this.request<any>(`/api/v2/academy/overview?teamId=${teamId}`);
   }
 
   async getFans(teamId: string): Promise<any> {

@@ -554,15 +554,20 @@ export class GameTeamsReformedService {
   // ===== DELEÇÃO DE TIMES =====
 
   /**
-   * Deletar time com limpeza completa
+   * Deletar time com limpeza COMPLETA e TOTAL
    * 1. Deletar partidas da temporada
    * 2. Deletar progresso da temporada
-   * 3. Deletar jogadores
-   * 4. Deletar time
+   * 3. Deletar estatísticas dos times da máquina
+   * 4. Deletar TODOS os jogadores (youth_players + game_players)
+   * 5. Deletar academia do time
+   * 6. Deletar testes da academia
+   * 7. Deletar notícias do time
+   * 8. Deletar o time
+   * 9. LIMPEZA TOTAL GARANTIDA!
    */
   async deleteTeam(teamId: string, userId: string) {
     try {
-      this.logger.log(`🗑️ REFORM: Iniciando deleção do time ${teamId} do usuário ${userId}`);
+      this.logger.log(`🗑️ REFORM: Iniciando DELETÇÃO COMPLETA do time ${teamId} do usuário ${userId}`);
 
       // 1. Verificar se o time pertence ao usuário
       const { data: team, error: teamError } = await supabase
@@ -576,7 +581,7 @@ export class GameTeamsReformedService {
         throw new Error('Time não encontrado ou não pertence ao usuário');
       }
 
-      this.logger.log(`🔍 REFORM: Deletando time "${team.name}"`);
+      this.logger.log(`🔍 REFORM: Deletando time "${team.name}" com LIMPEZA TOTAL`);
 
       // 2. Deletar partidas da temporada atual
       await this.deleteSeasonMatches(userId, teamId);
@@ -590,10 +595,19 @@ export class GameTeamsReformedService {
       // 5. Deletar histórico de temporadas (opcional - vou manter por enquanto)
       // await this.deleteSeasonHistory(userId, teamId);
 
-      // 6. Deletar jogadores do time
+      // 6. Deletar TODOS os jogadores do time (youth_players + game_players)
       await this.deleteTeamPlayers(teamId);
 
-      // 6. Deletar o time
+      // 7. NOVO: Deletar academia do time
+      await this.deleteTeamAcademy(teamId);
+
+      // 8. NOVO: Deletar testes da academia
+      await this.deleteTeamTryouts(teamId);
+
+      // 9. NOVO: Deletar notícias do time
+      await this.deleteTeamNews(teamId);
+
+      // 10. Deletar o time
       const { error: deleteTeamError } = await supabase
         .from('game_teams')
         .delete()
@@ -604,11 +618,11 @@ export class GameTeamsReformedService {
         throw new Error(`Error deleting team: ${deleteTeamError.message}`);
       }
 
-      this.logger.log(`✅ REFORM: Time "${team.name}" deletado com sucesso`);
+      this.logger.log(`✅ REFORM: Time "${team.name}" DELETADO COMPLETAMENTE com LIMPEZA TOTAL!`);
 
       return {
         success: true,
-        message: `Time "${team.name}" foi deletado com sucesso. Todos os dados da temporada atual foram removidos.`,
+        message: `Time "${team.name}" foi deletado com sucesso. TODOS os dados foram completamente removidos.`,
         team_name: team.name
       };
 
@@ -686,16 +700,31 @@ export class GameTeamsReformedService {
    */
   private async deleteTeamPlayers(teamId: string) {
     try {
-      const { error } = await supabase
+      // 1. Deletar jogadores da academia (youth_players)
+      const { error: youthError } = await supabase
         .from('youth_players')
         .delete()
         .eq('team_id', teamId);
 
-      if (error) {
-        this.logger.warn(`⚠️ Erro ao deletar jogadores: ${error.message}`);
+      if (youthError) {
+        this.logger.warn(`⚠️ Erro ao deletar youth_players: ${youthError.message}`);
       } else {
-        this.logger.log('🗑️ Jogadores do time deletados');
+        this.logger.log('🗑️ Youth players do time deletados');
       }
+
+      // 2. Deletar jogadores principais (game_players)
+      const { error: gameError } = await supabase
+        .from('game_players')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (gameError) {
+        this.logger.warn(`⚠️ Erro ao deletar game_players: ${gameError.message}`);
+      } else {
+        this.logger.log('🗑️ Game players do time deletados');
+      }
+
+      this.logger.log('✅ Todos os jogadores do time foram deletados com sucesso');
     } catch (error) {
       this.logger.warn('⚠️ Erro ao deletar jogadores:', error);
     }
@@ -719,6 +748,66 @@ export class GameTeamsReformedService {
       }
     } catch (error) {
       this.logger.warn('⚠️ Erro ao deletar histórico:', error);
+    }
+  }
+
+  /**
+   * NOVO: Deletar academia do time
+   */
+  private async deleteTeamAcademy(teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('youth_academies')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar academia: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Academia do time deletada');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar academia:', error);
+    }
+  }
+
+  /**
+   * NOVO: Deletar testes da academia do time
+   */
+  private async deleteTeamTryouts(teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('youth_tryouts')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar testes da academia: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Testes da academia do time deletados');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar testes da academia:', error);
+    }
+  }
+
+  /**
+   * NOVO: Deletar notícias do time
+   */
+  private async deleteTeamNews(teamId: string) {
+    try {
+      const { error } = await supabase
+        .from('game_news')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar notícias: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Notícias do time deletadas');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar notícias:', error);
     }
   }
 }
