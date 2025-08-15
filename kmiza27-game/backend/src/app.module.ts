@@ -9,6 +9,8 @@ import { MachineTeamsModule } from './modules/machine-teams/machine-teams.module
 import { SeasonsModule } from './modules/seasons/seasons.module';
 import { PromotionRelegationModule } from './modules/promotion-relegation/promotion-relegation.module';
 import { PlayersModule } from './modules/players/players.module';
+import { AcademyModule } from './modules/academy/academy.module';
+import { TrainingModule } from './modules/training/training.module';
 import { YouthAcademyModule } from './modules/youth-academy/youth-academy.module';
 import { FansModule } from './modules/fans/fans.module';
 import { TacticsModule } from './modules/tactics/tactics.module';
@@ -31,6 +33,9 @@ import { PlayerDevelopmentModule } from './modules/player-development/player-dev
     SeasonsModule,
     PromotionRelegationModule,
     PlayersModule,
+    // Módulos de academia e treinamento
+    AcademyModule,
+    TrainingModule,
     // Novos módulos (stubs) para funcionalidades adicionais
     YouthAcademyModule,
     FansModule,

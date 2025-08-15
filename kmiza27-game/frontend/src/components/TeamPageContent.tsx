@@ -13,11 +13,13 @@ import { ArrowLeft, Landmark, Users, Star, Play, Calendar, Swords, Trophy, Gradu
 import TeamPlayers from './TeamPlayers';
 import StadiumExpansion from './StadiumExpansion';
 import YouthAcademy from './YouthAcademy';
+import AcademyPanel from './AcademyPanel';
+import TrainingPanel from './TrainingPanel';
 import FinanceManager from './FinanceManager';
 
 import NewsFeed from './NewsFeed';
 
-type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'finances';
+type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'training' | 'finances';
 
 export default function TeamPageContent() {
   const params = useParams();
@@ -132,7 +134,9 @@ export default function TeamPageContent() {
       case 'stadium':
         return <StadiumExpansion team={team!} />;
       case 'academy':
-        return <YouthAcademy />;
+        return <AcademyPanel teamId={team!.id} />;
+      case 'training':
+        return <TrainingPanel teamId={team!.id} />;
       case 'finances':
         return <FinanceManager />;
       default:
@@ -332,7 +336,7 @@ export default function TeamPageContent() {
                   <div className="space-y-3 pt-2 border-t border-slate-200">
                     <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">🚀 Ações</h4>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -359,8 +363,18 @@ export default function TeamPageContent() {
                         onClick={() => setActiveView('academy')} 
                         className="justify-start text-xs h-9"
                       >
-                        <Dumbbell className="h-3 w-3 mr-1" /> 
+                        <GraduationCap className="h-3 w-3 mr-1" /> 
                         Academia
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveView('training')} 
+                        className="justify-start text-xs h-9"
+                      >
+                        <Dumbbell className="h-3 w-3 mr-1" /> 
+                        Treinamento
                       </Button>
                       
                       <Button 
