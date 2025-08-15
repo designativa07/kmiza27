@@ -16,6 +16,8 @@ CREATE TABLE game_academy_logs (
     focus text,
     intensity text,
     total_points decimal(5,2),
+    attribute_gains jsonb,
+    injury_result jsonb,
     created_at timestamp with time zone DEFAULT now()
 );
 
