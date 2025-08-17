@@ -134,6 +134,16 @@ export class MatchesController {
     return this.matchesService.getMatchBroadcasts(+id);
   }
 
+  @Get(':id/prediction')
+  async getMatchPrediction(@Param('id') id: string) {
+    try {
+      return await this.matchesService.getMatchPrediction(+id);
+    } catch (error) {
+      console.error(`Error fetching prediction for match ${id}:`, error);
+      throw error;
+    }
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateMatchDto: UpdateMatchDto, @Res() res: Response) {
     console.log('🔍 PATCH /matches/:id - Dados recebidos:', {

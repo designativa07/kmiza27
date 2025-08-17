@@ -233,6 +233,10 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
                                    competition?.type?.toLowerCase() === 'torneio' ||
                                    competition?.type?.toLowerCase() === 'knockout';
 
+  const handleRowClick = (teamId: number) => {
+    router.push(`/time/${teamId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
@@ -327,7 +331,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
                     {groupName === 'Classificação Geral' ? '' : `Grupo ${groupName}`}
                     </h2>
-                    <StandingsTable standings={groupStandings} />
+                    <StandingsTable standings={groupStandings} onRowClick={handleRowClick} />
                   </div>
                   
                 {/* Jogos do grupo (2/5 do espaço em XL) */}
@@ -362,7 +366,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
             {/* Classificação (3/5 do espaço em XL) */}
             <div className="xl:col-span-3">
-                <StandingsTable standings={standings} />
+                <StandingsTable standings={standings} onRowClick={handleRowClick} />
             </div>
             
             {/* Jogos da rodada atual */}
@@ -545,9 +549,17 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, formatDate, getTeamLogoUrl
 // Componente da tabela de classificação
 interface StandingsTableProps {
   standings: Standing[];
+  onRowClick: (teamId: number) => void;
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, onRowClick }) => {
+  const getPositionClass = (position: number) => {
+    if (position <= 3) return 'bg-green-500 text-white';
+    if (position <= 6) return 'bg-blue-500 text-white';
+    if (position <= 10) return 'bg-purple-500 text-white';
+    return 'bg-gray-400 text-white';
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
@@ -569,7 +581,11 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {standings.map((standing, index) => (
-              <tr key={standing.team.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+              <tr
+                key={standing.team.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => onRowClick(standing.team.id)}
+              >
                 <td className="px-1 py-3 whitespace-nowrap w-8 text-center">
                   <span className="text-sm font-medium text-gray-900">{standing.position}</span>
                 </td>

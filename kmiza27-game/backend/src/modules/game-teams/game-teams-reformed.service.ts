@@ -345,6 +345,7 @@ export class GameTeamsReformedService {
         
         const attributes = this.generatePlayerAttributes(positionGroup.position);
         const potential = this.generatePlayerPotential(attributes);
+        const marketValue = this.calculateYouthMarketValue(attributes, age, potential);
 
         players.push({
           name: `${firstName} ${lastName}`,
@@ -354,6 +355,7 @@ export class GameTeamsReformedService {
           team_id: teamId,
           attributes: attributes,
           potential: potential,
+          market_value: marketValue, // <-- VALOR ADICIONADO
           status: 'contracted',
           contract_date: new Date(),
           created_at: new Date().toISOString()
@@ -428,6 +430,32 @@ export class GameTeamsReformedService {
       defending: Math.min(99, attributes.defending + Math.floor(Math.random() * 15)),
       physical: Math.min(99, attributes.physical + Math.floor(Math.random() * 15))
     };
+  }
+
+  private calculateYouthMarketValue(attributes: any, age: number, potential: any): number {
+    const overall = (
+      (attributes.pace || 50) +
+      (attributes.shooting || 50) +
+      (attributes.passing || 50) +
+      (attributes.dribbling || 50) +
+      (attributes.defending || 50) +
+      (attributes.physical || 50)
+    ) / 6;
+
+    const potentialOverall = (
+      (potential.pace || 50) +
+      (potential.shooting || 50) +
+      (potential.passing || 50) +
+      (potential.dribbling || 50) +
+      (potential.defending || 50) +
+      (potential.physical || 50)
+    ) / 6;
+    
+    let baseValue = Math.pow(overall / 10, 3) * 500; // Valor base menor para jovens
+    const potentialGap = Math.max(0, potentialOverall - overall);
+    baseValue += potentialGap * 3000;
+
+    return Math.round(baseValue / 100) * 100; // Arredonda
   }
 
   // ===== UTILITÁRIOS =====

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import PlayerCardCompact from './PlayerCardCompact';
+import PlayerCard from './PlayerCard';
 
 interface AcademyPlayer {
   id: string;
@@ -53,9 +53,10 @@ interface AcademyStats {
 
 interface AcademyPanelProps {
   teamId: string;
+  onPlayerPromoted?: () => void;
 }
 
-export default function AcademyPanel({ teamId }: AcademyPanelProps) {
+export default function AcademyPanel({ teamId, onPlayerPromoted }: AcademyPanelProps) {
   const [players, setPlayers] = useState<AcademyPlayer[]>([]);
   const [stats, setStats] = useState<AcademyStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +98,89 @@ export default function AcademyPanel({ teamId }: AcademyPanelProps) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handlers para as ações do PlayerCard
+  const handleConfigureTraining = (playerId: string) => {
+    setSelectedPlayer(playerId);
+  };
+
+  const handleViewDetails = (playerId: string) => {
+    setSelectedPlayerForDetails(playerId);
+  };
+
+  const handlePromotePlayer = async (playerId: string) => {
+    if (confirm('Tem certeza que deseja promover este jogador para o time profissional? Esta ação não pode ser desfeita.')) {
+      try {
+        // TODO: Implementar API para promover jogador
+        console.log('Promover jogador:', playerId);
+        alert('Funcionalidade de promoção será implementada em breve!');
+        
+        // Notificar o componente pai para atualizar os números
+        if (onPlayerPromoted) {
+          onPlayerPromoted();
+        }
+      } catch (error) {
+        console.error('Erro ao promover jogador:', error);
+        alert('Erro ao promover jogador. Tente novamente.');
+      }
+    }
+  };
+
+  const handleSendToAcademy = async (playerId: string) => {
+    try {
+      const player = players.find(p => p.id === playerId);
+      if (!player) return;
+
+      const response = await fetch('http://localhost:3004/api/v2/api/v2/academy/training', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId,
+          teamId,
+          focus: player.training_focus,
+          intensity: player.training_intensity,
+          inAcademy: true,
+          playerType: player.type
+        })
+      });
+
+      if (response.ok) {
+        await loadAcademyData();
+        alert('Jogador enviado para a academia com sucesso!');
+      }
+    } catch (err) {
+      console.error('Erro ao enviar jogador para academia:', err);
+      alert('Erro ao enviar jogador para academia. Tente novamente.');
+    }
+  };
+
+  const handleRemoveFromAcademy = async (playerId: string) => {
+    try {
+      const player = players.find(p => p.id === playerId);
+      if (!player) return;
+
+      const response = await fetch('http://localhost:3004/api/v2/api/v2/academy/training', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId,
+          teamId,
+          focus: player.training_focus,
+          intensity: player.training_intensity,
+          inAcademy: false,
+          playerType: player.type
+        })
+      });
+
+      if (response.ok) {
+        await loadAcademyData();
+        alert('Jogador removido da academia com sucesso!');
+      }
+    } catch (err) {
+      console.error('Erro ao remover jogador da academia:', err);
+      alert('Erro ao remover jogador da academia. Tente novamente.');
     }
   };
 
@@ -398,7 +482,7 @@ export default function AcademyPanel({ teamId }: AcademyPanelProps) {
               <div className="flex flex-wrap gap-3">
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Posição</label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" title="Filtrar por posição">
                     <option value="">Todas as posições</option>
                     <option value="GK">Goleiro</option>
                     <option value="CB">Zagueiro</option>
@@ -415,7 +499,7 @@ export default function AcademyPanel({ teamId }: AcademyPanelProps) {
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Idade</label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" title="Filtrar por idade">
                     <option value="">Todas as idades</option>
                     <option value="16-18">16-18 anos</option>
                     <option value="19-21">19-21 anos</option>
@@ -425,7 +509,7 @@ export default function AcademyPanel({ teamId }: AcademyPanelProps) {
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                  <select className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" title="Filtrar por status">
                     <option value="">Todos os status</option>
                     <option value="academy">Na academia</option>
                     <option value="not-academy">Fora da academia</option>
@@ -434,216 +518,58 @@ export default function AcademyPanel({ teamId }: AcademyPanelProps) {
               </div>
             </div>
 
-            {/* Lista de jogadores */}
-            {filteredPlayers.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-gray-400 text-6xl mb-4">👥</div>
-                <p className="text-lg text-gray-500 font-medium">Nenhum jogador encontrado nesta categoria.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPlayers.map(player => (
-                  <div key={player.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
-                    {/* Header do jogador */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">{player.name}</h3>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
-                            {player.position}
-                          </span>
-                          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                            {player.age} anos
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            player.type === 'youth' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                          }`}>
-                            {player.type === 'youth' ? 'Júnior' : 'Profissional'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right ml-4">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">{player.overall}</div>
-                        <div className="text-xs text-gray-500 font-medium">Overall</div>
-                        <div className="text-lg font-bold text-green-600">{player.potential}</div>
-                        <div className="text-xs text-gray-500 font-medium">Potencial</div>
-                      </div>
-                    </div>
-
-                    {/* Status de treinamento */}
-                    <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
-                      <h4 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
-                        <span className="text-lg">🎯</span>
-                        Status de Treinamento
-                      </h4>
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Status:</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            player.is_in_academy 
-                              ? 'bg-green-100 text-green-800 border border-green-200' 
-                              : 'bg-gray-100 text-gray-800 border border-gray-200'
-                          }`}>
-                            {player.is_in_academy ? '🏋️ Em treino' : '⏸️ Fora da academia'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Foco:</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getFocusColor(player.training_focus)} border`}>
-                            {player.training_focus}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Intensidade:</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getIntensityColor(player.training_intensity)} border capitalize`}>
-                            {player.training_intensity}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Atributos */}
-                    <div className="mb-4">
-                      <h4 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
-                        <span className="text-lg">⚡</span>
-                        Atributos
-                        {player.attributeChanges && Object.keys(player.attributeChanges).length > 0 && (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full border border-green-200 animate-pulse">
-                            📈 Evoluindo
-                          </span>
-                        )}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">PAC</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-purple-600">{player.attributes.pace}</span>
-                              {player.attributeChanges?.pace && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.pace}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-purple-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.pace}%`}}></div>
-                          </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">SHO</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-red-600">{player.attributes.shooting}</span>
-                              {player.attributeChanges?.shooting && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.shooting}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-red-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.shooting}%`}}></div>
-                          </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">PAS</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-blue-600">{player.attributes.passing}</span>
-                              {player.attributeChanges?.passing && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.passing}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.passing}%`}}></div>
-                          </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">DRI</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-yellow-600">{player.attributes.dribbling}</span>
-                              {player.attributeChanges?.dribbling && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.dribbling}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.dribbling}%`}}></div>
-                          </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">DEF</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-green-600">{player.attributes.defending}</span>
-                              {player.attributeChanges?.defending && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.defending}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.defending}%`}}></div>
-                          </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 relative">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold text-gray-600">PHY</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-orange-600">{player.attributes.physical}</span>
-                              {player.attributeChanges?.physical && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full border border-green-200 animate-bounce">
-                                  +{player.attributeChanges.physical}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-orange-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.physical}%`}}></div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Informações de treinamento recente */}
-                      {player.lastTraining && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <div className="flex items-center justify-between text-xs text-blue-700">
-                            <span>🕒 Último treino: {new Date(player.lastTraining).toLocaleDateString('pt-BR')}</span>
-                            <span>📊 {player.trainingCount} sessões</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Ações */}
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => handlePlayerAction(player.id, 'training')}
-                        className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                      >
-                        <span className="text-lg">🎯</span>
-                        Configurar Treino
-                      </button>
-                      <button
-                        onClick={() => handlePlayerAction(player.id, 'details')}
-                        className="px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                      >
-                        <span className="text-lg">📊</span>
-                        Detalhes
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                         {/* Lista de jogadores com PlayerCard unificado */}
+             {filteredPlayers.length === 0 ? (
+               <div className="text-center py-16">
+                 <div className="text-gray-400 text-6xl mb-4">👥</div>
+                 <p className="text-lg text-gray-500 font-medium">Nenhum jogador encontrado nesta categoria.</p>
+               </div>
+             ) : (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {filteredPlayers.map(player => (
+                   <PlayerCard 
+                     key={player.id} 
+                     player={{
+                       id: player.id,
+                       name: player.name,
+                       position: player.position,
+                       age: player.age,
+                       overall: player.overall,
+                       potential: player.potential,
+                       attributes: {
+                         pace: player.attributes.pace,
+                         shooting: player.attributes.shooting,
+                         passing: player.attributes.passing,
+                         dribbling: player.attributes.dribbling,
+                         defending: player.attributes.defending,
+                         physical: player.attributes.physical,
+                       },
+                       training_focus: player.training_focus,
+                       training_intensity: player.training_intensity,
+                       type: player.type,
+                       is_in_academy: player.is_in_academy,
+                       attributeChanges: player.attributeChanges,
+                       lastTraining: player.lastTraining,
+                       trainingCount: player.trainingCount,
+                       morale: player.morale,
+                       fitness: player.fitness,
+                       form: player.form,
+                     }}
+                     context="academy"
+                     showTrainingStatus={true}
+                     showAttributes={true}
+                     showPhysicalStats={true}
+                     showTrainingHistory={true}
+                     onConfigureTraining={handleConfigureTraining}
+                     onViewDetails={handleViewDetails}
+                     onPromotePlayer={handlePromotePlayer}
+                     onSendToAcademy={handleSendToAcademy}
+                     onRemoveFromAcademy={handleRemoveFromAcademy}
+                     className="h-full"
+                   />
+                 ))}
+               </div>
+             )}
           </div>
         )}
       </div>

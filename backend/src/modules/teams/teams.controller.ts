@@ -213,4 +213,36 @@ export class TeamsController {
   async removeAlias(@Param('id') id: string, @Param('alias') alias: string) {
     return this.teamsService.removeAlias(+id, alias);
   }
+
+  // Endpoints para estatísticas avançadas
+  @Get(':id/statistics')
+  async getTeamStatistics(@Param('id') id: string) {
+    return this.teamsService.getTeamStatistics(+id);
+  }
+
+  @Get(':id/difficulty-analysis')
+  async getDifficultyAnalysis(@Param('id') id: string) {
+    return this.teamsService.getDifficultyAnalysis(+id);
+  }
+
+  @Get(':id/comparison/:otherTeamId')
+  async compareTeams(@Param('id') teamId: string, @Param('otherTeamId') otherTeamId: string) {
+    return this.teamsService.compareTeams(+teamId, +otherTeamId);
+  }
+
+  // Endpoints para probabilidades e estatísticas avançadas
+  @Get(':id/title-chances')
+  async getTitleChances(@Param('id') id: string) {
+    return this.teamsService.getTitleChances(+id);
+  }
+
+  @Get(':id/relegation-risk')
+  async getRelegationRisk(@Param('id') id: string) {
+    return this.teamsService.getRelegationRisk(+id);
+  }
+
+  @Get(':id/advanced-stats')
+  async getAdvancedStats(@Param('id') id: string) {
+    return this.teamsService.getAdvancedStats(+id);
+  }
 } 

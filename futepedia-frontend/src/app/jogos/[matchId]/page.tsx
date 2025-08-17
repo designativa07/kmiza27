@@ -7,6 +7,7 @@ import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
 import dynamic from 'next/dynamic';
+import { MatchPrediction } from '@/components/MatchPrediction';
 
 // Importar componente de mapa dinamicamente
 const SingleStadiumMap = dynamic(() => import('@/components/SingleStadiumMap'), { 
@@ -305,6 +306,11 @@ export default function MatchPage({ params }: Props) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Predição da Partida */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <MatchPrediction matchId={match.id} />
         </div>
 
         {/* Informações do Jogo */}

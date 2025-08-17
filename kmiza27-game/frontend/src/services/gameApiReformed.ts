@@ -478,6 +478,175 @@ class GameApiReformedService {
   async getNews(teamId: string): Promise<any> {
     return this.request<any>(`/api/v2/news/feed?teamId=${teamId}`);
   }
+
+  // NOVA FUNÇÃO PARA PROMOVER JOGADOR
+  async promotePlayer(playerId: string, teamId: string): Promise<any> {
+    try {
+      const response = await this.request<any>('/api/v2/youth/promote-player', {
+        method: 'POST',
+        body: JSON.stringify({ playerId, teamId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('API Error promoting player:', error);
+      throw error;
+    }
+  }
+
+  // NOVA FUNÇÃO PARA LISTAR JOOGADOR
+  async listPlayer(playerId: string, teamId: string, price: number, isYouth: boolean): Promise<any> {
+    try {
+      const response = await this.request<any>('/api/v2/market/list-player', {
+        method: 'POST',
+        body: JSON.stringify({ playerId, teamId, price, isYouth }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('API Error listing player:', error);
+      throw error;
+    }
+  }
+
+  async getListedPlayers(teamId: string): Promise<any[]> {
+    try {
+      const response = await this.request<any[]>(`/api/v2/market/listed-players?teamId=${teamId}`);
+      return response;
+    } catch (error) {
+      console.error('API Error fetching listed players:', error);
+      throw error;
+    }
+  }
+
+  // NOVA FUNÇÃO PARA EXECUTAR IA DO MERCADO
+  async runMarketAI() {
+    try {
+      const response = await this.request<any>('/api/v2/market/run-ai', {
+        method: 'POST',
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error running market AI:', error);
+      throw error;
+    }
+  }
+
+  // NOVA FUNÇÃO PARA LIMPEZA DE LISTAGENS EXPIRADAS
+  async cleanupExpiredListings() {
+    try {
+      const response = await this.request<any>('/api/v2/market/cleanup-expired', {
+        method: 'POST',
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error cleaning up expired listings:', error);
+      throw error;
+    }
+  }
+
+  // NOVAS FUNÇÕES PARA SISTEMA DE OFERTAS
+  async makeOffer(playerId: string, buyingTeamId: string, offerPrice: number, isYouth: boolean) {
+    try {
+      const response = await this.request<any>('/api/v2/market/make-offer', {
+        method: 'POST',
+        body: JSON.stringify({
+          playerId,
+          buyingTeamId,
+          offerPrice,
+          isYouth,
+        }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error making offer:', error);
+      throw error;
+    }
+  }
+
+  async acceptOffer(offerId: string) {
+    try {
+      const response = await this.request<any>('/api/v2/market/accept-offer', {
+        method: 'POST',
+        body: JSON.stringify({ offerId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error accepting offer:', error);
+      throw error;
+    }
+  }
+
+  async rejectOffer(offerId: string) {
+    try {
+      const response = await this.request<any>('/api/v2/market/reject-offer', {
+        method: 'POST',
+        body: JSON.stringify({ offerId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error rejecting offer:', error);
+      throw error;
+    }
+  }
+
+  async getPendingOffers(teamId: string) {
+    try {
+      const response = await this.request<any>(`/api/v2/market/pending-offers?teamId=${teamId}`);
+      return response;
+    } catch (error) {
+      console.error('API Error fetching pending offers:', error);
+      throw error;
+    }
+  }
+
+  // NOVAS FUNÇÕES PARA NOTIFICAÇÕES DO MERCADO
+  async getTeamNotifications(teamId: string, limit: number = 20) {
+    try {
+      const response = await this.request<any>(`/api/v2/market/notifications?teamId=${teamId}&limit=${limit}`);
+      return response;
+    } catch (error) {
+      console.error('API Error fetching team notifications:', error);
+      throw error;
+    }
+  }
+
+  async markNotificationAsRead(notificationId: string) {
+    try {
+      const response = await this.request<any>('/api/v2/market/mark-notification-read', {
+        method: 'POST',
+        body: JSON.stringify({ notificationId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  async markAllNotificationsAsRead(teamId: string) {
+    try {
+      const response = await this.request<any>('/api/v2/market/mark-all-notifications-read', {
+        method: 'POST',
+        body: JSON.stringify({ teamId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  // NOVO MÉTODO PARA PROCESSAR OFERTAS DA IA
+  async processAIOffers() {
+    try {
+      const response = await this.request<any>('/api/v2/market/process-ai-offers', {
+        method: 'POST',
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error processing AI offers:', error);
+      throw error;
+    }
+  }
 }
 
 export const gameApiReformed = new GameApiReformedService();
