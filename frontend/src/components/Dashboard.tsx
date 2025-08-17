@@ -26,7 +26,8 @@ import {
   ShieldCheckIcon,
   CpuChipIcon,
   ComputerDesktopIcon,
-  HomeIcon
+  HomeIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline'
 import StatsCards from './StatsCards'
 
@@ -51,6 +52,7 @@ import TitlesPage from '../app/titles/page'
 import ProfilePage from '../app/profile/page'
 import PoolsManager from './PoolsManager'
 import HomepagePage from '../app/homepage/page'
+import SimulationsPage from '../app/simulations/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -111,6 +113,7 @@ export default function Dashboard() {
         'competicoes': 'Competições',
         'jogos': 'Jogos',
         'classificacoes': 'Classificações',
+        'simulacoes': 'Simulações',
         'artilharia': 'Artilharia',
         'boloes': 'Bolões',
         'canais': 'Canais',
@@ -589,6 +592,8 @@ export default function Dashboard() {
         return <TopScorersTable />
       case 'Títulos':
         return <TitlesPage />
+      case 'Simulações':
+        return <SimulationsPage />
       case 'Perfil':
         return <ProfilePage />
       case 'Configurações':
@@ -620,6 +625,7 @@ export default function Dashboard() {
     { name: 'Competições', icon: TrophyIcon, page: 'Competições' },
     { name: 'Jogos', icon: CalendarIcon, page: 'Jogos' },
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
+    { name: 'Simulações', icon: CalculatorIcon, page: 'Simulações' },
     { name: 'Bolões', icon: TrophyIcon, page: 'Bolões' },
     { name: 'Canais', icon: TvIcon, page: 'Canais' },
     { 

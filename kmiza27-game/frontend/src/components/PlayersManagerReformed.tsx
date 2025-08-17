@@ -3,8 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameApiReformed } from '@/services/gameApiReformed';
-import PlayerCardCompact, { PlayerCardData, ATTRIBUTE_LABELS } from './PlayerCardCompact';
+import PlayerCardCompact from './PlayerCardCompact';
 import PlayerAttributesLegend from './PlayerAttributesLegend';
+import SellPlayerModal from './SellPlayerModal';
+import { transformPlayerData } from '@/lib/player-utils';
+import { PlayerCardData } from '@/types/player';
 
 interface PlayersManagerReformedProps {
   teamId?: string;
@@ -14,7 +17,7 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
   const { selectedTeam } = useGameStore();
   const [players, setPlayers] = useState<PlayerCardData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'elenco' | 'academia' | 'lesoes' | 'estatisticas'>('elenco');
+  const [activeTab, setActiveTab] = useState<'profissional' | 'academia' | 'estatisticas' | 'lesoes'>('profissional');
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     position: 'all',
@@ -25,6 +28,8 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
   });
   const [showLegend, setShowLegend] = useState(false);
   const [sortBy, setSortBy] = useState<'overall' | 'age' | 'name' | 'position' | 'salary'>('overall');
+  const [isSellModalOpen, setSellModalOpen] = useState(false);
+  const [playerToSell, setPlayerToSell] = useState<PlayerCardData | null>(null);
 
   const currentTeam = teamId || selectedTeam?.id;
 
@@ -42,45 +47,8 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
       // Carregar jogadores da API
       const playersData = await gameApiReformed.getPlayers(currentTeam);
       
-      // Converter para formato do card
-      const formattedPlayers: PlayerCardData[] = playersData.map((player: any) => ({
-        id: player.id,
-        name: player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim(),
-        position: player.position || 'CM',
-        age: player.age || 25,
-        overall: player.overall || Math.round(((player.speed ?? 0) + (player.stamina ?? 0) + (player.strength ?? 0) + (player.passing ?? 0) + (player.shooting ?? 0) + (player.dribbling ?? 0) + (player.defending ?? 0)) / 7),
-        potential: player.potential || 75,
-        
-        attributes: {
-          PAC: Math.round(((player.speed ?? 0) + (player.stamina ?? 0)) / 2),
-          FIN: player.shooting ?? 0,
-          PAS: player.passing ?? 0,
-          DRI: player.dribbling ?? 0,
-          DEF: player.defending ?? 0,
-          FIS: Math.round(((player.strength ?? 0) + (player.stamina ?? 0)) / 2),
-          GOL: player.goalkeeping ?? 0
-        },
-        
-        morale: player.morale ?? 60,
-        fitness: player.fitness ?? 80,
-        form: player.form ?? 5,
-        fatigue: player.fatigue ?? 0,
-        injury_severity: player.injury_severity ?? 0,
-        
-        salary: player.salary_monthly ?? 0,
-        market_value: player.market_value ?? 0,
-        
-        training_focus: player.training_focus as keyof typeof ATTRIBUTE_LABELS,
-        training_intensity: player.training_intensity as 'baixa' | 'normal' | 'alta',
-        is_in_academy: player.is_in_academy ?? false,
-        
-        personality: player.personality,
-        
-        games_played: player.games_played ?? 0,
-        goals_scored: player.goals_scored ?? 0,
-        assists: player.assists ?? 0,
-        average_rating: player.average_rating ?? 6.0
-      }));
+      // Usar a função de transformação centralizada
+      const formattedPlayers = playersData.map(transformPlayerData).filter(Boolean) as PlayerCardData[];
       
       setPlayers(formattedPlayers);
     } catch (error) {
@@ -116,47 +84,49 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
     });
 
   const handlePlayerAction = async (playerId: string, action: string) => {
-    const player = players.find(p => p.id === playerId);
-    if (!player) return;
+    console.log(`Action: ${action} on player ${playerId}`);
+
+    if (action === 'promote') {
+      try {
+        if (selectedTeam) {
+          const result = await gameApiReformed.promotePlayer(playerId, selectedTeam.id);
+          if (result.success) {
+            console.log('Player promoted!', result.player);
+            // Atualizar a lista de jogadores para refletir a promoção
+            loadPlayers(); 
+          }
+        }
+      } catch (error) {
+        console.error('Failed to promote player:', error);
+      }
+    }
+
+    if (action === 'sell') {
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        setPlayerToSell(player);
+        setSellModalOpen(true);
+      }
+    }
+
+    // Fechar as ações após o clique
+    setSelectedPlayer(null);
+  };
+
+  const confirmSellPlayer = async (price: number) => {
+    if (!playerToSell || !selectedTeam) return;
 
     try {
-      switch (action) {
-        case 'edit_training':
-          // Abrir modal de treino
-          setSelectedPlayer(playerId);
-          break;
-          
-        case 'view_details':
-          // Mostrar detalhes do jogador
-          alert(`Detalhes de ${player.name} - Em desenvolvimento`);
-          break;
-          
-        case 'promote':
-          // Promover da academia
-          if (player.is_in_academy) {
-            await gameApiReformed.setTraining({
-              playerId,
-              focus: player.training_focus || 'PAS',
-              intensity: 'normal',
-              inAcademy: false
-            });
-            await loadPlayers();
-          }
-          break;
-          
-        case 'to_academy':
-          // Enviar para academia
-          await gameApiReformed.setTraining({
-            playerId,
-            focus: player.training_focus || 'PAS',
-            intensity: 'normal',
-            inAcademy: true
-          });
-          await loadPlayers();
-          break;
+      const isYouth = activeTab === 'academia';
+      const result = await gameApiReformed.listPlayer(playerToSell.id, selectedTeam.id, price, isYouth);
+      if (result.success) {
+        console.log('Player listed for sale!', result.transfer);
+        alert(`${playerToSell.name} foi listado no mercado por ${price} K$!`);
+        loadPlayers(); // Recarrega para mostrar o novo status
       }
     } catch (error) {
-      console.error('Erro na ação do jogador:', error);
+      console.error('Failed to list player:', error);
+      alert("Erro ao colocar jogador à venda.");
     }
   };
 
@@ -186,7 +156,7 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       {/* Header */}
       <div className="card">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -221,101 +191,121 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
         <PlayerAttributesLegend showDetailed={true} />
       )}
 
-      {/* Tabs */}
-      <div className="card">
-        <div className="flex space-x-1 mb-4">
-          {[
-            { key: 'elenco', label: 'Elenco Principal', count: players.filter(p => !p.is_in_academy).length },
-            { key: 'academia', label: 'Academia', count: players.filter(p => p.is_in_academy).length },
-            { key: 'lesoes', label: 'Lesionados', count: players.filter(p => p.injury_severity && p.injury_severity > 0).length },
-            { key: 'estatisticas', label: 'Estatísticas', count: 0 }
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {tab.label} {tab.count > 0 && `(${tab.count})`}
-            </button>
-          ))}
+      {/* Abas de Navegação */}
+      <div className="flex items-center border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('profissional')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'profissional'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-blue-600'
+          }`}
+        >
+          Elenco Principal
+        </button>
+        <button
+          onClick={() => setActiveTab('academia')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'academia'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-blue-600'
+          }`}
+        >
+          Academia de Base
+        </button>
+        <button
+          onClick={() => setActiveTab('lesoes')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'lesoes'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-blue-600'
+          }`}
+        >
+          Lesionados
+        </button>
+        <button
+          onClick={() => setActiveTab('estatisticas')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'estatisticas'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-blue-600'
+          }`}
+        >
+          Estatísticas
+        </button>
+      </div>
+      
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Posição</label>
+          <select
+            value={filters.position}
+            onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="all">Todas</option>
+            <option value="GK">Goleiro</option>
+            <option value="CB">Zagueiro</option>
+            <option value="LB">Lateral Esq.</option>
+            <option value="RB">Lateral Dir.</option>
+            <option value="CM">Meio-campo</option>
+            <option value="ST">Atacante</option>
+          </select>
         </div>
 
-        {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Posição</label>
-            <select
-              value={filters.position}
-              onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="all">Todas</option>
-              <option value="GK">Goleiro</option>
-              <option value="CB">Zagueiro</option>
-              <option value="LB">Lateral Esq.</option>
-              <option value="RB">Lateral Dir.</option>
-              <option value="CM">Meio-campo</option>
-              <option value="ST">Atacante</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Overall Mín.</label>
+          <input
+            type="range"
+            min="40"
+            max="99"
+            value={filters.overallMin}
+            onChange={(e) => setFilters(prev => ({ ...prev, overallMin: Number(e.target.value) }))}
+            className="w-full"
+          />
+          <span className="text-xs text-gray-600">{filters.overallMin}+</span>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Overall Mín.</label>
-            <input
-              type="range"
-              min="40"
-              max="99"
-              value={filters.overallMin}
-              onChange={(e) => setFilters(prev => ({ ...prev, overallMin: Number(e.target.value) }))}
-              className="w-full"
-            />
-            <span className="text-xs text-gray-600">{filters.overallMin}+</span>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+          <input
+            type="text"
+            placeholder="Nome do jogador..."
+            value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
-            <input
-              type="text"
-              placeholder="Nome do jogador..."
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="overall">Overall</option>
+            <option value="age">Idade</option>
+            <option value="name">Nome</option>
+            <option value="position">Posição</option>
+            <option value="salary">Salário</option>
+          </select>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="overall">Overall</option>
-              <option value="age">Idade</option>
-              <option value="name">Nome</option>
-              <option value="position">Posição</option>
-              <option value="salary">Salário</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({
-                position: 'all',
-                ageMin: 16,
-                ageMax: 40,
-                overallMin: 40,
-                search: ''
-              })}
-              className="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
-            >
-              Limpar Filtros
-            </button>
-          </div>
+        <div className="flex items-end">
+          <button
+            onClick={() => setFilters({
+              position: 'all',
+              ageMin: 16,
+              ageMax: 40,
+              overallMin: 40,
+              search: ''
+            })}
+            className="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
+          >
+            Limpar Filtros
+          </button>
         </div>
       </div>
 
@@ -336,6 +326,7 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
               showActions={selectedPlayer === player.id}
               isSelected={selectedPlayer === player.id}
               size="medium"
+              playerType={activeTab === 'academia' ? 'youth' : 'professional'}
             />
           ))}
         </div>
@@ -394,6 +385,13 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
           </div>
         </div>
       )}
+
+      <SellPlayerModal
+        isOpen={isSellModalOpen}
+        player={playerToSell}
+        onClose={() => setSellModalOpen(false)}
+        onConfirm={confirmSellPlayer}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Match, Round, MatchBroadcast, Channel, Competition, Team, Stadium, Player } from '../../entities';
@@ -7,6 +7,8 @@ import { UpdateMatchDto } from './dto/update-match.dto';
 import { MatchStatus, MatchLeg } from '../../entities/match.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateTwoLegTieDto } from './dto/create-two-leg-tie.dto';
+import { PowerIndexService } from '../simulations/power-index.service';
+import { StandingsService, StandingEntry } from '../standings/standings.service';
 
 @Injectable()
 export class MatchesService {
@@ -27,6 +29,9 @@ export class MatchesService {
     private stadiumRepository: Repository<Stadium>,
     @InjectRepository(Player)
     private playerRepository: Repository<Player>,
+    @Inject(forwardRef(() => PowerIndexService))
+    private readonly powerIndexService: PowerIndexService,
+    private readonly standingsService: StandingsService,
   ) {}
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -843,5 +848,224 @@ export class MatchesService {
       console.error('Stack trace:', error.stack);
       return [];
     }
+  }
+
+  async getMatchPrediction(matchId: number): Promise<any> {
+    const match = await this.matchRepository.findOne({
+      where: { id: matchId },
+      relations: ['home_team', 'away_team', 'competition'],
+    });
+
+    if (!match) throw new Error('Partida não encontrada');
+    const { home_team, away_team, competition } = match;
+    if (!home_team || !away_team || !competition) throw new Error('Dados da partida incompletos');
+
+    try {
+      // Usar o método correto para calcular o Power Index para a competição inteira
+      const powerIndexEntries = await this.powerIndexService.calculatePowerIndexForCompetition(competition.id);
+
+      const homeTeamPI = powerIndexEntries.find(p => p.team_id === home_team.id);
+      const awayTeamPI = powerIndexEntries.find(p => p.team_id === away_team.id);
+
+      if (!homeTeamPI || !awayTeamPI) {
+        // Se não houver dados de PI, retorna uma predição indisponível
+        return {
+          predictionUnavailable: true,
+          fallbackUsed: false,
+        };
+      }
+
+      const homePowerIndex = homeTeamPI.power_index;
+      const awayPowerIndex = awayTeamPI.power_index;
+
+      // Lógica de cálculo de probabilidade...
+      const powerDifference = homePowerIndex - awayPowerIndex;
+      const homeAdvantage = 5;
+      const adjustedPowerDifference = powerDifference + homeAdvantage;
+      let homeWinProbability = 50 + (adjustedPowerDifference / 10) * 8;
+      homeWinProbability = Math.max(5, Math.min(95, homeWinProbability));
+      const awayWinProbability = 100 - homeWinProbability;
+      const drawProbability = 100 - (Math.abs(powerDifference) / 1.5);
+      const adjustedDrawProbability = Math.max(15, Math.min(40, drawProbability));
+      const totalWinProbability = 100 - adjustedDrawProbability;
+      const finalHomeWin = (homeWinProbability / 100) * totalWinProbability;
+      const finalAwayWin = (awayWinProbability / 100) * totalWinProbability;
+
+      // Obter dados da classificação para o Head-to-Head
+      const standings = await this.standingsService.getCompetitionStandings(competition.id);
+      const homeTeamStanding = standings.find(s => s.team.id === home_team.id);
+      const awayTeamStanding = standings.find(s => s.team.id === away_team.id);
+
+      const headToHead = {
+        homeTeam: {
+          name: home_team.name,
+          logoUrl: home_team.logo_url,
+          position: homeTeamStanding?.position || 0,
+          points: homeTeamStanding?.points || 0,
+          form: homeTeamStanding?.form || '',
+          powerIndex: homePowerIndex,
+        },
+        awayTeam: {
+          name: away_team.name,
+          logoUrl: away_team.logo_url,
+          position: awayTeamStanding?.position || 0,
+          points: awayTeamStanding?.points || 0,
+          form: awayTeamStanding?.form || '',
+          powerIndex: awayPowerIndex,
+        },
+      };
+
+      return {
+        probabilities: {
+          homeWin: parseFloat(finalHomeWin.toFixed(1)),
+          draw: parseFloat(adjustedDrawProbability.toFixed(1)),
+          awayWin: parseFloat(finalAwayWin.toFixed(1)),
+        },
+        headToHead,
+        fallbackUsed: false, // Sucesso, não usou fallback
+      };
+
+    } catch (error) {
+      // Se calculatePowerIndexForCompetition falhar (ex: sem standings), usamos o fallback
+      console.warn(`Fallback ativado para partida ${matchId}:`, error.message);
+      return this.runPredictionFallback(home_team, away_team);
+    }
+  }
+
+  private async runPredictionFallback(home_team: Team, away_team: Team): Promise<any> {
+      const homeTeamStanding = await this._getFallbackStandingEntry(home_team.id);
+      const awayTeamStanding = await this._getFallbackStandingEntry(away_team.id);
+
+      if (!homeTeamStanding || !awayTeamStanding) {
+        return { predictionUnavailable: true, fallbackUsed: true };
+      }
+
+      // Simular um cálculo de Power Index simplificado para o fallback
+      const homePowerIndex = (homeTeamStanding.points / homeTeamStanding.played) * 25 + (homeTeamStanding.goal_difference / homeTeamStanding.played) * 10 + 50;
+      const awayPowerIndex = (awayTeamStanding.points / awayTeamStanding.played) * 25 + (awayTeamStanding.goal_difference / awayTeamStanding.played) * 10 + 50;
+      
+      // ... (mesma lógica de cálculo de probabilidade do método principal) ...
+      const powerDifference = homePowerIndex - awayPowerIndex;
+      const homeAdvantage = 5;
+      const adjustedPowerDifference = powerDifference + homeAdvantage;
+      let homeWinProbability = 50 + (adjustedPowerDifference / 10) * 8;
+      homeWinProbability = Math.max(5, Math.min(95, homeWinProbability));
+      const awayWinProbability = 100 - homeWinProbability;
+      const drawProbability = 100 - (Math.abs(powerDifference) / 1.5);
+      const adjustedDrawProbability = Math.max(15, Math.min(40, drawProbability));
+      const totalWinProbability = 100 - adjustedDrawProbability;
+      const finalHomeWin = (homeWinProbability / 100) * totalWinProbability;
+      const finalAwayWin = (awayWinProbability / 100) * totalWinProbability;
+
+      const headToHead = {
+        homeTeam: {
+          name: home_team.name,
+          logoUrl: home_team.logo_url,
+          position: 0,
+          points: homeTeamStanding.points,
+          form: homeTeamStanding.form,
+          powerIndex: homePowerIndex,
+        },
+        awayTeam: {
+          name: away_team.name,
+          logoUrl: away_team.logo_url,
+          position: 0,
+          points: awayTeamStanding.points,
+          form: awayTeamStanding.form,
+          powerIndex: awayPowerIndex,
+        },
+      };
+
+      return {
+        probabilities: {
+          homeWin: parseFloat(finalHomeWin.toFixed(1)),
+          draw: parseFloat(adjustedDrawProbability.toFixed(1)),
+          awayWin: parseFloat(finalAwayWin.toFixed(1)),
+        },
+        headToHead,
+        fallbackUsed: true,
+      };
+  }
+
+  async findRemainingMatches(competitionId: number): Promise<Match[]> {
+    return this.matchRepository.find({
+      where: {
+        competition: { id: competitionId },
+        status: MatchStatus.SCHEDULED,
+      },
+      relations: ['home_team', 'away_team'],
+      order: { match_date: 'ASC' },
+    });
+  }
+
+  private async _getFallbackStandingEntry(teamId: number): Promise<any> {
+    const matches = await this.matchRepository.find({
+      where: [
+        { home_team: { id: teamId }, status: MatchStatus.FINISHED },
+        { away_team: { id: teamId }, status: MatchStatus.FINISHED },
+      ],
+      relations: ['home_team', 'away_team'],
+      order: { match_date: 'DESC' },
+    });
+
+    if (matches.length === 0) return null;
+
+    let points = 0;
+    let played = 0;
+    let won = 0;
+    let drawn = 0;
+    let lost = 0;
+    let goals_for = 0;
+    let goals_against = 0;
+    
+    matches.forEach(match => {
+        played++;
+        const isHome = match.home_team.id === teamId;
+        const teamScore = isHome ? match.home_score : match.away_score;
+        const opponentScore = isHome ? match.away_score : match.home_score;
+
+        goals_for += teamScore;
+        goals_against += opponentScore;
+
+        if (teamScore > opponentScore) {
+            won++;
+            points += 3;
+        } else if (teamScore < opponentScore) {
+            lost++;
+        } else {
+            drawn++;
+            points += 1;
+        }
+    });
+
+    const form = this._calculateRecentForm(matches, teamId);
+    
+    return {
+      team: matches[0].home_team.id === teamId ? matches[0].home_team : matches[0].away_team,
+      points,
+      played,
+      won,
+      drawn,
+      lost,
+      goals_for,
+      goals_against,
+      goal_difference: goals_for - goals_against,
+      form,
+      position: 0, // Posição não é relevante aqui
+    };
+  }
+
+  private _calculateRecentForm(matches: Match[], teamId: number): string {
+    const recentMatches = matches.slice(0, 5);
+    let form = '';
+    recentMatches.forEach(match => {
+      const isHome = match.home_team.id === teamId;
+      const teamScore = isHome ? match.home_score : match.away_score;
+      const opponentScore = isHome ? match.away_score : match.home_score;
+      if (teamScore > opponentScore) form += 'V';
+      else if (teamScore < opponentScore) form += 'D';
+      else form += 'E';
+    });
+    return form;
   }
 } 

@@ -32,6 +32,7 @@ import {
   PoolParticipant,
   PoolPrediction
 } from './entities';
+import { SimulationResult } from './entities/simulation-result.entity';
 import { BotConfig } from './entities/bot-config.entity';
 import { WhatsAppMenuConfig } from './entities/whatsapp-menu-config.entity';
 
@@ -61,6 +62,7 @@ import { UrlShortenerModule } from './modules/url-shortener/url-shortener.module
 import { TitlesModule } from './modules/titles/titles.module';
 import { AmateurModule } from './modules/amateur/amateur.module';
 import { PoolsModule } from './modules/pools/pools.module';
+import { SimulationsModule } from './modules/simulations/simulations.module';
 
 @Module({
   imports: [
@@ -97,6 +99,7 @@ import { PoolsModule } from './modules/pools/pools.module';
     TitlesModule,
     AmateurModule,
     PoolsModule,
+    SimulationsModule,
   ],
   controllers: [AppController],
   providers: [

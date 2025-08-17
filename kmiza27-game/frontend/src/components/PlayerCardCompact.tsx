@@ -1,17 +1,8 @@
 'use client';
 
 import React from 'react';
-
-// Siglas em português para os atributos
-export const ATTRIBUTE_LABELS = {
-  PAC: 'Ritmo',        // Pace (Speed + Acceleration)
-  FIN: 'Finalização',  // Finishing (Shooting + Finishing)
-  PAS: 'Passe',        // Passing
-  DRI: 'Drible',       // Dribbling
-  DEF: 'Defesa',       // Defending
-  FIS: 'Físico',       // Physical (Strength + Stamina)
-  GOL: 'Goleiro'       // Goalkeeping
-} as const;
+import { FaArrowUp, FaDollarSign, FaDumbbell, FaPlus } from 'react-icons/fa';
+import { PlayerCardData, ATTRIBUTE_LABELS } from '@/types/player';
 
 // Abreviaturas em português para exibição compacta
 export const ATTRIBUTE_ABBREVIATIONS = {
@@ -68,51 +59,6 @@ export const POSITION_ABBREVIATIONS = {
   CF: 'SA'
 } as const;
 
-export interface PlayerCardData {
-  id: string;
-  name: string;
-  position: string;
-  age: number;
-  overall: number;
-  potential?: number;
-  
-  // Atributos para o card
-  attributes: {
-    PAC: number;  // Ritmo (speed + acceleration)
-    FIN: number;  // Finalização (shooting + finishing)
-    PAS: number;  // Passe
-    DRI: number;  // Drible
-    DEF: number;  // Defesa
-    FIS: number;  // Físico (strength + stamina)
-    GOL?: number; // Goleiro (apenas para GK)
-  };
-  
-  // Estado do jogador
-  morale?: number;
-  fitness?: number;
-  form?: number;
-  fatigue?: number;
-  injury_severity?: number;
-  
-  // Informações de contrato
-  salary?: number;
-  market_value?: number;
-  
-  // Informações de treino
-  training_focus?: keyof typeof ATTRIBUTE_LABELS;
-  training_intensity?: 'baixa' | 'normal' | 'alta';
-  is_in_academy?: boolean;
-  
-  // Personalidade
-  personality?: string;
-  
-  // Estatísticas
-  games_played?: number;
-  goals_scored?: number;
-  assists?: number;
-  average_rating?: number;
-}
-
 interface PlayerCardCompactProps {
   player: PlayerCardData;
   onClick?: () => void;
@@ -120,6 +66,7 @@ interface PlayerCardCompactProps {
   showActions?: boolean;
   isSelected?: boolean;
   size?: 'small' | 'medium' | 'large';
+  playerType: 'youth' | 'professional'; // <-- NOVA PROP
 }
 
 export default function PlayerCardCompact({
@@ -128,7 +75,8 @@ export default function PlayerCardCompact({
   onActionClick,
   showActions = false,
   isSelected = false,
-  size = 'medium'
+  size = 'medium',
+  playerType, // <-- NOVA PROP
 }: PlayerCardCompactProps) {
   
   // Determinar cores baseadas no overall
@@ -280,7 +228,7 @@ export default function PlayerCardCompact({
           <AttributeBar 
             key={attr}
             label={attr}
-            value={player.attributes[attr as keyof typeof player.attributes] || 0}
+            value={player.attributes[attr as keyof typeof player.attributes] ?? 0}
           />
         ))}
       </div>
@@ -313,40 +261,43 @@ export default function PlayerCardCompact({
         </div>
       )}
 
-      {/* Ações (se mostrar) */}
-      {showActions && onActionClick && (
-        <div className="mt-2 pt-2 border-t border-gray-100 flex gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onActionClick('edit_training');
-            }}
-            className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
-          >
-            Treino
-          </button>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onActionClick('view_details');
-            }}
-            className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
-          >
-            Detalhes
-          </button>
-          
-          {player.overall >= 70 && (
+      {/* Seção de Ações */}
+      {showActions && (
+        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-around gap-2">
+          {playerType === 'youth' ? (
             <button
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
               onClick={(e) => {
-                e.stopPropagation();
-                onActionClick('promote');
+                e.stopPropagation(); // Evita que o clique feche o card
+                onActionClick?.('promote');
               }}
-              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
             >
+              <FaArrowUp />
               Promover
             </button>
+          ) : (
+            <button
+              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onActionClick?.('sell');
+              }}
+            >
+              <FaDollarSign />
+              Vender
+            </button>
           )}
+
+          <button
+            className="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              onActionClick?.('train');
+            }}
+          >
+            <FaDumbbell />
+            Treinar
+          </button>
         </div>
       )}
     </div>

@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.comparison-bar-team1 {
+  background-color: #3b82f6; /* Cor azul para o time 1 */
+}
+
+.comparison-bar-team2 {
+  background-color: #ef4444; /* Cor vermelha para o time 2 */
+  margin-left: -1px; /* Evita um pequeno espaço entre as barras */
+}
+
+.prediction-bar-home { background-color: #3b82f6; }
+.prediction-bar-draw { background-color: #6b7280; }
+.prediction-bar-away { background-color: #ef4444; }

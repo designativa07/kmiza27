@@ -309,81 +309,60 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
 
         {/* Estatísticas da Temporada Reformuladas */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white rounded-lg border border-amber-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-            <div className="bg-amber-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          {/* Card de Status Individual */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-amber-100 rounded-full p-3">
+              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <div className="text-2xl font-bold text-amber-700 mb-1">{progress.points}</div>
-            <div className="text-xs text-amber-600 font-medium">Pontos</div>
-          </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-            <div className="bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-slate-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-              </svg>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{progress.points}</div>
+              <div className="text-xs text-slate-500 font-medium">Pontos</div>
             </div>
-            <div className="text-2xl font-bold text-slate-700 mb-1">{progress.games_played}/38</div>
-            <div className="text-xs text-slate-600 font-medium">Jogos</div>
-            {progress.games_played >= 38 && (
-              <div className="text-xs text-emerald-600 font-semibold mt-2 bg-emerald-50 rounded px-2 py-1">
-                ✅ Completa
-              </div>
-            )}
           </div>
-          <div className="bg-white rounded-lg border border-emerald-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-            <div className="bg-emerald-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-              </svg>
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-slate-100 rounded-full p-3">
+              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             </div>
-            <div className="text-2xl font-bold text-emerald-700 mb-1">{progress.goals_for}</div>
-            <div className="text-xs text-emerald-600 font-medium">Gols Pró</div>
-          </div>
-          <div className="bg-white rounded-lg border border-red-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-            <div className="bg-red-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-              </svg>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{progress.games_played}/38</div>
+              <div className="text-xs text-slate-500 font-medium">Jogos</div>
             </div>
-            <div className="text-2xl font-bold text-red-700 mb-1">{progress.goals_against}</div>
-            <div className="text-xs text-red-600 font-medium">Gols Contra</div>
           </div>
-          <div className={`bg-white rounded-lg border p-4 text-center shadow-sm hover:shadow-md transition-shadow ${
-            progress.position <= 4 ? 'border-green-200' : 
-            progress.position >= 17 ? 'border-red-200' : 'border-blue-200'
-          }`}>
-            <div className={`rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3 ${
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-emerald-100 rounded-full p-3">
+               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{progress.goals_for}</div>
+              <div className="text-xs text-slate-500 font-medium">Gols Pró</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-red-100 rounded-full p-3">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{progress.goals_against}</div>
+              <div className="text-xs text-slate-500 font-medium">Gols Contra</div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`rounded-full p-3 ${
               progress.position <= 4 ? 'bg-green-100' : 
               progress.position >= 17 ? 'bg-red-100' : 'bg-blue-100'
             }`}>
-              {progress.position <= 4 ? (
-                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 10a7 7 0 019.307-6.611 1 1 0 00.365-1.964 9 9 0 1014.9 6.807 1 1 0 00-.977-1.744A7 7 0 013 10z" clipRule="evenodd" />
-                  <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v8l-3.707 3.707a1 1 0 001.414 1.414l4-4A1 1 0 0011 11V3a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              ) : progress.position >= 17 ? (
-                <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              )}
+              <svg className={`w-6 h-6 ${
+                progress.position <= 4 ? 'text-green-600' :
+                progress.position >= 17 ? 'text-red-600' : 'text-blue-600'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3"></path></svg>
             </div>
-            <div className={`text-2xl font-bold mb-1 ${
-              progress.position <= 4 ? 'text-green-700' : 
-              progress.position >= 17 ? 'text-red-700' : 'text-blue-700'
-            }`}>
-              {progress.position}º
-            </div>
-            <div className={`text-xs font-medium ${
-              progress.position <= 4 ? 'text-green-600' : 
-              progress.position >= 17 ? 'text-red-600' : 'text-blue-600'
-            }`}>
-              {getPositionDescription(progress.position, progress.current_tier)}
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{progress.position}º</div>
+              <div className="text-xs text-slate-500 font-medium">Acesso</div>
             </div>
           </div>
         </div>
@@ -443,16 +422,16 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
                     <table className="w-full">
                       <thead className="bg-slate-100 border-b border-slate-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pos</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Time</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Pts</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">J</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">V</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">E</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">D</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">GP</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">GC</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">SG</th>
+                          <th className="px-4 py-1 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pos</th>
+                          <th className="px-4 py-1 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Time</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Pts</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">J</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">V</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">E</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">D</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">GP</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">GC</th>
+                          <th className="px-4 py-1 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">SG</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-slate-100">
@@ -462,14 +441,14 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
                           
                           return (
                             <tr key={team.team_id} className={`${isUserTeam ? 'bg-emerald-50 border-l-4 border-emerald-500 shadow-sm' : ''} hover:bg-slate-50 transition-colors`}>
-                              <td className={`px-4 py-4 whitespace-nowrap text-sm font-bold ${positionClass}`}>
+                              <td className={`px-4 py-2 whitespace-nowrap text-sm font-bold ${positionClass}`}>
                                 <div className="flex items-center">
                                   <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold mr-2">
                                     {team.position}
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 whitespace-nowrap">
+                              <td className="px-4 py-2 whitespace-nowrap">
                                 <div className="flex items-center">
                                   <div 
                                     className="w-5 h-5 rounded-full mr-3 shadow-sm border border-white" 
@@ -484,16 +463,16 @@ export default function CompetitionsManagerReformed({ onSeasonEnd, refreshKey }:
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-center">
+                              <td className="px-4 py-2 whitespace-nowrap text-center">
                                 <span className="text-sm font-bold text-slate-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">{team.points}</span>
                               </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600 text-center font-medium">{team.games_played}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-emerald-600 text-center font-semibold">{team.wins}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-amber-600 text-center font-semibold">{team.draws}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-red-600 text-center font-semibold">{team.losses}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600 text-center">{team.goals_for}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600 text-center">{team.goals_against}</td>
-                              <td className={`px-4 py-4 whitespace-nowrap text-sm text-center font-semibold ${
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-center font-medium">{team.games_played}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-emerald-600 text-center font-semibold">{team.wins}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-amber-600 text-center font-semibold">{team.draws}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-red-600 text-center font-semibold">{team.losses}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-center">{team.goals_for}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-center">{team.goals_against}</td>
+                              <td className={`px-4 py-2 whitespace-nowrap text-sm text-center font-semibold ${
                                 team.goal_difference > 0 ? 'text-emerald-600' : 
                                 team.goal_difference < 0 ? 'text-red-600' : 'text-slate-500'
                               }`}>

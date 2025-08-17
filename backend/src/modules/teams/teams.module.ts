@@ -6,10 +6,13 @@ import { extname, join } from 'path';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
 import { Team, Match, CompetitionTeam, Player, PlayerTeamHistory, InternationalTeam } from '../../entities';
+import { SimulationResult } from '../../entities/simulation-result.entity';
+import { StandingsModule } from '../standings/standings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Team, Match, CompetitionTeam, Player, PlayerTeamHistory, InternationalTeam]),
+    TypeOrmModule.forFeature([Team, Match, CompetitionTeam, Player, PlayerTeamHistory, InternationalTeam, SimulationResult]),
+    StandingsModule,
     MulterModule.register({
       storage: diskStorage({
         destination: join(process.cwd(), 'uploads', 'escudos'),

@@ -58,9 +58,10 @@ interface TrainingStats {
 
 interface TrainingPanelProps {
   teamId: string;
+  onPlayerChanges?: () => void;
 }
 
-export default function TrainingPanel({ teamId }: TrainingPanelProps) {
+export default function TrainingPanel({ teamId, onPlayerChanges }: TrainingPanelProps) {
   const [players, setPlayers] = useState<TrainingPlayer[]>([]);
   const [stats, setStats] = useState<TrainingStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +150,11 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
       if (response.ok) {
         await loadTrainingData();
         alert('Semana de treinamento aplicada com sucesso!');
+        
+        // Notificar o componente pai sobre mudanças nos jogadores
+        if (onPlayerChanges) {
+          onPlayerChanges();
+        }
       }
     } catch (err) {
       console.error('Erro ao aplicar semana de treinamento:', err);
@@ -496,23 +502,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                     </div>
                   </div>
 
-                  {/* Status de treinamento */}
+                  {/* Configurações de treinamento */}
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
-                    <h4 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
-                      <span className="text-lg">🎯</span>
-                      Status de Treinamento
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">Status:</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          player.is_in_academy 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
-                            : 'bg-gray-100 text-gray-800 border border-gray-200'
-                        }`}>
-                          {player.is_in_academy ? '🏋️ Em treino' : '⏸️ Fora da academia'}
-                        </span>
-                      </div>
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">Foco:</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getFocusColor(player.training_focus)} border`}>
@@ -562,8 +554,8 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                       )}
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">PAC</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-purple-600">{player.attributes.pace}</span>
@@ -578,8 +570,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                           <div className="bg-purple-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.pace}%`}}></div>
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">SHO</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-red-600">{player.attributes.shooting}</span>
@@ -594,8 +587,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                           <div className="bg-red-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.shooting}%`}}></div>
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">PAS</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-blue-600">{player.attributes.passing}</span>
@@ -610,8 +604,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                           <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.passing}%`}}></div>
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">DRI</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-yellow-600">{player.attributes.dribbling}</span>
@@ -626,8 +621,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                           <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.dribbling}%`}}></div>
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">DEF</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-green-600">{player.attributes.defending}</span>
@@ -642,8 +638,9 @@ export default function TrainingPanel({ teamId }: TrainingPanelProps) {
                           <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{width: `${player.attributes.defending}%`}}></div>
                         </div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-1">
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-xs font-semibold text-gray-600">PHY</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-orange-600">{player.attributes.physical}</span>

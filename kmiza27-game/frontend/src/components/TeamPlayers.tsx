@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { gameApiReformed } from '@/services/gameApiReformed';
-import PlayerCardCompact, { PlayerCardData } from './PlayerCardCompact';
+import PlayerCard from './PlayerCard';
 
 interface Player {
   id: string;
@@ -31,14 +31,20 @@ interface Player {
   overall?: number;
   age?: number;
   salary?: number;
+  training_focus?: string;
+  training_intensity?: 'baixa' | 'normal' | 'alta';
+  morale?: number;
+  fitness?: number;
+  form?: number;
 }
 
 interface TeamPlayersProps {
   teamId: string;
   teamName: string;
+  onPlayerChanges?: () => void;
 }
 
-export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
+export default function TeamPlayers({ teamId, teamName, onPlayerChanges }: TeamPlayersProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +106,11 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
           overall,
           age,
           salary,
+          training_focus: p.training_focus,
+          training_intensity: p.training_intensity,
+          morale: p.morale,
+          fitness: p.fitness,
+          form: p.form,
         } as Player;
       });
       setPlayers(normalized);
@@ -109,6 +120,39 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
       setPlayers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handlers para as ações do PlayerCard
+  const handleConfigureTraining = (playerId: string) => {
+    // TODO: Implementar modal de configuração de treino
+    console.log('Configurar treino para jogador:', playerId);
+    alert('Funcionalidade de configuração de treino será implementada em breve!');
+  };
+
+  const handleViewDetails = (playerId: string) => {
+    // TODO: Implementar modal de detalhes do jogador
+    console.log('Ver detalhes do jogador:', playerId);
+    alert('Funcionalidade de detalhes será implementada em breve!');
+  };
+
+  const handleListPlayer = (playerId: string) => {
+    // TODO: Implementar modal para listar jogador no mercado
+    console.log('Listar jogador no mercado:', playerId);
+    alert('Funcionalidade de listagem no mercado será implementada em breve!');
+  };
+
+  const handleFirePlayer = (playerId: string) => {
+    if (confirm('Tem certeza que deseja demitir este jogador? Esta ação não pode ser desfeita.')) {
+      // TODO: Implementar API para demitir jogador
+      console.log('Demitir jogador:', playerId);
+      setPlayers(prev => prev.filter(p => p.id !== playerId));
+      alert('Jogador demitido com sucesso!');
+      
+      // Notificar o componente pai sobre mudanças nos jogadores
+      if (onPlayerChanges) {
+        onPlayerChanges();
+      }
     }
   };
 
@@ -158,7 +202,7 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
     return list;
   };
 
-  // Mapeamento de posições para o formato esperado pelo PlayerCardCompact
+  // Mapeamento de posições para o formato esperado pelo PlayerCard
   const positionMapping: Record<string, string> = {
     // Português para inglês
     'Goleiro': 'GK',
@@ -238,6 +282,7 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
           value={pos} 
           onChange={(e) => setPos(e.target.value)} 
           className="border rounded px-2 py-1 text-sm"
+          title="Filtrar por posição"
         >
           {availablePositions.map((p) => (
             <option key={p} value={p}>{p === 'ALL' ? 'Todas' : (posToPt[p] || p)}</option>
@@ -247,6 +292,7 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
           value={sort} 
           onChange={(e) => setSort(e.target.value as any)} 
           className="border rounded px-2 py-1 text-sm"
+          title="Ordenar jogadores"
         >
           <option value="overall">Ordenar por Overall</option>
           <option value="age">Ordenar por Idade</option>
@@ -257,10 +303,10 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
         </div>
       </div>
 
-      {/* Grid de jogadores compactos - 4-5 por linha */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+      {/* Grid de jogadores com PlayerCard unificado - 2-3 por linha para melhor visualização */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredPlayers.map((p) => (
-          <PlayerCardCompact 
+          <PlayerCard 
             key={p.id} 
             player={{
               id: p.id,
@@ -268,17 +314,32 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
               position: positionMapping[p.position] || 'CM',
               age: p.age || 0,
               overall: p.overall || 0,
+              potential: Math.max(...Object.values(p.potential)),
               attributes: {
-                PAC: p.attributes.pace,
-                FIN: p.attributes.shooting,
-                PAS: p.attributes.passing,
-                DRI: p.attributes.dribbling,
-                DEF: p.attributes.defending,
-                FIS: p.attributes.physical,
+                pace: p.attributes.pace,
+                shooting: p.attributes.shooting,
+                passing: p.attributes.passing,
+                dribbling: p.attributes.dribbling,
+                defending: p.attributes.defending,
+                physical: p.attributes.physical,
               },
-              salary: p.salary,
+              training_focus: p.training_focus,
+              training_intensity: p.training_intensity,
+              type: 'professional',
+              morale: p.morale,
+              fitness: p.fitness,
+              form: p.form,
             }}
-            size="small"
+            context="roster"
+            showTrainingStatus={true}
+            showAttributes={true}
+            showPhysicalStats={true}
+            showTrainingHistory={false}
+            onConfigureTraining={handleConfigureTraining}
+            onViewDetails={handleViewDetails}
+            onListPlayer={handleListPlayer}
+            onFirePlayer={handleFirePlayer}
+            className="h-full"
           />
         ))}
       </div>
@@ -295,11 +356,11 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-gray-600 mb-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">RIT</span>
+              <span className="font-medium text-gray-700">PAC</span>
               <span>Ritmo (Velocidade + Aceleração)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">FIN</span>
+              <span className="font-medium text-gray-700">SHO</span>
               <span>Finalização (Chute + Finalização)</span>
             </div>
             <div className="flex items-center gap-2">
@@ -317,22 +378,18 @@ export default function TeamPlayers({ teamId, teamName }: TeamPlayersProps) {
               <span>Defesa (Desarme + Marcação)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">FIS</span>
+              <span className="font-medium text-gray-700">PHY</span>
               <span>Físico (Força + Resistência)</span>
             </div>
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">GOL</span>
-              <span>Goleiro (Apenas para GKs)</span>
-            </div>
-            <div className="flex items-center gap-2">
               <span className="font-medium text-gray-700">Overall</span>
               <span>Média geral dos atributos</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">GOL</span>
-              <span>Goleiro</span>
+              <span className="font-medium text-gray-700">Potencial</span>
+              <span>Valor máximo que pode atingir</span>
             </div>
           </div>
         </div>

@@ -1,12 +1,13 @@
 'use client';
 
 import { notFound } from 'next/navigation';
-import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink } from 'lucide-react';
+import { Shield, User, Calendar, Shirt, MapPin, Users, Trophy, BookOpen, UserCheck, PlayCircle, Info, Building, ExternalLink, BarChart3 } from 'lucide-react';
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { PlayerCard } from '@/components/PlayerCard';
 import { MarkdownText } from '@/lib/markdown';
 import TeamTitles from '@/components/TeamTitles';
+import { TeamStatistics } from '@/components/TeamStatistics';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
@@ -74,7 +75,7 @@ type Props = {
   params: { teamId: string };
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 async function getTeamData(teamId: string) {
   const [teamRes, playersRes] = await Promise.all([
@@ -143,12 +144,13 @@ const TabButton = ({ active, onClick, children, icon: Icon }: {
 );
 
 const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) => {
-  const [activeTab, setActiveTab] = useState<'jogos' | 'elenco' | 'info' | 'titulos' | 'estadio'>('jogos');
+  const [activeTab, setActiveTab] = useState<'jogos' | 'elenco' | 'info' | 'estatisticas' | 'titulos' | 'estadio'>('jogos');
 
   const tabs = [
     { id: 'jogos' as const, label: 'Jogos', icon: PlayCircle },
     { id: 'elenco' as const, label: 'Elenco', icon: UserCheck },
     { id: 'info' as const, label: 'Info', icon: Info },
+    { id: 'estatisticas' as const, label: 'Estatísticas', icon: BarChart3 },
     { id: 'titulos' as const, label: 'Títulos', icon: Trophy },
     { id: 'estadio' as const, label: 'Estádio', icon: Building },
   ];
@@ -216,6 +218,13 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
                 <p className="text-gray-500 text-center text-sm md:text-base">Informações adicionais sobre o time não estão disponíveis no momento.</p>
               )}
             </div>
+          </div>
+        );
+      
+      case 'estatisticas':
+        return (
+          <div className="bg-white p-3 md:p-6 border-t border-gray-300">
+            <TeamStatistics teamId={team.id} />
           </div>
         );
       

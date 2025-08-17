@@ -19,6 +19,8 @@ import { InvestmentsModule } from './modules/investments/investments.module';
 import { NewsModule } from './modules/news/news.module';
 import { MatchSimulationModule } from './modules/match-simulation/match-simulation.module';
 import { PlayerDevelopmentModule } from './modules/player-development/player-development.module';
+import { MarketModule } from './modules/market/market.module';
+import { YouthModule } from './modules/youth/youth.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { PlayerDevelopmentModule } from './modules/player-development/player-dev
     // Módulos avançados de simulação e desenvolvimento
     MatchSimulationModule,
     PlayerDevelopmentModule,
+    MarketModule,
+    YouthModule,
   ],
   controllers: [AppController],
   providers: [SupabaseService],

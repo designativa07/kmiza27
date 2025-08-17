@@ -5,9 +5,12 @@ import { SupabaseService } from '../../database/supabase.service';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://kmiza27-supabase.h4xd66.easypanel.host';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q';
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Cliente com privilégios de administrador para bypassar RLS em operações seguras de backend
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface PlayerAttributes {
   // Atributos Técnicos
@@ -115,6 +118,7 @@ export interface Player {
 @Injectable()
 export class PlayersService {
   private readonly logger = new Logger(PlayersService.name);
+  private squadCreationLocks = new Set<string>(); // Set para controlar times em processo de criação
 
   // ===== CRIAÇÃO DE JOGADORES =====
 
@@ -132,6 +136,7 @@ export class PlayersService {
       
       // Calcular potencial se não fornecido
       const potential = playerData.potential || this.calculateInitialPotential(playerData.age, attributes);
+      const marketValue = this.calculateMarketValue(attributes, playerData.age, potential);
 
       const newPlayer = {
         name: playerData.name,
@@ -160,7 +165,7 @@ export class PlayersService {
         contract_end_date: playerData.team_id ? 
           new Date(Date.now() + (2 * 365 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] : null,
         salary_monthly: this.calculateInitialSalary(attributes, playerData.age),
-        market_value: this.calculateMarketValue(attributes, playerData.age, potential),
+        market_value: marketValue,
         
         // Estatísticas iniciais
         games_played: this.randomBetween(0, playerData.age > 20 ? 50 : 10),
@@ -175,7 +180,8 @@ export class PlayersService {
         signed_date: new Date().toISOString().split('T')[0],
       };
 
-      const { data: player, error } = await supabase
+      // USA O CLIENTE ADMIN PARA A CRIAÇÃO
+      const { data: player, error } = await supabaseAdmin
         .from('game_players')
         .insert(newPlayer)
         .select()
@@ -253,36 +259,50 @@ export class PlayersService {
    */
   async getTeamPlayers(teamId: string): Promise<Player[]> {
     try {
-      // Buscar diretamente na tabela base (mais confiável no setup inicial)
-      let { data: players, error } = await supabase
+      // Usar cliente ADMIN para bypassar RLS
+      let { data: players, error } = await supabaseAdmin
         .from('game_players')
         .select('*')
-        .eq('team_id', teamId)
-        .eq('team_type', 'first_team')
-        .order('position');
-
-      // Se vazio, criar plantel inicial automaticamente
-      if (!players || players.length === 0) {
-        this.logger.warn(`⚠️ Nenhum jogador encontrado para time ${teamId}. Criando plantel inicial.`);
-        await this.createInitialSquad(teamId);
-        const fb2 = await supabase
-          .from('game_players')
-          .select('*')
-          .eq('team_id', teamId)
-          .eq('team_type', 'first_team')
-          .order('position');
-        players = fb2.data as any[] | null;
-        error = fb2.error;
-      }
+        .eq('team_id', teamId);
 
       if (error) {
         throw new Error(`Erro ao buscar jogadores: ${error.message}`);
       }
 
+      // Se vazio E NENHUM PROCESSO DE CRIAÇÃO ESTIVER ATIVO, criar plantel
+      if ((!players || players.length === 0) && !this.squadCreationLocks.has(teamId)) {
+        this.logger.warn(`⚠️ Time ${teamId} sem jogadores. Iniciando criação do plantel inicial.`);
+        
+        // Ativa a trava
+        this.squadCreationLocks.add(teamId);
+
+        try {
+          // Cria o elenco
+          await this.createInitialSquad(teamId);
+          // Busca novamente após a criação
+          const { data: newPlayers, error: newError } = await supabaseAdmin
+            .from('game_players')
+            .select('*')
+            .eq('team_id', teamId);
+
+          if (newError) throw newError;
+          players = newPlayers;
+
+        } catch (creationError) {
+          this.logger.error(`❌ Erro crítico ao criar plantel para ${teamId}:`, creationError);
+          // Libera a trava em caso de erro para permitir nova tentativa
+          this.squadCreationLocks.delete(teamId);
+          throw creationError; // Propaga o erro
+        } finally {
+          // Garante que a trava seja liberada após a conclusão
+          this.squadCreationLocks.delete(teamId);
+        }
+      }
+
       return (players || []) as any;
 
     } catch (error) {
-      this.logger.error('❌ Erro ao buscar jogadores do time:', error);
+      this.logger.error(`❌ Erro ao buscar jogadores do time ${teamId}:`, error);
       throw error;
     }
   }
@@ -632,18 +652,32 @@ export class PlayersService {
     return Math.round(baseSalary * ageFactor);
   }
 
-  private calculateMarketValue(attributes: PlayerAttributes, age: number, potential: number): number {
-    const averageAbility = Object.values(attributes).reduce((sum, val) => sum + val, 0) / Object.keys(attributes).length;
-    
-    let baseValue = averageAbility * 10000;
-    
-    // Fator idade
-    if (age <= 23) baseValue *= (potential / averageAbility) * 1.2;
-    else if (age <= 27) baseValue *= 1.0;
-    else if (age <= 30) baseValue *= 0.7;
-    else baseValue *= 0.4;
+  private calculateMarketValue(attributes: any, age: number, potential: number): number {
+    const overall = (
+      (attributes.pace || 50) +
+      (attributes.shooting || 50) +
+      (attributes.passing || 50) +
+      (attributes.dribbling || 50) +
+      (attributes.defending || 50) +
+      (attributes.physical || 50)
+    ) / 6;
 
-    return Math.round(baseValue);
+    let baseValue = Math.pow(overall / 10, 3) * 1000;
+    
+    // Fator Potencial (para jogadores jovens)
+    if (age <= 24) {
+      const potentialGap = Math.max(0, potential - overall);
+      baseValue += potentialGap * 5000;
+    }
+
+    // Fator Idade (pico de valor entre 25-28)
+    if (age >= 29 && age <= 31) {
+      baseValue *= 0.7; // Começa a desvalorizar
+    } else if (age >= 32) {
+      baseValue *= 0.4; // Desvaloriza mais
+    }
+
+    return Math.round(baseValue / 100) * 100; // Arredonda para centenas
   }
 
   private generatePlayerName(): string {
