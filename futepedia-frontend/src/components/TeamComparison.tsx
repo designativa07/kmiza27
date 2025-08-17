@@ -55,7 +55,7 @@ interface TeamComparisonProps {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // Componente para o gráfico de barras
-const ComparisonBarChart = ({ data, team1Name, team2Name }) => {
+const ComparisonBarChart = ({ data, team1Name, team2Name }: { data: any, team1Name: string, team2Name: string }) => {
   const COLORS = ['#3b82f6', '#ef4444']; // Azul para time 1, Vermelho para time 2
 
   return (
