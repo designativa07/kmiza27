@@ -165,10 +165,15 @@ export function TeamComparison({ currentTeamId }: TeamComparisonProps) {
     </div>
   );
 
-  const StatRow = ({ label, team1Value, team2Value, team1Name, team2Name, invertColors = false }) => {
+  const StatRow = ({ label, team1Value, team2Value, invertColors = false }: { label: string, team1Value: number, team2Value: number, invertColors?: boolean }) => {
     const isTeam1Better = invertColors ? team1Value < team2Value : team1Value > team2Value;
     const isTeam2Better = invertColors ? team2Value < team1Value : team2Value > team1Value;
     
+    // Calcula o total para evitar divisão por zero
+    const total = team1Value + team2Value;
+    const team1Percentage = total > 0 ? (team1Value / total) * 100 : 50;
+    const team2Percentage = total > 0 ? (team2Value / total) * 100 : 50;
+
     return (
       <div>
         <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
@@ -177,15 +182,15 @@ export function TeamComparison({ currentTeamId }: TeamComparisonProps) {
           <span className={`font-bold ${isTeam2Better ? 'text-red-600' : ''}`}>{team2Value}</span>
         </div>
         <div className="flex w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-           {/* eslint-disable-next-line @next/next/no-img-element */}
+           {/* eslint-disable-next-line @next/next/no-css-tags */}
            <div 
              className="h-2.5 rounded-l-full comparison-bar-team1" 
-             style={{ width: `${(team1Value / (team1Value + team2Value || 1)) * 100}%` }}
+             style={{ width: `${team1Percentage}%` }}
            ></div>
-           {/* eslint-disable-next-line @next/next/no-img-element */}
+           {/* eslint-disable-next-line @next/next/no-css-tags */}
            <div 
              className="h-2.5 rounded-r-full comparison-bar-team2" 
-             style={{ width: `${(team2Value / (team1Value + team2Value || 1)) * 100}%` }}
+             style={{ width: `${team2Percentage}%` }}
            ></div>
         </div>
       </div>
@@ -242,7 +247,7 @@ export function TeamComparison({ currentTeamId }: TeamComparisonProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatCard title="Campanha Geral" icon={Trophy}>
                 {stats.map(s => (
-                    <StatRow key={s.label} label={s.label} team1Value={s.t1} team2Value={s.t2} team1Name={team1.name} team2Name={team2.name} invertColors={s.invert}/>
+                    <StatRow key={s.label} label={s.label} team1Value={s.t1} team2Value={s.t2} invertColors={s.invert}/>
                 ))}
             </StatCard>
             <div className="grid grid-rows-2 gap-4">
