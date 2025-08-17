@@ -155,7 +155,7 @@ export function TeamComparison({ currentTeamId }: TeamComparisonProps) {
     }
   };
 
-  const StatCard = ({ title, icon: Icon, children }) => (
+  const StatCard = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <h5 className="font-semibold text-gray-700 mb-3 flex items-center text-sm">
         <Icon className="h-4 w-4 mr-2 text-indigo-500" />
