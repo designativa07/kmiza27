@@ -562,13 +562,13 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
         {/* Coluna 2: Título e Rebaixamento */}
         <div className="space-y-6">
           {/* Probabilidades de Título */}
-          {titleChances && (titleChances.titleChances?.length > 0 || titleChances.simulation_based) && (
+          {titleChances && (titleChances.titleChances && titleChances.titleChances.length > 0 || titleChances.simulation_based) && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200 space-y-4">
               {titleChances.simulation_based ? (
                 /* Formato novo com dados de simulação */
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-semibold text-gray-800">{titleChances.competition.name}</h5>
+                    <h5 className="font-semibold text-gray-800">{titleChances.competition?.name}</h5>
                     <div className="text-xs text-gray-600">
                       <span>Posição: {titleChances.current_position}º</span>
                       <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -579,33 +579,33 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
                   
                   <div className="text-center my-4">
                     <div className="text-4xl font-bold text-green-600">
-                      {titleChances.title_probability.toFixed(1)}%
+                      {titleChances.title_probability?.toFixed(1) || 0}%
                     </div>
                     <p className="text-sm text-gray-600 mt-1">Chance de Título</p>
                     
                     <div className="grid grid-cols-3 gap-4 mt-4 text-center">
                       <div>
                         <div className="text-lg font-semibold text-blue-600">
-                          {titleChances.advanced_stats.top4_probability.toFixed(1)}%
+                          {titleChances.advanced_stats?.top4_probability?.toFixed(1) || 0}%
                         </div>
                         <p className="text-xs text-gray-600">G4 (Libertadores)</p>
                       </div>
                       <div>
                         <div className="text-lg font-semibold text-green-600">
-                          {titleChances.advanced_stats.average_final_position.toFixed(0)}º
+                          {titleChances.advanced_stats?.average_final_position?.toFixed(0) || 0}º
                         </div>
                         <p className="text-xs text-gray-600">Posição Média</p>
                       </div>
                       <div>
                         <div className="text-lg font-semibold text-purple-600">
-                          {titleChances.advanced_stats.average_final_points.toFixed(0)}
+                          {titleChances.advanced_stats?.average_final_points?.toFixed(0) || 0}
                         </div>
                         <p className="text-xs text-gray-600">Pontos Médios</p>
                       </div>
                     </div>
                     
                     <div className="mt-4 text-xs text-gray-500">
-                      Última simulação: {new Date(titleChances.execution_date).toLocaleDateString('pt-BR')}
+                      Última simulação: {titleChances.execution_date ? new Date(titleChances.execution_date).toLocaleDateString('pt-BR') : 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -663,13 +663,13 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
           )}
 
           {/* Risco de Rebaixamento */}
-          {relegationRisk && (relegationRisk.relegationRisks?.length > 0 || relegationRisk.simulation_based) && (
+          {relegationRisk && (relegationRisk.relegationRisks && relegationRisk.relegationRisks.length > 0 || relegationRisk.simulation_based) && (
             <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6 border border-red-200 space-y-4">
               {relegationRisk.simulation_based ? (
                 /* Formato novo com dados de simulação */
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-semibold text-gray-800">{relegationRisk.competition.name}</h5>
+                    <h5 className="font-semibold text-gray-800">{relegationRisk.competition?.name}</h5>
                     <div className="text-xs text-gray-600">
                       <span>Posição: {relegationRisk.current_position}º</span>
                       <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -680,33 +680,33 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
                   
                   <div className="text-center my-4">
                     <div className="text-4xl font-bold text-red-600">
-                      {relegationRisk.relegation_probability.toFixed(1)}%
+                      {relegationRisk.relegation_probability?.toFixed(1) || 0}%
                     </div>
                     <p className="text-sm text-gray-600 mt-1">Risco de Rebaixamento</p>
                     
                     <div className="grid grid-cols-3 gap-4 mt-4 text-center">
                       <div>
                         <div className="text-lg font-semibold text-green-600">
-                          {relegationRisk.advanced_stats.top6_probability.toFixed(1)}%
+                          {relegationRisk.advanced_stats?.top6_probability?.toFixed(1) || 0}%
                         </div>
                         <p className="text-xs text-gray-600">G6 (Sul-Americana)</p>
                       </div>
                       <div>
                         <div className="text-lg font-semibold text-blue-600">
-                          {relegationRisk.advanced_stats.average_final_position.toFixed(0)}º
+                          {relegationRisk.advanced_stats?.average_final_position?.toFixed(0) || 0}º
                         </div>
                         <p className="text-xs text-gray-600">Posição Média</p>
                       </div>
                       <div>
                         <div className="text-lg font-semibold text-purple-600">
-                          {relegationRisk.advanced_stats.average_final_points.toFixed(0)}
+                          {relegationRisk.advanced_stats?.average_final_points?.toFixed(0) || 0}
                         </div>
                         <p className="text-xs text-gray-600">Pontos Médios</p>
                       </div>
                     </div>
                     
                     <div className="mt-4 text-xs text-gray-500">
-                      Última simulação: {new Date(relegationRisk.execution_date).toLocaleDateString('pt-BR')}
+                      Última simulação: {relegationRisk.execution_date ? new Date(relegationRisk.execution_date).toLocaleDateString('pt-BR') : 'N/A'}
                     </div>
                   </div>
                 </div>
