@@ -134,17 +134,19 @@ export function TeamComparison({ currentTeamId }: TeamComparisonProps) {
     try {
       const [comparisonResponse, currentStatsResponse, selectedStatsResponse] = await Promise.all([
         fetch(`${API_URL}/teams/${currentTeamId}/comparison/${selectedTeamId}`),
-        fetch(`${API_URL}/teams/${currentTeamId}/statistics`),
-        fetch(`${API_URL}/teams/${selectedTeamId}/statistics`)
+        fetch(`${API_URL}/teams/${currentTeamId}/advanced-stats`),
+        fetch(`${API_URL}/teams/${selectedTeamId}/advanced-stats`)
       ]);
       if (!comparisonResponse.ok || !currentStatsResponse.ok || !selectedStatsResponse.ok) {
         throw new Error('Falha ao carregar dados de comparação.');
       }
-      const [comparison, currentStats, selectedStats] = await Promise.all([
+      const [comparison, currentStatsData, selectedStatsData] = await Promise.all([
         comparisonResponse.json(),
         currentStatsResponse.json(),
         selectedStatsResponse.json(),
       ]);
+      const currentStats = currentStatsData.statistics;
+      const selectedStats = selectedStatsData.statistics;
       setComparisonData(comparison);
       setCurrentTeamStats(currentStats);
       setSelectedTeamStats(selectedStats);
