@@ -212,28 +212,20 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [statsRes, difficultyRes, titleRes, relegationRes] = await Promise.all([
-          fetch(`${API_URL}/teams/${teamId}/statistics`),
-          fetch(`${API_URL}/teams/${teamId}/difficulty-analysis`),
-          fetch(`${API_URL}/teams/${teamId}/title-chances`),
-          fetch(`${API_URL}/teams/${teamId}/relegation-risk`)
-        ]);
+        
+        // Usar o endpoint unified que retorna todos os dados de uma vez
+        const response = await fetch(`${API_URL}/teams/${teamId}/advanced-stats`);
 
-        if (!statsRes.ok || !difficultyRes.ok || !titleRes.ok || !relegationRes.ok) {
+        if (!response.ok) {
           throw new Error('Erro ao carregar estatísticas');
         }
 
-        const [statsData, difficultyData, titleData, relegationData] = await Promise.all([
-          statsRes.json(),
-          difficultyRes.json(),
-          titleRes.json(),
-          relegationRes.json()
-        ]);
+        const data = await response.json();
 
-        setStatistics(statsData);
-        setDifficultyAnalysis(difficultyData);
-        setTitleChances(titleData);
-        setRelegationRisk(relegationData);
+        setStatistics(data.statistics);
+        setDifficultyAnalysis(data.difficultyAnalysis);
+        setTitleChances(data.titleChances);
+        setRelegationRisk(data.relegationRisk);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
       } finally {
