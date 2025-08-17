@@ -29,14 +29,14 @@ interface TeamStats {
   powerIndex: number;
 }
 
-const FormIndicator = ({ form }) => {
+const FormIndicator = ({ form }: { form: string }) => {
   if (!form) return null;
   const formArray = form.split('');
   return (
     <div className="flex space-x-1">
       {formArray.map((result, index) => {
         let bgColor = '';
-        switch (result) {
+        switch (result.toUpperCase()) {
           case 'V': bgColor = 'bg-green-500'; break;
           case 'E': bgColor = 'bg-gray-400'; break;
           case 'D': bgColor = 'bg-red-500'; break;
