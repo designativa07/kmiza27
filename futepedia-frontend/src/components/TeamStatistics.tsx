@@ -562,7 +562,7 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
         {/* Coluna 2: Título e Rebaixamento */}
         <div className="space-y-6">
           {/* Probabilidades de Título */}
-          {(titleChances.titleChances?.length > 0 || titleChances.simulation_based) && (
+          {titleChances && (titleChances.titleChances?.length > 0 || titleChances.simulation_based) && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200 space-y-4">
               {titleChances.simulation_based ? (
                 /* Formato novo com dados de simulação */
@@ -663,8 +663,8 @@ export function TeamStatistics({ teamId }: TeamStatisticsProps) {
           )}
 
           {/* Risco de Rebaixamento */}
-          {(relegationRisk.relegationRisks?.length > 0 || relegationRisk.simulation_based) && (
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-lg p-6 border border-red-200 space-y-4">
+          {relegationRisk && (relegationRisk.relegationRisks?.length > 0 || relegationRisk.simulation_based) && (
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6 border border-red-200 space-y-4">
               {relegationRisk.simulation_based ? (
                 /* Formato novo com dados de simulação */
                 <div>
