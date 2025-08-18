@@ -521,11 +521,12 @@ export class MarketAIService {
       const counterOfferPrice = Math.round((offer.offer_price + offer.listing_price) / 2);
 
       // Atualizar com a contraproposta
+      // WORKAROUND: usar 'pending' com counter_offer_price até constraint ser corrigida
       const { error } = await supabase
         .from('game_transfers')
         .update({
-          offer_status: 'counter_offer',
-          transfer_status: 'counter_offer', // Mudar para 'counter_offer' para mostrar status correto
+          offer_status: 'pending', // Temporário: usar 'pending' em vez de 'counter_offer'
+          transfer_status: 'negotiating', // Usar status válido existente
           ai_decision: 'counter_offer',
           ai_decision_at: new Date().toISOString(),
           counter_offer_price: counterOfferPrice

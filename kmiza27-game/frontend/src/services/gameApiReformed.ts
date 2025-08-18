@@ -486,7 +486,7 @@ class GameApiReformedService {
         method: 'POST',
         body: JSON.stringify({ playerId, teamId }),
       });
-      return response.data;
+      return response;
     } catch (error) {
       console.error('API Error promoting player:', error);
       throw error;
@@ -584,6 +584,32 @@ class GameApiReformedService {
       return response;
     } catch (error) {
       console.error('API Error rejecting offer:', error);
+      throw error;
+    }
+  }
+
+  async makeCounterOffer(offerId: string, counterOfferPrice: number) {
+    try {
+      const response = await this.request<any>('/api/v2/market/make-counter-offer', {
+        method: 'POST',
+        body: JSON.stringify({ offerId, counterOfferPrice }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error making counter offer:', error);
+      throw error;
+    }
+  }
+
+  async acceptCounterOffer(offerId: string) {
+    try {
+      const response = await this.request<any>('/api/v2/market/accept-counter-offer', {
+        method: 'POST',
+        body: JSON.stringify({ offerId }),
+      });
+      return response;
+    } catch (error) {
+      console.error('API Error accepting counter offer:', error);
       throw error;
     }
   }

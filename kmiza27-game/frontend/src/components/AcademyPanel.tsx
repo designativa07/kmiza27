@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
+import { gameApiReformed } from '@/services/gameApiReformed';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 interface AcademyPlayer {
   id: string;
@@ -113,9 +115,26 @@ export default function AcademyPanel({ teamId, onPlayerPromoted }: AcademyPanelP
   const handlePromotePlayer = async (playerId: string) => {
     if (confirm('Tem certeza que deseja promover este jogador para o time profissional? Esta ação não pode ser desfeita.')) {
       try {
-        // TODO: Implementar API para promover jogador
-        console.log('Promover jogador:', playerId);
-        alert('Funcionalidade de promoção será implementada em breve!');
+        console.log('Promovendo jogador:', playerId);
+        
+        // Usar a API real de promoção
+        const result = await gameApiReformed.promotePlayer(playerId, teamId);
+        
+        console.log('Jogador promovido com sucesso!', result);
+        console.log('Result type:', typeof result);
+        console.log('Result is null?', result === null);
+        console.log('Result is undefined?', result === undefined);
+        console.log('Result structure:', {
+          hasResult: !!result,
+          hasPlayer: !!result?.player,
+          marketValue: result?.player?.market_value,
+          resultKeys: result ? Object.keys(result) : 'no result',
+          playerKeys: result?.player ? Object.keys(result.player) : 'no player'
+        });
+        alert(`Jogador promovido com sucesso para o elenco profissional! Valor de mercado: ${formatCurrency(result?.player?.market_value)}`);
+        
+        // Recarregar a lista de jogadores
+        await loadAcademyData();
         
         // Notificar o componente pai para atualizar os números
         if (onPlayerPromoted) {
@@ -123,7 +142,7 @@ export default function AcademyPanel({ teamId, onPlayerPromoted }: AcademyPanelP
         }
       } catch (error) {
         console.error('Erro ao promover jogador:', error);
-        alert('Erro ao promover jogador. Tente novamente.');
+        alert('Erro ao promover jogador. Verifique se o jogador ainda está na base e tente novamente.');
       }
     }
   };

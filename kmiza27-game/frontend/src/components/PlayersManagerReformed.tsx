@@ -90,7 +90,7 @@ export default function PlayersManagerReformed({ teamId }: PlayersManagerReforme
       try {
         if (selectedTeam) {
           const result = await gameApiReformed.promotePlayer(playerId, selectedTeam.id);
-          if (result.success) {
+          if (result?.success) {
             console.log('Player promoted!', result.player);
             // Atualizar a lista de jogadores para refletir a promoção
             loadPlayers(); 

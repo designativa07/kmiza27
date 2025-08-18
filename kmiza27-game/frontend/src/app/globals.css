@@ -65,3 +65,56 @@ input[type="password"]::placeholder {
     background-color: #ffffff !important;
   }
 }
+
+/* Estilos para menus dropdown dos filtros */
+.select-dropdown,
+.select-dropdown *,
+.select-dropdown option,
+.select-dropdown option:hover {
+  background-color: white !important;
+  color: #374151 !important;
+}
+
+.select-dropdown option:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Garantir que todos os selects tenham fundo branco */
+select,
+select option,
+select option:hover {
+  background-color: white !important;
+  color: #374151 !important;
+}
+
+select option:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Estilos para o componente Select do shadcn/ui */
+[data-radix-popper-content-wrapper] {
+  background-color: white !important;
+}
+
+[data-radix-popper-content-wrapper] * {
+  background-color: white !important;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
