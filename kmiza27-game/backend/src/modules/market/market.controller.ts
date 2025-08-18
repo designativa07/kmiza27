@@ -16,8 +16,26 @@ export class MarketController {
   async listPlayer(
     @Body() body: { playerId: string; teamId: string; price: number; isYouth: boolean },
   ) {
-    this.logger.log(`Listing player ${body.playerId} for ${body.price}`);
-    return this.marketService.listPlayer(body.playerId, body.teamId, body.price, body.isYouth);
+    try {
+      this.logger.log(`Listing player ${body.playerId} for ${body.price}`);
+      
+      // Validação básica
+      if (!body.playerId || !body.teamId || !body.price) {
+        throw new Error('Missing required fields: playerId, teamId, or price');
+      }
+      
+      const result = await this.marketService.listPlayer(
+        body.playerId, 
+        body.teamId, 
+        body.price, 
+        body.isYouth
+      );
+      
+      return { success: true, data: result };
+    } catch (error) {
+      this.logger.error('Error in listPlayer endpoint:', error);
+      throw error;
+    }
   }
 
   @Post('unlist-player')
@@ -90,6 +108,18 @@ export class MarketController {
   async rejectOffer(@Body() body: { offerId: string }) {
     this.logger.log(`Rejecting offer ${body.offerId}`);
     return this.marketService.rejectOffer(body.offerId);
+  }
+
+  @Post('make-counter-offer')
+  async makeCounterOffer(@Body() body: { offerId: string; counterOfferPrice: number }) {
+    this.logger.log(`Making counter offer for ${body.offerId} with price ${body.counterOfferPrice}`);
+    return this.marketService.makeCounterOffer(body.offerId, body.counterOfferPrice);
+  }
+
+  @Post('accept-counter-offer')
+  async acceptCounterOffer(@Body() body: { offerId: string }) {
+    this.logger.log(`Accepting counter offer for offer ${body.offerId}`);
+    return this.marketService.acceptCounterOffer(body.offerId);
   }
 
   @Get('pending-offers')
@@ -178,6 +208,60 @@ export class MarketController {
       
     } catch (error) {
       this.logger.error('Erro ao processar ofertas da IA:', error);
+      throw error;
+    }
+  }
+
+  @Get('test-transfers-table')
+  async testTransfersTable() {
+    try {
+      this.logger.log('Testing game_transfers table structure...');
+      
+      // Teste 1: Verificar se a tabela existe e tem dados
+      const { data: allTransfers, error: allError } = await supabase
+        .from('game_transfers')
+        .select('*')
+        .limit(5);
+      
+      if (allError) {
+        this.logger.error('Error accessing game_transfers table:', allError);
+        throw new Error(`Cannot access game_transfers table: ${allError.message}`);
+      }
+      
+      // Teste 2: Verificar estrutura da tabela
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('game_transfers')
+        .select('*')
+        .limit(0);
+      
+      if (tableError) {
+        this.logger.error('Error getting table structure:', tableError);
+      }
+      
+      // Teste 3: Verificar se há ofertas com status 'pending'
+      const { data: pendingOffers, error: pendingError } = await supabase
+        .from('game_transfers')
+        .select('*')
+        .eq('offer_status', 'pending')
+        .limit(5);
+      
+      if (pendingError) {
+        this.logger.error('Error checking pending offers:', pendingError);
+      }
+      
+      return {
+        success: true,
+        message: 'game_transfers table test completed',
+        tableExists: true,
+        totalRecords: allTransfers?.length || 0,
+        sampleRecords: allTransfers?.slice(0, 3) || [],
+        pendingOffersCount: pendingOffers?.length || 0,
+        samplePendingOffers: pendingOffers?.slice(0, 3) || [],
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      this.logger.error('Error in test-transfers-table endpoint:', error);
       throw error;
     }
   }

@@ -326,3 +326,99 @@ ORDER BY column_name;
 - Observações:
   - Mantém compatibilidade do backend; sem mudança de contrato com frontends.
   - Fácil extensão: adicionar sinônimos no `intentSynonyms` e/ou novos itens no menu.
+
+## 10. Sistema de Simulação Monte Carlo e Estatísticas Preditivas
+
+### 10.1. Visão Geral
+Sistema robusto de previsões estatísticas para campeonatos usando simulação Monte Carlo, implementado para calcular probabilidades de título, rebaixamento e outras classificações.
+
+### 10.2. Componentes Principais
+
+#### Power Index (Índice de Força)
+- **Localização:** `backend/src/modules/simulations/power-index.service.ts`
+- **Função:** Calcular pontuação única (0-100) que mede a força real de cada time
+- **Algoritmo:** Combinação ponderada de:
+  - Points per Game (45%)
+  - Goal Difference per Game (25%) 
+  - Recent Form Score - últimos 5 jogos (30%)
+- **Endpoint:** `calculatePowerIndexForCompetition(competitionId)`
+
+#### Simulação Monte Carlo
+- **Localização:** `backend/src/modules/simulations/monte-carlo.service.ts`
+- **Função:** Simular milhares de cenários do restante da temporada
+- **Algoritmo:** Para cada jogo restante, usa Power Index para prever probabilidades e simula resultados
+- **Configurável:** 1 a 10.000 simulações por execução
+
+#### Armazenamento Histórico
+- **Tabela:** `simulation_results`
+- **Estrutura:**
+  ```sql
+  - id (SERIAL PRIMARY KEY)
+  - competition_id (INT, FK para competitions)
+  - execution_date (TIMESTAMP)
+  - simulation_count (INT 1-10000)
+  - executed_by (VARCHAR(100))
+  - is_latest (BOOLEAN) - apenas uma por competição
+  - power_index_data (JSONB) - dados do Power Index
+  - simulation_results (JSONB) - probabilidades calculadas
+  - metadata (JSONB) - metadados da execução
+  - execution_duration_ms (INT)
+  - algorithm_version (VARCHAR(50))
+  ```
+- **Trigger Automático:** Garante que apenas uma simulação por competição seja marcada como `is_latest`
+
+### 10.3. Controle Administrativo
+
+#### Painel de Simulação
+- **Localização Frontend:** `frontend/src/app/simulations/page.tsx`
+- **Funcionalidades:**
+  - Botão "Executar Nova Simulação"
+  - Seletor de competição (Brasileirão Série A/B)
+  - Campo para número de simulações (1-10.000)
+  - Histórico de execuções anteriores
+
+#### Endpoints da API
+- **POST** `/simulations/run` - Executar nova simulação (admin apenas)
+- **GET** `/teams/:id/advanced-stats` - Estatísticas unificadas do time
+- **GET** `/teams/:id/title-chances` - Probabilidades de título (com fallback)
+- **GET** `/teams/:id/relegation-risk` - Risco de rebaixamento (com fallback)
+
+### 10.4. Migração Gradual
+Sistema implementado com **migração gradual sem breaking changes**:
+- **Endpoints Públicos:** Tentam buscar dados de simulação primeiro, fazem fallback para cálculo legacy se não encontrado
+- **Compatibilidade:** Frontends funcionam com ou sem dados de simulação
+- **Formato de Resposta:** Novo formato inclui flag `simulation_based` para identificar origem dos dados
+
+### 10.5. Funcionalidades de Comparação
+
+#### Comparação de Times
+- **Localização:** `futepedia-frontend/src/components/TeamComparison.tsx`
+- **Endpoint:** `GET /teams/:id/comparison/:otherTeamId`
+- **Interface:** Sistema de busca + comparação lado a lado com gráficos
+
+#### Predição de Partidas
+- **Localização:** `futepedia-frontend/src/components/MatchPrediction.tsx`
+- **Endpoint:** `GET /matches/:id/prediction`
+- **Funcionalidades:**
+  - Gráfico de 3 cores (Casa/Empate/Visitante)
+  - Head-to-Head com estatísticas dos times
+  - Fallback inteligente para dados indisponíveis
+  - Aviso quando usa estatísticas gerais vs. competição específica
+
+### 10.6. Escopo de Implementação
+- **Competições:** Apenas Brasileirão Série A e Série B
+- **Tipos de Simulação:** Título, rebaixamento, classificação para copas
+- **Interface Admin:** Controle total sobre quando executar cálculos
+- **Interface Pública:** Visualização das probabilidades e comparações
+
+### 10.7. Fallbacks e Robustez
+- **Power Index:** Fallback para estatísticas gerais se dados da competição indisponíveis
+- **Predições:** Sistema inteligente degrada graciosamente quando dados específicos não existem
+- **Avisos Visuais:** Frontend indica quando está usando dados de fallback
+- **Compatibilidade:** Sistema funciona mesmo sem simulações executadas
+
+### 10.8. Performance e Otimização
+- **Índices de Banco:** Otimizados para consultas por competição e data
+- **Cache Automático:** Reutilização de resultados via flag `is_latest`
+- **Endpoint Unificado:** `/advanced-stats` retorna todos os dados em uma chamada
+- **Cálculo Sob Demanda:** Simulações executadas apenas quando solicitado pelo admin

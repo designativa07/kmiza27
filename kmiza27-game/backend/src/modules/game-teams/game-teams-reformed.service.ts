@@ -635,7 +635,10 @@ export class GameTeamsReformedService {
       // 9. NOVO: Deletar notícias do time
       await this.deleteTeamNews(teamId);
 
-      // 10. Deletar o time
+      // 10. NOVO: Deletar TODAS as ofertas de transferência relacionadas ao time
+      await this.deleteTeamTransfers(teamId);
+
+      // 11. Deletar o time
       const { error: deleteTeamError } = await supabase
         .from('game_teams')
         .delete()
@@ -836,6 +839,27 @@ export class GameTeamsReformedService {
       }
     } catch (error) {
       this.logger.warn('⚠️ Erro ao deletar notícias:', error);
+    }
+  }
+
+  /**
+   * NOVO: Deletar TODAS as ofertas de transferência relacionadas ao time
+   */
+  private async deleteTeamTransfers(teamId: string) {
+    try {
+      // Deletar ofertas onde o time é vendedor OU comprador
+      const { error } = await supabase
+        .from('game_transfers')
+        .delete()
+        .or(`selling_team_id.eq.${teamId},buying_team_id.eq.${teamId}`);
+
+      if (error) {
+        this.logger.warn(`⚠️ Erro ao deletar ofertas de transferência: ${error.message}`);
+      } else {
+        this.logger.log('🗑️ Ofertas de transferência do time deletadas');
+      }
+    } catch (error) {
+      this.logger.warn('⚠️ Erro ao deletar ofertas de transferência:', error);
     }
   }
 }

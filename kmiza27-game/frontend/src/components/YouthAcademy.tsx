@@ -5,6 +5,7 @@ import { useGameStore } from '@/store/gameStore';
 import { gameApiReformed } from '@/services/gameApiReformed';
 import YouthAcademyLogs from './YouthAcademyLogs';
 import PlayerCardCompact from './PlayerCardCompact';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 interface AcademyPlayer {
   id: string;
@@ -179,8 +180,29 @@ export default function YouthAcademy() {
   };
 
   const promotePlayer = async (playerId: string) => {
-    // TODO: Implementar promoção de jogador
-    alert('Funcionalidade de promoção em desenvolvimento...');
+    if (!selectedTeam) {
+      alert('Erro: Time não selecionado');
+      return;
+    }
+
+    if (confirm('Tem certeza que deseja promover este jogador para o time profissional? Esta ação não pode ser desfeita.')) {
+      try {
+        console.log('Promovendo jogador:', playerId);
+        
+        // Usar a API real de promoção
+        const result = await gameApiReformed.promotePlayer(playerId, selectedTeam.id);
+        
+        console.log('Jogador promovido com sucesso!', result);
+        alert(`Jogador promovido com sucesso para o elenco profissional! Valor de mercado: ${formatCurrency(result?.player?.market_value)}`);
+        
+        // Recarregar dados da academia
+        await loadAcademyData();
+        
+      } catch (error) {
+        console.error('Erro ao promover jogador:', error);
+        alert('Erro ao promover jogador. Verifique se o jogador ainda está na base e tente novamente.');
+      }
+    }
   };
 
   const setTraining = async (playerId: string, focus: string, intensity: 'low'|'normal'|'high' = 'normal') => {
@@ -450,10 +472,10 @@ export default function YouthAcademy() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold mb-2 text-gray-900">💰 Custos Mensais</h4>
                 <p className="text-gray-700">
-                  Custo mensal: R$ {academyInfo.monthly_cost.toLocaleString()}
+                  Custo mensal: {formatCurrency(academyInfo.monthly_cost)}
                 </p>
                 <p className="text-gray-700">
-                  Investimento total: R$ {academyInfo.investment.toLocaleString()}
+                  Investimento total: {formatCurrency(academyInfo.investment)}
                 </p>
               </div>
             </div>
