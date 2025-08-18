@@ -12,6 +12,44 @@ export class MarketAIService {
     try {
       this.logger.log('Starting Market AI analysis...');
 
+      // VERIFICAÇÃO: Limitar número total de jogadores no mercado
+      const { data: currentListings, error: listingsError } = await supabase
+        .from('game_transfers')
+        .select('id')
+        .eq('transfer_status', 'listed')
+        .eq('buying_team_id', null);
+
+      if (listingsError) {
+        this.logger.error('Failed to check current listings:', listingsError);
+        return;
+      }
+
+      const currentListingCount = currentListings?.length || 0;
+      const maxAllowedListings = 100; // Limite máximo de jogadores no mercado
+
+      if (currentListingCount >= maxAllowedListings) {
+        this.logger.log(`Market is full (${currentListingCount}/${maxAllowedListings}). Running cleanup first...`);
+        await this.cleanupExpiredListings();
+        
+        // Verificar novamente após limpeza
+        const { data: afterCleanup, error: afterError } = await supabase
+          .from('game_transfers')
+          .select('id')
+          .eq('transfer_status', 'listed')
+          .eq('buying_team_id', null);
+
+        if (afterError) {
+          this.logger.error('Failed to check listings after cleanup:', afterError);
+          return;
+        }
+
+        const afterCleanupCount = afterCleanup?.length || 0;
+        if (afterCleanupCount >= maxAllowedListings * 0.8) { // Se ainda estiver 80% cheio
+          this.logger.log(`Market still too full (${afterCleanupCount}/${maxAllowedListings}). Skipping AI execution.`);
+          return;
+        }
+      }
+
       // Buscar todos os times da IA (que não são do usuário)
       const { data: aiTeams, error: teamsError } = await supabase
         .from('game_teams')
@@ -97,32 +135,26 @@ export class MarketAIService {
 
     // Estratégia para jogadores da base
     if (youthPlayers.length > 0) {
-      // Vender jogadores com potencial muito baixo (menos de 65)
+      // LIMITAÇÃO: Máximo de 2 jogadores por time por execução da IA
+      const maxPlayersPerTeam = 2;
+      
+      // Vender jogadores com potencial muito baixo (menos de 65) - PRIORIDADE
       const veryLowPotential = youthPlayers
         .filter(p => p.potential_overall < 65)
         .sort((a, b) => a.potential_overall - b.potential_overall);
 
-      // Vender jogadores com potencial baixo (65-70) se houver muitos
+      // Vender jogadores com potencial baixo (65-70) se houver espaço
       const lowPotential = youthPlayers
         .filter(p => p.potential_overall >= 65 && p.potential_overall < 70)
         .sort((a, b) => a.potential_overall - b.potential_overall);
 
-      // Vender jogadores com potencial médio (70-75) se houver excesso
-      const mediumPotential = youthPlayers
-        .filter(p => p.potential_overall >= 70 && p.potential_overall < 75)
-        .sort((a, b) => a.potential_overall - b.potential_overall);
+      // Adicionar jogadores com potencial muito baixo (prioridade máxima)
+      playersToSell.push(...veryLowPotential.slice(0, Math.min(2, maxPlayersPerTeam)));
 
-      // Adicionar jogadores com potencial muito baixo (prioridade)
-      playersToSell.push(...veryLowPotential.slice(0, 3));
-
-      // Adicionar jogadores com potencial baixo se houver espaço
-      if (playersToSell.length < 4) {
-        playersToSell.push(...lowPotential.slice(0, 4 - playersToSell.length));
-      }
-
-      // Adicionar jogadores com potencial médio se ainda houver espaço
-      if (playersToSell.length < 5) {
-        playersToSell.push(...mediumPotential.slice(0, 5 - playersToSell.length));
+      // Adicionar jogadores com potencial baixo se ainda houver espaço
+      if (playersToSell.length < maxPlayersPerTeam) {
+        const remainingSlots = maxPlayersPerTeam - playersToSell.length;
+        playersToSell.push(...lowPotential.slice(0, remainingSlots));
       }
     }
 
@@ -225,14 +257,15 @@ export class MarketAIService {
    */
   async cleanupExpiredListings() {
     try {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      // LIMPEZA MAIS AGRESSIVA: 3 dias em vez de 7
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
       // Buscar listagens antigas da IA
       const { data: expiredListings, error } = await supabase
         .from('game_transfers')
         .select('id, player_id, is_youth_player, selling_team_id')
-        .lt('listed_at', oneWeekAgo.toISOString())
+        .lt('listed_at', threeDaysAgo.toISOString())
         .eq('transfer_status', 'listed')
         .eq('buying_team_id', null); // Sem ofertas
 
@@ -245,7 +278,7 @@ export class MarketAIService {
         await this.removeExpiredListing(listing);
       }
 
-      this.logger.log(`Cleaned up ${expiredListings.length} expired AI listings`);
+      this.logger.log(`Cleaned up ${expiredListings.length} expired AI listings (3+ days old)`);
     } catch (error) {
       this.logger.error('Error cleaning up expired listings:', error);
     }

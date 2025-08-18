@@ -1,0 +1,157 @@
+const { getSupabaseServiceClient } = require('../config/supabase-connection.js');
+
+async function testSimpleNewTeam() {
+  console.log('🧪 TESTE SIMPLES - CRIANDO NOVO TIME');
+  console.log('=====================================\n');
+
+  const supabase = getSupabaseServiceClient('vps');
+
+  try {
+    // 1. Verificar estado atual
+    console.log('📋 1. Estado atual do sistema...');
+    
+    const { data: allTeams, error: teamsError } = await supabase
+      .from('game_teams')
+      .select('id, name, team_type, created_at')
+      .order('created_at');
+
+    if (teamsError) {
+      console.log('❌ Erro ao buscar times:', teamsError.message);
+      return;
+    }
+
+    const { data: allPlayers, error: playersError } = await supabase
+      .from('game_players')
+      .select('team_id, team_type');
+
+    if (playersError) {
+      console.log('❌ Erro ao buscar jogadores:', teamsError.message);
+      return;
+    }
+
+    // Contar jogadores por time
+    const playersPerTeam = {};
+    allPlayers?.forEach(player => {
+      playersPerTeam[player.team_id] = (playersPerTeam[player.team_id] || 0) + 1;
+    });
+
+    console.log('📊 TIMES ATUAIS:');
+    allTeams?.forEach(team => {
+      const playerCount = playersPerTeam[team.id] || 0;
+      console.log(`   • ${team.name} (${team.team_type}): ${playerCount} jogadores`);
+    });
+
+    // 2. Criar um novo time
+    console.log('\n🏗️ 2. Criando novo time...');
+    
+    const newTeam = {
+      id: require('crypto').randomUUID(),
+      name: 'Time Teste Novo',
+      team_type: 'user_created',
+      budget: 1000000,
+      reputation: 50,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { error: createTeamError } = await supabase
+      .from('game_teams')
+      .insert(newTeam);
+
+    if (createTeamError) {
+      console.log('❌ Erro ao criar time:', createTeamError.message);
+      return;
+    }
+
+    console.log('✅ Novo time criado com sucesso!');
+
+    // 3. Verificar se jogadores foram criados automaticamente
+    console.log('\n🔍 3. Verificando se jogadores foram criados automaticamente...');
+    
+    // Aguardar um pouco para qualquer processo automático
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const { data: newTeamPlayers, error: newPlayersError } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('team_id', newTeam.id);
+
+    if (newPlayersError) {
+      console.log('❌ Erro ao buscar jogadores do novo time:', newPlayersError.message);
+    } else {
+      console.log(`📊 Jogadores do novo time: ${newTeamPlayers?.length || 0}`);
+      
+      if (newTeamPlayers && newTeamPlayers.length > 0) {
+        console.log('📋 Detalhes dos jogadores:');
+        newTeamPlayers.forEach((player, index) => {
+          console.log(`   • ${index + 1}: ${player.name} (${player.position}) - Age: ${player.age}`);
+        });
+      } else {
+        console.log('ℹ️ Nenhum jogador foi criado automaticamente');
+      }
+    }
+
+    // 4. Verificar se há jogadores de base
+    console.log('\n🔍 4. Verificando jogadores de base...');
+    
+    const { data: youthPlayers, error: youthError } = await supabase
+      .from('youth_players')
+      .select('*')
+      .eq('team_id', newTeam.id);
+
+    if (youthError) {
+      console.log('❌ Erro ao buscar jogadores de base:', youthError.message);
+    } else {
+      console.log(`📊 Jogadores de base: ${youthPlayers?.length || 0}`);
+      
+      if (youthPlayers && youthPlayers.length > 0) {
+        console.log('📋 Detalhes dos jogadores de base:');
+        youthPlayers.forEach((player, index) => {
+          console.log(`   • ${index + 1}: ${player.name} (${player.position}) - Age: ${player.age}`);
+        });
+      } else {
+        console.log('ℹ️ Nenhum jogador de base foi criado automaticamente');
+      }
+    }
+
+    // 5. Verificar estado final
+    console.log('\n📊 5. Estado final do sistema...');
+    
+    const { data: finalTeams, error: finalTeamsError } = await supabase
+      .from('game_teams')
+      .select('id, name, team_type')
+      .order('created_at');
+
+    if (!finalTeamsError) {
+      const { data: finalPlayers, error: finalPlayersError } = await supabase
+        .from('game_players')
+        .select('team_id');
+
+      if (!finalPlayersError) {
+        const finalPlayersPerTeam = {};
+        finalPlayers?.forEach(player => {
+          finalPlayersPerTeam[player.team_id] = (finalPlayersPerTeam[player.team_id] || 0) + 1;
+        });
+
+        console.log('📊 TIMES FINAIS:');
+        finalTeams?.forEach(team => {
+          const playerCount = finalPlayersPerTeam[team.id] || 0;
+          console.log(`   • ${team.name} (${team.team_type}): ${playerCount} jogadores`);
+        });
+      }
+    }
+
+    // 6. Resumo e recomendações
+    console.log('\n💡 RESUMO E RECOMENDAÇÕES:');
+    console.log('   • O sistema NÃO cria jogadores automaticamente para novos times');
+    console.log('   • Novos times começam SEM jogadores');
+    console.log('   • É necessário criar jogadores manualmente ou implementar sistema automático');
+    console.log('   • Para ter 23 jogadores + base, precisa implementar lógica de criação automática');
+    console.log('   • Recomendo implementar um trigger ou processo automático para novos times');
+
+  } catch (error) {
+    console.error('❌ Erro geral:', error.message);
+  }
+}
+
+testSimpleNewTeam();
