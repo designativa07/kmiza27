@@ -59,7 +59,6 @@ export class OpenAIService implements OnModuleInit {
 
   private removeAccents(str: string): string {
     const result = str.normalize("NFD").replace(/\p{Diacritic}/gu, "");
-    console.log(`🔍 removeAccents: "${str}" -> "${result}"`);
     return result;
   }
 

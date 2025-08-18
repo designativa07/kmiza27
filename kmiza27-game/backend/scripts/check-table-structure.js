@@ -1,101 +1,61 @@
-const { getSupabaseServiceClient } = require('../config/supabase-connection');
+const { getSupabaseClient } = require('../config/supabase-connection.js');
 
 async function checkTableStructure() {
+  console.log('🔍 VERIFICANDO ESTRUTURA DAS TABELAS');
+  console.log('=====================================\n');
+
+  const supabase = getSupabaseClient('vps');
+
   try {
-    console.log('🔍 Verificando estrutura da tabela game_transfers...');
-
-    const supabase = getSupabaseServiceClient('vps');
-
-    // 1. Verificar se a tabela existe e suas colunas
-    const { data: columns, error: columnsError } = await supabase
-      .from('game_transfers')
+    // Verificar youth_players
+    console.log('📋 Verificando tabela youth_players...');
+    const { data: youthData, error: youthError } = await supabase
+      .from('youth_players')
       .select('*')
       .limit(1);
 
-    if (columnsError) {
-      console.error('❌ Erro ao acessar tabela game_transfers:', columnsError);
-      return;
-    }
-
-    console.log('✅ Tabela game_transfers acessível');
-
-    // 2. Verificar uma listagem específica para ver a estrutura
-    const { data: sampleListing, error: sampleError } = await supabase
-      .from('game_transfers')
-      .select('*')
-      .eq('transfer_status', 'listed')
-      .limit(1)
-      .single();
-
-    if (sampleError) {
-      console.error('❌ Erro ao buscar amostra:', sampleError);
-      return;
-    }
-
-    console.log('\n📋 Estrutura da tabela game_transfers:');
-    console.log('Colunas disponíveis:');
-    Object.keys(sampleListing).forEach(key => {
-      console.log(`  - ${key}: ${typeof sampleListing[key]} (${sampleListing[key]})`);
-    });
-
-    // 3. Verificar se listing_price está presente
-    if ('listing_price' in sampleListing) {
-      console.log('\n✅ Coluna listing_price encontrada');
-      console.log(`   Valor: ${sampleListing.listing_price}`);
+    if (youthError) {
+      console.log('❌ Erro ao acessar youth_players:', youthError.message);
+    } else if (youthData && youthData.length > 0) {
+      console.log('✅ youth_players acessível');
+      console.log('📊 Total de registros:', youthData.length);
+      console.log('🔧 Colunas disponíveis:', Object.keys(youthData[0]));
     } else {
-      console.log('\n❌ Coluna listing_price NÃO encontrada!');
+      console.log('⚠️ youth_players vazia ou sem dados');
     }
 
-    // 4. Verificar constraints da tabela
-    console.log('\n🔒 Verificando constraints...');
-    
-    // Tentar inserir uma linha de teste para ver as constraints
-    const testData = {
-      player_id: 'test-player-id',
-      is_youth_player: true,
-      selling_team_id: 'test-team-id',
-      listing_price: 1000,
-      transfer_status: 'test'
-    };
+    console.log('\n📋 Verificando tabela game_players...');
+    const { data: gameData, error: gameError } = await supabase
+      .from('game_players')
+      .select('*')
+      .limit(1);
 
-    try {
-      const { error: insertError } = await supabase
-        .from('game_transfers')
-        .insert(testData);
-
-      if (insertError) {
-        console.log('❌ Erro ao inserir dados de teste:', insertError.message);
-        
-        if (insertError.code === '23502') {
-          console.log('   🔍 Erro de NOT NULL constraint detectado');
-          console.log('   📝 Verifique se todas as colunas obrigatórias estão sendo preenchidas');
-        }
-      } else {
-        console.log('✅ Inserção de teste bem-sucedida');
-        
-        // Limpar dados de teste
-        await supabase
-          .from('game_transfers')
-          .delete()
-          .eq('player_id', 'test-player-id');
-        console.log('🧹 Dados de teste removidos');
-      }
-    } catch (error) {
-      console.log('❌ Erro durante teste de inserção:', error.message);
+    if (gameError) {
+      console.log('❌ Erro ao acessar game_players:', gameError.message);
+    } else if (gameData && gameData.length > 0) {
+      console.log('✅ game_players acessível');
+      console.log('📊 Total de registros:', gameData.length);
+      console.log('🔧 Colunas disponíveis:', Object.keys(gameData[0]));
+    } else {
+      console.log('⚠️ game_players vazia ou sem dados');
     }
+
+    // Verificar se há jogadores
+    console.log('\n👥 Verificando total de jogadores...');
+    const { count: youthCount } = await supabase
+      .from('youth_players')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: gameCount } = await supabase
+      .from('game_players')
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`📊 Total youth_players: ${youthCount || 0}`);
+    console.log(`📊 Total game_players: ${gameCount || 0}`);
 
   } catch (error) {
-    console.error('❌ Erro durante verificação:', error);
+    console.error('❌ Erro geral:', error);
   }
 }
 
-// Executar verificação
-checkTableStructure()
-  .then(() => {
-    console.log('\n✅ Verificação concluída');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ Erro fatal:', error);
-    process.exit(1);
-  });
+checkTableStructure();
