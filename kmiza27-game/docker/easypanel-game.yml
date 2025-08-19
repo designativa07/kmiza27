@@ -29,7 +29,7 @@ services:
   kmiza27-game-frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.optimized  # Usar Dockerfile otimizado
     ports:
       - "3005:3005"
     environment:

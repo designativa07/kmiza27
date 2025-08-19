@@ -29,6 +29,7 @@ docker system prune -f
 
 # Build das imagens
 echo "🔨 Fazendo build das imagens..."
+
 echo "📦 Build do Backend..."
 docker-compose -f docker/easypanel-game.yml build --no-cache kmiza27-game-backend
 
@@ -43,6 +44,15 @@ fi
 
 echo "📦 Build do Frontend..."
 docker-compose -f docker/easypanel-game.yml build --no-cache kmiza27-game-frontend
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro no build do frontend!"
+    echo "🔄 Tentando build alternativo..."
+    cd frontend
+    chmod +x build-frontend.sh
+    ./build-frontend.sh
+    cd ..
+fi
 
 # Iniciar serviços
 echo "🚀 Iniciando serviços..."
