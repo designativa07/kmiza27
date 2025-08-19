@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ATTRIBUTE_LABELS, OVERALL_COLORS } from './PlayerCardCompact';
+import { ATTRIBUTE_LABELS } from '@/types/player';
+import { OVERALL_COLORS } from './PlayerCardCompact';
 
 interface PlayerAttributesLegendProps {
   showDetailed?: boolean;
