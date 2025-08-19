@@ -1,0 +1,49 @@
+# Dockerfile Otimizado para o Backend do Jogo Kmiza27 (Multi-stage)
+FROM node:18-alpine AS builder
+
+# Criar diretório da aplicação
+WORKDIR /app
+
+# Copiar package.json e package-lock.json
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies para o build)
+RUN npm ci
+
+# Copiar código fonte
+COPY . .
+
+# Build da aplicação
+RUN npm run build
+
+# Stage de produção
+FROM node:18-alpine AS production
+
+# Criar usuário não-root para segurança
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
+
+# Criar diretório da aplicação
+WORKDIR /app
+
+# Copiar package.json e package-lock.json
+COPY package*.json ./
+
+# Instalar apenas dependências de produção
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar arquivos buildados do stage anterior
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+
+# Mudar para usuário não-root
+USER nestjs
+
+# Expor porta
+EXPOSE 3004
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3004/api/v1/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Comando para iniciar a aplicação
+CMD ["npm", "run", "start:prod"]
