@@ -13,7 +13,10 @@ services:
       SUPABASE_URL: https://kmiza27-supabase.h4xd66.easypanel.host/
       SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q
       MAIN_API_URL: http://195.200.0.191:3001
-      FRONTEND_URL: http://localhost:3005
+      FRONTEND_URL: https://game.kmiza27.com
+      # URLs de produção para o backend
+      PRODUCTION_DOMAIN: gameapi.kmiza27.com
+      FRONTEND_DOMAIN: game.kmiza27.com
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3004/api/v1/health"]
@@ -33,7 +36,11 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: https://kmiza27-supabase.h4xd66.easypanel.host/
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
-      NEXT_PUBLIC_GAME_API_URL: http://kmiza27-game-backend:3004
+      # URL da API de produção
+      NEXT_PUBLIC_GAME_API_URL: https://gameapi.kmiza27.com
+      # Domínios de produção
+      NEXT_PUBLIC_FRONTEND_DOMAIN: game.kmiza27.com
+      NEXT_PUBLIC_API_DOMAIN: gameapi.kmiza27.com
     restart: unless-stopped
     depends_on:
       - kmiza27-game-backend
