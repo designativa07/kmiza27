@@ -19,6 +19,21 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+# Verificar imports do frontend antes do deploy
+echo "🔍 Verificando imports do frontend..."
+chmod +x check-imports.sh
+./check-imports.sh
+
+if [ $? -ne 0 ]; then
+    echo "⚠️ Problemas de imports encontrados. Tentando corrigir..."
+    echo "🔧 Corrigindo imports incorretos..."
+    
+    # Corrigir imports conhecidos
+    sed -i 's|import { ATTRIBUTE_LABELS, OVERALL_COLORS } from '\''./PlayerCardCompact'\'';|import { ATTRIBUTE_LABELS } from '\''@/types/player'\'';\nimport { OVERALL_COLORS } from '\''./PlayerCardCompact'\'';|g' frontend/src/components/PlayerAttributesLegend.tsx
+    
+    echo "✅ Imports corrigidos!"
+fi
+
 # Parar serviços existentes
 echo "🛑 Parando serviços existentes..."
 docker-compose -f docker/easypanel-game.yml down
