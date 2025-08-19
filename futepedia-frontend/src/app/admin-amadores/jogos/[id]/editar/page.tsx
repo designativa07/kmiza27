@@ -51,11 +51,12 @@ interface Stadium {
 }
 
 const matchStatuses = [
-  'scheduled', 'in_progress', 'finished', 'cancelled', 'postponed'
+  'scheduled', 'to_confirm', 'in_progress', 'finished', 'cancelled', 'postponed'
 ];
 
 const statusLabels = {
   scheduled: 'Agendado',
+  to_confirm: 'A Confirmar',
   in_progress: 'Em Andamento',
   finished: 'Finalizado',
   cancelled: 'Cancelado',

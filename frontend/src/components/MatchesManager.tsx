@@ -1086,6 +1086,7 @@ export default function MatchesManager() {
   const getStatusBadge = (status: string) => {
     const statusMap = {
       scheduled: { color: 'bg-blue-100 text-blue-800', text: 'Agendado' },
+      to_confirm: { color: 'bg-orange-100 text-orange-800', text: 'A Confirmar' },
       live: { color: 'bg-green-100 text-green-800', text: 'Ao Vivo' },
       finished: { color: 'bg-gray-100 text-gray-800', text: 'Finalizado' },
       postponed: { color: 'bg-yellow-100 text-yellow-800', text: 'Adiado' },
@@ -1505,6 +1506,7 @@ export default function MatchesManager() {
               >
                 <option value="">Todos</option>
                 <option value="scheduled">⏰ Agendado</option>
+                <option value="to_confirm">⏳ A Confirmar</option>
                 <option value="live">🔴 Ao Vivo</option>
                 <option value="finished">✅ Finalizado</option>
                 <option value="postponed">⏸️ Adiado</option>
@@ -1870,6 +1872,7 @@ export default function MatchesManager() {
                          aria-label="Selecionar status da partida"
                        >
                          <option value="scheduled">Agendado</option>
+                         <option value="to_confirm">A Confirmar</option>
                          <option value="live">Ao Vivo</option>
                          <option value="finished">Finalizado</option>
                          <option value="postponed">Adiado</option>
