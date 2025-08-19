@@ -4,7 +4,7 @@ services:
   kmiza27-game-backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.optimized  # Usar Dockerfile otimizado
     ports:
       - "3004:3004"
     environment:

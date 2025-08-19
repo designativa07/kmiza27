@@ -13,6 +13,12 @@ if [ ! -f "docker/easypanel-game.yml" ]; then
     exit 1
 fi
 
+# Verificar se o Docker está rodando
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Erro: Docker não está rodando!"
+    exit 1
+fi
+
 # Parar serviços existentes
 echo "🛑 Parando serviços existentes..."
 docker-compose -f docker/easypanel-game.yml down
@@ -23,7 +29,20 @@ docker system prune -f
 
 # Build das imagens
 echo "🔨 Fazendo build das imagens..."
-docker-compose -f docker/easypanel-game.yml build --no-cache
+echo "📦 Build do Backend..."
+docker-compose -f docker/easypanel-game.yml build --no-cache kmiza27-game-backend
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro no build do backend!"
+    echo "🔄 Tentando build alternativo..."
+    cd backend
+    chmod +x build-backend.sh
+    ./build-backend.sh
+    cd ..
+fi
+
+echo "📦 Build do Frontend..."
+docker-compose -f docker/easypanel-game.yml build --no-cache kmiza27-game-frontend
 
 # Iniciar serviços
 echo "🚀 Iniciando serviços..."
@@ -52,3 +71,5 @@ echo "🌐 Frontend: https://game.kmiza27.com"
 echo ""
 echo "📝 Para ver logs: docker-compose -f docker/easypanel-game.yml logs -f"
 echo "📝 Para parar: docker-compose -f docker/easypanel-game.yml down"
+echo ""
+echo "🔍 Para verificar status: ./check-production-status.sh"
