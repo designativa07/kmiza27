@@ -9,6 +9,7 @@ import { Card } from './card.entity';
 
 export enum MatchStatus {
   SCHEDULED = 'scheduled',
+  TO_CONFIRM = 'to_confirm',
   LIVE = 'live',
   FINISHED = 'finished',
   POSTPONED = 'postponed',

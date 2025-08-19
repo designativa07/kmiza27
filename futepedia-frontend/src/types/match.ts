@@ -19,7 +19,7 @@ export interface Competition {
 
 export interface Match {
   id: number;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'POSTPONED' | 'scheduled' | 'in_progress' | 'finished' | 'postponed';
+  status: 'SCHEDULED' | 'TO_CONFIRM' | 'IN_PROGRESS' | 'FINISHED' | 'POSTPONED' | 'scheduled' | 'to_confirm' | 'in_progress' | 'finished' | 'postponed';
   match_date: string;
   home_team: Team;
   away_team: Team;

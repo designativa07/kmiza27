@@ -166,6 +166,9 @@ const MatchStatus = ({ status, homeScore, awayScore }: {
       case 'scheduled':
       case 'agendado':
         return { text: 'Agendado', color: 'text-blue-600 bg-blue-100' };
+      case 'to_confirm':
+      case 'a confirmar':
+        return { text: 'A Confirmar', color: 'text-orange-600 bg-orange-100' };
       default:
         return { text: status || 'A definir', color: 'text-gray-600 bg-gray-100' };
     }

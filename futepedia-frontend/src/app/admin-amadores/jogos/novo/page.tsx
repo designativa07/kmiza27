@@ -217,6 +217,7 @@ export default function NovoJogoPage() {
 
   const statusOptions = [
     { value: 'scheduled', label: 'Agendado' },
+    { value: 'to_confirm', label: 'A Confirmar' },
     { value: 'in_progress', label: 'Em Andamento' },
     { value: 'finished', label: 'Finalizado' },
     { value: 'cancelled', label: 'Cancelado' },
