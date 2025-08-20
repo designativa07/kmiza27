@@ -34,6 +34,38 @@ if [ $? -ne 0 ]; then
     echo "✅ Imports corrigidos!"
 fi
 
+# Verificar propriedades obrigatórias
+echo "🔍 Verificando propriedades obrigatórias..."
+cd frontend
+
+# Verificar se PlayerCardCompact está sendo usado com playerType
+echo "Verificando PlayerCardCompact..."
+grep -r "PlayerCardCompact" src/components/ --include="*.tsx" | while read -r line; do
+    if [[ $line == *"<PlayerCardCompact"* ]]; then
+        file=$(echo "$line" | cut -d: -f1)
+        line_num=$(echo "$line" | cut -d: -f2)
+        
+        # Verificar se tem playerType
+        if ! grep -A 20 -B 5 "PlayerCardCompact" "$file" | grep -q "playerType"; then
+            echo "⚠️  $file:$line_num - PlayerCardCompact sem playerType"
+            echo "🔧 Corrigindo automaticamente..."
+            
+            # Adicionar playerType baseado no contexto
+            if [[ $file == *"YouthAcademy"* ]]; then
+                sed -i 's|size="small"|size="small"\n                      playerType="youth"|g' "$file"
+            elif [[ $file == *"PlayersManager"* ]]; then
+                sed -i 's|size="medium"|size="medium"\n              playerType={activeTab === '\''academia'\'' ? '\''youth'\'' : '\''professional'\''}|g' "$file"
+            else
+                sed -i 's|size="medium"|size="medium"\n              playerType="professional"|g' "$file"
+            fi
+            
+            echo "✅ Corrigido em $file"
+        fi
+    fi
+done
+
+cd ..
+
 # Parar serviços existentes
 echo "🛑 Parando serviços existentes..."
 docker-compose -f docker/easypanel-game.yml down

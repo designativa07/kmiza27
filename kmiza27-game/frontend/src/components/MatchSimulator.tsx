@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameApiReformed, SeasonMatch } from '@/services/gameApiReformed';
 import CompetitionsManagerReformed from './CompetitionsManagerReformed';
+import MatchVisualSimulator from './MatchVisualSimulator';
 
 // Tipo antigo mantido para compatibilidade com código existente
 interface Match {
@@ -48,6 +49,8 @@ export default function MatchSimulator() {
     tempo: 'balanced'
   });
   const [activeTab, setActiveTab] = useState<'matches' | 'simulation' | 'tactics' | 'competitions'>('matches');
+  const [showVisualSimulator, setShowVisualSimulator] = useState(false);
+  const [selectedMatchForVisual, setSelectedMatchForVisual] = useState<Match | null>(null);
 
   // Função simples para carregar partidas
   // Função para converter SeasonMatch para Match (compatibilidade)
@@ -203,6 +206,22 @@ export default function MatchSimulator() {
 
   const updateTactics = async (newTactics: Partial<Tactics>) => {
     setTactics(prev => ({ ...prev, ...newTactics }));
+  };
+
+  const openVisualSimulator = (match: Match) => {
+    setSelectedMatchForVisual(match);
+    setShowVisualSimulator(true);
+  };
+
+  const closeVisualSimulator = () => {
+    setShowVisualSimulator(false);
+    setSelectedMatchForVisual(null);
+  };
+
+  const handleVisualMatchEnd = (result: { homeScore: number; awayScore: number }) => {
+    console.log('🎉 Partida visual finalizada:', result);
+    // Aqui você pode integrar com o sistema de simulação real se desejar
+    closeVisualSimulator();
   };
 
   if (!selectedTeam) {
@@ -373,16 +392,58 @@ export default function MatchSimulator() {
           )}
 
           {activeTab === 'simulation' && (
-            <div className="text-center py-8">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">🎮 Simulação de Partida</h3>
-              <p className="text-gray-700 mb-4">
-                Sistema de simulação com animações em desenvolvimento...
-              </p>
-              <div className="bg-gray-100 rounded-lg p-6">
-                <div className="text-4xl mb-4">⚽</div>
-                <p className="text-sm text-gray-600">
-                  Em breve: Simulação visual com estatísticas em tempo real
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">🎮 Simulação de Partida</h3>
+              
+              {/* Seleção de Partida para Simulação Visual */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">🎯 Simulação Visual</h4>
+                <p className="text-blue-700 mb-4">
+                  Experimente a nova simulação visual estilo "futebol de botão"!
                 </p>
+                
+                {matches.length === 0 ? (
+                  <p className="text-blue-600 text-sm">Nenhuma partida disponível para simulação.</p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-blue-600 text-sm">Selecione uma partida para simular visualmente:</p>
+                    {matches.slice(0, 3).map((match) => (
+                      <div key={match.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4">
+                            <span className="font-medium">{match.home_team_name}</span>
+                            <span className="text-gray-500">vs</span>
+                            <span className="font-medium">{match.away_team_name}</span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {match.match_date} - {match.status === 'scheduled' ? 'Agendada' : 'Finalizada'}
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => openVisualSimulator(match)}
+                          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                        >
+                          🎮 Simular Visualmente
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Simulação Tradicional */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-3">⚽ Simulação Tradicional</h4>
+                <p className="text-gray-700 mb-4">
+                  Sistema de simulação com estatísticas detalhadas
+                </p>
+                <div className="bg-gray-100 rounded-lg p-6">
+                  <div className="text-4xl mb-4">⚽</div>
+                  <p className="text-sm text-gray-600">
+                    Simulação textual com highlights e estatísticas
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -493,6 +554,23 @@ export default function MatchSimulator() {
             <CompetitionsManagerReformed />
           )}
         </div>
+      )}
+
+      {/* Simulador Visual */}
+      {showVisualSimulator && selectedMatchForVisual && (
+        <MatchVisualSimulator
+          matchId={selectedMatchForVisual.id}
+          homeTeam={{
+            name: selectedMatchForVisual.home_team_name,
+            colors: { primary: '#3B82F6', secondary: '#1E40AF' }
+          }}
+          awayTeam={{
+            name: selectedMatchForVisual.away_team_name,
+            colors: { primary: '#EF4444', secondary: '#DC2626' }
+          }}
+          onMatchEnd={handleVisualMatchEnd}
+          onClose={closeVisualSimulator}
+        />
       )}
     </div>
   );

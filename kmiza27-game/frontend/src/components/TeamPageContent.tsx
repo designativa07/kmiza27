@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { GameTeam } from '@/lib/supabase';
@@ -20,6 +20,7 @@ import Marketplace from './Marketplace';
 import MarketNotifications from './MarketNotifications';
 
 import NewsFeed from './NewsFeed';
+import MatchVisualSimulator from './MatchVisualSimulator';
 
 type ActiveView = 'dashboard' | 'players' | 'stadium' | 'academy' | 'training' | 'finances' | 'market' | 'offers';
 
@@ -42,6 +43,8 @@ export default function TeamPageContent() {
   const [playersCount, setPlayersCount] = useState<number>(0);
   const [academyPlayersCount, setAcademyPlayersCount] = useState<number>(0);
   const [professionalPlayersCount, setProfessionalPlayersCount] = useState<number>(0);
+  const [showVisualSimulator, setShowVisualSimulator] = useState(false);
+  const [selectedMatchForVisual, setSelectedMatchForVisual] = useState<SeasonMatch | null>(null);
 
   const teamId = params.teamId as string;
 
@@ -103,6 +106,22 @@ export default function TeamPageContent() {
     }
   };
   
+  const openVisualSimulator = useCallback((match: SeasonMatch) => {
+    setSelectedMatchForVisual(match);
+    setShowVisualSimulator(true);
+  }, []);
+
+  const closeVisualSimulator = useCallback(() => {
+    setShowVisualSimulator(false);
+    setSelectedMatchForVisual(null);
+  }, []);
+
+  const handleVisualMatchEnd = useCallback((result: { homeScore: number; awayScore: number }) => {
+    console.log('🎉 Partida visual finalizada:', result);
+    // Aqui você pode integrar com o sistema de simulação real se desejar
+    closeVisualSimulator();
+  }, [closeVisualSimulator]);
+
   const simulateMatch = async (matchId: string) => {
     if (!selectedTeam) return;
     try {
@@ -184,9 +203,19 @@ export default function TeamPageContent() {
                           <p className="text-sm opacity-80 ml-7">{new Date(upcomingMatches[0].match_date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                         </div>
                         {upcomingMatches[0].status === 'scheduled' && (
-                          <Button size="lg" onClick={() => simulateMatch(upcomingMatches[0].id)} disabled={simulatingMatch === upcomingMatches[0].id} className="w-full mt-4 text-md font-bold bg-white text-emerald-700 hover:bg-slate-50">
-                            <Play className="h-5 w-5 mr-2" />{simulatingMatch === upcomingMatches[0].id ? 'Jogando...' : 'JOGAR'}
-                          </Button>
+                          <div className="space-y-3 mt-4">
+                            <Button size="lg" onClick={() => simulateMatch(upcomingMatches[0].id)} disabled={simulatingMatch === upcomingMatches[0].id} className="w-full text-md font-bold bg-white text-emerald-700 hover:bg-slate-50">
+                              <Play className="h-5 w-5 mr-2" />{simulatingMatch === upcomingMatches[0].id ? 'Jogando...' : 'JOGAR'}
+                            </Button>
+                            
+                            <Button 
+                              size="lg" 
+                              onClick={() => openVisualSimulator(upcomingMatches[0])} 
+                              className="w-full text-md font-bold bg-purple-600 text-white hover:bg-purple-700"
+                            >
+                              🎮 JOGAR COM SIMULAÇÃO VISUAL
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </CardContent>
@@ -662,6 +691,23 @@ export default function TeamPageContent() {
           }}
           onClose={() => setSeasonEndModal({ isOpen: false, seasonResult: null })}
         />
+
+        {/* Simulador Visual */}
+        {showVisualSimulator && selectedMatchForVisual && (
+          <MatchVisualSimulator
+            matchId={selectedMatchForVisual.id}
+            homeTeam={{
+              name: selectedMatchForVisual.home_team_id === team.id ? team.name : (selectedMatchForVisual.home_machine?.name || 'Adversário'),
+              colors: team.colors || { primary: '#3B82F6', secondary: '#1E40AF' }
+            }}
+            awayTeam={{
+              name: selectedMatchForVisual.away_team_id === team.id ? team.name : (selectedMatchForVisual.away_machine?.name || 'Adversário'),
+              colors: { primary: '#EF4444', secondary: '#DC2626' }
+            }}
+            onMatchEnd={handleVisualMatchEnd}
+            onClose={closeVisualSimulator}
+          />
+        )}
       </div>
     </div>
   );
