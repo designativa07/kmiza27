@@ -35,6 +35,23 @@ else
     echo "npx tsc --noEmit --skipLibCheck 2>&1 | grep -E 'Cannot find|has no exported member'"
 fi
 
+echo ""
+echo "🔍 Verificando propriedades obrigatórias..."
+echo "Verificando PlayerCardCompact..."
+
+# Verificar se PlayerCardCompact está sendo usado com playerType
+grep -r "PlayerCardCompact" src/components/ --include="*.tsx" | while read -r line; do
+    if [[ $line == *"<PlayerCardCompact"* ]]; then
+        file=$(echo "$line" | cut -d: -f1)
+        line_num=$(echo "$line" | cut -d: -f2)
+        
+        # Verificar se tem playerType
+        if ! grep -A 20 -B 5 "PlayerCardCompact" "$file" | grep -q "playerType"; then
+            echo "⚠️  $file:$line_num - PlayerCardCompact sem playerType"
+        fi
+    fi
+done
+
 cd ..
 echo ""
 echo "✅ Verificação concluída!"

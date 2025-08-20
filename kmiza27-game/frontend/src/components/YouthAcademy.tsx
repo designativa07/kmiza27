@@ -321,6 +321,7 @@ export default function YouthAcademy() {
                         }
                       }}
                       size="small"
+                      playerType="youth"
                     />
                     
                     {/* Controles de treinamento */}

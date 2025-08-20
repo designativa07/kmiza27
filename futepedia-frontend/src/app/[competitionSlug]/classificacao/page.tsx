@@ -24,6 +24,7 @@ interface Standing {
   team: {
     id: number;
     name: string;
+    short_name?: string;
     logo_url: string;
   };
   points: number;
@@ -45,6 +46,23 @@ interface Round {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Função para gerar nome curto como fallback
+const generateShortName = (fullName: string): string => {
+  // Se tem hífen, pega a primeira parte
+  if (fullName.includes('-')) {
+    return fullName.split('-')[0].trim();
+  }
+  
+  // Se tem múltiplas palavras, pega as primeiras letras
+  const words = fullName.split(' ').filter(word => word.length > 0);
+  if (words.length > 1) {
+    return words.map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3);
+  }
+  
+  // Se é uma palavra só, pega os primeiros 3-4 caracteres
+  return fullName.substring(0, Math.min(4, fullName.length)).toUpperCase();
+};
 
 // Função para formatar a data
 const formatDate = (dateString: string) => {
@@ -265,7 +283,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
   if (isPureKnockoutCompetition) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-2 sm:px-4 py-4">
           {/* Container para competições de mata-mata */}
           <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
             {/* Navegação de Rodadas */}
@@ -298,7 +316,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
           </div>
 
           {/* Seção de estatísticas adaptada para mata-mata */}
-          <div className="mt-8 bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <div className="mt-8 bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações da Competição</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
               <div className="bg-green-50 p-4 rounded-lg">
@@ -318,7 +336,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-2 sm:px-4 py-4">
 
         {/* Layout baseado no tipo de competição */}
         {Object.keys(standingsByGroup).length > 1 ? (
@@ -395,7 +413,7 @@ function ClassificacaoPage({ params }: { params: { competitionSlug: string } }) 
         )}
 
         {/* Seção adicional para estatísticas */}
-        <div className="mt-8 bg-white rounded-lg p-6 shadow-md border border-gray-100">
+        <div className="mt-8 bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Estatísticas</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div className="bg-blue-50 p-4 rounded-lg">
@@ -561,75 +579,92 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, onRowClick }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-1 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIME</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">PTS</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">J</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">V</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">E</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">D</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GP</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GC</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">SG</th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Últimos Jogos</th>
+    <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="sticky left-0 z-20 bg-gray-50 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] sm:min-w-[140px]">TIME</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">PTS</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">J</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">V</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">E</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">D</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">GP</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">GC</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">SG</th>
+              <th className="px-1 sm:px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Últimos Jogos</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {standings.map((standing, index) => (
-              <tr
-                key={standing.team.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => onRowClick(standing.team.id)}
-              >
-                <td className="px-1 py-3 whitespace-nowrap w-8 text-center">
-                  <span className="text-sm font-medium text-gray-900">{standing.position}</span>
-                </td>
-                <td className="px-2 py-3 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <TeamLogo
-                      src={standing.team.logo_url ? getTeamLogoUrl(standing.team.logo_url) : null}
-                      alt={standing.team.name}
-                      size="sm"
-                      className="mr-2"
-                    />
-                    <span className="text-xs font-medium text-gray-900">{standing.team.name}</span>
-                  </div>
-                </td>
-                <td className="px-2 py-3 whitespace-nowrap text-center">
-                  <span className="text-sm font-bold text-gray-900">{standing.points}</span>
-                </td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.played}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-green-600">{standing.won}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-yellow-600">{standing.drawn}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-red-600">{standing.lost}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goals_for}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goals_against}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500">{standing.goal_difference}</td>
-                <td className="px-2 py-3 whitespace-nowrap text-center">
-                  {standing.form && (
-                    <div className="flex justify-center space-x-1">
-                      {standing.form.split('').slice(-5).map((result, idx) => (
-                        <span
-                          key={idx}
-                          className={`inline-block w-3.5 h-3.5 rounded-full text-xs text-white font-bold flex items-center justify-center ${
-                            result === 'W' ? 'bg-green-500' :
-                            result === 'D' ? 'bg-yellow-500' :
-                            result === 'L' ? 'bg-red-500' : 'bg-gray-400'
-                          }`}
-                        >
-                          {result === 'W' ? 'V' : result === 'D' ? 'E' : 'D'}
-                        </span>
-                      ))}
+            {standings.map((standing, index) => {
+              const isLibertadoresZone = index < 4; // Primeiras 4 posições
+              const isRelegationZone = index >= standings.length - 4; // Últimas 4 posições
+              
+              let bgColor = 'bg-white';
+              let hoverBgColor = 'group-hover:bg-gray-100';
+              
+              if (isLibertadoresZone) {
+                bgColor = 'bg-green-50';
+                hoverBgColor = 'group-hover:bg-green-200';
+              } else if (isRelegationZone) {
+                bgColor = 'bg-red-50';
+                hoverBgColor = 'group-hover:bg-red-200';
+              }
+              
+              return (
+                <tr
+                  key={standing.team.id}
+                  className={`${bgColor} cursor-pointer group`}
+                  onClick={() => onRowClick(standing.team.id)}
+                >
+                  <td className={`sticky left-0 z-20 ${bgColor} ${hoverBgColor} px-2 py-3 whitespace-nowrap min-w-[100px] sm:min-w-[140px]`}>
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900 mr-3 min-w-[20px]">{standing.position}</span>
+                      <TeamLogo
+                        src={standing.team.logo_url ? getTeamLogoUrl(standing.team.logo_url) : null}
+                        alt={standing.team.name}
+                        size="sm"
+                        className="mr-2"
+                      />
+                      {/* Nome completo em desktop, nome curto em mobile */}
+                      <span className="text-xs font-medium text-gray-900 hidden sm:block">{standing.team.name}</span>
+                      <span className="text-xs font-medium text-gray-900 block sm:hidden">
+                        {standing.team.short_name || generateShortName(standing.team.name)}
+                      </span>
                     </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center min-w-[40px] ${hoverBgColor}`}>
+                    <span className="text-sm font-bold text-gray-900">{standing.points}</span>
+                  </td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500 min-w-[40px] ${hoverBgColor}`}>{standing.played}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-green-600 min-w-[40px] ${hoverBgColor}`}>{standing.won}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-yellow-600 min-w-[40px] ${hoverBgColor}`}>{standing.drawn}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-red-600 min-w-[40px] ${hoverBgColor}`}>{standing.lost}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500 min-w-[40px] ${hoverBgColor}`}>{standing.goals_for}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500 min-w-[40px] ${hoverBgColor}`}>{standing.goals_against}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center text-xs text-gray-500 min-w-[40px] ${hoverBgColor}`}>{standing.goal_difference}</td>
+                  <td className={`px-1 sm:px-2 py-3 whitespace-nowrap text-center min-w-[80px] ${hoverBgColor}`}>
+                    {standing.form && (
+                      <div className="flex justify-center space-x-1">
+                        {standing.form.split('').slice(-5).map((result, idx) => (
+                          <span
+                            key={idx}
+                            className={`inline-block w-3.5 h-3.5 rounded-full text-xs text-white font-bold flex items-center justify-center ${
+                              result === 'W' ? 'bg-green-500' :
+                              result === 'D' ? 'bg-yellow-500' :
+                              result === 'L' ? 'bg-red-500' : 'bg-gray-400'
+                            }`}
+                          >
+                            {result === 'W' ? 'V' : result === 'D' ? 'E' : 'D'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

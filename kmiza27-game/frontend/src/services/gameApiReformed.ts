@@ -337,6 +337,20 @@ class GameApiReformedService {
   }
 
   /**
+   * Buscar timeline de simulação visual
+   */
+  async getVisualSimulationTimeline(
+    matchId: string, 
+    userTeamData: any, 
+    machineTeamData: any
+  ): Promise<any[]> {
+    return this.request<any[]>(`/api/v2/match-simulation/${matchId}/visual-timeline`, {
+      method: 'POST',
+      body: JSON.stringify({ userTeamData, machineTeamData }),
+    });
+  }
+
+  /**
    * Buscar classificação completa da série
    */
   async getFullStandings(userId: string): Promise<any> {

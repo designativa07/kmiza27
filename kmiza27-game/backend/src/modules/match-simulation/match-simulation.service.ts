@@ -25,6 +25,7 @@ export interface PlayerMatchData {
   speed: number;
   stamina: number;
   strength: number;
+  vision: number;
   
   // Estado atual
   morale: number;

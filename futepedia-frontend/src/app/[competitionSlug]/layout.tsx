@@ -75,7 +75,7 @@ export default async function CompetitionLayout({
       
       {/* Navegação secundária */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <NavLinks links={navLinks} />
         </div>
       </div>
