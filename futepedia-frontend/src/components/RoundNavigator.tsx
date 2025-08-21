@@ -100,13 +100,18 @@ export function RoundNavigator({
             </p>
           )}
           {/* Indicadores de Rodada */}
-          <div className="flex flex-wrap items-center justify-center gap-1 mt-2 max-w-xs" style={{ rowGap: '0.5rem' }}>
+          <div className="mt-2 max-w-xs" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(19, 1fr)',
+            gap: '0.25rem',
+            rowGap: '0.5rem'
+          }}>
             {rounds.map((round, index) => (
               <button
                 key={round.id}
                 onClick={() => onRoundChange(round.id, round.round_number)}
                 className={`
-                    w-2 h-2 rounded-full transition-all duration-200 flex-shrink-0
+                    w-2 h-2 rounded-full transition-all duration-200
                     ${index === currentIndex 
                       ? 'bg-green-600 ring-2 ring-green-300' 
                       : index < currentIndex 
@@ -118,10 +123,6 @@ export function RoundNavigator({
                   `Fase: ${round.phase || 'N/A'}` : 
                   `Rodada ${round.round_number}`
                 }
-                style={{ 
-                  flexBasis: 'calc(100% / 19)', // Máximo 19 bolinhas por linha
-                  maxWidth: 'calc(100% / 19)'
-                }}
               />
             ))}
           </div>
