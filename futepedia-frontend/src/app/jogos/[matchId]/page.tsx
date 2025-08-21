@@ -234,37 +234,37 @@ export default function MatchPage({ params }: Props) {
 
             {/* Confronto Principal */}
             <div className="text-center mb-6">
-              <div className="flex items-center justify-center space-x-8 mb-4">
+              <div className="flex items-center justify-center space-x-4 sm:space-x-8 mb-4">
                                  {/* Time da Casa */}
                  <div className="flex flex-col items-center space-y-2">
                    <img
                      src={getTeamLogoUrl(match.home_team.logo_url)}
                      alt={`${match.home_team.name} logo`}
-                     className="w-16 h-16 object-contain"
+                     className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                    />
-                   <h2 className="text-xl font-bold text-gray-900 text-center">
+                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center">
                      {match.home_team.name}
                    </h2>
                    {match.home_team.city && (
-                     <p className="text-sm text-gray-500">{match.home_team.city}</p>
+                     <p className="text-xs sm:text-sm text-gray-500">{match.home_team.city}</p>
                    )}
                  </div>
 
                  {/* Placar */}
                  <div className="text-center">
                    {hasScore ? (
-                     <div className="text-4xl font-bold text-gray-900 mb-2">
+                     <div className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">
                        {match.home_score} × {match.away_score}
                      </div>
                    ) : (
-                     <div className="text-4xl font-bold text-gray-400 mb-2">
+                     <div className="text-2xl sm:text-4xl font-bold text-gray-400 mb-2">
                        × 
                      </div>
                    )}
                    
                    {/* Pênaltis */}
                    {hasPenalties && (
-                     <div className="text-lg text-gray-600">
+                     <div className="text-sm sm:text-lg text-gray-600">
                        Pênaltis: {match.home_score_penalties} × {match.away_score_penalties}
                      </div>
                    )}
@@ -275,13 +275,13 @@ export default function MatchPage({ params }: Props) {
                    <img
                      src={getTeamLogoUrl(match.away_team.logo_url)}
                      alt={`${match.away_team.name} logo`}
-                     className="w-16 h-16 object-contain"
+                     className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                    />
-                   <h2 className="text-xl font-bold text-gray-900 text-center">
+                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center">
                      {match.away_team.name}
                    </h2>
                    {match.away_team.city && (
-                     <p className="text-sm text-gray-500">{match.away_team.city}</p>
+                     <p className="text-xs sm:text-sm text-gray-500">{match.away_team.city}</p>
                    )}
                  </div>
               </div>
@@ -310,12 +310,7 @@ export default function MatchPage({ params }: Props) {
 
                 {/* Transmissão - Agora ocupa toda a largura */}
         <div className="mb-6">
-          <MatchBroadcastSection
-            broadcasts={match.broadcasts}
-            broadcastChannels={match.broadcast_channels}
-            homeTeamName={match.home_team.name}
-            awayTeamName={match.away_team.name}
-          />
+          <MatchBroadcastSection match={match} />
         </div>
 
         {/* Estádio */}

@@ -53,16 +53,13 @@ async function testVideoEmbed() {
     console.log('3. Teste o botão "Ocultar" no player do YouTube');
     console.log('4. O card de transmissão agora ocupa toda a largura disponível');
     console.log('5. Clique no card do Globoplay para abrir em nova aba');
-    console.log('6. **Teste a funcionalidade +LINK**:');
-    console.log('   - Clique no botão "+LINK" azul');
-    console.log('   - Adicione uma nova URL (ex: outro vídeo do YouTube)');
-    console.log('   - Verifique se o novo player aparece');
-    console.log('   - Teste a remoção com o botão X vermelho');
-    console.log('7. **Teste o Formulário Administrativo**:');
+    console.log('6. **Teste o Formulário Administrativo**:');
     console.log('   - Acesse: Painel Admin → Jogos → "+ Adicionar Jogo"');
     console.log('   - Na seção "Transmissão", teste o botão "+LINK" azul');
     console.log('   - Adicione múltiplas URLs e verifique os chips removíveis');
     console.log('   - Salve o jogo e teste na página da partida');
+    console.log('7. **Nota**: O botão +LINK foi removido da página pública da partida');
+    console.log('   - A funcionalidade de adicionar links está disponível apenas nos formulários admin');
     
     await client.end();
   } catch (error) {

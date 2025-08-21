@@ -998,6 +998,20 @@ export class MatchesService {
     });
   }
 
+  /**
+   * Busca TODOS os jogos de uma competição, independente do status
+   * Usado para simulação Monte Carlo que precisa de estatísticas completas
+   */
+  async findAllCompetitionMatches(competitionId: number): Promise<Match[]> {
+    return this.matchRepository.find({
+      where: {
+        competition: { id: competitionId },
+      },
+      relations: ['home_team', 'away_team'],
+      order: { match_date: 'ASC' },
+    });
+  }
+
   private async _getFallbackStandingEntry(teamId: number): Promise<any> {
     const matches = await this.matchRepository.find({
       where: [

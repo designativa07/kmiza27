@@ -145,26 +145,26 @@ export function MatchPrediction({ matchId }: { matchId: number }) {
         <div className="grid grid-cols-3 gap-2 p-4 bg-gray-50 rounded-lg border">
             {/* Time da Casa */}
             <div className="flex flex-col items-center text-center">
-                <img src={getTeamLogoUrl(homeTeam.logoUrl)} alt={homeTeam.name} className="h-12 w-12 mb-2"/>
-                <p className="font-bold text-sm">{homeTeam.name}</p>
+                <img src={getTeamLogoUrl(homeTeam.logoUrl)} alt={homeTeam.name} className="h-8 w-8 sm:h-12 sm:w-12 mb-1 sm:mb-2"/>
+                <p className="font-bold text-xs sm:text-sm">{homeTeam.name}</p>
             </div>
 
             {/* Estatísticas */}
             <div className="flex flex-col justify-around text-center text-xs text-gray-600">
                 <div>{homeTeam.position}º <span className="font-semibold">Pos.</span> {awayTeam.position}º</div>
                 <div>{homeTeam.points} <span className="font-semibold">Pts</span> {awayTeam.points}</div>
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <FormIndicator form={homeTeam.form} />
                     <span className="font-semibold">Forma</span>
                     <FormIndicator form={awayTeam.form} />
                 </div>
-                <div>{homeTeam.powerIndex.toFixed(0)} <span className="font-semibold text-indigo-500">Power Index</span> {awayTeam.powerIndex.toFixed(0)}</div>
+                <div>{homeTeam.powerIndex.toFixed(0)} <span className="font-semibold text-indigo-500">Power</span> {awayTeam.powerIndex.toFixed(0)}</div>
             </div>
             
             {/* Time Visitante */}
             <div className="flex flex-col items-center text-center">
-                <img src={getTeamLogoUrl(awayTeam.logoUrl)} alt={awayTeam.name} className="h-12 w-12 mb-2"/>
-                <p className="font-bold text-sm">{awayTeam.name}</p>
+                <img src={getTeamLogoUrl(awayTeam.logoUrl)} alt={awayTeam.name} className="h-8 w-8 sm:h-12 sm:w-12 mb-1 sm:mb-2"/>
+                <p className="font-bold text-xs sm:text-sm">{awayTeam.name}</p>
             </div>
         </div>
       </div>

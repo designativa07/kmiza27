@@ -54,38 +54,70 @@ A página `jogos/[matchId]/page.tsx` foi atualizada para usar:
 />
 ```
 
-## 📱 Como Usar
+## Como Usar
 
-### **Para Usuários Finais**
-1. Acesse a página de uma partida (ex: `/jogos/1031`)
-2. Na seção "Transmissão", o vídeo já estará visível por padrão
-3. Clique no botão "Ocultar" (à direita, abaixo do vídeo) para esconder
-4. Clique em "MOSTRAR TRANSMISSÃO" para exibir novamente
+### 1. **Adicionar Links de Transmissão (Formulários Administrativos)**
 
-### **Para Adicionar Múltiplas Transmissões**
-1. Na seção "Assistir ao Vivo Online", clique no botão **"+LINK"**
-2. Digite a URL da transmissão no campo de texto
-3. Clique em **"Adicionar"** para incluir o novo link
-4. Repita o processo para adicionar mais transmissões
-5. Use o botão **"X"** (vermelho) para remover links individuais
+Para adicionar múltiplos links de transmissão a uma partida, use os formulários administrativos:
 
-### **Para Administradores**
-1. **No formulário ADICIONAR JOGO/EDITAR JOGO**:
-   - Use o botão **"+LINK"** ao lado do campo "LINK direto para transmissão"
-   - Digite a URL da transmissão no prompt que aparecer
-   - Repita o processo para adicionar mais links
-   - Os links são separados por vírgula automaticamente
-   - Use o botão **"X"** para remover links individuais
+- **ADICIONAR JOGO**: Acesse o painel admin → Jogos → "+ Adicionar Jogo"
+- **EDITAR JOGO**: Acesse o painel admin → Jogos → Clique em "Editar" em qualquer jogo
 
-2. **Formato dos dados**:
-   - **Um link**: Enviado como string simples
-   - **Múltiplos links**: Enviados como array JSON
-   - **Exemplo**: `["https://youtube.com/...", "https://globoplay.globo.com/..."]`
+No campo **"LINK direto para transmissão"**:
 
-3. **Suporte automático**:
-   - Links são automaticamente detectados e convertidos para embed
-   - YouTube, Vimeo e Twitch funcionam com player inline
-   - Globoplay mostra card informativo com link direto
+1. **Digite URLs diretamente**: Cole uma ou mais URLs separadas por vírgula
+   ```
+   https://www.youtube.com/watch?v=..., https://globoplay.globo.com/tv-globo/ao-vivo/6120663/
+   ```
+
+2. **Use o botão +LINK**: Clique no botão azul "+LINK" ao lado do campo para adicionar URLs uma por vez
+   - O sistema mostrará um prompt para inserir a nova URL
+   - Cada URL será adicionada à lista existente
+
+3. **Visualize os links**: Os links aparecerão como "chips" abaixo do campo de input
+   - Cada chip mostra a URL completa
+   - Use o botão "X" vermelho para remover links individuais
+
+4. **Salve o jogo**: Clique em "Salvar" para persistir as alterações
+
+### 2. **Visualizar Transmissões na Página da Partida**
+
+Após salvar, os links aparecerão automaticamente na página pública da partida:
+
+- **YouTube, Vimeo, Twitch**: Players embutidos funcionais
+- **Globoplay**: Card especial com link direto (devido a restrições de direitos autorais)
+- **Outros links**: Botões de acesso direto
+
+### 3. **Formatos de Dados Suportados**
+
+O sistema aceita múltiplos formatos para `broadcast_channels`:
+
+```json
+// String única
+"https://www.youtube.com/watch?v=..."
+
+// Array de strings
+["https://www.youtube.com/watch?v=...", "https://globoplay.globo.com/..."]
+
+// String com vírgulas (formato do formulário)
+"https://www.youtube.com/watch?v=..., https://globoplay.globo.com/..."
+```
+
+## Interface Moderna
+
+### **Formulários Administrativos**
+- ✅ Botão **+LINK** azul ao lado do campo de transmissão
+- ✅ **Chips visuais** para cada URL adicionada
+- ✅ Botões **X** para remoção individual
+- ✅ **Placeholder** sugerindo múltiplos links
+- ✅ **Processamento automático** de vírgulas para arrays
+
+### **Página Pública da Partida**
+- ✅ **Sem botão +LINK** (funcionalidade apenas administrativa)
+- ✅ **Players embutidos** para YouTube, Vimeo, Twitch
+- ✅ **Card especial** para Globoplay com explicação
+- ✅ **Layout responsivo** ocupando toda a largura disponível
+- ✅ **Botão "Ocultar"** reposicionado abaixo do vídeo
 
 ## 🔧 Suporte a URLs
 
