@@ -29,7 +29,6 @@ export class CreateSimulationHistoryTable1755379382888 implements MigrationInter
         await queryRunner.query(`ALTER TABLE "notifications" DROP CONSTRAINT "notifications_user_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "notifications" DROP CONSTRAINT "notifications_match_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "users" DROP CONSTRAINT "users_favorite_team_id_fkey"`);
-        await queryRunner.query(`ALTER TABLE "simulation_history" DROP CONSTRAINT "FK_fbafcb31cb54dcaca2fa6418385"`);
         await queryRunner.query(`ALTER TABLE "pool_matches" DROP CONSTRAINT "pool_matches_match_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "pool_matches" DROP CONSTRAINT "pool_matches_pool_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "pool_participants" DROP CONSTRAINT "pool_participants_user_id_fkey"`);
@@ -39,8 +38,9 @@ export class CreateSimulationHistoryTable1755379382888 implements MigrationInter
         await queryRunner.query(`ALTER TABLE "pool_predictions" DROP CONSTRAINT "pool_predictions_pool_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "pools" DROP CONSTRAINT "pools_created_by_user_id_fkey"`);
         await queryRunner.query(`ALTER TABLE "pools" DROP CONSTRAINT "pools_round_id_fkey"`);
-        await queryRunner.query(`ALTER TABLE "pools" DROP CONSTRAINT "pools_competition_id_fkey"`);
-        await queryRunner.query(`ALTER TABLE "international_teams" DROP CONSTRAINT "FK_international_teams_team_id"`);
+        // Comentar constraints que não existem
+        // await queryRunner.query(`ALTER TABLE "pools" DROP CONSTRAINT "pools_competition_id_fkey"`);
+        // await queryRunner.query(`ALTER TABLE "international_teams" DROP CONSTRAINT "FK_international_teams_team_id"`);
         await queryRunner.query(`DROP INDEX "public"."idx_match_broadcasts_match_id"`);
         await queryRunner.query(`DROP INDEX "public"."idx_matches_date"`);
         await queryRunner.query(`DROP INDEX "public"."idx_matches_status"`);
