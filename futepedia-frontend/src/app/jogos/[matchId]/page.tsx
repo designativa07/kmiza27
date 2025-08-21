@@ -8,6 +8,7 @@ import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
 import { getApiUrl } from '@/lib/config';
 import dynamic from 'next/dynamic';
 import { MatchPrediction } from '@/components/MatchPrediction';
+import MatchBroadcastSection from '@/components/MatchBroadcastSection';
 
 // Importar componente de mapa dinamicamente
 const SingleStadiumMap = dynamic(() => import('@/components/SingleStadiumMap'), { 
@@ -124,30 +125,7 @@ function formatMatchDate(dateString: string) {
   };
 }
 
-// Função para processar canais de transmissão
-function processBroadcastChannels(broadcastChannels: string | string[] | undefined): string[] {
-  if (!broadcastChannels) return [];
-  
-  if (Array.isArray(broadcastChannels)) {
-    return broadcastChannels;
-  }
-  
-  if (typeof broadcastChannels === 'string') {
-    try {
-      // Tentar parse JSON se começar com [ ou "
-      if (broadcastChannels.startsWith('[') || broadcastChannels.startsWith('"')) {
-        const parsed = JSON.parse(broadcastChannels);
-        return Array.isArray(parsed) ? parsed : [parsed];
-      }
-      // Se for string simples, dividir por vírgula
-      return broadcastChannels.split(',').map(channel => channel.trim()).filter(Boolean);
-    } catch {
-      return [broadcastChannels];
-    }
-  }
-  
-  return [];
-}
+
 
 // Componente de status do jogo
 const MatchStatus = ({ status, homeScore, awayScore }: { 
@@ -257,54 +235,68 @@ export default function MatchPage({ params }: Props) {
             {/* Confronto Principal */}
             <div className="text-center mb-6">
               <div className="flex items-center justify-center space-x-8 mb-4">
-                {/* Time da Casa */}
-                <div className="flex flex-col items-center space-y-2">
-                  <img
-                    src={getTeamLogoUrl(match.home_team.logo_url)}
-                    alt={`${match.home_team.name} logo`}
-                    className="w-20 h-20 object-contain"
-                  />
-                  <h2 className="text-xl font-bold text-gray-900 text-center">
-                    {match.home_team.name}
-                  </h2>
-                  {match.home_team.city && (
-                    <p className="text-sm text-gray-500">{match.home_team.city}</p>
-                  )}
-                </div>
+                                 {/* Time da Casa */}
+                 <div className="flex flex-col items-center space-y-2">
+                   <img
+                     src={getTeamLogoUrl(match.home_team.logo_url)}
+                     alt={`${match.home_team.name} logo`}
+                     className="w-16 h-16 object-contain"
+                   />
+                   <h2 className="text-xl font-bold text-gray-900 text-center">
+                     {match.home_team.name}
+                   </h2>
+                   {match.home_team.city && (
+                     <p className="text-sm text-gray-500">{match.home_team.city}</p>
+                   )}
+                 </div>
 
-                {/* Placar */}
-                <div className="text-center">
-                  {hasScore ? (
-                    <div className="text-4xl font-bold text-gray-900 mb-2">
-                      {match.home_score} × {match.away_score}
-                    </div>
-                  ) : (
-                    <div className="text-4xl font-bold text-gray-400 mb-2">
-                      × 
-                    </div>
-                  )}
-                  
-                  {/* Pênaltis */}
-                  {hasPenalties && (
-                    <div className="text-lg text-gray-600">
-                      Pênaltis: {match.home_score_penalties} × {match.away_score_penalties}
-                    </div>
-                  )}
-                </div>
+                 {/* Placar */}
+                 <div className="text-center">
+                   {hasScore ? (
+                     <div className="text-4xl font-bold text-gray-900 mb-2">
+                       {match.home_score} × {match.away_score}
+                     </div>
+                   ) : (
+                     <div className="text-4xl font-bold text-gray-400 mb-2">
+                       × 
+                     </div>
+                   )}
+                   
+                   {/* Pênaltis */}
+                   {hasPenalties && (
+                     <div className="text-lg text-gray-600">
+                       Pênaltis: {match.home_score_penalties} × {match.away_score_penalties}
+                     </div>
+                   )}
+                 </div>
 
-                {/* Time Visitante */}
-                <div className="flex flex-col items-center space-y-2">
-                  <img
-                    src={getTeamLogoUrl(match.away_team.logo_url)}
-                    alt={`${match.away_team.name} logo`}
-                    className="w-20 h-20 object-contain"
-                  />
-                  <h2 className="text-xl font-bold text-gray-900 text-center">
-                    {match.away_team.name}
-                  </h2>
-                  {match.away_team.city && (
-                    <p className="text-sm text-gray-500">{match.away_team.city}</p>
-                  )}
+                 {/* Time Visitante */}
+                 <div className="flex flex-col items-center space-y-2">
+                   <img
+                     src={getTeamLogoUrl(match.away_team.logo_url)}
+                     alt={`${match.away_team.name} logo`}
+                     className="w-16 h-16 object-contain"
+                   />
+                   <h2 className="text-xl font-bold text-gray-900 text-center">
+                     {match.away_team.name}
+                   </h2>
+                   {match.away_team.city && (
+                     <p className="text-sm text-gray-500">{match.away_team.city}</p>
+                   )}
+                 </div>
+              </div>
+              
+              {/* Data e Hora - Movido para o card principal */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-center space-x-6 text-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                    <span className="capitalize">{date}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-gray-500" />
+                    <span className="text-lg font-semibold">{time}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -316,50 +308,14 @@ export default function MatchPage({ params }: Props) {
             <MatchPrediction matchId={match.id} />
         </div>
 
-        {/* Informações do Jogo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Data e Hora */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-blue-600" />
-              Data e Hora
-            </h3>
-            <div className="space-y-2">
-              <p className="text-gray-700 capitalize">{date}</p>
-              <p className="text-2xl font-bold text-gray-900 flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-gray-500" />
-                {time}
-              </p>
-            </div>
-          </div>
-
-          {/* Transmissão */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-              Transmissão
-            </h3>
-            {match.broadcasts && match.broadcasts.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {match.broadcasts.map(({ channel }) => (
-                  <a
-                    key={channel.id}
-                    href={channel.channel_link || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-block px-4 py-2 rounded-md text-sm font-semibold transition-colors
-                      ${channel.channel_link 
-                        ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                        : 'bg-gray-200 text-gray-700 cursor-not-allowed'}`}
-                  >
-                    {channel.name}
-                  </a>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">A definir</p>
-            )}
-          </div>
+                {/* Transmissão - Agora ocupa toda a largura */}
+        <div className="mb-6">
+          <MatchBroadcastSection
+            broadcasts={match.broadcasts}
+            broadcastChannels={match.broadcast_channels}
+            homeTeamName={match.home_team.name}
+            awayTeamName={match.away_team.name}
+          />
         </div>
 
         {/* Estádio */}
