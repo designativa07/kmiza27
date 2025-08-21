@@ -11,8 +11,10 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Request,
+  Delete,
 } from '@nestjs/common';
 import { SimulationsService, RunSimulationRequest } from './simulations.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 export class RunSimulationDto {
   competitionId: number;
@@ -239,6 +241,29 @@ export class SimulationsController {
           ? 'Competição suporta simulações' 
           : 'Simulações disponíveis apenas para Brasileirão Série A e Série B',
       },
+    };
+  }
+
+  /**
+   * Exclui uma simulação específica
+   */
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async deleteSimulation(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
+    await this.simulationsService.deleteSimulation(id);
+    return { message: 'Simulação excluída com sucesso' };
+  }
+
+  /**
+   * Exclui múltiplas simulações
+   */
+  @Delete('batch')
+  @UseGuards(JwtAuthGuard)
+  async deleteMultipleSimulations(@Body() request: { ids: number[] }): Promise<{ message: string; deletedCount: number }> {
+    const deletedCount = await this.simulationsService.deleteMultipleSimulations(request.ids);
+    return { 
+      message: `${deletedCount} simulação(ões) excluída(s) com sucesso`,
+      deletedCount 
     };
   }
 }

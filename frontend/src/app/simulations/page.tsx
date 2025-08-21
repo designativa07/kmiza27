@@ -61,6 +61,7 @@ export default function SimulationsPage() {
   const [latestResult, setLatestResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deletingSimulation, setDeletingSimulation] = useState<number | null>(null);
 
   const competitions = [
     { id: 1, name: 'Brasileirão Série A' },
@@ -103,13 +104,11 @@ export default function SimulationsPage() {
     try {
       const response = await fetch(`${API_URL}/simulations/latest/${selectedCompetition}`);
       const data = await response.json();
-      if (data.success && data.data) {
+      if (data.success) {
         setLatestResult(data.data);
-      } else {
-        setLatestResult(null);
       }
     } catch (err) {
-      console.error('Erro ao carregar última simulação:', err);
+      console.error('Erro ao carregar simulação mais recente:', err);
     }
   };
 
@@ -147,6 +146,41 @@ export default function SimulationsPage() {
       console.error('Erro ao executar simulação:', err);
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const deleteSimulation = async (simulationId: number) => {
+    if (!confirm('Tem certeza que deseja excluir esta simulação? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    setDeletingSimulation(simulationId);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch(`${API_URL}/simulations/${simulationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage('Simulação excluída com sucesso!');
+        // Recarregar histórico e estatísticas
+        await loadHistory();
+        await loadStats();
+      } else {
+        setError(data.message || 'Erro ao excluir simulação');
+      }
+    } catch (err) {
+      setError('Erro de conexão ao excluir simulação');
+      console.error('Erro ao excluir simulação:', err);
+    } finally {
+      setDeletingSimulation(null);
     }
   };
 
@@ -307,20 +341,26 @@ export default function SimulationsPage() {
               )}
             </button>
 
-            {/* Mensagens */}
-            {error && (
-              <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-md">
-                <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                <span className="text-red-700 text-sm">{error}</span>
+            {/* Mensagens de Sucesso e Erro */}
+            {successMessage && (
+              <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-4">
+                <div className="flex">
+                  <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+                  <p className="text-sm text-green-800">{successMessage}</p>
+                </div>
               </div>
             )}
 
-            {successMessage && (
-              <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-md">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span className="text-green-700 text-sm">{successMessage}</span>
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="flex">
+                  <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
               </div>
             )}
+
+            {/* Configurações de Simulação */}
           </div>
         </div>
 
@@ -449,6 +489,9 @@ export default function SimulationsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -477,6 +520,22 @@ export default function SimulationsPage() {
                           Histórico
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => deleteSimulation(entry.id)}
+                        disabled={deletingSimulation === entry.id}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                      >
+                        {deletingSimulation === entry.id ? (
+                          <>
+                            <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                            Excluindo...
+                          </>
+                        ) : (
+                          'Excluir'
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))}

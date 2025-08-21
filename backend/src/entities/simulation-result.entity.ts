@@ -47,6 +47,8 @@ export interface SimulationMetadata {
     goal_difference_per_game: number;
     recent_form: number;
   };
+  round_number?: number; // Rodada em que a simulação foi executada
+  notes?: string; // Notas sobre a simulação
 }
 
 @Entity('simulation_results')
@@ -60,56 +62,71 @@ export class SimulationResult {
   @JoinColumn({ name: 'competition_id' })
   competition: Competition;
 
-  @CreateDateColumn()
-  execution_date: Date;
+  @Column({ name: 'competition_id' })
+  competitionId: number;
 
-  @UpdateDateColumn()
-  updated_at: Date;
+  @CreateDateColumn({ name: 'execution_date' })
+  executionDate: Date;
 
-  @Column('int')
-  simulation_count: number;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 
-  @Column('varchar', { length: 100 })
-  executed_by: string;
+  @Column({ name: 'simulation_count' })
+  simulationCount: number;
 
-  @Column('boolean', { default: false })
-  is_latest: boolean; // Flag para marcar a simulação mais recente de cada competição
+  @Column({ name: 'executed_by', length: 100 })
+  executedBy: string;
+
+  @Column({ name: 'is_latest', default: false })
+  isLatest: boolean; // Flag para marcar a simulação mais recente de cada competição
+
+  @Column({ name: 'is_important', default: false })
+  isImportant: boolean; // Nova: marca simulações importantes para não serem removidas
+
+  @Column({ name: 'retention_days', nullable: true })
+  retentionDays: number; // Nova: dias para manter esta simulação (null = usar padrão)
+
+  @Column({ name: 'round_number', nullable: true })
+  roundNumber: number; // Nova: rodada em que a simulação foi executada
+
+  @Column({ name: 'notes', type: 'text', nullable: true })
+  notes: string; // Nova: notas sobre a simulação
 
   @Column('jsonb')
-  power_index_data: PowerIndexEntry[];
+  powerIndexData: PowerIndexEntry[];
 
   @Column('jsonb')
-  simulation_results: TeamPrediction[];
+  simulationResults: TeamPrediction[];
 
   @Column('jsonb')
   metadata: SimulationMetadata;
 
-  @Column('int')
-  execution_duration_ms: number;
+  @Column({ name: 'execution_duration_ms' })
+  executionDurationMs: number;
 
-  @Column('varchar', { length: 50, default: '1.0.0' })
-  algorithm_version: string;
+  @Column({ name: 'algorithm_version', length: 50, default: '1.0.0' })
+  algorithmVersion: string;
 
   // Método para buscar probabilidades de um time específico
   getTeamPrediction(teamId: number): TeamPrediction | null {
-    return this.simulation_results.find(result => result.team_id === teamId) || null;
+    return this.simulationResults.find(result => result.team_id === teamId) || null;
   }
 
   // Método para buscar Power Index de um time específico
   getTeamPowerIndex(teamId: number): PowerIndexEntry | null {
-    return this.power_index_data.find(entry => entry.team_id === teamId) || null;
+    return this.powerIndexData.find(entry => entry.team_id === teamId) || null;
   }
 
   // Método para obter top N times com maior probabilidade de título
   getTopTitleContenders(limit: number = 5): TeamPrediction[] {
-    return this.simulation_results
+    return this.simulationResults
       .sort((a, b) => b.title_probability - a.title_probability)
       .slice(0, limit);
   }
 
   // Método para obter times em risco de rebaixamento
   getRelegationRisk(threshold: number = 10): TeamPrediction[] {
-    return this.simulation_results
+    return this.simulationResults
       .filter(result => result.relegation_probability >= threshold)
       .sort((a, b) => b.relegation_probability - a.relegation_probability);
   }
