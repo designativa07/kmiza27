@@ -4,7 +4,7 @@ export class CreateSimulationResultsTableSimplified1755400000001 implements Migr
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Criar tabela simulation_results
     await queryRunner.query(`
-      CREATE TABLE "simulation_results" (
+      CREATE TABLE IF NOT EXISTS "simulation_results" (
         "id" SERIAL NOT NULL,
         "competition_id" int NOT NULL,
         "execution_date" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -45,7 +45,7 @@ export class CreateSimulationResultsTableSimplified1755400000001 implements Migr
     `);
     
     await queryRunner.query(`
-      COMMENT ON COLUMN "simulation_results"."metadata" IS 'Metadados da execução (duração, versão do algoritmo, etc.)';
+      COMMENT ON COLUMN "simulation_results"."metadata" IS 'Metadados da execução (configurações, pesos, etc.)';
     `);
     
     await queryRunner.query(`
@@ -53,68 +53,64 @@ export class CreateSimulationResultsTableSimplified1755400000001 implements Migr
     `);
     
     await queryRunner.query(`
-      COMMENT ON COLUMN "simulation_results"."algorithm_version" IS 'Versão do algoritmo usado na simulação';
+      COMMENT ON COLUMN "simulation_results"."algorithm_version" IS 'Versão do algoritmo de simulação';
     `);
 
-    // Índices para melhor performance
+    // Criar índices para performance
     await queryRunner.query(`
-      CREATE INDEX "IDX_simulation_results_competition_execution_date" 
-      ON "simulation_results" ("competition_id", "execution_date");
+      CREATE INDEX "IDX_simulation_results_competition" ON "simulation_results" ("competition_id");
+    `);
+    
+    await queryRunner.query(`
+      CREATE INDEX "IDX_simulation_results_execution_date" ON "simulation_results" ("execution_date");
+    `);
+    
+    await queryRunner.query(`
+      CREATE INDEX "IDX_simulation_results_is_latest" ON "simulation_results" ("is_latest");
+    `);
+    
+    await queryRunner.query(`
+      CREATE INDEX "IDX_simulation_results_competition_latest" ON "simulation_results" ("competition_id", "is_latest");
     `);
 
+    // Trigger para garantir que apenas uma simulação por competição seja marcada como is_latest
     await queryRunner.query(`
-      CREATE INDEX "IDX_simulation_results_competition_latest" 
-      ON "simulation_results" ("competition_id", "is_latest");
-    `);
-
-    await queryRunner.query(`
-      CREATE INDEX "IDX_simulation_results_execution_date" 
-      ON "simulation_results" ("execution_date");
-    `);
-
-    // Comentário da tabela
-    await queryRunner.query(`
-      COMMENT ON TABLE "simulation_results" IS 'Histórico de simulações Monte Carlo para previsões de campeonatos';
-    `);
-
-    // Criar trigger para garantir que apenas uma simulação por competição seja marcada como 'latest'
-    await queryRunner.query(`
-      CREATE OR REPLACE FUNCTION update_simulation_latest_flag()
+      CREATE OR REPLACE FUNCTION update_simulation_results_latest()
       RETURNS TRIGGER AS $$
       BEGIN
-        -- Se a nova simulação está sendo marcada como latest
-        IF NEW.is_latest = TRUE THEN
-          -- Desmarcar todas as outras simulações da mesma competição
+        IF NEW.is_latest = true THEN
           UPDATE simulation_results 
-          SET is_latest = FALSE 
+          SET is_latest = false 
           WHERE competition_id = NEW.competition_id 
-            AND id != NEW.id;
+          AND id != NEW.id;
         END IF;
-        
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
     `);
-
+    
     await queryRunner.query(`
-      CREATE TRIGGER trigger_simulation_latest_flag
-        BEFORE INSERT OR UPDATE ON simulation_results
-        FOR EACH ROW
-        EXECUTE FUNCTION update_simulation_latest_flag();
+      CREATE TRIGGER trigger_update_simulation_results_latest
+      BEFORE INSERT OR UPDATE ON simulation_results
+      FOR EACH ROW
+      EXECUTE FUNCTION update_simulation_results_latest();
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Remover trigger e função
-    await queryRunner.query('DROP TRIGGER IF EXISTS trigger_simulation_latest_flag ON simulation_results;');
-    await queryRunner.query('DROP FUNCTION IF EXISTS update_simulation_latest_flag();');
-
+    // Remover trigger
+    await queryRunner.query(`DROP TRIGGER IF EXISTS trigger_update_simulation_results_latest ON simulation_results`);
+    
+    // Remover função
+    await queryRunner.query(`DROP FUNCTION IF EXISTS update_simulation_results_latest()`);
+    
     // Remover índices
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_simulation_results_competition_execution_date";');
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_simulation_results_competition_latest";');
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_simulation_results_execution_date";');
-
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_simulation_results_competition_latest"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_simulation_results_is_latest"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_simulation_results_execution_date"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_simulation_results_competition"`);
+    
     // Remover tabela
-    await queryRunner.query('DROP TABLE IF EXISTS "simulation_results";');
+    await queryRunner.query(`DROP TABLE IF EXISTS "simulation_results"`);
   }
 }

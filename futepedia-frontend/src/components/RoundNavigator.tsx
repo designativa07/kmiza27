@@ -100,7 +100,7 @@ export function RoundNavigator({
             </p>
           )}
           {/* Indicadores de Rodada */}
-          <div className="flex items-center space-x-1 overflow-x-auto max-w-xs justify-center mt-2">
+          <div className="flex flex-wrap items-center justify-center gap-1 mt-2 max-w-xs">
             {rounds.map((round, index) => (
               <button
                 key={round.id}
