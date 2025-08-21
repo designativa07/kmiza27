@@ -1,214 +1,139 @@
 'use client';
 
-import { useState } from 'react';
-import { TrendingUp, Tv, Globe, Plus, X } from 'lucide-react';
+import React from 'react';
+import { Globe, Tv, Radio } from 'lucide-react';
 import InlineVideoPlayer from './InlineVideoPlayer';
 
-interface MatchBroadcast {
-  id: number;
-  channel: {
-    id: number;
-    name: string;
-    channel_link?: string;
-    active: boolean;
-  };
-}
-
 interface MatchBroadcastSectionProps {
-  broadcasts?: MatchBroadcast[];
-  broadcastChannels?: string | string[];
-  homeTeamName: string;
-  awayTeamName: string;
+  match: {
+    broadcast_channels?: string[] | string | null;
+    broadcasts?: Array<{
+      id: number;
+      channel: {
+        id: number;
+        name: string;
+        channel_link?: string;
+        active: boolean;
+      };
+    }> | null;
+    home_team: { name: string };
+    away_team: { name: string };
+  };
 }
 
-// Função para processar canais de transmissão
-function processBroadcastChannels(broadcastChannels: string | string[] | undefined): string[] {
-  if (!broadcastChannels) return [];
-  
-  if (Array.isArray(broadcastChannels)) {
-    return broadcastChannels;
-  }
-  
-  if (typeof broadcastChannels === 'string') {
-    try {
-      // Tentar parse JSON se começar com [ ou "
-      if (broadcastChannels.startsWith('[') || broadcastChannels.startsWith('"')) {
-        const parsed = JSON.parse(broadcastChannels);
-        return Array.isArray(parsed) ? parsed : [parsed];
+const MatchBroadcastSection: React.FC<MatchBroadcastSectionProps> = ({ match }) => {
+  // Função para processar broadcast_channels (pode ser string, array ou null)
+  const processBroadcastChannels = (channels: string[] | string | null): string[] => {
+    if (!channels) return [];
+    if (Array.isArray(channels)) return channels;
+    if (typeof channels === 'string') {
+      try {
+        // Tentar fazer parse se for JSON string
+        const parsed = JSON.parse(channels);
+        return Array.isArray(parsed) ? parsed : [channels];
+      } catch {
+        // Se não for JSON válido, tratar como string simples
+        return [channels];
       }
-      // Se for string simples, dividir por vírgula
-      return broadcastChannels.split(',').map(channel => channel.trim()).filter(Boolean);
-    } catch {
-      return [broadcastChannels];
     }
-  }
-  
-  return [];
-}
+    return [];
+  };
 
-export default function MatchBroadcastSection({ 
-  broadcasts, 
-  broadcastChannels, 
-  homeTeamName, 
-  awayTeamName 
-}: MatchBroadcastSectionProps) {
-  const [additionalLinks, setAdditionalLinks] = useState<string[]>([]);
-  const [newLinkInput, setNewLinkInput] = useState('');
-  const [showAddLinkForm, setShowAddLinkForm] = useState(false);
-
-  const hasVideoStreams = broadcastChannels && processBroadcastChannels(broadcastChannels).length > 0;
-  const hasTvChannels = broadcasts && broadcasts.length > 0;
-  const hasAnyBroadcast = hasVideoStreams || hasTvChannels || additionalLinks.length > 0;
-
-  const handleAddLink = () => {
-    if (newLinkInput.trim()) {
-      setAdditionalLinks([...additionalLinks, newLinkInput.trim()]);
-      setNewLinkInput('');
-      setShowAddLinkForm(false);
+  // Função para processar broadcasts (canais tradicionais de TV/rádio)
+  const processBroadcasts = (broadcasts: Array<{
+    id: number;
+    channel: {
+      id: number;
+      name: string;
+      channel_link?: string;
+      active: boolean;
+    };
+  }> | null): Array<{ name: string; link?: string }> => {
+    if (!broadcasts) return [];
+    if (Array.isArray(broadcasts)) {
+      return broadcasts.map(broadcast => ({
+        name: broadcast.channel.name,
+        link: broadcast.channel.channel_link
+      }));
     }
+    return [];
   };
 
-  const handleRemoveLink = (index: number) => {
-    setAdditionalLinks(additionalLinks.filter((_, i) => i !== index));
-  };
+  const broadcastChannels = processBroadcastChannels(match.broadcast_channels || null);
+  const broadcasts = processBroadcasts(match.broadcasts || null);
+  const homeTeamName = match.home_team.name;
+  const awayTeamName = match.away_team.name;
 
-  const handleRemoveOriginalLink = (index: number) => {
-    // Aqui você pode implementar a lógica para remover links originais
-    // Por enquanto, apenas remove do estado local
-    console.log('Remover link original:', index);
-  };
+  // Verificar se há streams de vídeo online
+  const hasVideoStreams = broadcastChannels.length > 0;
+  const hasTraditionalBroadcasts = broadcasts.length > 0;
 
-  if (!hasAnyBroadcast) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-          Transmissão
-        </h3>
-        <p className="text-gray-500">A definir</p>
-      </div>
-    );
+  // Se não há nenhuma transmissão, não mostrar a seção
+  if (!hasVideoStreams && !hasTraditionalBroadcasts) {
+    return null;
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+        <Tv className="h-5 w-5 mr-2 text-blue-600" />
         Transmissão
       </h3>
-      
-                        {/* Streams de Vídeo Online */}
-                  {(hasVideoStreams || additionalLinks.length > 0) && (
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-gray-700 flex items-center">
-                          <Globe className="h-4 w-4 mr-2 text-blue-600" />
-                          Assistir ao Vivo Online
-                        </h4>
-                        <button
-                          onClick={() => setShowAddLinkForm(!showAddLinkForm)}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          +LINK
-                        </button>
-                      </div>
 
-                      {/* Formulário para adicionar novo link */}
-                      {showAddLinkForm && (
-                        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="url"
-                              value={newLinkInput}
-                              onChange={(e) => setNewLinkInput(e.target.value)}
-                              placeholder="https://www.youtube.com/watch?v=..."
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                              onClick={handleAddLink}
-                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors"
-                            >
-                              Adicionar
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowAddLinkForm(false);
-                                setNewLinkInput('');
-                              }}
-                              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      )}
+      <div className="space-y-6">
+        {/* Streams de Vídeo Online */}
+        {hasVideoStreams && (
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-gray-700 flex items-center mb-3">
+              <Globe className="h-4 w-4 mr-2 text-blue-600" />
+              Assistir ao Vivo Online
+            </h4>
 
-                      <div className="space-y-3">
-                        {/* Links originais */}
-                        {hasVideoStreams && processBroadcastChannels(broadcastChannels).map((channel, index) => (
-                          <div key={`original-${index}`} className="relative">
-                            <InlineVideoPlayer 
-                              url={channel} 
-                              title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
-                              className="w-full"
-                            />
-                            <button
-                              onClick={() => handleRemoveOriginalLink(index)}
-                              className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
-                              title="Remover link"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
+            <div className="space-y-3">
+              {broadcastChannels.map((channel, index) => (
+                <InlineVideoPlayer
+                  key={index}
+                  url={channel}
+                  title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
+                  className="w-full"
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-                        {/* Links adicionais */}
-                        {additionalLinks.map((link, index) => (
-                          <div key={`additional-${index}`} className="relative">
-                            <InlineVideoPlayer 
-                              url={link} 
-                              title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
-                              className="w-full"
-                            />
-                            <button
-                              onClick={() => handleRemoveLink(index)}
-                              className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
-                              title="Remover link"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+        {/* Canais Tradicionais de TV/Rádio */}
+        {hasTraditionalBroadcasts && (
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 flex items-center mb-3">
+              <Radio className="h-4 w-4 mr-2 text-green-600" />
+              Canais de TV e Rádio
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {broadcasts.map((channel, index) => (
+                <div key={index}>
+                  {channel.link ? (
+                    <a
+                      href={channel.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-600 rounded-lg px-3 py-2 text-center transition-colors"
+                    >
+                      <span className="text-sm font-medium">{channel.name}</span>
+                    </a>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center">
+                      <span className="text-sm font-medium text-gray-700">{channel.name}</span>
                     </div>
                   )}
-      
-             {/* Canais de TV Tradicionais */}
-       {hasTvChannels && (
-         <div>
-           <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-             <Tv className="h-4 w-4 mr-2 text-indigo-600" />
-             Canais de TV
-           </h4>
-           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-             {broadcasts.map(({ channel }) => (
-               <a
-                 key={channel.id}
-                 href={channel.channel_link || '#'}
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 className={`inline-block px-3 py-2 rounded-md text-sm font-semibold transition-colors text-center
-                   ${channel.channel_link 
-                     ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                     : 'bg-gray-200 text-gray-700 cursor-not-allowed'}`}
-               >
-                 {channel.name}
-               </a>
-             ))}
-           </div>
-         </div>
-       )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default MatchBroadcastSection;

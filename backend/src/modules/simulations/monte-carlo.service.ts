@@ -14,6 +14,9 @@ export interface SimulationMatch {
   home_team_id: number;
   away_team_id: number;
   match_date: Date;
+  status: string;
+  home_score?: number;
+  away_score?: number;
 }
 
 export interface SimulationTeam {
@@ -57,28 +60,26 @@ export class MonteCarloService {
     const startTime = Date.now();
     this.logger.log(`Iniciando simulação Monte Carlo: ${simulationCount} iterações para competição ${competitionId}`);
 
-    // 1. Buscar partidas restantes
-    const remainingMatches = await this.getRemainingMatches(competitionId);
-    this.logger.log(`Encontradas ${remainingMatches.length} partidas restantes`);
+    // 1. Buscar TODAS as partidas da competição
+    const allMatches = await this.getRemainingMatches(competitionId);
+    this.logger.log(`Encontradas ${allMatches.length} partidas no total`);
 
-    // 2. Buscar classificação atual
-    const currentStandings = await this.standingsService.getCompetitionStandings(competitionId);
-    
-    // 3. Converter standings para formato de simulação
-    const initialTeamStates = this.convertStandingsToSimulationFormat(currentStandings);
+    // 2. Calcular estatísticas iniciais baseado nos jogos finalizados
+    const initialTeamStates = await this.calculateInitialStatsFromMatches(allMatches);
+    this.logger.log(`Estatísticas iniciais calculadas para ${initialTeamStates.length} times`);
 
-    // 4. Criar mapa de Power Index por time
+    // 3. Criar mapa de Power Index por time
     const powerIndexMap = new Map<number, number>();
     powerIndexData.forEach(entry => {
       powerIndexMap.set(entry.team_id, entry.power_index);
     });
 
-    // 5. Executar simulações
+    // 4. Executar simulações
     const simulationResults: SimulationTeam[][] = [];
     
     for (let i = 0; i < simulationCount; i++) {
       const simulationTeams = this.cloneTeamStates(initialTeamStates);
-      this.simulateRemainingMatches(remainingMatches, simulationTeams, powerIndexMap);
+      this.simulateRemainingMatches(allMatches, simulationTeams, powerIndexMap);
       this.sortTeamsByPosition(simulationTeams);
       simulationResults.push(simulationTeams);
 
@@ -88,7 +89,7 @@ export class MonteCarloService {
       }
     }
 
-    // 6. Calcular estatísticas finais
+    // 5. Calcular estatísticas finais
     const predictions = this.calculatePredictions(simulationResults, competitionId);
 
     const executionTime = Date.now() - startTime;
@@ -102,16 +103,21 @@ export class MonteCarloService {
   }
 
   /**
-   * Busca partidas restantes (não finalizadas) de uma competição
+   * Busca TODAS as partidas de uma competição para simulação
+   * Inclui jogos finalizados (para estatísticas) e não finalizados (para simular)
    */
   private async getRemainingMatches(competitionId: number): Promise<SimulationMatch[]> {
-    const matches = await this.matchesService.findRemainingMatches(competitionId);
+    // Buscar TODOS os jogos da competição, independente do status
+    const allMatches = await this.matchesService.findAllCompetitionMatches(competitionId);
 
-    return matches.map(match => ({
+    return allMatches.map(match => ({
       id: match.id,
       home_team_id: match.home_team.id,
       away_team_id: match.away_team.id,
       match_date: match.match_date,
+      status: match.status, // Incluir status para lógica de simulação
+      home_score: match.home_score, // Incluir placar se finalizado
+      away_score: match.away_score,
     }));
   }
 
@@ -134,7 +140,104 @@ export class MonteCarloService {
   }
 
   /**
+   * Calcula estatísticas iniciais baseado nos jogos finalizados
+   */
+  private async calculateInitialStatsFromMatches(matches: SimulationMatch[]): Promise<SimulationTeam[]> {
+    const teamMap = new Map<number, SimulationTeam>();
+
+    matches.forEach(match => {
+      const homeTeamId = match.home_team_id;
+      const awayTeamId = match.away_team_id;
+
+      if (!teamMap.has(homeTeamId)) {
+        teamMap.set(homeTeamId, {
+          id: homeTeamId,
+          name: 'Unknown', // Placeholder, will be updated later
+          points: 0,
+          played: 0,
+          won: 0,
+          drawn: 0,
+          lost: 0,
+          goals_for: 0,
+          goals_against: 0,
+          goal_difference: 0,
+        });
+      }
+      if (!teamMap.has(awayTeamId)) {
+        teamMap.set(awayTeamId, {
+          id: awayTeamId,
+          name: 'Unknown', // Placeholder, will be updated later
+          points: 0,
+          played: 0,
+          won: 0,
+          drawn: 0,
+          lost: 0,
+          goals_for: 0,
+          goals_against: 0,
+          goal_difference: 0,
+        });
+      }
+
+      const homeTeam = teamMap.get(homeTeamId)!;
+      const awayTeam = teamMap.get(awayTeamId)!;
+
+      if (match.status === 'finished' && match.home_score !== undefined && match.away_score !== undefined) {
+        this.updateTeamStatsFromRealMatch(homeTeam, awayTeam, match.home_score, match.away_score);
+      }
+    });
+
+    // Buscar nomes dos times do banco
+    const teamNames = await this.getTeamNames(Array.from(teamMap.keys()));
+
+    // Sort teams by ID to ensure consistent order
+    const sortedTeams = Array.from(teamMap.values()).sort((a, b) => a.id - b.id);
+
+    return sortedTeams.map(team => ({
+      ...team,
+      name: teamNames.get(team.id) || 'Unknown',
+    }));
+  }
+
+  /**
+   * Busca nomes dos times por IDs
+   */
+  private async getTeamNames(teamIds: number[]): Promise<Map<number, string>> {
+    const teamNames = new Map<number, string>();
+    
+    try {
+      // Buscar todos os jogos uma única vez
+      const allMatches = await this.matchesService.findAllCompetitionMatches(1); // Brasileirão
+      
+      // Extrair nomes dos times dos jogos
+      allMatches.forEach(match => {
+        if (!teamNames.has(match.home_team.id)) {
+          teamNames.set(match.home_team.id, match.home_team.name);
+        }
+        if (!teamNames.has(match.away_team.id)) {
+          teamNames.set(match.away_team.id, match.away_team.name);
+        }
+      });
+      
+      // Garantir que todos os IDs solicitados tenham um nome
+      teamIds.forEach(teamId => {
+        if (!teamNames.has(teamId)) {
+          teamNames.set(teamId, `Time ${teamId}`);
+        }
+      });
+    } catch (error) {
+      // Fallback: usar IDs como nomes
+      teamIds.forEach(teamId => {
+        teamNames.set(teamId, `Time ${teamId}`);
+      });
+    }
+    
+    return teamNames;
+  }
+
+  /**
    * Simula todas as partidas restantes para uma iteração
+   * Jogos já finalizados são usados para estatísticas iniciais
+   * Apenas jogos não finalizados são simulados
    */
   private simulateRemainingMatches(
     matches: SimulationMatch[],
@@ -150,6 +253,13 @@ export class MonteCarloService {
 
       if (!homeTeam || !awayTeam) continue;
 
+      // Se o jogo já foi finalizado, usar o resultado real
+      if (match.status === 'finished' && match.home_score !== undefined && match.away_score !== undefined) {
+        this.updateTeamStatsFromRealMatch(homeTeam, awayTeam, match.home_score, match.away_score);
+        continue; // Pular para o próximo jogo
+      }
+
+      // Se o jogo não foi finalizado, simular o resultado
       // Obter Power Index dos times
       const homePowerIndex = powerIndexMap.get(match.home_team_id) || 50;
       const awayPowerIndex = powerIndexMap.get(match.away_team_id) || 50;
@@ -231,6 +341,41 @@ export class MonteCarloService {
       homeTeam.points += 3;
       awayTeam.lost++;
     } else if (result === 'away') {
+      awayTeam.won++;
+      awayTeam.points += 3;
+      homeTeam.lost++;
+    } else {
+      homeTeam.drawn++;
+      homeTeam.points += 1;
+      awayTeam.drawn++;
+      awayTeam.points += 1;
+    }
+  }
+
+  /**
+   * Atualiza estatísticas dos times com base em um jogo real finalizado
+   */
+  private updateTeamStatsFromRealMatch(
+    homeTeam: SimulationTeam,
+    awayTeam: SimulationTeam,
+    homeScore: number,
+    awayScore: number,
+  ): void {
+    homeTeam.played++;
+    homeTeam.goals_for += homeScore;
+    homeTeam.goals_against += awayScore;
+    homeTeam.goal_difference = homeTeam.goals_for - homeTeam.goals_against;
+
+    awayTeam.played++;
+    awayTeam.goals_for += awayScore;
+    awayTeam.goals_against += homeScore;
+    awayTeam.goal_difference = awayTeam.goals_for - awayTeam.goals_against;
+
+    if (homeScore > awayScore) {
+      homeTeam.won++;
+      homeTeam.points += 3;
+      awayTeam.lost++;
+    } else if (homeScore < awayScore) {
       awayTeam.won++;
       awayTeam.points += 3;
       homeTeam.lost++;
