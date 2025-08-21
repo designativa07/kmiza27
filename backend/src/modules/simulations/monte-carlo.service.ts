@@ -278,12 +278,25 @@ export class MonteCarloService {
 
   /**
    * Simula o resultado de uma partida baseado nas probabilidades
+   * Adiciona fator de volatilidade para tornar mais realista
    */
   private simulateMatchResult(probabilities: {
     homeProbability: number;
     awayProbability: number;
     drawProbability: number;
   }): 'home' | 'away' | 'draw' {
+    // Adicionar fator de volatilidade (futebol é muito imprevisível)
+    const volatilityFactor = 0.15; // 15% de chance de resultado surpresa
+    
+    // 15% de chance de resultado aleatório (surpresa)
+    if (Math.random() < volatilityFactor) {
+      const random = Math.random();
+      if (random < 0.4) return 'home';
+      if (random < 0.8) return 'away';
+      return 'draw';
+    }
+    
+    // 85% de chance de resultado baseado nas probabilidades calculadas
     const random = Math.random();
     
     if (random < probabilities.homeProbability) {

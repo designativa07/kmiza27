@@ -18,13 +18,14 @@ export class PowerIndexService {
   private readonly logger = new Logger(PowerIndexService.name);
 
   // Configuração padrão dos pesos do Power Index
+  // Ajustado para refletir que faltam 19 rodadas (metade do campeonato)
   private readonly defaultConfig: PowerIndexConfig = {
     weights: {
-      points_per_game: 0.45,      // 45% - Desempenho geral
-      goal_difference_per_game: 0.25, // 25% - Eficiência ofensiva/defensiva
-      recent_form: 0.30,          // 30% - Forma recente (últimos 5 jogos)
+      points_per_game: 0.30,      // 30% - Desempenho geral (reduzido de 45%)
+      goal_difference_per_game: 0.20, // 20% - Eficiência ofensiva/defensiva (reduzido de 25%)
+      recent_form: 0.50,          // 50% - Forma recente (aumentado de 30% - mais importante!)
     },
-    version: '1.0.0',
+    version: '2.0.0',
   };
 
   constructor(private readonly standingsService: StandingsService) {}
@@ -130,29 +131,29 @@ export class PowerIndexService {
 
   /**
    * Normaliza pontos por jogo para escala 0-100
-   * 2.5 pontos por jogo = 100 (mais realista)
+   * 2.0 pontos por jogo = 100 (muito mais realista)
    */
   private normalizePointsPerGame(pointsPerGame: number): number {
-    return Math.min(100, (pointsPerGame / 2.5) * 100);
+    return Math.min(100, (pointsPerGame / 2.0) * 100);
   }
 
   /**
    * Normaliza saldo de gols por jogo para escala 0-100
-   * +2 gols por jogo = 100, -2 gols por jogo = 0 (mais realista)
+   * +1.5 gols por jogo = 100, -1.5 gols por jogo = 0 (muito mais realista)
    */
   private normalizeGoalDifferencePerGame(goalDiffPerGame: number): number {
-    // Clampar entre -2 e +2 (mais realista)
-    const clampedDiff = Math.max(-2, Math.min(2, goalDiffPerGame));
+    // Clampar entre -1.5 e +1.5 (muito mais realista)
+    const clampedDiff = Math.max(-1.5, Math.min(1.5, goalDiffPerGame));
     // Converter para escala 0-100
-    return ((clampedDiff + 2) / 4) * 100;
+    return ((clampedDiff + 1.5) / 3) * 100;
   }
 
   /**
    * Normaliza forma recente para escala 0-100
-   * 2.5 pontos por jogo na forma recente = 100 (mais realista)
+   * 2.0 pontos por jogo na forma recente = 100 (muito mais realista)
    */
   private normalizeRecentForm(recentFormScore: number): number {
-    return Math.min(100, (recentFormScore / 2.5) * 100);
+    return Math.min(100, (recentFormScore / 2.0) * 100);
   }
 
   /**
@@ -164,36 +165,36 @@ export class PowerIndexService {
 
   /**
    * Calcula força relativa entre dois times
-   * Retorna um valor entre 0.2 e 0.8 representando a probabilidade do time1 vencer
-   * Versão mais balanceada para evitar probabilidades extremas
+   * Retorna um valor entre 0.3 e 0.7 representando a probabilidade do time1 vencer
+   * Versão muito mais conservadora para refletir a realidade do futebol
    */
   calculateRelativeStrength(powerIndex1: number, powerIndex2: number): number {
     const difference = powerIndex1 - powerIndex2;
     
-    // Usar função mais suave para converter diferença em probabilidade
-    // A fórmula garante que o resultado fique entre 0.2 e 0.8 (mais realista)
-    const rawProbability = 1 / (1 + Math.exp(-difference / 30)); // Divisor maior = diferenças menores
+    // Usar função muito mais suave para converter diferença em probabilidade
+    // A fórmula garante que o resultado fique entre 0.3 e 0.7 (muito mais realista)
+    const rawProbability = 1 / (1 + Math.exp(-difference / 50)); // Divisor muito maior = diferenças mínimas
     
-    // Clampar entre 0.2 e 0.8 para evitar probabilidades extremas
-    return Math.max(0.2, Math.min(0.8, rawProbability));
+    // Clampar entre 0.3 e 0.7 para evitar probabilidades extremas
+    return Math.max(0.3, Math.min(0.7, rawProbability));
   }
 
   /**
    * Ajusta probabilidades para mandar de campo
-   * Time da casa recebe bônus mais realista
+   * Time da casa recebe bônus muito mais realista
    */
-  adjustForHomeAdvantage(homeProbability: number, homeAdvantageBonus: number = 0.15): {
+  adjustForHomeAdvantage(homeProbability: number, homeAdvantageBonus: number = 0.25): {
     homeProbability: number;
     awayProbability: number;
     drawProbability: number;
   } {
-    // Aplicar bônus de casa mais realista (15% em vez de 5%)
-    const adjustedHomeProbability = Math.min(0.85, homeProbability + homeAdvantageBonus);
+    // Aplicar bônus de casa muito mais realista (25% em vez de 15%)
+    const adjustedHomeProbability = Math.min(0.8, homeProbability + homeAdvantageBonus);
     const remainingProbability = 1 - adjustedHomeProbability;
     
     // Distribuir probabilidade restante entre visitante e empate
-    const awayProbability = remainingProbability * 0.7; // 70% para vitória visitante
-    const drawProbability = remainingProbability * 0.3;  // 30% para empate
+    const awayProbability = remainingProbability * 0.6; // 60% para vitória visitante
+    const drawProbability = remainingProbability * 0.4;  // 40% para empate
 
     return {
       homeProbability: adjustedHomeProbability,

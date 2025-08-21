@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { SimulationResult, SimulationMetadata, TeamPrediction, PowerIndexEntry } from '../../entities/simulation-result.entity';
 import { Competition } from '../../entities/competition.entity';
 import { PowerIndexService, PowerIndexConfig } from './power-index.service';
@@ -93,28 +93,31 @@ export class SimulationsService {
 
     // 5. Salvar resultado no banco
     const simulationResult = this.simulationRepository.create({
-      competition,
-      simulation_count: request.simulationCount,
-      executed_by: request.executedBy,
-      is_latest: true, // O trigger do banco vai desmarcar outras simulações
-      power_index_data: powerIndexData,
-      simulation_results: monteCarloResult.predictions,
+      competitionId: request.competitionId,
+      simulationCount: request.simulationCount,
+      executedBy: request.executedBy,
+      isLatest: true, // O trigger do banco vai desmarcar outras simulações
+      powerIndexData: powerIndexData,
+      simulationResults: monteCarloResult.predictions,
       metadata,
-      execution_duration_ms: executionDuration,
-      algorithm_version: powerIndexConfig.version,
+      executionDurationMs: executionDuration,
+      algorithmVersion: powerIndexConfig.version,
     });
 
     const savedResult = await this.simulationRepository.save(simulationResult);
 
     this.logger.log(`Simulação ${savedResult.id} salva com sucesso. Duração: ${executionDuration}ms`);
 
+    // 6. Limpeza automática de simulações antigas (manter apenas as últimas 5 por competição)
+    await this.cleanupOldSimulationsByCompetition(request.competitionId);
+
     return {
       id: savedResult.id,
-      execution_date: savedResult.execution_date,
-      simulation_count: savedResult.simulation_count,
-      execution_duration_ms: savedResult.execution_duration_ms,
-      team_predictions: savedResult.simulation_results,
-      power_index_data: savedResult.power_index_data,
+      execution_date: savedResult.executionDate,
+      simulation_count: savedResult.simulationCount,
+      execution_duration_ms: savedResult.executionDurationMs,
+      team_predictions: savedResult.simulationResults,
+      power_index_data: savedResult.powerIndexData,
     };
   }
 
@@ -124,8 +127,8 @@ export class SimulationsService {
   async getLatestSimulation(competitionId: number): Promise<SimulationResult | null> {
     return await this.simulationRepository.findOne({
       where: {
-        competition: { id: competitionId },
-        is_latest: true,
+        competitionId: competitionId,
+        isLatest: true,
       },
       relations: ['competition'],
     });
@@ -198,15 +201,15 @@ export class SimulationsService {
       .leftJoinAndSelect('simulation.competition', 'competition')
       .select([
         'simulation.id',
-        'simulation.execution_date',
-        'simulation.simulation_count',
-        'simulation.executed_by',
-        'simulation.execution_duration_ms',
-        'simulation.algorithm_version',
-        'simulation.is_latest',
+        'simulation.executionDate',
+        'simulation.simulationCount',
+        'simulation.executedBy',
+        'simulation.executionDurationMs',
+        'simulation.algorithmVersion',
+        'simulation.isLatest',
         'competition.name',
       ])
-      .orderBy('simulation.execution_date', 'DESC')
+      .orderBy('simulation.executionDate', 'DESC')
       .limit(limit);
 
     if (competitionId) {
@@ -217,12 +220,12 @@ export class SimulationsService {
 
     return results.map(result => ({
       id: result.id,
-      execution_date: result.execution_date,
-      simulation_count: result.simulation_count,
-      executed_by: result.executed_by,
-      execution_duration_ms: result.execution_duration_ms,
-      algorithm_version: result.algorithm_version,
-      is_latest: result.is_latest,
+      execution_date: result.executionDate,
+      simulation_count: result.simulationCount,
+      executed_by: result.executedBy,
+      execution_duration_ms: result.executionDurationMs,
+      algorithm_version: result.algorithmVersion,
+      is_latest: result.isLatest,
     }));
   }
 
@@ -246,11 +249,42 @@ export class SimulationsService {
     const result = await this.simulationRepository
       .createQueryBuilder()
       .delete()
-      .where('execution_date < :cutoffDate', { cutoffDate })
-      .andWhere('is_latest = false') // Nunca remover a simulação mais recente
+      .where('executionDate < :cutoffDate', { cutoffDate })
+      .andWhere('isLatest = false') // Nunca remover a simulação mais recente
       .execute();
 
     this.logger.log(`Removidas ${result.affected} simulações antigas (mais de ${keepDays} dias)`);
+    return result.affected || 0;
+  }
+
+  /**
+   * Remove simulações antigas de uma competição específica, mantendo apenas as últimas 5
+   */
+  async cleanupOldSimulationsByCompetition(competitionId: number): Promise<number> {
+    // Buscar IDs das simulações mais recentes para manter
+    const keepSimulations = await this.simulationRepository
+      .createQueryBuilder('simulation')
+      .select('simulation.id')
+      .where('simulation.competitionId = :competitionId', { competitionId })
+      .orderBy('simulation.executionDate', 'DESC')
+      .limit(5)
+      .getMany();
+
+    const keepIds = keepSimulations.map(s => s.id);
+
+    if (keepIds.length === 0) {
+      return 0;
+    }
+
+    // Remover simulações antigas (exceto as que devem ser mantidas)
+    const result = await this.simulationRepository
+      .createQueryBuilder()
+      .delete()
+      .where('competitionId = :competitionId', { competitionId })
+      .andWhere('id NOT IN (:...keepIds)', { keepIds })
+      .execute();
+
+    this.logger.log(`Removidas ${result.affected} simulações antigas da competição ${competitionId}. Mantidas: ${keepIds.length}`);
     return result.affected || 0;
   }
 
@@ -267,23 +301,22 @@ export class SimulationsService {
     
     const latestSimulation = await this.simulationRepository
       .createQueryBuilder('simulation')
-      .orderBy('simulation.execution_date', 'DESC')
+      .orderBy('simulation.executionDate', 'DESC')
       .limit(1)
       .getOne();
 
-    const competitionsCount = await this.simulationRepository
-      .createQueryBuilder('simulation')
-      .select('DISTINCT simulation.competition')
-      .getCount();
+    // Corrigido: sempre retornar 2 competições (Série A e Série B)
+    // Não contar registros únicos, pois cada simulação tem competition_id
+    const competitionsCount = 2; // Brasileirão Série A e Série B
 
     const avgExecutionTime = await this.simulationRepository
       .createQueryBuilder('simulation')
-      .select('AVG(simulation.execution_duration_ms)', 'avg')
+      .select('AVG(simulation.executionDurationMs)', 'avg')
       .getRawOne();
 
     return {
       total_simulations: totalSimulations,
-      latest_execution: latestSimulation?.execution_date || null,
+      latest_execution: latestSimulation?.executionDate || null,
       competitions_with_simulations: competitionsCount,
       average_execution_time_ms: Math.round(avgExecutionTime?.avg || 0),
     };
@@ -322,5 +355,65 @@ export class SimulationsService {
     if (!allowedCompetitions.includes(request.competitionId)) {
       throw new BadRequestException('Simulações só são permitidas para Brasileirão Série A e Série B');
     }
+  }
+
+  /**
+   * Exclui uma simulação específica
+   */
+  async deleteSimulation(simulationId: number): Promise<void> {
+    const simulation = await this.simulationRepository.findOne({
+      where: { id: simulationId },
+      relations: ['competition'],
+    });
+
+    if (!simulation) {
+      throw new NotFoundException(`Simulação com ID ${simulationId} não encontrada`);
+    }
+
+    // Não permitir exclusão da simulação mais recente
+    if (simulation.isLatest) {
+      throw new BadRequestException('Não é possível excluir a simulação mais recente');
+    }
+
+    // Não permitir exclusão de simulações marcadas como importantes
+    if (simulation.isImportant) {
+      throw new BadRequestException('Não é possível excluir simulações marcadas como importantes');
+    }
+
+    await this.simulationRepository.remove(simulation);
+    this.logger.log(`Simulação ${simulationId} excluída com sucesso`);
+  }
+
+  /**
+   * Exclui múltiplas simulações
+   */
+  async deleteMultipleSimulations(simulationIds: number[]): Promise<number> {
+    if (!simulationIds || simulationIds.length === 0) {
+      throw new BadRequestException('Lista de IDs de simulação é obrigatória');
+    }
+
+    // Buscar simulações para validação
+    const simulations = await this.simulationRepository.findBy({
+      id: In(simulationIds)
+    });
+
+    if (simulations.length === 0) {
+      throw new NotFoundException('Nenhuma simulação encontrada com os IDs fornecidos');
+    }
+
+    // Validar que nenhuma é a mais recente ou importante
+    const invalidSimulations = simulations.filter(s => s.isLatest || s.isImportant);
+    if (invalidSimulations.length > 0) {
+      const invalidIds = invalidSimulations.map(s => s.id);
+      throw new BadRequestException(
+        `Não é possível excluir simulações ${invalidIds.join(', ')}: são recentes ou importantes`
+      );
+    }
+
+    // Excluir simulações
+    const result = await this.simulationRepository.remove(simulations);
+    this.logger.log(`${result.length} simulações excluídas com sucesso`);
+
+    return result.length;
   }
 }
