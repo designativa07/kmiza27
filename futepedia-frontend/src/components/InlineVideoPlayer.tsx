@@ -10,7 +10,7 @@ interface InlineVideoPlayerProps {
 }
 
 interface VideoEmbedInfo {
-  type: 'youtube' | 'vimeo' | 'twitch' | 'other';
+  type: 'youtube' | 'vimeo' | 'twitch' | 'globoplay' | 'other';
   embedUrl: string;
   originalUrl: string;
 }
@@ -61,24 +61,33 @@ export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo',
         }
       }
       
-      // Twitch
-      if (urlObj.hostname.includes('twitch.tv')) {
-        const pathParts = urlObj.pathname.split('/');
-        if (pathParts[1] === 'videos' && pathParts[2]) {
-          return {
-            type: 'twitch',
-            embedUrl: `https://player.twitch.tv/?video=v${pathParts[2]}&parent=${window.location.hostname}`,
-            originalUrl: url
-          };
-        }
-      }
-      
-      // Outros serviços
-      return {
-        type: 'other',
-        embedUrl: url,
-        originalUrl: url
-      };
+             // Twitch
+       if (urlObj.hostname.includes('twitch.tv')) {
+         const pathParts = urlObj.pathname.split('/');
+         if (pathParts[1] === 'videos' && pathParts[2]) {
+           return {
+             type: 'twitch',
+             embedUrl: `https://player.twitch.tv/?video=v${pathParts[2]}&parent=${window.location.hostname}`,
+             originalUrl: url
+           };
+         }
+       }
+       
+       // Globoplay - Não suporta embed devido a X-Frame-Options
+       if (urlObj.hostname.includes('globoplay.globo.com')) {
+         return {
+           type: 'globoplay',
+           embedUrl: url, // Usar URL original
+           originalUrl: url
+         };
+       }
+       
+       // Outros serviços
+       return {
+         type: 'other',
+         embedUrl: url,
+         originalUrl: url
+       };
       
     } catch (error) {
       console.error('Erro ao processar URL do vídeo:', error);
@@ -153,6 +162,32 @@ export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo',
             <span>MOSTRAR TRANSMISSÃO</span>
           </button>
         )}
+      </div>
+    );
+  }
+
+  // Para Globoplay, mostrar mensagem especial
+  if (embedInfo.type === 'globoplay') {
+    return (
+      <div className={`${className}`}>
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-lg p-4 text-white">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-lg">📺 TV Globo</h4>
+            <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Ao Vivo</span>
+          </div>
+          <p className="text-sm mb-4 opacity-90">
+            Este canal não permite reprodução direta no site devido a restrições de direitos autorais.
+          </p>
+          <a
+            href={embedInfo.originalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-white text-orange-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 group"
+          >
+            <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            <span>ASSISTIR NO GLOBOPLAY</span>
+          </a>
+        </div>
       </div>
     );
   }

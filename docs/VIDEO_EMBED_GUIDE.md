@@ -10,6 +10,7 @@ O **Futepedia** agora suporta **embed automático de vídeos** diretamente na p�
 - **YouTube**: Embed automático com player responsivo
 - **Vimeo**: Suporte completo para vídeos do Vimeo
 - **Twitch**: Player integrado para streams do Twitch
+- **Globoplay**: Link direto com mensagem explicativa (não suporta embed)
 - **Outros serviços**: Link direto para serviços não suportados
 
 ### 🎨 **Interface Moderna**
@@ -20,6 +21,9 @@ O **Futepedia** agora suporta **embed automático de vídeos** diretamente na p�
 - Ícones intuitivos para diferentes tipos de transmissão
 - Layout otimizado com card de transmissão em largura total
 - Controles organizados no footer do player
+- **Botão "+LINK"** para adicionar múltiplas transmissões dinamicamente
+- **Gerenciamento de links** com opção de remoção individual
+- **Formulário inline** para adicionar novos links de transmissão
 
 ## 🛠️ Como Implementar
 
@@ -58,10 +62,30 @@ A página `jogos/[matchId]/page.tsx` foi atualizada para usar:
 3. Clique no botão "Ocultar" (à direita, abaixo do vídeo) para esconder
 4. Clique em "MOSTRAR TRANSMISSÃO" para exibir novamente
 
+### **Para Adicionar Múltiplas Transmissões**
+1. Na seção "Assistir ao Vivo Online", clique no botão **"+LINK"**
+2. Digite a URL da transmissão no campo de texto
+3. Clique em **"Adicionar"** para incluir o novo link
+4. Repita o processo para adicionar mais transmissões
+5. Use o botão **"X"** (vermelho) para remover links individuais
+
 ### **Para Administradores**
-1. Adicione links de transmissão no campo `broadcast_channels`
-2. Suporte para múltiplos links (array JSON)
-3. Links são automaticamente detectados e convertidos para embed
+1. **No formulário ADICIONAR JOGO/EDITAR JOGO**:
+   - Use o botão **"+LINK"** ao lado do campo "LINK direto para transmissão"
+   - Digite a URL da transmissão no prompt que aparecer
+   - Repita o processo para adicionar mais links
+   - Os links são separados por vírgula automaticamente
+   - Use o botão **"X"** para remover links individuais
+
+2. **Formato dos dados**:
+   - **Um link**: Enviado como string simples
+   - **Múltiplos links**: Enviados como array JSON
+   - **Exemplo**: `["https://youtube.com/...", "https://globoplay.globo.com/..."]`
+
+3. **Suporte automático**:
+   - Links são automaticamente detectados e convertidos para embed
+   - YouTube, Vimeo e Twitch funcionam com player inline
+   - Globoplay mostra card informativo com link direto
 
 ## 🔧 Suporte a URLs
 
@@ -84,6 +108,15 @@ A página `jogos/[matchId]/page.tsx` foi atualizada para usar:
 "https://www.twitch.tv/videos/VIDEO_ID"
 "https://twitch.tv/videos/VIDEO_ID"
 ```
+
+### **Globoplay**
+```typescript
+"https://globoplay.globo.com/tv-globo/ao-vivo/6120663/"
+"https://globoplay.globo.com/programa/ID_DO_PROGRAMA"
+"https://globoplay.globo.com/novela/ID_DA_NOVELA"
+```
+
+> **⚠️ Limitação**: O Globoplay não permite embed direto devido à política de segurança `X-Frame-Options: sameorigin`. Em vez disso, mostra um card informativo com link direto para o serviço.
 
 ## 🎨 Personalização
 
@@ -117,20 +150,37 @@ node test-video-embed.js
 ```
 
 ### **Verificação Manual**
-1. Acesse uma partida com `broadcast_channels` preenchido
-2. Verifique se o vídeo já está visível na seção "Transmissão"
-3. Teste o botão "Ocultar" (compacto, à direita, abaixo do vídeo)
-4. Confirme que o card de transmissão ocupa toda a largura disponível
-5. Teste em diferentes tamanhos de tela
+1. **Página da Partida** (`/jogos/1031`):
+   - Acesse uma partida com `broadcast_channels` preenchido
+   - Verifique se o vídeo já está visível na seção "Transmissão"
+   - Teste o botão "Ocultar" (compacto, à direita, abaixo do vídeo)
+   - Confirme que o card de transmissão ocupa toda a largura disponível
+   - Teste em diferentes tamanhos de tela
+   - Verifique o card especial do Globoplay (não permite embed)
+
+2. **Formulário Administrativo**:
+   - Acesse o painel admin → Jogos → "+ Adicionar Jogo"
+   - Na seção "Transmissão", teste o botão **"+LINK"** azul
+   - Adicione múltiplas URLs (YouTube, Globoplay, etc.)
+   - Verifique se os links aparecem como chips removíveis
+   - Teste a remoção de links individuais com o botão **"X"**
+   - Salve o jogo e verifique se os links funcionam na página da partida
+
+3. **Funcionalidade "+LINK" na Página da Partida**:
+   - Clique no botão "+LINK" na seção "Assistir ao Vivo Online"
+   - Adicione uma nova URL de transmissão
+   - Verifique se o novo player aparece
+   - Teste a remoção de links individuais
 
 ## 🚀 Próximos Passos
 
 ### **Melhorias Futuras**
-- [ ] Suporte a mais plataformas (Facebook Live, Instagram Live)
+- [ ] Suporte a mais plataformas (Facebook Live, Instagram Live, Band TV)
 - [ ] Player com controles personalizados
 - [ ] Cache de vídeos para melhor performance
 - [ ] Analytics de visualização
 - [ ] Qualidade de vídeo configurável
+- [ ] Suporte a mais canais brasileiros (SBT, Record, etc.)
 
 ### **Integrações**
 - [ ] API do YouTube para metadados
@@ -142,6 +192,7 @@ node test-video-embed.js
 - [YouTube Embed API](https://developers.google.com/youtube/iframe_api)
 - [Vimeo Player API](https://developer.vimeo.com/player/sdk)
 - [Twitch Embed](https://dev.twitch.tv/docs/embed)
+- [Globoplay](https://globoplay.globo.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Lucide React](https://lucide.dev/)
 

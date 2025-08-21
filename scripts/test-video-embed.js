@@ -31,22 +31,38 @@ async function testVideoEmbed() {
     console.log(`📋 Partida encontrada: ${matchData.home_team} x ${matchData.away_team}`);
     console.log(`📺 broadcast_channels atual:`, matchData.broadcast_channels);
     
-    // Adicionar link de YouTube para teste
-    const testVideoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; // Rick Roll para teste
+    // Adicionar links de teste (YouTube e Globoplay)
+    const testVideoUrls = [
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Rick Roll para teste
+      "https://globoplay.globo.com/tv-globo/ao-vivo/6120663/" // TV Globo ao vivo
+    ];
     
     await client.query(`
       UPDATE matches 
       SET broadcast_channels = $1
       WHERE id = $2
-    `, [JSON.stringify([testVideoUrl]), 1031]);
+    `, [JSON.stringify(testVideoUrls), 1031]);
     
-    console.log('✅ Link de teste adicionado!');
-    console.log(`🔗 URL: ${testVideoUrl}`);
+    console.log('✅ Links de teste adicionados!');
+    console.log(`🔗 URLs: ${testVideoUrls.join(', ')}`);
     console.log('\n📱 Agora você pode testar:');
     console.log('1. Acesse: http://localhost:3001/jogos/1031');
-    console.log('2. Na seção "Transmissão", o vídeo já estará visível');
-    console.log('3. Teste o botão "Ocultar" (compacto, à direita, abaixo do vídeo)');
+    console.log('2. Na seção "Transmissão", você verá:');
+    console.log('   - Player do YouTube (funciona com embed)');
+    console.log('   - Card especial do Globoplay (não permite embed)');
+    console.log('3. Teste o botão "Ocultar" no player do YouTube');
     console.log('4. O card de transmissão agora ocupa toda a largura disponível');
+    console.log('5. Clique no card do Globoplay para abrir em nova aba');
+    console.log('6. **Teste a funcionalidade +LINK**:');
+    console.log('   - Clique no botão "+LINK" azul');
+    console.log('   - Adicione uma nova URL (ex: outro vídeo do YouTube)');
+    console.log('   - Verifique se o novo player aparece');
+    console.log('   - Teste a remoção com o botão X vermelho');
+    console.log('7. **Teste o Formulário Administrativo**:');
+    console.log('   - Acesse: Painel Admin → Jogos → "+ Adicionar Jogo"');
+    console.log('   - Na seção "Transmissão", teste o botão "+LINK" azul');
+    console.log('   - Adicione múltiplas URLs e verifique os chips removíveis');
+    console.log('   - Salve o jogo e teste na página da partida');
     
     await client.end();
   } catch (error) {
