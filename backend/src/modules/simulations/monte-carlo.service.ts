@@ -38,9 +38,27 @@ export interface MonteCarloResult {
   execution_time_ms: number;
 }
 
+export enum MatchResult {
+  HOME_WIN = 'home',
+  AWAY_WIN = 'away',
+  DRAW = 'draw'
+}
+
 @Injectable()
 export class MonteCarloService {
   private readonly logger = new Logger(MonteCarloService.name);
+  
+  // VERSÃO 5.0.0 - ALGORITMO REBALANCEADO PARA PREVISÕES REALISTAS
+  private readonly VERSION = '5.0.0';
+  
+  // VOLATILIDADE MÁXIMA PARA CAOS TOTAL
+  private readonly volatilityFactor = 0.50; // Aumentado para 0.50 (máximo caos)
+  
+  // FATORES DE SUPER EQUILÍBRIO
+  private readonly homeAdvantageRealistic = 0.04; // Reduzido para 0.04 (quase sem vantagem)
+  private readonly maxWinProbability = 0.58; // Máximo 58% (super equilibrado)
+  private readonly minWinProbability = 0.42; // Mínimo 42% (qualquer um pode ganhar)
+  private readonly drawProbabilityBase = 0.38; // Base de 38% para empates (muito mais empates)
 
   constructor(
     private readonly powerIndexService: PowerIndexService,
@@ -112,8 +130,8 @@ export class MonteCarloService {
 
     return allMatches.map(match => ({
       id: match.id,
-      home_team_id: match.home_team.id,
-      away_team_id: match.away_team.id,
+      home_team_id: match.home_team?.id,
+      away_team_id: match.away_team?.id,
       match_date: match.match_date,
       status: match.status, // Incluir status para lógica de simulação
       home_score: match.home_score, // Incluir placar se finalizado
@@ -210,11 +228,16 @@ export class MonteCarloService {
       
       // Extrair nomes dos times dos jogos
       allMatches.forEach(match => {
-        if (!teamNames.has(match.home_team.id)) {
-          teamNames.set(match.home_team.id, match.home_team.name);
+        const homeTeamId = match.home_team?.id;
+        const awayTeamId = match.away_team?.id;
+        const homeTeamName = match.home_team?.name || `Time ${homeTeamId}`;
+        const awayTeamName = match.away_team?.name || `Time ${awayTeamId}`;
+        
+        if (homeTeamId && !teamNames.has(homeTeamId)) {
+          teamNames.set(homeTeamId, homeTeamName);
         }
-        if (!teamNames.has(match.away_team.id)) {
-          teamNames.set(match.away_team.id, match.away_team.name);
+        if (awayTeamId && !teamNames.has(awayTeamId)) {
+          teamNames.set(awayTeamId, awayTeamName);
         }
       });
       
@@ -247,6 +270,13 @@ export class MonteCarloService {
     const teamMap = new Map<number, SimulationTeam>();
     teams.forEach(team => teamMap.set(team.id, team));
 
+    // Ordenar times por pontos para determinar posições atuais
+    const sortedTeams = [...teams].sort((a, b) => b.points - a.points);
+    const positionMap = new Map<number, number>();
+    sortedTeams.forEach((team, index) => {
+      positionMap.set(team.id, index + 1);
+    });
+
     for (const match of matches) {
       const homeTeam = teamMap.get(match.home_team_id);
       const awayTeam = teamMap.get(match.away_team_id);
@@ -264,48 +294,191 @@ export class MonteCarloService {
       const homePowerIndex = powerIndexMap.get(match.home_team_id) || 50;
       const awayPowerIndex = powerIndexMap.get(match.away_team_id) || 50;
 
-      // Calcular probabilidades do jogo
-      const homeProbability = this.powerIndexService.calculateRelativeStrength(homePowerIndex, awayPowerIndex);
-      const gameProbs = this.powerIndexService.adjustForHomeAdvantage(homeProbability);
+              // Obter posições atuais dos times
+      const homePosition = positionMap.get(match.home_team_id) || 1;
+      const awayPosition = positionMap.get(match.away_team_id) || 1;
+      
+      // Calcular jogos restantes (estimativa baseada no número total de jogos)
+      const totalMatchesInSeason = 38;
+      const remainingMatchesEstimate = Math.max(1, totalMatchesInSeason - homeTeam.played);
 
       // Simular resultado
-      const result = this.simulateMatchResult(gameProbs);
+      const result = this.simulateMatchResult(
+        { team_id: match.home_team_id, power_index: homePowerIndex, points: homeTeam.points } as PowerIndexEntry,
+        { team_id: match.away_team_id, power_index: awayPowerIndex, points: awayTeam.points } as PowerIndexEntry,
+        homePosition,
+        awayPosition,
+        remainingMatchesEstimate
+      );
       
       // Atualizar estatísticas dos times
       this.updateTeamStats(homeTeam, awayTeam, result);
+      
+      // Reordenar times após cada jogo para atualizar posições
+      sortedTeams.sort((a, b) => b.points - a.points);
+      sortedTeams.forEach((team, index) => {
+        positionMap.set(team.id, index + 1);
+      });
     }
   }
 
   /**
-   * Simula o resultado de uma partida baseado nas probabilidades
-   * Adiciona fator de volatilidade para tornar mais realista
+   * Simula o resultado de uma partida com algoritmo REALISTA
+   * VERSÃO 5.0.0 - REBALANCEADO PARA PREVISÕES EQUILIBRADAS
    */
-  private simulateMatchResult(probabilities: {
-    homeProbability: number;
-    awayProbability: number;
-    drawProbability: number;
-  }): 'home' | 'away' | 'draw' {
-    // Adicionar fator de volatilidade (futebol é muito imprevisível)
-    const volatilityFactor = 0.15; // 15% de chance de resultado surpresa
+  private simulateMatchResult(
+    homeTeam: PowerIndexEntry,
+    awayTeam: PowerIndexEntry,
+    homePosition: number,
+    awayPosition: number,
+    remainingMatches: number = 20,
+  ): MatchResult {
+    // 1. CALCULAR FORÇA RELATIVA DOS TIMES (mais equilibrada)
+    const homeStrength = homeTeam.power_index;
+    const awayStrength = awayTeam.power_index;
     
-    // 15% de chance de resultado aleatório (surpresa)
-    if (Math.random() < volatilityFactor) {
-      const random = Math.random();
-      if (random < 0.4) return 'home';
-      if (random < 0.8) return 'away';
-      return 'draw';
+    // Usar diferença logarítmica com compressão extrema
+    const strengthDifference = Math.log(homeStrength + 1) - Math.log(awayStrength + 1);
+    const normalizedDifference = Math.tanh(strengthDifference / 100); // Aumentado para 100 (diferença mínima)
+    
+    // 2. PROBABILIDADE BASE SUPER EQUILIBRADA (quase coin flip)
+    let homeWinProbability = 0.5 + (normalizedDifference * 0.05); // Reduzido para 0.05 (±5% max)
+    
+    // 3. APLICAR VANTAGEM DE CASA REALISTA
+    homeWinProbability += this.homeAdvantageRealistic;
+    
+    // 4. APLICAR FATOR DE POSIÇÃO MODERADO
+    const positionFactor = this.calculatePositionFactorRealistic(homePosition, awayPosition);
+    homeWinProbability += positionFactor;
+    
+    // 5. APLICAR FATOR DE ESPERANÇA BASEADO NO TEMPO RESTANTE
+    const hopeFactor = this.calculateTimeBasedHopeFactor(
+      homePosition, awayPosition, homeTeam.points, awayTeam.points, remainingMatches
+    );
+    homeWinProbability += hopeFactor;
+    
+    // 6. APLICAR VOLATILIDADE MÍNIMA (apenas para imprevisibilidade natural)
+    if (Math.random() < this.volatilityFactor) {
+      const volatilityRange = 0.15; // Muito reduzido
+      const randomVolatility = (Math.random() - 0.5) * volatilityRange;
+      homeWinProbability += randomVolatility;
     }
     
-    // 85% de chance de resultado baseado nas probabilidades calculadas
+    // 7. GARANTIR LIMITES REALISTAS
+    homeWinProbability = Math.max(this.minWinProbability, Math.min(this.maxWinProbability, homeWinProbability));
+    
+    // 8. CALCULAR PROBABILIDADE DE EMPATE DINÂMICA
+    const drawProbability = this.calculateDrawProbability(homeStrength, awayStrength);
+    
+    // 9. SIMULAR RESULTADO
     const random = Math.random();
     
-    if (random < probabilities.homeProbability) {
-      return 'home';
-    } else if (random < probabilities.homeProbability + probabilities.drawProbability) {
-      return 'draw';
+    if (random < homeWinProbability) {
+      return MatchResult.HOME_WIN;
+    } else if (random < homeWinProbability + drawProbability) {
+      return MatchResult.DRAW;
     } else {
-      return 'away';
+      return MatchResult.AWAY_WIN;
     }
+  }
+
+  /**
+   * Calcula fator de posição REALISTA baseado na diferença entre times
+   * VERSÃO 5.0.0 - MUITO MAIS MODERADO
+   */
+  private calculatePositionFactorRealistic(homePosition: number, awayPosition: number): number {
+    const positionDifference = awayPosition - homePosition;
+    
+    // Fator muito reduzido - posição não é tudo no futebol
+    if (positionDifference > 0) {
+      return Math.min(0.05, positionDifference * 0.01); // Máximo 5%
+    } else if (positionDifference < 0) {
+      return Math.max(-0.05, positionDifference * 0.01); // Máximo -5%
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Calcula fator de esperança baseado no TEMPO RESTANTE e situação
+   * VERSÃO 5.0.0 - CONSIDERA JOGOS RESTANTES PARA REALISMO
+   */
+  private calculateTimeBasedHopeFactor(
+    homePosition: number, 
+    awayPosition: number, 
+    homePoints: number, 
+    awayPoints: number,
+    remainingMatches: number
+  ): number {
+    let totalBonus = 0;
+    
+    // FATOR DE TEMPO: Quanto mais jogos restam, menor o bonus de desespero
+    const timeReductionFactor = Math.max(0.3, (38 - remainingMatches) / 38); // Reduz conforme jogos restantes
+    
+    // BONUS PARA TIMES NA ZONA (drasticamente aumentado)
+    if (homePosition >= 17) {
+      // Com muitos jogos restantes, bonus MASSIVO para recuperação
+      const baseZoneBonus = (21 - homePosition) * 0.15; // Aumentado para 0.15 (muito mais esperança)
+      const adjustedBonus = baseZoneBonus * Math.max(0.8, timeReductionFactor); // Mínimo 80% do bonus
+      totalBonus += adjustedBonus;
+      
+      // Bonus por pontos baixos (muito aumentado)
+      if (homePoints < 25) {
+        const pointsBonus = (25 - homePoints) * 0.04 * Math.max(0.9, timeReductionFactor); // Muito aumentado
+        totalBonus += Math.min(0.25, pointsBonus); // Máximo 25% (era 15%)
+      }
+    }
+    
+    // BONUS PARA TIMES PRÓXIMOS DA ZONA (mínimo)
+    if (homePosition >= 15 && homePosition <= 16) {
+      const safetyBonus = (17 - homePosition) * 0.01 * timeReductionFactor;
+      totalBonus += safetyBonus;
+    }
+    
+    // MALUS PARA TIMES VISITANTES NA ZONA (também reduzido)
+    if (awayPosition >= 17) {
+      const awayMalus = (21 - awayPosition) * 0.01 * timeReductionFactor;
+      totalBonus -= awayMalus;
+    }
+    
+    // LIMITAR O BONUS TOTAL (super generoso para máxima esperança)
+    return Math.max(-0.03, Math.min(0.35, totalBonus));
+  }
+
+  /**
+   * Calcula probabilidade de empate baseada na força dos times
+   * VERSÃO 5.0.0 - DINÂMICA E REALISTA
+   */
+  private calculateDrawProbability(homeStrength: number, awayStrength: number): number {
+    // Times mais equilibrados têm mais chance de empate
+    const strengthDifference = Math.abs(homeStrength - awayStrength);
+    const maxDifference = 50; // Assumindo power index máximo de 100
+    
+    // Quanto menor a diferença, maior a chance de empate
+    const balanceFactor = 1 - (strengthDifference / maxDifference);
+    
+    // Probabilidade base de empate + fator de equilíbrio
+    const drawProbability = this.drawProbabilityBase + (balanceFactor * 0.1);
+    
+    // Limitar entre 20% e 35%
+    return Math.max(0.20, Math.min(0.35, drawProbability));
+  }
+
+
+
+  /**
+   * Obtém a posição atual de um time na classificação
+   */
+  private getCurrentPosition(team: SimulationTeam): number {
+    // Implementação mais precisa baseada nos pontos
+    if (team.points >= 40) return 1;
+    if (team.points >= 35) return 2;
+    if (team.points >= 30) return 3;
+    if (team.points >= 25) return 4;
+    if (team.points >= 20) return 5;
+    if (team.points >= 15) return 6;
+    if (team.points >= 10) return 7;
+    return 8;
   }
 
   /**
@@ -314,22 +487,22 @@ export class MonteCarloService {
   private updateTeamStats(
     homeTeam: SimulationTeam,
     awayTeam: SimulationTeam,
-    result: 'home' | 'away' | 'draw',
+    result: MatchResult,
   ): void {
     // Simular placar baseado no resultado
     let homeGoals = 0;
     let awayGoals = 0;
 
     switch (result) {
-      case 'home':
+      case MatchResult.HOME_WIN:
         homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3 gols
         awayGoals = Math.floor(Math.random() * homeGoals); // 0 a homeGoals-1
         break;
-      case 'away':
+      case MatchResult.AWAY_WIN:
         awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3 gols
         homeGoals = Math.floor(Math.random() * awayGoals); // 0 a awayGoals-1
         break;
-      case 'draw':
+      case MatchResult.DRAW:
         const drawGoals = Math.floor(Math.random() * 4); // 0-3 gols cada
         homeGoals = drawGoals;
         awayGoals = drawGoals;
@@ -349,11 +522,11 @@ export class MonteCarloService {
     awayTeam.goal_difference = awayTeam.goals_for - awayTeam.goals_against;
 
     // Atualizar pontos e resultados
-    if (result === 'home') {
+    if (result === MatchResult.HOME_WIN) {
       homeTeam.won++;
       homeTeam.points += 3;
       awayTeam.lost++;
-    } else if (result === 'away') {
+    } else if (result === MatchResult.AWAY_WIN) {
       awayTeam.won++;
       awayTeam.points += 3;
       homeTeam.lost++;
@@ -508,4 +681,6 @@ export class MonteCarloService {
   private cloneTeamStates(teams: SimulationTeam[]): SimulationTeam[] {
     return teams.map(team => ({ ...team }));
   }
+
+
 }

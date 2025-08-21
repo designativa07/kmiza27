@@ -13,7 +13,8 @@ import {
   Loader2,
   History,
   Settings,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 
 interface SimulationStats {
@@ -61,7 +62,6 @@ export default function SimulationsPage() {
   const [latestResult, setLatestResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [deletingSimulation, setDeletingSimulation] = useState<number | null>(null);
 
   const competitions = [
     { id: 1, name: 'Brasileirão Série A' },
@@ -104,11 +104,13 @@ export default function SimulationsPage() {
     try {
       const response = await fetch(`${API_URL}/simulations/latest/${selectedCompetition}`);
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.data) {
         setLatestResult(data.data);
+      } else {
+        setLatestResult(null);
       }
     } catch (err) {
-      console.error('Erro ao carregar simulação mais recente:', err);
+      console.error('Erro ao carregar última simulação:', err);
     }
   };
 
@@ -149,38 +151,29 @@ export default function SimulationsPage() {
     }
   };
 
-  const deleteSimulation = async (simulationId: number) => {
+  const handleDeleteSimulation = async (simulationId: number) => {
     if (!confirm('Tem certeza que deseja excluir esta simulação? Esta ação não pode ser desfeita.')) {
       return;
     }
 
-    setDeletingSimulation(simulationId);
-    setError(null);
-    setSuccessMessage(null);
-
     try {
       const response = await fetch(`${API_URL}/simulations/${simulationId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (data.success) {
         setSuccessMessage('Simulação excluída com sucesso!');
-        // Recarregar histórico e estatísticas
-        await loadHistory();
         await loadStats();
+        await loadHistory();
+        await loadLatestSimulation();
       } else {
         setError(data.message || 'Erro ao excluir simulação');
       }
     } catch (err) {
-      setError('Erro de conexão ao excluir simulação');
+      setError('Erro de conexão com o servidor');
       console.error('Erro ao excluir simulação:', err);
-    } finally {
-      setDeletingSimulation(null);
     }
   };
 
@@ -341,26 +334,20 @@ export default function SimulationsPage() {
               )}
             </button>
 
-            {/* Mensagens de Sucesso e Erro */}
-            {successMessage && (
-              <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-4">
-                <div className="flex">
-                  <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
-                  <p className="text-sm text-green-800">{successMessage}</p>
-                </div>
-              </div>
-            )}
-
+            {/* Mensagens */}
             {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-4">
-                <div className="flex">
-                  <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
+              <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-md">
+                <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                <span className="text-red-700 text-sm">{error}</span>
               </div>
             )}
 
-            {/* Configurações de Simulação */}
+            {successMessage && (
+              <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-md">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span className="text-green-700 text-sm">{successMessage}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -522,20 +509,20 @@ export default function SimulationsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => deleteSimulation(entry.id)}
-                        disabled={deletingSimulation === entry.id}
-                        className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                      >
-                        {deletingSimulation === entry.id ? (
-                          <>
-                            <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                            Excluindo...
-                          </>
-                        ) : (
-                          'Excluir'
-                        )}
-                      </button>
+                      {!entry.is_latest ? (
+                        <button
+                          onClick={() => handleDeleteSimulation(entry.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+                          title="Excluir Simulação"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Excluir
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">
+                          Não pode ser excluída
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
