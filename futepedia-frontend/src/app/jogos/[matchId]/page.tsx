@@ -116,7 +116,7 @@ function formatMatchDate(dateString: string) {
       month: 'long', 
       year: 'numeric',
       timeZone: 'America/Sao_Paulo' 
-    }),
+    }).replace(/De/g, 'de').replace(/De/g, 'de'),
     time: date.toLocaleTimeString('pt-BR', { 
       hour: '2-digit', 
       minute: '2-digit',
@@ -291,7 +291,7 @@ export default function MatchPage({ params }: Props) {
                 <div className="flex items-center justify-center space-x-6 text-gray-600">
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-5 w-5 text-blue-600" />
-                    <span className="capitalize">{date}</span>
+                    <span className="capitalize text-sm">{date}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Clock className="h-5 w-5 text-gray-500" />
