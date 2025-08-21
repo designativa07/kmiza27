@@ -100,7 +100,7 @@ export function RoundNavigator({
             </p>
           )}
           {/* Indicadores de Rodada */}
-          <div className="flex flex-wrap items-center justify-center gap-1 mt-2 max-w-xs">
+          <div className="flex flex-wrap items-center justify-center gap-1 mt-2 max-w-xs" style={{ rowGap: '0.5rem' }}>
             {rounds.map((round, index) => (
               <button
                 key={round.id}
@@ -114,7 +114,14 @@ export function RoundNavigator({
                       : 'bg-gray-300 hover:bg-gray-400'
                     }
                   `}
-                title={isMataMata ? (round.phase || round.name) : (round.name || `Rodada ${round.round_number}`)}
+                title={isMataMata ? 
+                  `Fase: ${round.phase || 'N/A'}` : 
+                  `Rodada ${round.round_number}`
+                }
+                style={{ 
+                  flexBasis: 'calc(100% / 19)', // Máximo 19 bolinhas por linha
+                  maxWidth: 'calc(100% / 19)'
+                }}
               />
             ))}
           </div>
