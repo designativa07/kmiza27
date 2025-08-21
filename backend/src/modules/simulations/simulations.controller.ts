@@ -14,7 +14,6 @@ import {
   Delete,
 } from '@nestjs/common';
 import { SimulationsService, RunSimulationRequest } from './simulations.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 export class RunSimulationDto {
   competitionId: number;
@@ -245,25 +244,25 @@ export class SimulationsController {
   }
 
   /**
-   * Exclui uma simulação específica
+   * Excluir simulação específica por ID
+   * DELETE /simulations/:id
    */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async deleteSimulation(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
-    await this.simulationsService.deleteSimulation(id);
-    return { message: 'Simulação excluída com sucesso' };
-  }
+  async deleteSimulation(@Param('id', ParseIntPipe) id: number) {
+    const success = await this.simulationsService.deleteSimulation(id);
 
-  /**
-   * Exclui múltiplas simulações
-   */
-  @Delete('batch')
-  @UseGuards(JwtAuthGuard)
-  async deleteMultipleSimulations(@Body() request: { ids: number[] }): Promise<{ message: string; deletedCount: number }> {
-    const deletedCount = await this.simulationsService.deleteMultipleSimulations(request.ids);
-    return { 
-      message: `${deletedCount} simulação(ões) excluída(s) com sucesso`,
-      deletedCount 
+    if (!success) {
+      return {
+        success: false,
+        message: 'Simulação não encontrada ou não pode ser excluída',
+        data: null,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Simulação excluída com sucesso',
+      data: null,
     };
   }
 }
