@@ -95,7 +95,7 @@ export default function MatchVisualSimulator({
   const setCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
     if (node) {
       console.log('🎯 Canvas montado via callback ref:', node);
-      canvasRef.current = node;
+      (canvasRef as any).current = node;
       setCanvasReady(true);
     }
   }, []);
@@ -148,7 +148,7 @@ export default function MatchVisualSimulator({
   }, [findPlayer]);
 
   const updatePlayerPositions = useCallback((state: VisualMatch) => {
-    const speed = 0.08; // Velocidade aumentada para movimento mais suave
+    const speed = 0.08;
     const fieldWidth = 600;
     const fieldHeight = 300;
     const margin = 30;
@@ -158,7 +158,6 @@ export default function MatchVisualSimulator({
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
       
-      // Movimento mais suave com easing
       if (Math.abs(dx) > 0.5) {
         player.x += dx * speed;
       } else {
@@ -177,7 +176,6 @@ export default function MatchVisualSimulator({
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
       
-      // Movimento mais suave com easing
       if (Math.abs(dx) > 0.5) {
         player.x += dx * speed;
       } else {
@@ -191,48 +189,736 @@ export default function MatchVisualSimulator({
       }
     });
     
-    // Atualizar posição da bola com movimento mais suave
-    const ballDx = state.ballPosition.targetX - state.ballPosition.x;
-    const ballDy = state.ballPosition.targetY - state.ballPosition.y;
-    
-    if (Math.abs(ballDx) > 0.5) {
-      state.ballPosition.x += ballDx * speed;
-    } else {
-      state.ballPosition.x = state.ballPosition.targetX;
-    }
-    
-    if (Math.abs(ballDy) > 0.5) {
-      state.ballPosition.y += ballDy * speed;
-    } else {
-      state.ballPosition.y = state.ballPosition.targetY;
-    }
-    
-    // Adicionar movimento automático dos jogadores quando não estão se movendo para um alvo específico
-    if (state.status === 'playing') {
-      state.homeTeam.players.forEach(player => {
-        if (Math.abs(player.x - player.targetX) < 1 && Math.abs(player.y - player.targetY) < 1) {
-          // Jogador chegou ao alvo, dar um novo alvo aleatório próximo
-          const randomX = player.x + (Math.random() - 0.5) * 40;
-          const randomY = player.y + (Math.random() - 0.5) * 40;
-          
-          // Manter dentro dos limites do campo
-          player.targetX = Math.max(margin + 20, Math.min(fieldWidth - margin - 20, randomX));
-          player.targetY = Math.max(margin + 20, Math.min(fieldHeight - margin - 20, randomY));
-        }
-      });
+    // Atualizar posição da bola com física realista
+    if (state.ballVelocity.x !== 0 || state.ballVelocity.y !== 0) {
+      state.ballPosition.x += state.ballVelocity.x;
+      state.ballPosition.y += state.ballVelocity.y;
       
-      state.awayTeam.players.forEach(player => {
-        if (Math.abs(player.x - player.targetX) < 1 && Math.abs(player.y - player.targetY) < 1) {
-          // Jogador chegou ao alvo, dar um novo alvo aleatório próximo
-          const randomX = player.x + (Math.random() - 0.5) * 40;
-          const randomY = player.y + (Math.random() - 0.5) * 40;
-          
-          // Manter dentro dos limites do campo
-          player.targetX = Math.max(margin + 20, Math.min(fieldWidth - margin - 20, randomX));
-          player.targetY = Math.max(margin + 20, Math.min(fieldHeight - margin - 20, randomY));
-        }
-      });
+      // Fricção da bola (desaceleração)
+      state.ballVelocity.x *= 0.95;
+      state.ballVelocity.y *= 0.95;
+      
+      // Parar a bola quando muito lenta
+      if (Math.abs(state.ballVelocity.x) < 0.1) state.ballVelocity.x = 0;
+      if (Math.abs(state.ballVelocity.y) < 0.1) state.ballVelocity.y = 0;
+      
+      // Rebater nas bordas do campo
+      if (state.ballPosition.x <= margin || state.ballPosition.x >= fieldWidth - margin) {
+        state.ballVelocity.x *= -0.8;
+        state.ballPosition.x = Math.max(margin, Math.min(fieldWidth - margin, state.ballPosition.x));
+      }
+      if (state.ballPosition.y <= margin || state.ballPosition.y >= fieldHeight - margin) {
+        state.ballVelocity.y *= -0.8;
+        state.ballPosition.y = Math.max(margin, Math.min(fieldHeight - margin, state.ballPosition.y));
+      }
     }
+    
+    // Inteligência tática dos jogadores
+    if (state.status === 'playing') {
+      updateTacticalPositions(state, fieldWidth, fieldHeight, margin);
+    }
+  }, []);
+
+  // Função para atualizar posições táticas dos jogadores
+  const updateTacticalPositions = useCallback((state: VisualMatch, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const allPlayers = [...state.homeTeam.players, ...state.awayTeam.players];
+    
+    // Atualizar posições táticas baseadas na posse da bola
+    const ballCarrier = allPlayers.find(p => p.isWithBall);
+    
+    if (ballCarrier) {
+      // Jogador com a bola: procurar espaço para atacar
+      if (ballCarrier.team === 'home') {
+        // Time da casa atacando (direita)
+        const attackDirection = 1;
+        updateAttackFormation(state.homeTeam, ballCarrier, fieldWidth, fieldHeight, margin, attackDirection);
+        updateDefenseFormation(state.awayTeam, ballCarrier, fieldWidth, fieldHeight, margin);
+      } else {
+        // Time visitante atacando (esquerda)
+        const attackDirection = -1;
+        updateAttackFormation(state.awayTeam, ballCarrier, fieldWidth, fieldHeight, margin, attackDirection);
+        updateDefenseFormation(state.homeTeam, ballCarrier, fieldWidth, fieldHeight, margin);
+      }
+    } else {
+      // Bola livre: jogadores procuram posições táticas
+      updateFormationPositions(state.homeTeam, fieldWidth, fieldHeight, margin, 1);
+      updateFormationPositions(state.awayTeam, fieldWidth, fieldHeight, margin, -1);
+    }
+  }, []);
+
+  // Função para atualizar formação de ataque
+  const updateAttackFormation = useCallback((team: { players: VisualPlayer[] }, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number, direction: number) => {
+    const centerX = fieldWidth / 2;
+    const centerY = fieldHeight / 2;
+    
+    team.players.forEach(player => {
+      if (player.id === ballCarrier.id) {
+        // Jogador com a bola: procurar espaço para atacar
+        if (direction > 0) {
+          // Atacar para direita
+          player.targetX = Math.min(player.x + 40, fieldWidth - margin - 80);
+        } else {
+          // Atacar para esquerda
+          player.targetX = Math.max(player.x - 40, margin + 80);
+        }
+        player.targetY = centerY + (Math.random() - 0.5) * 30;
+      } else {
+        // Outros jogadores: posicionamento tático de ataque
+        const distanceFromBall = Math.sqrt((player.x - ballCarrier.x) ** 2 + (player.y - ballCarrier.y) ** 2);
+        
+        if (distanceFromBall < 80) {
+          // Jogador próximo: dar opção de passe
+          player.targetX = ballCarrier.x + (Math.random() - 0.5) * 50;
+          player.targetY = ballCarrier.y + (Math.random() - 0.5) * 50;
+        } else {
+          // Jogador distante: posicionamento tático avançado
+          updateAdvancedAttackPosition(player, fieldWidth, fieldHeight, margin, direction, ballCarrier);
+        }
+      }
+    });
+  }, []);
+
+  // Função para posicionamento tático avançado de ataque
+  const updateAdvancedAttackPosition = useCallback((player: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number, direction: number, ballCarrier: VisualPlayer) => {
+    const centerY = fieldHeight / 2;
+    
+    // Posicionamento baseado na posição do jogador e direção do ataque
+    switch (player.position) {
+      case 'ST':
+        // Atacantes: avançar muito no campo adversário
+        if (direction > 0) {
+          // Time da casa atacando (direita)
+          player.targetX = Math.max(player.x, fieldWidth * 0.7);
+          player.targetY = centerY + (player.id.includes('1') ? -25 : 25);
+        } else {
+          // Time visitante atacando (esquerda)
+          player.targetX = Math.min(player.x, fieldWidth * 0.3);
+          player.targetY = centerY + (player.id.includes('1') ? -25 : 25);
+        }
+        break;
+        
+      case 'LM':
+      case 'RM':
+        // Pontas: avançar nas laterais
+        if (direction > 0) {
+          player.targetX = Math.max(player.x, fieldWidth * 0.6);
+        } else {
+          player.targetX = Math.min(player.x, fieldWidth * 0.4);
+        }
+        player.targetY = centerY + (player.position === 'RM' ? -60 : 60);
+        break;
+        
+      case 'CM':
+        // Meio-campistas: avançar no centro
+        if (direction > 0) {
+          player.targetX = Math.max(player.x, fieldWidth * 0.55);
+        } else {
+          player.targetX = Math.min(player.x, fieldWidth * 0.45);
+        }
+        player.targetY = centerY + (player.id.includes('1') ? -40 : 40);
+        break;
+        
+      case 'CDM':
+        // Volante: avançar um pouco menos
+        if (direction > 0) {
+          player.targetX = Math.max(player.x, fieldWidth * 0.5);
+        } else {
+          player.targetX = Math.min(player.x, fieldWidth * 0.5);
+        }
+        player.targetY = centerY;
+        break;
+        
+      case 'CB':
+      case 'RB':
+      case 'LB':
+        // Defensores: avançar moderadamente
+        if (direction > 0) {
+          player.targetX = Math.max(player.x, fieldWidth * 0.35);
+        } else {
+          player.targetX = Math.min(player.x, fieldWidth * 0.65);
+        }
+        player.targetY = centerY + (player.position === 'RB' ? -50 : player.position === 'LB' ? 50 : (player.id.includes('1') ? -30 : 30));
+        break;
+        
+      case 'GK':
+        // Goleiro: sair um pouco do gol
+        if (direction > 0) {
+          player.targetX = Math.max(player.x, fieldWidth * 0.15);
+        } else {
+          player.targetX = Math.min(player.x, fieldWidth * 0.85);
+        }
+        player.targetY = centerY;
+        break;
+    }
+    
+    // Adicionar variação aleatória para movimento natural
+    player.targetX += (Math.random() - 0.5) * 15;
+    player.targetY += (Math.random() - 0.5) * 15;
+    
+    // Manter dentro dos limites
+    player.targetX = Math.max(margin + 20, Math.min(fieldWidth - margin - 20, player.targetX));
+    player.targetY = Math.max(margin + 20, Math.min(fieldHeight - margin - 20, player.targetY));
+  }, []);
+
+  // Função para atualizar formação de defesa
+  const updateDefenseFormation = useCallback((team: { players: VisualPlayer[] }, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const centerX = fieldWidth / 2;
+    const centerY = fieldHeight / 2;
+    
+    team.players.forEach(player => {
+      if (player.position === 'GK') {
+        // Goleiro: defender o gol com inteligência
+        updateGoalkeeperPosition(player, ballCarrier, fieldWidth, fieldHeight, margin);
+      } else if (player.position === 'CB' || player.position === 'RB' || player.position === 'LB') {
+        // Zagueiros: manter posicionamento defensivo
+        updateDefenderPosition(player, ballCarrier, fieldWidth, fieldHeight, margin);
+      } else {
+        // Meio-campistas e atacantes: pressionar e marcar
+        const distanceFromBall = Math.sqrt((player.x - ballCarrier.x) ** 2 + (player.y - ballCarrier.y) ** 2);
+        
+        if (distanceFromBall < 100) {
+          // Jogador próximo da bola: pressionar
+          player.targetX = ballCarrier.x + (Math.random() - 0.5) * 25;
+          player.targetY = ballCarrier.y + (Math.random() - 0.5) * 25;
+        } else {
+          // Jogador distante: posicionamento defensivo tático
+          updateDefensiveMidfieldPosition(player, ballCarrier, fieldWidth, fieldHeight, margin);
+        }
+      }
+    });
+  }, []);
+
+  // Função para posicionamento inteligente do goleiro
+  const updateGoalkeeperPosition = useCallback((player: VisualPlayer, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const centerY = fieldHeight / 2;
+    const isHomeTeam = player.team === 'home';
+    
+    if (isHomeTeam) {
+      // Goleiro da casa (gol esquerdo)
+      if (ballCarrier.team === 'away') {
+        // Bola no campo da casa: goleiro fica no gol
+        player.targetX = margin + 20;
+      } else {
+        // Bola no campo adversário: goleiro pode sair um pouco
+        player.targetX = Math.max(player.x - 15, margin + 5);
+      }
+    } else {
+      // Goleiro visitante (gol direito)
+      if (ballCarrier.team === 'home') {
+        // Bola no campo da casa: goleiro fica no gol
+        player.targetX = fieldWidth - margin - 20;
+      } else {
+        // Bola no campo adversário: goleiro pode sair um pouco
+        player.targetX = Math.min(player.x + 15, fieldWidth - margin - 5);
+      }
+    }
+    
+    // Ajustar posição Y baseado na posição da bola
+    const ballY = ballCarrier.y;
+    if (ballY < centerY - 40) {
+      player.targetY = centerY - 30; // Bola alta
+    } else if (ballY > centerY + 40) {
+      player.targetY = centerY + 30; // Bola baixa
+    } else {
+      player.targetY = centerY; // Bola no centro
+    }
+  }, []);
+
+  // Função para posicionamento defensivo dos zagueiros
+  const updateDefenderPosition = useCallback((player: VisualPlayer, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const centerY = fieldHeight / 2;
+    const isHomeTeam = player.team === 'home';
+    
+    // Zagueiros mantêm posicionamento defensivo
+    if (isHomeTeam) {
+      // Zagueiros da casa (lado esquerdo)
+      switch (player.position) {
+        case 'CB':
+          player.targetX = margin + 90;
+          player.targetY = centerY + (player.id.includes('1') ? -35 : 35);
+          break;
+        case 'RB':
+          player.targetX = margin + 90;
+          player.targetY = centerY - 60;
+          break;
+        case 'LB':
+          player.targetX = margin + 90;
+          player.targetY = centerY + 60;
+          break;
+      }
+    } else {
+      // Zagueiros visitantes (lado direito)
+      switch (player.position) {
+        case 'CB':
+          player.targetX = fieldWidth - margin - 90;
+          player.targetY = centerY + (player.id.includes('1') ? -35 : 35);
+          break;
+        case 'RB':
+          player.targetX = fieldWidth - margin - 90;
+          player.targetY = centerY - 60;
+          break;
+        case 'LB':
+          player.targetX = fieldWidth - margin - 90;
+          player.targetY = centerY + 60;
+          break;
+      }
+    }
+    
+    // Adicionar variação aleatória para movimento natural
+    player.targetX += (Math.random() - 0.5) * 10;
+    player.targetY += (Math.random() - 0.5) * 10;
+  }, []);
+
+  // Função para posicionamento defensivo do meio-campo
+  const updateDefensiveMidfieldPosition = useCallback((player: VisualPlayer, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const centerY = fieldHeight / 2;
+    const isHomeTeam = player.team === 'home';
+    
+    // Meio-campistas e atacantes se posicionam defensivamente
+    if (isHomeTeam) {
+      // Time da casa defendendo (lado esquerdo)
+      switch (player.position) {
+        case 'CDM':
+          player.targetX = margin + 150;
+          player.targetY = centerY;
+          break;
+        case 'CM':
+          player.targetX = margin + 150;
+          player.targetY = centerY + (player.id.includes('1') ? -40 : 40);
+          break;
+        case 'RM':
+          player.targetX = margin + 150;
+          player.targetY = centerY - 60;
+          break;
+        case 'LM':
+          player.targetX = margin + 150;
+          player.targetY = centerY + 60;
+          break;
+        case 'ST':
+          player.targetX = margin + 200;
+          player.targetY = centerY + (player.id.includes('1') ? -25 : 25);
+          break;
+      }
+    } else {
+      // Time visitante defendendo (lado direito)
+      switch (player.position) {
+        case 'CDM':
+          player.targetX = fieldWidth - margin - 150;
+          player.targetY = centerY;
+          break;
+        case 'CM':
+          player.targetX = fieldWidth - margin - 150;
+          player.targetY = centerY + (player.id.includes('1') ? -40 : 40);
+          break;
+        case 'RM':
+          player.targetX = fieldWidth - margin - 150;
+          player.targetY = centerY - 60;
+          break;
+        case 'LM':
+          player.targetX = fieldWidth - margin - 150;
+          player.targetY = centerY + 60;
+          break;
+        case 'ST':
+          player.targetX = fieldWidth - margin - 200;
+          player.targetY = centerY + (player.id.includes('1') ? -25 : 25);
+          break;
+      }
+    }
+    
+    // Adicionar variação aleatória para movimento natural
+    player.targetX += (Math.random() - 0.5) * 15;
+    player.targetY += (Math.random() - 0.5) * 15;
+  }, []);
+
+  // Função para atualizar posições de formação
+  const updateFormationPositions = useCallback((team: { players: VisualPlayer[] }, fieldWidth: number, fieldHeight: number, margin: number, direction: number) => {
+    team.players.forEach(player => {
+      updateFormationPosition(player, fieldWidth, fieldHeight, margin, direction);
+    });
+  }, []);
+
+  // Função para atualizar posição individual de formação
+  const updateFormationPosition = useCallback((player: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number, direction: number) => {
+    const centerX = fieldWidth / 2;
+    const centerY = fieldHeight / 2;
+    
+    let targetX = player.x;
+    let targetY = player.y;
+    
+    // Posições baseadas na posição do jogador
+    switch (player.position) {
+      case 'GK':
+        if (direction > 0) {
+          targetX = margin + 20; // Gol esquerdo
+        } else {
+          targetX = fieldWidth - margin - 20; // Gol direito
+        }
+        targetY = centerY;
+        break;
+        
+      case 'CB':
+        if (direction > 0) {
+          targetX = margin + 90;
+        } else {
+          targetX = fieldWidth - margin - 90;
+        }
+        targetY = centerY + (player.id.includes('1') ? -35 : 35);
+        break;
+        
+      case 'RB':
+        if (direction > 0) {
+          targetX = margin + 90;
+        } else {
+          targetX = fieldWidth - margin - 90;
+        }
+        targetY = centerY - 60;
+        break;
+        
+      case 'LB':
+        if (direction > 0) {
+          targetX = margin + 90;
+        } else {
+          targetX = fieldWidth - margin - 90;
+        }
+        targetY = centerY + 60;
+        break;
+        
+      case 'CDM':
+        if (direction > 0) {
+          targetX = margin + 180;
+        } else {
+          targetX = fieldWidth - margin - 180;
+        }
+        targetY = centerY;
+        break;
+        
+      case 'CM':
+        if (direction > 0) {
+          targetX = margin + 180;
+        } else {
+          targetX = fieldWidth - margin - 180;
+        }
+        targetY = centerY + (player.id.includes('1') ? -45 : 45);
+        break;
+        
+      case 'RM':
+        if (direction > 0) {
+          targetX = margin + 180;
+        } else {
+          targetX = fieldWidth - margin - 180;
+        }
+        targetY = centerY - 70;
+        break;
+        
+      case 'LM':
+        if (direction > 0) {
+          targetX = margin + 180;
+        } else {
+          targetX = fieldWidth - margin - 180;
+        }
+        targetY = centerY + 70;
+        break;
+        
+      case 'ST':
+        if (direction > 0) {
+          targetX = margin + 270;
+        } else {
+          targetX = fieldWidth - margin - 270;
+        }
+        targetY = centerY + (player.id.includes('1') ? -30 : 30);
+        break;
+    }
+    
+    // Adicionar variação aleatória para movimento natural
+    if (Math.abs(player.x - player.targetX) < 5 && Math.abs(player.y - player.targetY) < 5) {
+      targetX += (Math.random() - 0.5) * 20;
+      targetY += (Math.random() - 0.5) * 20;
+    }
+    
+    // Manter dentro dos limites
+    player.targetX = Math.max(margin + 20, Math.min(fieldWidth - margin - 20, targetX));
+    player.targetY = Math.max(margin + 20, Math.min(fieldHeight - margin - 20, targetY));
+  }, []);
+
+  // Sistema de jogadas de futebol
+  const executeFootballActions = useCallback((state: VisualMatch, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const allPlayers = [...state.homeTeam.players, ...state.awayTeam.players];
+    const ballCarrier = allPlayers.find(p => p.isWithBall);
+    
+    if (!ballCarrier) {
+      // Bola livre: verificar se algum jogador pode pegá-la
+      const closestPlayer = findClosestPlayerToBall(state);
+      if (closestPlayer) {
+        const distanceToBall = Math.sqrt((closestPlayer.x - state.ballPosition.x) ** 2 + (closestPlayer.y - state.ballPosition.y) ** 2);
+        if (distanceToBall < 15) {
+          // Jogador pegou a bola
+          closestPlayer.isWithBall = true;
+          state.ballPosition.x = closestPlayer.x;
+          state.ballPosition.y = closestPlayer.y;
+          state.ballVelocity.x = 0;
+          state.ballVelocity.y = 0;
+        }
+      }
+      return;
+    }
+    
+    // Jogador com a bola: executar ações baseadas na posição e situação
+    const actionChance = Math.random();
+    const isNearGoal = isPlayerNearGoal(ballCarrier, fieldWidth, fieldHeight, margin);
+    
+    if (isNearGoal && actionChance < 0.6) {
+      // 60% de chance de chutar quando próximo ao gol
+      executeShot(state, ballCarrier, fieldWidth, fieldHeight, margin);
+    } else if (actionChance < 0.4) {
+      // 40% de chance de passar
+      executePass(state, ballCarrier, fieldWidth, fieldHeight, margin);
+    } else if (actionChance < 0.7) {
+      // 30% de chance de driblar
+      executeDribble(state, ballCarrier, fieldWidth, fieldHeight, margin);
+    }
+    // 30% de chance de continuar com a bola
+  }, []);
+
+  // Função para verificar se jogador está próximo ao gol
+  const isPlayerNearGoal = useCallback((player: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number): boolean => {
+    const centerY = fieldHeight / 2;
+    
+    if (player.team === 'home') {
+      // Time da casa: verificar proximidade com gol direito
+      const distanceToGoal = Math.sqrt((player.x - (fieldWidth - margin)) ** 2 + (player.y - centerY) ** 2);
+      return distanceToGoal < 120; // Dentro de 120px do gol
+    } else {
+      // Time visitante: verificar proximidade com gol esquerdo
+      const distanceToGoal = Math.sqrt((player.x - margin) ** 2 + (player.y - centerY) ** 2);
+      return distanceToGoal < 120; // Dentro de 120px do gol
+    }
+  }, []);
+
+  // Função para encontrar jogador mais próximo da bola
+  const findClosestPlayerToBall = useCallback((state: VisualMatch): VisualPlayer | null => {
+    const allPlayers = [...state.homeTeam.players, ...state.awayTeam.players];
+    let closestPlayer: VisualPlayer | null = null;
+    let minDistance = Infinity;
+    
+    allPlayers.forEach(player => {
+      const distance = Math.sqrt((player.x - state.ballPosition.x) ** 2 + (player.y - state.ballPosition.y) ** 2);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPlayer = player;
+      }
+    });
+    
+    return closestPlayer;
+  }, []);
+
+  // Função para executar passe
+  const executePass = useCallback((state: VisualMatch, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    const teammates = (ballCarrier.team === 'home' ? state.homeTeam : state.awayTeam).players.filter(p => p.id !== ballCarrier.id);
+    
+    if (teammates.length === 0) return;
+    
+    // Escolher companheiro para passar baseado na posição e situação
+    const targetPlayer = findBestPassTarget(ballCarrier, teammates, fieldWidth, fieldHeight, margin);
+    
+    if (!targetPlayer) return; // Nenhum alvo bom encontrado
+    
+    // Calcular direção do passe
+    const dx = targetPlayer.x - ballCarrier.x;
+    const dy = targetPlayer.y - ballCarrier.y;
+    const distance = Math.sqrt(dx ** 2 + dy ** 2);
+    
+    if (distance > 180) return; // Passe muito longo
+    
+    // Executar passe
+    ballCarrier.isWithBall = false;
+    targetPlayer.isWithBall = true;
+    
+    // Mover bola para o alvo
+    const passSpeed = 3.5;
+    state.ballVelocity.x = (dx / distance) * passSpeed;
+    state.ballVelocity.y = (dy / distance) * passSpeed;
+    
+    // Atualizar posição alvo da bola
+    state.ballPosition.targetX = targetPlayer.x;
+    state.ballPosition.targetY = targetPlayer.y;
+    
+    console.log(`⚽ ${ballCarrier.name} passou para ${targetPlayer.name}`);
+  }, []);
+
+  // Função para encontrar melhor alvo para passe
+  const findBestPassTarget = useCallback((ballCarrier: VisualPlayer, teammates: VisualPlayer[], fieldWidth: number, fieldHeight: number, margin: number): VisualPlayer | null => {
+    const centerY = fieldHeight / 2;
+    const isHomeTeam = ballCarrier.team === 'home';
+    
+    // Filtrar companheiros que estão em posições vantajosas
+    const goodTargets = teammates.filter(teammate => {
+      const distance = Math.sqrt((teammate.x - ballCarrier.x) ** 2 + (teammate.y - ballCarrier.y) ** 2);
+      
+      // Passe não muito curto nem muito longo
+      if (distance < 30 || distance > 180) return false;
+      
+      // Verificar se está em posição de ataque
+      if (isHomeTeam) {
+        // Time da casa: procurar jogadores à direita (ataque)
+        return teammate.x > ballCarrier.x + 20;
+      } else {
+        // Time visitante: procurar jogadores à esquerda (ataque)
+        return teammate.x < ballCarrier.x - 20;
+      }
+    });
+    
+    if (goodTargets.length === 0) return null;
+    
+    // Escolher o melhor alvo baseado na posição e distância
+    let bestTarget = goodTargets[0];
+    let bestScore = 0;
+    
+    goodTargets.forEach(teammate => {
+      const distance = Math.sqrt((teammate.x - ballCarrier.x) ** 2 + (teammate.y - ballCarrier.y) ** 2);
+      const positionScore = getPositionScore(teammate, isHomeTeam, fieldWidth, fieldHeight, margin);
+      const totalScore = positionScore - (distance / 10); // Preferir posições melhores e distâncias menores
+      
+      if (totalScore > bestScore) {
+        bestScore = totalScore;
+        bestTarget = teammate;
+      }
+    });
+    
+    return bestTarget;
+  }, []);
+
+  // Função para calcular pontuação da posição do jogador
+  const getPositionScore = useCallback((player: VisualPlayer, isHomeTeam: boolean, fieldWidth: number, fieldHeight: number, margin: number): number => {
+    let score = 0;
+    
+    // Pontuação baseada na posição do jogador
+    switch (player.position) {
+      case 'ST':
+        score += 100; // Atacantes são prioridade
+        break;
+      case 'LM':
+      case 'RM':
+        score += 80; // Pontas são bons alvos
+        break;
+      case 'CM':
+        score += 70; // Meio-campistas
+        break;
+      case 'CDM':
+        score += 50; // Volante
+        break;
+      case 'CB':
+      case 'RB':
+      case 'LB':
+        score += 30; // Defensores
+        break;
+      case 'GK':
+        score += 10; // Goleiro (última opção)
+        break;
+    }
+    
+    // Bônus por estar em posição de ataque
+    if (isHomeTeam && player.x > fieldWidth * 0.6) {
+      score += 50; // Avançou no campo adversário
+    } else if (!isHomeTeam && player.x < fieldWidth * 0.4) {
+      score += 50; // Avançou no campo adversário
+    }
+    
+    return score;
+  }, []);
+
+  // Função para executar chute
+  const executeShot = useCallback((state: VisualMatch, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    // Determinar direção do chute baseado na posição do jogador
+    let shotDirection = 1; // Direita
+    let goalX = fieldWidth - margin;
+    let goalY = fieldHeight / 2;
+    
+    if (ballCarrier.team === 'away') {
+      shotDirection = -1; // Esquerda
+      goalX = margin;
+    }
+    
+    // Calcular direção do chute
+    const dx = goalX - ballCarrier.x;
+    const dy = goalY - ballCarrier.y;
+    const distance = Math.sqrt(dx ** 2 + dy ** 2);
+    
+    // Executar chute
+    ballCarrier.isWithBall = false;
+    
+    // Velocidade do chute baseada na distância
+    const shotSpeed = Math.min(8, 3 + (distance / 100));
+    state.ballVelocity.x = (dx / distance) * shotSpeed;
+    state.ballVelocity.y = (dy / distance) * shotSpeed;
+    
+    // Adicionar variação aleatória para realismo
+    state.ballVelocity.x += (Math.random() - 0.5) * 2;
+    state.ballVelocity.y += (Math.random() - 0.5) * 2;
+    
+    console.log(`⚽ ${ballCarrier.name} chutou para o gol!`);
+    
+    // Verificar se é gol
+    setTimeout(() => {
+      checkGoal(state, ballCarrier.team, fieldWidth, fieldHeight, margin);
+    }, 1000);
+  }, []);
+
+  // Função para executar drible
+  const executeDribble = useCallback((state: VisualMatch, ballCarrier: VisualPlayer, fieldWidth: number, fieldHeight: number, margin: number) => {
+    // Mover bola em direção ao movimento do jogador
+    const moveDirection = ballCarrier.team === 'home' ? 1 : -1;
+    const dribbleSpeed = 2;
+    
+    state.ballVelocity.x = moveDirection * dribbleSpeed;
+    state.ballVelocity.y = (Math.random() - 0.5) * dribbleSpeed;
+    
+    // Mover jogador junto com a bola
+    ballCarrier.targetX += moveDirection * 20;
+    ballCarrier.targetY += (Math.random() - 0.5) * 20;
+    
+    // Manter dentro dos limites
+    ballCarrier.targetX = Math.max(margin + 20, Math.min(fieldWidth - margin - 20, ballCarrier.targetX));
+    ballCarrier.targetY = Math.max(margin + 20, Math.min(fieldHeight - margin - 20, ballCarrier.targetY));
+    
+    console.log(`⚽ ${ballCarrier.name} driblou!`);
+  }, []);
+
+  // Função para verificar gol
+  const checkGoal = useCallback((state: VisualMatch, scoringTeam: 'home' | 'away', fieldWidth: number, fieldHeight: number, margin: number) => {
+    const ballX = state.ballPosition.x;
+    const ballY = state.ballPosition.y;
+    
+    // Verificar se a bola entrou no gol
+    if (scoringTeam === 'home') {
+      // Gol direito
+      if (ballX >= fieldWidth - margin && ballY >= 90 && ballY <= 210) {
+        state.score.home++;
+        state.lastGoal = { team: 'home', minute: state.minute };
+        console.log(`🎉 GOL! ${state.homeTeam.name} marca! Placar: ${state.score.home} - ${state.score.away}`);
+        resetBallToCenter(state, fieldWidth, fieldHeight);
+      }
+    } else {
+      // Gol esquerdo
+      if (ballX <= margin && ballY >= 90 && ballY <= 210) {
+        state.score.away++;
+        state.lastGoal = { team: 'away', minute: state.minute };
+        console.log(`🎉 GOL! ${state.awayTeam.name} marca! Placar: ${state.score.home} - ${state.score.away}`);
+        resetBallToCenter(state, fieldWidth, fieldHeight);
+      }
+    }
+  }, []);
+
+  // Função para resetar bola ao centro
+  const resetBallToCenter = useCallback((state: VisualMatch, fieldWidth: number, fieldHeight: number) => {
+    state.ballPosition.x = fieldWidth / 2;
+    state.ballPosition.y = fieldHeight / 2;
+    state.ballVelocity.x = 0;
+    state.ballVelocity.y = 0;
+    state.ballPosition.targetX = fieldWidth / 2;
+    state.ballPosition.targetY = fieldHeight / 2;
+    
+    // Nenhum jogador tem a bola
+    [...state.homeTeam.players, ...state.awayTeam.players].forEach(p => p.isWithBall = false);
   }, []);
 
   // Funções auxiliares de desenho
@@ -417,6 +1103,9 @@ export default function MatchVisualSimulator({
         
         // Atualizar posições dos jogadores
         updatePlayerPositions(state);
+        
+        // Executar ações de futebol
+        executeFootballActions(state, 600, 300, 30);
         
         // Redesenhar
         draw();
@@ -835,6 +1524,11 @@ function initializeMatch(homeTeam: any, awayTeam: any): VisualMatch {
     status: 'pre_match',
     lastGoal: { team: null, minute: 0 }
   };
+  
+  // Dar a bola para um jogador inicial (meio-campista da casa)
+  homePlayers[6].isWithBall = true; // Meio 1
+  initialMatchState.ballPosition.x = homePlayers[6].x;
+  initialMatchState.ballPosition.y = homePlayers[6].y;
   
   console.log('✅ Estado inicial da partida criado:', initialMatchState);
   return initialMatchState;

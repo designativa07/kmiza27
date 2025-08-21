@@ -1,6 +1,7 @@
 'use client';
 
-import { TrendingUp, Tv, Globe } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, Tv, Globe, Plus, X } from 'lucide-react';
 import InlineVideoPlayer from './InlineVideoPlayer';
 
 interface MatchBroadcast {
@@ -51,9 +52,31 @@ export default function MatchBroadcastSection({
   homeTeamName, 
   awayTeamName 
 }: MatchBroadcastSectionProps) {
+  const [additionalLinks, setAdditionalLinks] = useState<string[]>([]);
+  const [newLinkInput, setNewLinkInput] = useState('');
+  const [showAddLinkForm, setShowAddLinkForm] = useState(false);
+
   const hasVideoStreams = broadcastChannels && processBroadcastChannels(broadcastChannels).length > 0;
   const hasTvChannels = broadcasts && broadcasts.length > 0;
-  const hasAnyBroadcast = hasVideoStreams || hasTvChannels;
+  const hasAnyBroadcast = hasVideoStreams || hasTvChannels || additionalLinks.length > 0;
+
+  const handleAddLink = () => {
+    if (newLinkInput.trim()) {
+      setAdditionalLinks([...additionalLinks, newLinkInput.trim()]);
+      setNewLinkInput('');
+      setShowAddLinkForm(false);
+    }
+  };
+
+  const handleRemoveLink = (index: number) => {
+    setAdditionalLinks(additionalLinks.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveOriginalLink = (index: number) => {
+    // Aqui você pode implementar a lógica para remover links originais
+    // Por enquanto, apenas remove do estado local
+    console.log('Remover link original:', index);
+  };
 
   if (!hasAnyBroadcast) {
     return (
@@ -74,26 +97,92 @@ export default function MatchBroadcastSection({
         Transmissão
       </h3>
       
-      {/* Streams de Vídeo Online */}
-      {hasVideoStreams && (
-        <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-            <Globe className="h-4 w-4 mr-2 text-blue-600" />
-            Assistir ao Vivo Online
-          </h4>
-          <div className="space-y-3">
-            {processBroadcastChannels(broadcastChannels).map((channel, index) => (
-              <div key={index}>
-                <InlineVideoPlayer 
-                  url={channel} 
-                  title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
-                  className="w-full"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                        {/* Streams de Vídeo Online */}
+                  {(hasVideoStreams || additionalLinks.length > 0) && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-gray-700 flex items-center">
+                          <Globe className="h-4 w-4 mr-2 text-blue-600" />
+                          Assistir ao Vivo Online
+                        </h4>
+                        <button
+                          onClick={() => setShowAddLinkForm(!showAddLinkForm)}
+                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          +LINK
+                        </button>
+                      </div>
+
+                      {/* Formulário para adicionar novo link */}
+                      {showAddLinkForm && (
+                        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="url"
+                              value={newLinkInput}
+                              onChange={(e) => setNewLinkInput(e.target.value)}
+                              placeholder="https://www.youtube.com/watch?v=..."
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                              onClick={handleAddLink}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors"
+                            >
+                              Adicionar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowAddLinkForm(false);
+                                setNewLinkInput('');
+                              }}
+                              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        {/* Links originais */}
+                        {hasVideoStreams && processBroadcastChannels(broadcastChannels).map((channel, index) => (
+                          <div key={`original-${index}`} className="relative">
+                            <InlineVideoPlayer 
+                              url={channel} 
+                              title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
+                              className="w-full"
+                            />
+                            <button
+                              onClick={() => handleRemoveOriginalLink(index)}
+                              className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+                              title="Remover link"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Links adicionais */}
+                        {additionalLinks.map((link, index) => (
+                          <div key={`additional-${index}`} className="relative">
+                            <InlineVideoPlayer 
+                              url={link} 
+                              title={`${homeTeamName} x ${awayTeamName} - Transmissão`}
+                              className="w-full"
+                            />
+                            <button
+                              onClick={() => handleRemoveLink(index)}
+                              className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+                              title="Remover link"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
       
              {/* Canais de TV Tradicionais */}
        {hasTvChannels && (

@@ -822,6 +822,20 @@ export default function MatchesManager() {
       let method: string;
       let payload: any;
 
+      // Processar múltiplos links de transmissão
+      let processedBroadcastChannels = null;
+      if (formData.broadcast_channels && formData.broadcast_channels.trim()) {
+        const links = formData.broadcast_channels
+          .split(',')
+          .map(link => link.trim())
+          .filter(link => link.length > 0);
+        
+        if (links.length > 0) {
+          // Se houver apenas um link, enviar como string; se houver múltiplos, enviar como array
+          processedBroadcastChannels = links.length === 1 ? links[0] : links;
+        }
+      }
+
       const basePayload = {
         competition_id: parseInt(String(formData.competition_id || '')),
         round_id: formData.round_id ? parseInt(String(formData.round_id)) : undefined,
@@ -830,7 +844,7 @@ export default function MatchesManager() {
         phase: formData.phase || undefined,
         status: formData.status,
         match_date: new Date(formData.match_date).toISOString(),
-        broadcast_channels: formData.broadcast_channels || null,
+        broadcast_channels: processedBroadcastChannels,
         channel_ids: formData.channel_ids,
         home_score: formData.home_score !== undefined ? formData.home_score : null,
         away_score: formData.away_score !== undefined ? formData.away_score : null,
@@ -2101,7 +2115,26 @@ export default function MatchesManager() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="broadcast_channels" className="block text-sm font-medium text-gray-700">LINK direto para transmissão</label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label htmlFor="broadcast_channels" className="block text-sm font-medium text-gray-700">LINK direto para transmissão</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentLinks = formData.broadcast_channels ? formData.broadcast_channels.split(',').map(link => link.trim()) : [];
+                                const newLink = prompt('Digite a URL da transmissão:');
+                                if (newLink && newLink.trim()) {
+                                  const updatedLinks = [...currentLinks, newLink.trim()];
+                                  setFormData({ ...formData, broadcast_channels: updatedLinks.join(', ') });
+                                }
+                              }}
+                              className="inline-flex items-center px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                            >
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                              +LINK
+                            </button>
+                          </div>
                           <input
                             type="text"
                             name="broadcast_channels"
@@ -2109,8 +2142,31 @@ export default function MatchesManager() {
                             value={formData.broadcast_channels}
                             onChange={(e) => setFormData({ ...formData, broadcast_channels: e.target.value })}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            placeholder="https://..."
+                            placeholder="https://..., https://..., https://..."
                           />
+                          {formData.broadcast_channels && (
+                            <div className="mt-2 space-y-1">
+                              {formData.broadcast_channels.split(',').map((link, index) => (
+                                <div key={index} className="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-xs">
+                                  <span className="truncate flex-1">{link.trim()}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const currentLinks = formData.broadcast_channels.split(',').map(link => link.trim());
+                                      const updatedLinks = currentLinks.filter((_, i) => i !== index);
+                                      setFormData({ ...formData, broadcast_channels: updatedLinks.join(', ') });
+                                    }}
+                                    className="ml-2 text-red-600 hover:text-red-800"
+                                    title="Remover link"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
