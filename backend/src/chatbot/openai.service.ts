@@ -7,6 +7,8 @@ export interface MessageAnalysis {
   team?: string;
   competition?: string;
   player?: string;
+  homeTeam?: string;
+  awayTeam?: string;
   confidence: number;
 }
 
@@ -126,7 +128,27 @@ export class OpenAIService implements OnModuleInit {
       // Detectar informações de transmissão
       if (lowerMessage.includes('onde passa') || lowerMessage.includes('transmissão') ||
           lowerMessage.includes('transmissao') || lowerMessage.includes('canal') ||
-          lowerMessage.includes('tv') || lowerMessage.includes('streaming')) {
+          lowerMessage.includes('canais') || lowerMessage.includes('tv') || 
+          lowerMessage.includes('streaming') || lowerMessage.includes('assistir') || 
+          lowerMessage.includes('onde assistir')) {
+        
+        console.log(`🔍 DEBUG: Detectada intenção de transmissão para mensagem: "${lowerMessage}"`);
+        
+        // Verificar se é uma pergunta sobre partida específica (ex: "Bahia x Fluminense")
+        const specificMatch = this.extractSpecificMatch(lowerMessage);
+        console.log(`🔍 DEBUG: Resultado extractSpecificMatch:`, specificMatch);
+        
+        if (specificMatch) {
+          console.log(`✅ Detectado transmissão para partida específica: ${specificMatch.homeTeam} x ${specificMatch.awayTeam}`);
+          return {
+            intent: 'specific_match_broadcast',
+            homeTeam: specificMatch.homeTeam,
+            awayTeam: specificMatch.awayTeam,
+            confidence: 0.95
+          };
+        }
+        
+        console.log(`🔍 DEBUG: Nenhuma partida específica detectada, buscando time individual`);
         const team = this.extractTeamName(lowerMessage);
         console.log(`✅ Detectado transmissão para time: ${team}`);
         return {
@@ -424,6 +446,105 @@ export class OpenAIService implements OnModuleInit {
     }
     
     return undefined;
+  }
+
+  private extractSpecificMatch(message: string): { homeTeam: string; awayTeam: string } | undefined {
+    const lowerMessage = this.removeAccents(message.toLowerCase());
+    
+    // Padrões para detectar partidas específicas - mais precisos
+    const patterns = [
+      // Padrão: "Time1 x Time2" ou "Time1 vs Time2" ou "Time1 versus Time2"
+      /([a-záàâãéèêíìîóòôõúùûç\s]+?)\s*(?:x|vs|versus)\s+([a-záàâãéèêíìîóòôõúùûç\s]+?)(?:\s|$|[?!.,])/i,
+      // Padrão: "Time1 contra Time2"
+      /([a-záàâãéèêíìîóòôõúùûç\s]+?)\s+contra\s+([a-záàâãéèêíìîóòôõúùûç\s]+?)(?:\s|$|[?!.,])/i,
+      // Padrão: "Time1 e Time2" (mais restritivo)
+      /([a-záàâãéèêíìîóòôõúùûç\s]+?)\s+e\s+([a-záàâãéèêíìîóòôõúùûç\s]+?)(?:\s|$|[?!.,])/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = lowerMessage.match(pattern);
+      if (match) {
+        let homeTeam = match[1].trim();
+        let awayTeam = match[2].trim();
+        
+        // Limpar palavras de contexto comuns
+        const contextWords = ['onde', 'assistir', 'transmissao', 'transmissão', 'canais', 'passa', 'como', 'ver', 'ver', 'o', 'a', 'de', 'da', 'do', 'em', 'para'];
+        
+        // Remover palavras de contexto do início e fim
+        homeTeam = homeTeam.replace(new RegExp(`^(${contextWords.join('|')})\\s+`, 'i'), '').trim();
+        awayTeam = awayTeam.replace(new RegExp(`\\s+(${contextWords.join('|')})$`, 'i'), '').trim();
+        
+        // Se ainda há palavras de contexto, tentar extrair apenas o nome do time
+        if (homeTeam.split(' ').length > 3) {
+          // Tentar encontrar o nome do time no final da string
+          const words = homeTeam.split(' ');
+          for (let i = words.length - 1; i >= 0; i--) {
+            const candidate = words.slice(i).join(' ');
+            if (this.isValidTeamName(candidate)) {
+              homeTeam = candidate;
+              break;
+            }
+          }
+        }
+        
+        if (awayTeam.split(' ').length > 3) {
+          // Tentar encontrar o nome do time no início da string
+          const words = awayTeam.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            const candidate = words.slice(0, i + 1).join(' ');
+            if (this.isValidTeamName(candidate)) {
+              awayTeam = candidate;
+              break;
+            }
+          }
+        }
+        
+        console.log(`🔍 DEBUG extractSpecificMatch: "${homeTeam}" vs "${awayTeam}"`);
+        
+        // Verificar se ambos os times existem na lista de times conhecidos
+        const homeTeamExists = this.isValidTeamName(homeTeam);
+        const awayTeamExists = this.isValidTeamName(awayTeam);
+        
+        if (homeTeamExists && awayTeamExists) {
+          // Retornar os nomes exatos dos times encontrados
+          const foundHomeTeam = this.findTeamByName(homeTeam);
+          const foundAwayTeam = this.findTeamByName(awayTeam);
+          
+          return {
+            homeTeam: foundHomeTeam!,
+            awayTeam: foundAwayTeam!
+          };
+        }
+      }
+    }
+    
+    return undefined;
+  }
+  
+  // Método auxiliar para verificar se um nome é válido
+  private isValidTeamName(teamName: string): boolean {
+    if (!teamName || teamName.trim().length < 2) return false;
+    
+    const normalizedTeamName = this.removeAccents(teamName.toLowerCase());
+    
+    return this.teamNames.some(team => {
+      const normalizedTeam = this.removeAccents(team.toLowerCase());
+      return normalizedTeam.includes(normalizedTeamName) || 
+             normalizedTeamName.includes(normalizedTeam);
+    });
+  }
+  
+  // Método auxiliar para encontrar o nome exato do time
+  private findTeamByName(teamName: string): string | undefined {
+    if (!teamName || teamName.trim().length < 2) return undefined;
+    
+    const normalizedTeamName = this.removeAccents(teamName.toLowerCase());
+    
+    return this.teamNames.find(team => {
+      const normalizedTeam = this.removeAccents(team.toLowerCase());
+      return normalizedTeam.includes(normalizedTeamName) || 
+             normalizedTeamName.includes(normalizedTeam);
+    });
   }
   
   private extractCompetitionName(message: string): string | undefined {
