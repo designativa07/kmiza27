@@ -422,26 +422,52 @@ export class OpenAIService implements OnModuleInit {
     // Ordenar por comprimento (maiores primeiro) para evitar conflitos
     const sortedTeamNames = this.teamNames.sort((a, b) => b.length - a.length);
     
+    // Primeiro, tentar encontrar matches exatos ou muito específicos
     for (const teamName of sortedTeamNames) {
-      let matched = false;
-      
-      // Para nomes curtos (<=3 chars), ser mais restritivo com word boundaries
-      if (teamName.length <= 3) {
-        const regex = new RegExp(`\\b${teamName}\\b`, 'i');
-        if (regex.test(message)) {
-          matched = true;
-        }
-      } else {
+      if (teamName.length > 3) { // Ignorar aliases muito curtos inicialmente
+        let matched = false;
+        
         // Para nomes longos, usar busca normal
         if (lowerMessage.includes(teamName.toLowerCase())) {
           matched = true;
         }
+        
+        if (matched) {
+          return teamName;
+        }
       }
-      
-      if (matched) {
-        // Retornar o nome/alias encontrado para manter compatibilidade
-        // O findTeam no ChatbotService vai resolver para o time real
-        return teamName;
+    }
+    
+    // Se não encontrou matches específicos, tentar com aliases curtos
+    // mas sendo mais restritivo para evitar conflitos
+    for (const teamName of sortedTeamNames) {
+      if (teamName.length <= 3) {
+        // Para aliases curtos, usar word boundaries e verificar se não há conflitos
+        const regex = new RegExp(`\\b${teamName}\\b`, 'i');
+        if (regex.test(message)) {
+          // Verificar se este alias curto não causa conflitos
+          const conflictingTeams = this.teamNames.filter(otherTeam => 
+            otherTeam !== teamName && 
+            (otherTeam.toLowerCase().includes(teamName.toLowerCase()) || 
+             teamName.toLowerCase().includes(otherTeam.toLowerCase()))
+          );
+          
+          // Se não há conflitos ou se este é o único match, usar
+          if (conflictingTeams.length === 0) {
+            return teamName;
+          }
+          
+          // Se há conflitos, verificar se a mensagem contém mais contexto
+          // para resolver o conflito
+          const hasMoreContext = conflictingTeams.some(conflict => 
+            lowerMessage.includes(conflict.toLowerCase())
+          );
+          
+          if (hasMoreContext) {
+            // Se há mais contexto, continuar procurando por matches mais específicos
+            continue;
+          }
+        }
       }
     }
     
