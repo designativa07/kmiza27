@@ -669,4 +669,153 @@ export class OpenAIService implements OnModuleInit {
              (lowerMessage.length <= 15 && lowerMessage.includes(greeting));
     });
   }
+
+  /**
+   * Gera uma resposta inteligente para perguntas não reconhecidas
+   * Usa análise de contexto e conhecimento de futebol para fornecer respostas úteis
+   */
+  async generateResponse(
+    question: string,
+    context?: {
+      competitionId?: number;
+      userId?: string;
+      conversationHistory?: string[];
+    }
+  ): Promise<{
+    success: boolean;
+    answer?: string;
+    confidence: number;
+    source: string;
+    reasoning?: string;
+  }> {
+    try {
+      console.log(`🤖 OpenAI generateResponse chamado para: "${question}"`);
+      
+      // Análise básica da pergunta
+      const lowerQuestion = this.removeAccents(question.toLowerCase());
+      
+      // Verificar se é uma pergunta sobre futebol
+      const footballKeywords = [
+        'futebol', 'futebol', 'bola', 'gol', 'time', 'jogador', 'treinador',
+        'campeonato', 'liga', 'copa', 'estadio', 'arbitro', 'cartao',
+        'escanteio', 'falta', 'penalti', 'penalty', 'corner', 'escanteio',
+        'libertadores', 'brasileirao', 'champions', 'mundial', 'copa america'
+      ];
+      
+      const isFootballQuestion = footballKeywords.some(keyword => 
+        lowerQuestion.includes(keyword)
+      );
+      
+      if (!isFootballQuestion) {
+        console.log(`❌ Pergunta não relacionada ao futebol: ${question}`);
+        return {
+          success: false,
+          confidence: 0.1,
+          source: 'análise_local',
+          reasoning: 'Pergunta não relacionada ao futebol'
+        };
+      }
+      
+      // Tentar responder com base no conhecimento local
+      const localAnswer = this.generateLocalAnswer(lowerQuestion, context);
+      if (localAnswer.success) {
+        console.log(`✅ Resposta local encontrada: ${localAnswer.answer}`);
+        return localAnswer;
+      }
+      
+      // Se não conseguir responder localmente, retornar que precisa de pesquisa externa
+      console.log(`🔍 Pergunta precisa de pesquisa externa: ${question}`);
+      return {
+        success: false,
+        confidence: 0.3,
+        source: 'análise_local',
+        reasoning: 'Pergunta complexa que requer pesquisa externa'
+      };
+      
+    } catch (error) {
+      console.error(`❌ Erro no generateResponse: ${error.message}`, error.stack);
+      return {
+        success: false,
+        confidence: 0.0,
+        source: 'erro',
+        reasoning: `Erro interno: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Gera resposta baseada no conhecimento local do sistema
+   */
+  private generateLocalAnswer(
+    question: string,
+    context?: any
+  ): {
+    success: boolean;
+    answer?: string;
+    confidence: number;
+    source: string;
+    reasoning?: string;
+  } {
+    // Respostas para perguntas comuns sobre futebol
+    const commonAnswers = {
+      'regras do futebol': {
+        answer: 'O futebol é jogado com 11 jogadores por time, o objetivo é marcar gols. Jogos têm 90 minutos divididos em dois tempos de 45 minutos. Faltas podem resultar em cartões amarelos ou vermelhos.',
+        confidence: 0.9
+      },
+      'como funciona o campeonato brasileiro': {
+        answer: 'O Campeonato Brasileiro é disputado por 20 times em formato de pontos corridos. Cada time joga contra todos os outros em jogos de ida e volta. Os 4 primeiros se classificam para a Libertadores, os 4 últimos são rebaixados.',
+        confidence: 0.85
+      },
+      'o que é a libertadores': {
+        answer: 'A Copa Libertadores da América é o principal torneio de clubes da América do Sul. É equivalente à Champions League europeia. Times brasileiros, argentinos, uruguaios e de outros países sul-americanos participam.',
+        confidence: 0.9
+      },
+      'como funciona o sistema de rebaixamento': {
+        answer: 'No sistema brasileiro, os 4 últimos colocados do campeonato são rebaixados para a série B. Isso garante que apenas os melhores times permaneçam na elite do futebol nacional.',
+        confidence: 0.8
+      }
+    };
+    
+    // Procurar por respostas que correspondam à pergunta
+    for (const [key, response] of Object.entries(commonAnswers)) {
+      if (question.includes(key) || this.calculateSimilarity(question, key) > 0.6) {
+        return {
+          success: true,
+          answer: response.answer,
+          confidence: response.confidence,
+          source: 'conhecimento_local',
+          reasoning: `Resposta encontrada para: ${key}`
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      confidence: 0.2,
+      source: 'conhecimento_local',
+      reasoning: 'Nenhuma resposta local encontrada'
+    };
+  }
+
+  /**
+   * Calcula similaridade entre duas strings usando algoritmo simples
+   */
+  private calculateSimilarity(str1: string, str2: string): number {
+    const words1 = str1.split(' ').filter(word => word.length > 2);
+    const words2 = str2.split(' ').filter(word => word.length > 2);
+    
+    if (words1.length === 0 || words2.length === 0) return 0;
+    
+    let matches = 0;
+    for (const word1 of words1) {
+      for (const word2 of words2) {
+        if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
+          matches++;
+          break;
+        }
+      }
+    }
+    
+    return matches / Math.max(words1.length, words2.length);
+  }
 } 

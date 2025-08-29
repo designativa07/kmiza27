@@ -53,6 +53,7 @@ import ProfilePage from '../app/profile/page'
 import PoolsManager from './PoolsManager'
 import HomepagePage from '../app/homepage/page'
 import SimulationsPage from '../app/simulations/page'
+import AIAnalyticsPage from '../app/ai-research/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -583,6 +584,8 @@ export default function Dashboard() {
         return <AdminsManager />
       case 'Configurações do Bot':
         return <AutomationPanel />
+      case 'IA Research':
+        return <AIAnalyticsPage />
       case 'Notificações':
         return <NotificationsManager />
       case 'Status do Sistema':
@@ -639,6 +642,7 @@ export default function Dashboard() {
     },
     { name: 'Chatwoot', icon: ChatBubbleLeftRightIcon, page: 'Chatwoot', isExternalLink: true },
     { name: 'Configurações do Bot', icon: CpuChipIcon, page: 'Configurações do Bot' },
+            { name: 'IA Research', icon: CpuChipIcon, page: 'IA Research' },
     { name: 'Notificações', icon: BellIcon, page: 'Notificações' },
     { name: 'Status do Sistema', icon: ComputerDesktopIcon, page: 'Status do Sistema' },
     { name: 'Perfil', icon: UserIcon, page: 'Perfil' },

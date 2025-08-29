@@ -23,6 +23,7 @@ import { BotConfigModule } from '../modules/bot-config/bot-config.module';
 import { TeamsModule } from '../modules/teams/teams.module';
 import { WhatsAppMenuModule } from '../modules/whatsapp-menu/whatsapp-menu.module';
 import { UrlShortenerModule } from '../modules/url-shortener/url-shortener.module';
+import { AIResearchModule } from '../modules/ai-research/ai-research.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { UrlShortenerModule } from '../modules/url-shortener/url-shortener.modul
     WhatsAppMenuModule,
     TeamsModule,
     UrlShortenerModule,
+    AIResearchModule,
   ],
   controllers: [ChatbotController],
   providers: [
