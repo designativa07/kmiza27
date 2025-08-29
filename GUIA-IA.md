@@ -110,6 +110,84 @@ const payload = {
 - **Preview:** Mostra como aparece no WhatsApp real
 - **Validação:** Apenas campos funcionais são expostos
 
+### 2.2. Sistema de IA Research e Query Adapter - NOVA IMPLEMENTAÇÃO
+- **Localização Backend:** `src/modules/ai-research/`
+- **Componentes Principais:**
+  - `AIResearchService`: Serviço principal para pesquisa inteligente
+  - `QueryAdapterService`: Serviço para adaptar perguntas naturais para intents específicos
+  - `AIResearchModule`: Módulo NestJS que organiza os serviços
+
+#### Query Adapter Service - Funcionalidade Principal
+- **Objetivo:** Mapear perguntas em linguagem natural para intents específicos do chatbot
+- **Localização:** `src/modules/ai-research/query-adapter.service.ts`
+- **Interface:** `QueryAdaptationResult` com campos `adapted`, `intent`, `confidence`, `reasoning`
+
+#### Mapeamentos de Padrões Implementados:
+```typescript
+// Transmissões e Canais
+'onde vai passar': 'broadcast_info',
+'que canal vai passar': 'broadcast_info',
+'em que canal': 'broadcast_info',
+
+// Horários e Próximos Jogos  
+'que horas é o jogo': 'next_match',
+'quando é o jogo': 'next_match',
+'próximo jogo': 'next_match',
+
+// Tabela e Classificação
+'tabela de classificação': 'table',
+'classificação do brasileirão': 'table',
+'posição na tabela': 'table',
+
+// Artilheiros
+'artilheiros': 'top_scorers',
+'gols marcados': 'top_scorers',
+'quem marcou mais gols': 'top_scorers',
+
+// Jogos de Hoje/Semana
+'jogos de hoje': 'matches_today',
+'partidas da semana': 'matches_week'
+```
+
+#### Análise Semântica Inteligente:
+- **Palavras-chave:** Sistema detecta palavras relacionadas a cada categoria
+- **Stop Words:** Remove palavras comuns para focar no significado
+- **Confiança:** Calcula nível de confiança baseado na especificidade do padrão
+- **Fallback:** Se análise semântica falhar, mantém intent original do OpenAI
+
+#### Fluxo de Processamento no Chatbot:
+1. **Análise OpenAI:** `OpenAIService.analyzeMessage()` classifica intenção inicial
+2. **Query Adapter:** `QueryAdapterService.adaptQueryToIntent()` tenta adaptar pergunta
+3. **Sobrescrita:** Se adaptação bem-sucedida (confiança > 0.6), sobrescreve intent
+4. **Processamento:** Chatbot usa intent adaptado para rotear corretamente
+5. **Fallback IA:** Se intent for 'unknown' ou cair no default, chama `AIResearchService`
+
+#### Integração com AI Research Service:
+- **Dupla Proteção:** IA Research é chamada tanto no case 'unknown' quanto no default
+- **Base de Conhecimento:** Pesquisa em dados locais antes de buscar na internet
+- **Cache Inteligente:** Evita repetir pesquisas para as mesmas perguntas
+- **Fallback Graceful:** Sempre tenta IA antes de mostrar menu padrão
+
+#### Configuração e Controle:
+- **Admin Panel:** Interface para configurar parâmetros de IA Research
+- **Thresholds:** Configurável confiança mínima para adaptação (padrão: 0.6)
+- **Logs Detalhados:** Sistema de debug para monitorar adaptações
+- **Estatísticas:** Métricas de uso e eficácia do sistema
+
+#### Vantagens da Implementação:
+- **Melhor Aproveitamento:** Usa funcionalidades já implementadas no chatbot
+- **Respostas Mais Precisas:** Aproveita lógica específica de cada intent
+- **Experiência do Usuário:** Maior chance de receber resposta útil
+- **Manutenibilidade:** Fácil adicionar novos padrões e mapeamentos
+- **Performance:** Evita chamadas desnecessárias para IA Research
+
+#### Exemplos de Funcionamento:
+- **"onde vai passar botafogo e bragantino?"** → `broadcast_info` ✅
+- **"quando é o jogo do flamengo?"** → `next_match` ✅  
+- **"tabela de classificação"** → `table` ✅
+- **"artilheiros do campeonato"** → `top_scorers` ✅
+- **"xyz123 teste aleatorio"** → Não adaptado → IA Research ✅
+
 - **Sistema de Comandos do Chatbot:**
   - **Arquitetura de Comandos:** Sistema baseado em identificadores únicos (`CMD_`, `MENU_`, `COMP_`) que conectam interface visual com funcionalidades do backend.
   - **Fluxo de Processamento:**
@@ -131,7 +209,7 @@ const payload = {
   - **Conversão Automática:** Interceptador global converte URLs antigas (`/uploads/escudos/`) para CDN (`https://cdn.kmiza27.com/img/escudos/`).
 - **Testes:** Utiliza-se Jest para testes unitários e de integração. Os scripts de teste estão definidos no `package.json` do backend.
 
-### 2.2. Encurtamento de URLs com Shlink
+### 2.3. Encurtamento de URLs com Shlink
 - **Integração:** O sistema é integrado com uma instância auto-hospedada do Shlink para criar URLs curtas e amigáveis.
 - **Localização da Lógica:** `backend/src/modules/url-shortener/url-shortener.service.ts`
 - **Geração de Links para Partidas:**
@@ -422,3 +500,205 @@ Sistema implementado com **migração gradual sem breaking changes**:
 - **Cache Automático:** Reutilização de resultados via flag `is_latest`
 - **Endpoint Unificado:** `/advanced-stats` retorna todos os dados em uma chamada
 - **Cálculo Sob Demanda:** Simulações executadas apenas quando solicitado pelo admin
+
+## 11. Sistema de Respostas Inteligentes de Competições - NOVA IMPLEMENTAÇÃO
+
+### 11.1. Visão Geral
+Sistema avançado de respostas para perguntas sobre competições, implementando:
+- **Respostas completas** com informações essenciais
+- **Próximos jogos** com canais de transmissão
+- **Tabela de classificação** (top 5 + times em risco)
+- **Sistema de confirmações** para mostrar mais detalhes
+- **Links diretos** para páginas das competições
+
+### 11.2. Componentes Principais
+
+#### ChatbotService - Métodos de Competição
+- **Localização:** `backend/src/chatbot/chatbot.service.ts`
+- **Métodos Implementados:**
+  - `getCompetitionInfo()`: Resposta completa da competição
+  - `getCompetitionGames()`: Lista detalhada de jogos
+  - `isConfirmationForCompetitionGames()`: Detecta confirmações
+  - `getLastCompetitionMentioned()`: Contexto da conversa
+
+#### Estrutura de Resposta de Competição
+```typescript
+// Resposta completa inclui:
+🏆 NOME DA COMPETIÇÃO
+📅 Temporada: 2025
+📅 PRÓXIMOS JOGOS:
+  📆 Data - Horário
+  🆚 Time A vs Time B
+  🏆 Fase/Rodada
+  📺 Canais de transmissão
+
+📊 TOP 5 DA TABELA:
+  🥇 Time (pontos, gols pró/contra)
+
+⚠️ TIMES EM RISCO:
+  🔴 Time (pontos, gols pró/contra)
+
+📅 PRÓXIMA RODADA: Nome da rodada
+
+🔍 Quer saber mais sobre jogos específicos?
+📱 Info completa: http://localhost:3001/[slug]/jogos
+```
+
+### 11.3. Sistema de Confirmações
+
+#### Detecção de Confirmações
+- **Padrões reconhecidos:** "sim", "yes", "claro", "quero", "queria", "gostaria"
+- **Fluxo:** Usuário pergunta → Chatbot responde → Usuário confirma → Chatbot mostra mais detalhes
+
+#### Implementação
+```typescript
+// Verificação de confirmação
+if (this.isConfirmationForCompetitionGames(message)) {
+  const competitionName = await this.getLastCompetitionMentioned(phoneNumber);
+  if (competitionName) {
+    const response = await this.getCompetitionGames(competitionName);
+    return response;
+  }
+}
+```
+
+### 11.4. Otimização de Slugs
+
+#### Uso de Slugs da Base de Dados
+- **Campo:** `competition.slug` na tabela `competitions`
+- **Características:** `VARCHAR(255) UNIQUE`
+- **Interface Admin:** Campo editável no painel administrativo
+- **Vantagens:** 
+  - ✅ Sem geração desnecessária
+  - ✅ URLs consistentes e configuráveis
+  - ✅ Performance otimizada
+
+#### Estrutura da Entidade
+```typescript
+@Entity('competitions')
+export class Competition {
+  @Column({ type: 'varchar', length: 255, unique: true })
+  slug: string;
+  // ... outros campos
+}
+```
+
+### 11.5. Sistema de Transmissões Integrado
+
+#### Busca de Jogos com Transmissões
+- **Query otimizada:** JOIN com `broadcasts` e `channels`
+- **Informações retornadas:** Data, horário, times, fase, canais
+- **Fallback:** Sistema funciona mesmo sem transmissões cadastradas
+
+#### Exemplo de Query
+```typescript
+const upcomingMatches = await this.matchesRepository
+  .createQueryBuilder('match')
+  .leftJoinAndSelect('match.broadcasts', 'broadcasts')
+  .leftJoinAndSelect('broadcasts.channel', 'channel')
+  .where('comp.id = :competitionId', { competitionId: competition.id })
+  .andWhere('match.match_date >= :today', { today: new Date() })
+  .orderBy('match.match_date', 'ASC')
+  .limit(5)
+  .getMany();
+```
+
+### 11.6. Tabela de Classificação Inteligente
+
+#### Top 5 + Times em Risco
+- **Top 5:** Ordenados por pontos, gols pró, gols contra
+- **Times em Risco:** Últimos 3 com indicadores visuais (🔴🟠🟡)
+- **Dados:** Pontos, gols marcados, gols sofridos
+
+#### Implementação
+```typescript
+// Top 5 da tabela
+const topTeams = await this.competitionTeamsRepository
+  .createQueryBuilder('ct')
+  .orderBy('ct.points', 'DESC')
+  .limit(5)
+  .getMany();
+
+// Times em risco (últimos 3)
+const bottomTeams = await this.competitionTeamsRepository
+  .createQueryBuilder('ct')
+  .orderBy('ct.points', 'ASC')
+  .limit(3)
+  .getMany();
+```
+
+### 11.7. Integração com Query Adapter
+
+#### Padrões de Detecção para Competições
+- **Mapeamentos adicionados:**
+```typescript
+'brasileirao': 'competition_info',
+'brasileiro': 'competition_info',
+'copa do brasil': 'competition_info',
+'libertadores': 'competition_info',
+'sul-americana': 'competition_info',
+'serie a': 'competition_info',
+'serie b': 'competition_info'
+```
+
+#### Fluxo de Processamento
+1. **Query Adapter** detecta padrão de competição
+2. **ChatbotService** chama `getCompetitionInfo()`
+3. **Resposta completa** é gerada com todas as informações
+4. **Usuário confirma** para ver mais detalhes
+5. **Sistema mostra** lista completa de jogos
+
+### 11.8. Benefícios da Implementação
+
+#### Para Usuários
+- **✅ Respostas completas** em uma única pergunta
+- **✅ Informações organizadas** e fáceis de entender
+- **✅ Links diretos** para páginas das competições
+- **✅ Fluxo natural** de confirmação para mais detalhes
+
+#### Para Desenvolvedores
+- **✅ Código limpo** e bem estruturado
+- **✅ Reutilização** de métodos existentes
+- **✅ Performance otimizada** com slugs da base
+- **✅ Fácil manutenção** e extensão
+
+#### Para Administradores
+- **✅ Controle total** sobre slugs das competições
+- **✅ URLs personalizáveis** via painel admin
+- **✅ Consistência** em todo o sistema
+
+### 11.9. Exemplos de Uso
+
+#### Cenário 1: Pergunta sobre Competição
+```
+Usuário: "copa do brasil"
+Chatbot: [Resposta completa com próximos jogos, tabela, etc.]
+Usuário: "sim"
+Chatbot: [Lista detalhada de todos os jogos]
+```
+
+#### Cenário 2: Diferentes Competições
+```
+Usuário: "brasileirao"
+Chatbot: [Resposta completa do Brasileirão]
+
+Usuário: "libertadores"
+Chatbot: [Resposta completa da Libertadores]
+```
+
+### 11.10. Configuração e Manutenção
+
+#### Painel Administrativo
+- **Edição de Competições:** Campo "Slug" editável
+- **Validação:** Slugs únicos automaticamente
+- **Preview:** Visualização de URLs geradas
+
+#### Banco de Dados
+- **Tabela:** `competitions`
+- **Campo crítico:** `slug` (UNIQUE)
+- **Migrações:** Automáticas via TypeORM
+
+#### Monitoramento
+- **Logs:** Sistema de debug para respostas de competições
+- **Métricas:** Contagem de perguntas por competição
+- **Performance:** Tempo de resposta das queries

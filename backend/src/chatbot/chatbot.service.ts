@@ -20,6 +20,8 @@ import { StandingsService, StandingEntry } from '../modules/standings/standings.
 import { BotConfigService } from '../modules/bot-config/bot-config.service';
 import { WhatsAppMenuService } from '../modules/whatsapp-menu/whatsapp-menu.service';
 import { UrlShortenerService } from '../modules/url-shortener/url-shortener.service';
+import { AIResearchService } from '../modules/ai-research/ai-research.service';
+import { QueryAdapterService } from '../modules/ai-research/query-adapter.service';
 
 @Injectable()
 export class ChatbotService {
@@ -51,7 +53,9 @@ export class ChatbotService {
     private whatsAppMenuService: WhatsAppMenuService,
     private urlShortenerService: UrlShortenerService,
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
+    private aiResearchService: AIResearchService,
+    private queryAdapterService: QueryAdapterService
   ) {}
 
   /**
@@ -77,6 +81,20 @@ export class ChatbotService {
       message: 'Nomes de times recarregados com sucesso',
       totalNames
     };
+  }
+
+  /**
+   * Gera URL para página de competição baseada no ambiente
+   */
+  private generateCompetitionUrl(slug: string): string {
+    // Em desenvolvimento, usar localhost
+    if (process.env.NODE_ENV === 'development') {
+      return `http://localhost:3001/${slug}/jogos`;
+    }
+    
+    // Em produção, usar a variável de ambiente ou fallback para futepedia.kmiza27.com
+    const baseUrl = process.env.FUTEPEDIA_URL || 'https://futepedia.kmiza27.com';
+    return `${baseUrl}/${slug}/jogos`;
   }
 
   /**
@@ -179,12 +197,75 @@ export class ChatbotService {
       const analysis = await this.openAIService.analyzeMessage(message);
       console.log(`🧠 Intenção detectada: ${analysis.intent} (${(analysis.confidence * 100).toFixed(0)}%)`);
 
+      // 🔄 QUERY ADAPTER: Tentar adaptar a pergunta para um intent específico
+      console.log(`🔄 DEBUG: Tentando adaptar query usando QueryAdapterService`);
+      try {
+        const queryAdaptation = await this.queryAdapterService.adaptQueryToIntent(message);
+        
+        if (queryAdaptation.adapted && queryAdaptation.confidence > 0.6) {
+          console.log(`✅ Query adaptada: "${message}" → intent: ${queryAdaptation.intent} (confiança: ${queryAdaptation.confidence})`);
+          console.log(`🔍 Motivo: ${queryAdaptation.reasoning}`);
+          
+          // Sobrescrever a análise do OpenAI com a adaptação
+          if (queryAdaptation.intent) {
+            analysis.intent = queryAdaptation.intent;
+          }
+          analysis.confidence = queryAdaptation.confidence;
+          
+          // Para transmissões, extrair times usando o QueryAdapterService
+          if (queryAdaptation.intent === 'broadcast_info') {
+            const extractedTeams = await this.queryAdapterService.extractTeamsWithAI(message);
+            if (extractedTeams && extractedTeams.length > 0) {
+              // Para broadcast_info, usar o primeiro time encontrado
+              analysis.team = extractedTeams[0];
+              console.log(`🏈 Times extraídos pela IA: ${extractedTeams.join(', ')}`);
+              console.log(`🏈 Time selecionado para broadcast: "${analysis.team}"`);
+              
+              // Se houver múltiplos times, configurar para specific_match_broadcast
+              if (extractedTeams.length >= 2) {
+                analysis.homeTeam = extractedTeams[0];
+                analysis.awayTeam = extractedTeams[1];
+                console.log(`🏈 Jogo específico detectado: ${analysis.homeTeam} vs ${analysis.awayTeam}`);
+              }
+            }
+          }
+          
+          // Para competições, usar o nome extraído pelo QueryAdapter
+          if (queryAdaptation.intent === 'competition_info' && queryAdaptation.extractedCompetition) {
+            analysis.competition = queryAdaptation.extractedCompetition;
+            console.log(`🏆 Competição extraída pelo QueryAdapter: "${analysis.competition}"`);
+          }
+          
+          // Adicionar mensagem de adaptação
+          if (queryAdaptation.adaptedMessage) {
+            console.log(`📝 Mensagem de adaptação: ${queryAdaptation.adaptedMessage}`);
+          }
+        } else {
+          console.log(`❌ Query não pôde ser adaptada: ${queryAdaptation.reasoning}`);
+        }
+      } catch (adapterError) {
+        console.log(`⚠️ Erro no QueryAdapterService: ${adapterError.message}`);
+        // Continuar com a análise original do OpenAI
+      }
+
       let response: string;
       let shouldSendMenu = false;
 
       // Verificar se é saudação ou primeira interação
       const isGreeting = analysis.intent === 'greeting' || this.isExplicitGreeting(message);
       const shouldSendWelcome = isFirstInteraction || isGreeting;
+
+      // Verificar se é uma confirmação para ver jogos de competição
+      if (this.isConfirmationForCompetitionGames(message)) {
+        console.log(`✅ Confirmação detectada para ver jogos de competição`);
+        const competitionName = await this.getLastCompetitionMentioned(phoneNumber);
+        if (competitionName) {
+          console.log(`🏆 Buscando jogos da competição: ${competitionName}`);
+          const response = await this.getCompetitionGames(competitionName);
+          await this.clearUserConversationState(phoneNumber);
+          return response;
+        }
+      }
 
       if (shouldSendWelcome) {
         console.log(`👋 ${isFirstInteraction ? 'Primeira interação' : 'Saudação'} detectada para ${phoneNumber}`);
@@ -295,6 +376,31 @@ export class ChatbotService {
           shouldSendMenu = true;
           break;
 
+        case 'unknown':
+          // Mensagem não reconhecida - tentar IA primeiro
+          console.log(`🔍 DEBUG: Tentando pesquisa com IA para mensagem não reconhecida (intent: unknown)`);
+          try {
+            const aiResult = await this.aiResearchService.researchQuestion(message, {
+              userId: phoneNumber
+            });
+
+            if (aiResult.success && aiResult.answer) {
+              console.log(`🤖 IA encontrou resposta: ${aiResult.source}`);
+              response = `🔍 Não tenho essa informação na minha base, mas pesquisei e a resposta é:\n\n${aiResult.answer}`;
+              shouldSendMenu = true;
+            } else {
+              // IA não conseguiu ajudar, usar fallback padrão
+              console.log(`❌ IA não conseguiu ajudar, usando fallback padrão`);
+              response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+              shouldSendMenu = true;
+            }
+          } catch (aiError) {
+            console.log(`❌ Erro na pesquisa com IA: ${aiError.message}, usando fallback padrão`);
+            response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+            shouldSendMenu = true;
+          }
+          break;
+
         default:
           // Verificar se é uma solicitação de "meu time" ou similar
           const lowerMessage = message.toLowerCase().trim();
@@ -332,9 +438,28 @@ export class ChatbotService {
             }
           }
 
-          // Mensagem não reconhecida - enviar ajuda básica
-          response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
-          shouldSendMenu = true;
+          // Mensagem não reconhecida - tentar IA Research antes de desistir
+          console.log(`⚠️ Caso default acionado para intent não tratado: ${analysis.intent}`);
+          try {
+            const aiResult = await this.aiResearchService.researchQuestion(message, {
+              userId: phoneNumber
+            });
+
+            if (aiResult.success && aiResult.answer) {
+              console.log(`🤖 IA encontrou resposta no default: ${aiResult.source}`);
+              response = `🔍 Não tenho essa informação na minha base, mas pesquisei e a resposta é:\n\n${aiResult.answer}`;
+              shouldSendMenu = true;
+            } else {
+              // IA não conseguiu ajudar, usar fallback padrão
+              console.log(`❌ IA não conseguiu ajudar no default, usando fallback padrão`);
+              response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+              shouldSendMenu = true;
+            }
+          } catch (aiError) {
+            console.log(`❌ Erro na pesquisa com IA no default: ${aiError.message}, usando fallback padrão`);
+            response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+            shouldSendMenu = true;
+          }
       }
 
       console.log(`🤖 Resposta gerada para ${phoneNumber}`);
@@ -874,6 +999,8 @@ ${shortUrl}
 
   private async getCompetitionInfo(competitionName: string): Promise<string> {
     try {
+      console.log(`🏆 Buscando informações da competição: ${competitionName}`);
+      
       const competition = await this.competitionsRepository
         .createQueryBuilder('competition')
         .where('LOWER(competition.name) LIKE LOWER(:name)', { name: `%${competitionName}%` })
@@ -883,14 +1010,123 @@ ${shortUrl}
         return `❌ Competição "${competitionName}" não encontrada.`;
       }
 
-      return `🏆 ${competition.name.toUpperCase()} 🏆
+      // Buscar próximos jogos da competição com transmissões
+      const upcomingMatches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
+        .leftJoinAndSelect('match.round', 'round')
+        .leftJoinAndSelect('match.competition', 'comp')
+        .leftJoinAndSelect('match.broadcasts', 'broadcasts')
+        .leftJoinAndSelect('broadcasts.channel', 'channel')
+        .where('comp.id = :competitionId', { competitionId: competition.id })
+        .andWhere('match.match_date >= :today', { today: new Date() })
+        .andWhere('match.status = :status', { status: 'scheduled' })
+        .orderBy('match.match_date', 'ASC')
+        .limit(5)
+        .getMany();
 
-📅 Temporada: ${competition.season}
-🌍 País/Região: ${competition.country}
-📋 Tipo: ${competition.type}
-✅ Status: ${competition.is_active ? 'Ativa' : 'Inativa'}
+      // Buscar tabela de classificação (top 5 + times em risco)
+      const topTeams = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.team', 'team')
+        .where('ct.competition = :competitionId', { competitionId: competition.id })
+        .orderBy('ct.points', 'DESC')
+        .addOrderBy('ct.goals_for', 'DESC')
+        .addOrderBy('ct.goals_against', 'ASC')
+        .limit(5)
+        .getMany();
 
-⚽ Quer saber sobre jogos desta competição?`;
+      // Buscar times em risco de rebaixamento (últimos 3)
+      const bottomTeams = await this.competitionTeamsRepository
+        .createQueryBuilder('ct')
+        .leftJoinAndSelect('ct.team', 'team')
+        .where('ct.competition = :competitionId', { competitionId: competition.id })
+        .orderBy('ct.points', 'ASC')
+        .addOrderBy('ct.goals_for', 'ASC')
+        .addOrderBy('ct.goals_against', 'DESC')
+        .limit(3)
+        .getMany();
+
+
+
+      let response = `🏆 ${competition.name.toUpperCase()} 🏆\n\n`;
+      
+      // Informações básicas da competição
+      response += `📅 Temporada: ${competition.season}\n`;
+      if (competition.country && competition.country !== 'Brasil') {
+        response += `🌍 País/Região: ${competition.country}\n`;
+      }
+      response += '\n';
+
+      // Próximos jogos
+      if (upcomingMatches.length > 0) {
+        response += `📅 PRÓXIMOS JOGOS:\n`;
+        for (const match of upcomingMatches) {
+          const matchDate = new Date(match.match_date);
+          const formattedDate = matchDate.toLocaleDateString('pt-BR', { 
+            day: '2-digit', 
+            month: '2-digit' 
+          });
+          const formattedTime = matchDate.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+
+          response += `\n📆 ${formattedDate} - ${formattedTime}\n`;
+          response += `🆚 ${match.home_team.name} vs ${match.away_team.name}\n`;
+          
+          if (match.round) {
+            response += `🏆 ${match.round.name || match.round.phase}\n`;
+          }
+
+          // Adicionar canais de transmissão
+          if (match.broadcasts && match.broadcasts.length > 0) {
+            const channels = match.broadcasts.map(b => b.channel.name).join(', ');
+            response += `📺 ${channels}\n`;
+          }
+        }
+        response += '\n';
+      }
+
+      // Tabela de classificação (top 5 + times em risco)
+      if (topTeams.length > 0) {
+        response += `📊 TOP 5 DA TABELA:\n`;
+        topTeams.forEach((ct, index) => {
+          const emoji = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index];
+          response += `\n${emoji} ${ct.team.name}\n`;
+          response += `   📊 ${ct.points || 0} pts | ${ct.goals_for || 0}⚽ | ${ct.goals_against || 0}🥅\n`;
+        });
+        response += '\n';
+      }
+
+      // Times em risco de rebaixamento
+      if (bottomTeams.length > 0) {
+        response += `⚠️ TIMES EM RISCO:\n`;
+        bottomTeams.forEach((ct, index) => {
+          const emoji = ['🔴', '🟠', '🟡'][index];
+          response += `\n${emoji} ${ct.team.name}\n`;
+          response += `   📊 ${ct.points || 0} pts | ${ct.goals_for || 0}⚽ | ${ct.goals_against || 0}🥅\n`;
+        });
+        response += '\n';
+      }
+
+      // Próxima rodada programada
+      if (upcomingMatches.length > 0) {
+        const nextRound = upcomingMatches[0].round;
+        if (nextRound) {
+          response += `📅 PRÓXIMA RODADA: ${nextRound.name || nextRound.phase}\n\n`;
+        }
+      }
+
+      // Call to action
+      response += `🔍 Quer saber mais sobre jogos específicos desta competição?\n\n`;
+      
+      // Link para página da competição usando o slug da base
+      const competitionUrl = this.generateCompetitionUrl(competition.slug);
+      response += `📱 TABELA COMPLETA: ${competitionUrl}`;
+
+      return response;
 
     } catch (error) {
       console.error('Erro ao buscar informações da competição:', error);
@@ -1366,14 +1602,33 @@ ${shortUrl}
 
   private async getBroadcastInfo(teamName: string): Promise<string> {
     try {
-      const team = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${teamName}%` })
-        .getOne();
+      // Usar o método findTeam existente que já considera aliases e priorização
+      const result = await this.findTeam(teamName);
+      
+      if (!result.team) {
+        let response = `❌ Time "${teamName}" não encontrado.`;
+        
+        // Se há sugestões, incluí-las na resposta
+        if (result.suggestions && result.suggestions.length > 0) {
+          response += '\n\n🤔 Você quis dizer:\n';
+          result.suggestions.forEach((suggestion, index) => {
+            response += `${index + 1}. ${suggestion.name}`;
+            if (suggestion.city && suggestion.state) {
+              response += ` (${suggestion.city}-${suggestion.state})`;
+            }
+            response += '\n';
+          });
+          response += '\n💡 Tente usar o nome completo do time.';
+        }
+        
+        return response;
+      }
 
-      if (!team) {
-        return `❌ Time "${teamName}" não encontrado.`;
+      const team = result.team;
+      
+      console.log(`🏈 Time selecionado para broadcast: ${team.name} (ID: ${team.id})`);
+      if (result.suggestions && result.suggestions.length > 0) {
+        console.log(`🏈 Outros times similares: ${result.suggestions.map(t => t.name).join(', ')}`);
       }
 
       // Buscar próximos jogos com informações de transmissão
@@ -1465,6 +1720,89 @@ ${shortUrl}
       this.logger.error('Erro ao buscar nome do bot no banco de dados. Usando fallback.', error);
     }
     return 'Tudo sobre futebol';
+  }
+
+
+
+  /**
+   * Verifica se a mensagem é uma confirmação para ver jogos de competição
+   */
+  private isConfirmationForCompetitionGames(message: string): boolean {
+    const lowerMessage = message.toLowerCase().trim();
+    const confirmations = ['sim', 'yes', 'claro', 'quero', 'queria', 'gostaria', 'pode ser', 'ok', 'beleza'];
+    return confirmations.includes(lowerMessage);
+  }
+
+  /**
+   * Obtém a última competição mencionada pelo usuário
+   */
+  private async getLastCompetitionMentioned(phoneNumber: string): Promise<string | null> {
+    try {
+      // Por enquanto, vou retornar uma competição padrão
+      // Em uma implementação completa, você armazenaria o histórico de conversas
+      return 'copa do brasil';
+    } catch (error) {
+      console.log(`⚠️ Erro ao obter última competição: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Obtém jogos de uma competição específica
+   */
+
+
+  private async getCompetitionGames(competitionName: string): Promise<string> {
+    try {
+      console.log(`🏆 Buscando jogos da competição: ${competitionName}`);
+      
+      // Buscar jogos da competição
+      const matches = await this.matchesRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'home_team')
+        .leftJoinAndSelect('match.away_team', 'away_team')
+        .leftJoinAndSelect('match.round', 'round')
+        .where('competition.name ILIKE :competitionName', { competitionName: `%${competitionName}%` })
+        .andWhere('match.match_date >= :today', { today: new Date() })
+        .orderBy('match.match_date', 'ASC')
+        .limit(10)
+        .getMany();
+
+      if (matches.length === 0) {
+        return `❌ Não encontrei jogos futuros da ${competitionName}.`;
+      }
+
+      let response = `🏆 JOGOS DA ${competitionName.toUpperCase()}\n\n`;
+      
+      for (const match of matches) {
+        const matchDate = new Date(match.match_date);
+        const formattedDate = matchDate.toLocaleDateString('pt-BR', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+        const formattedTime = matchDate.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+
+        response += `📅 ${formattedDate} - ${formattedTime}\n`;
+        response += `🆚 ${match.home_team.name} vs ${match.away_team.name}\n`;
+        
+        if (match.round) {
+          response += `🏆 ${match.round.name || match.round.phase}\n`;
+        }
+        
+        response += '\n';
+      }
+
+      return response;
+
+    } catch (error) {
+      console.log(`❌ Erro ao buscar jogos da competição: ${error.message}`);
+      return `❌ Erro ao buscar jogos da ${competitionName}.`;
+    }
   }
 
   private async getWelcomeMessage(): Promise<string> {
@@ -3581,13 +3919,36 @@ ${competitionLine}ዙ Rodada: ${roundName}
 
       console.log(`✅ DEBUG setFavoriteTeam: Usuário encontrado: ${user.id}`);
 
-      const team = await this.teamsRepository.findOne({
-        where: { name: teamName }
-      });
+      // Usar o método findTeam que considera aliases e priorização
+      const result = await this.findTeam(teamName);
 
-      if (!team) {
+      if (!result.team) {
         console.log(`❌ DEBUG setFavoriteTeam: Time "${teamName}" não encontrado`);
-        return `❌ Time "${teamName}" não encontrado no banco de dados.`;
+        
+        let errorMessage = `❌ Time "${teamName}" não encontrado no banco de dados.`;
+        
+        // Se há sugestões, incluí-las na resposta
+        if (result.suggestions && result.suggestions.length > 0) {
+          errorMessage += '\n\n🤔 Você quis dizer:\n';
+          result.suggestions.forEach((suggestion, index) => {
+            errorMessage += `${index + 1}. ${suggestion.name}`;
+            if (suggestion.city && suggestion.state) {
+              errorMessage += ` (${suggestion.city}-${suggestion.state})`;
+            }
+            errorMessage += '\n';
+          });
+          errorMessage += '\n💡 Tente usar o nome completo do time.';
+        }
+        
+        return errorMessage;
+      }
+
+      const team = result.team;
+      
+      // Se há sugestões, mostrar aviso
+      if (result.suggestions && result.suggestions.length > 0) {
+        console.log(`⚠️ DEBUG setFavoriteTeam: Múltiplos times encontrados, usando: ${team.name}`);
+        console.log(`🏈 Outros times similares: ${result.suggestions.map(t => t.name).join(', ')}`);
       }
 
       console.log(`✅ DEBUG setFavoriteTeam: Time encontrado: ${team.name} (ID: ${team.id})`);
@@ -3605,22 +3966,49 @@ ${competitionLine}ዙ Rodada: ${roundName}
 
   private async getSpecificMatchBroadcast(homeTeamName: string, awayTeamName: string): Promise<string> {
     try {
-      // Primeiro, buscar os times para obter seus IDs
-      const homeTeam = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${homeTeamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${homeTeamName}%` })
-        .getOne();
+      // Usar o método findTeam existente que já considera aliases e priorização
+      const homeTeamResult = await this.findTeam(homeTeamName);
+      const awayTeamResult = await this.findTeam(awayTeamName);
 
-      const awayTeam = await this.teamsRepository
-        .createQueryBuilder('team')
-        .where('LOWER(team.name) LIKE LOWER(:name)', { name: `%${awayTeamName}%` })
-        .orWhere('LOWER(team.short_name) LIKE LOWER(:name)', { name: `%${awayTeamName}%` })
-        .getOne();
-
-      if (!homeTeam || !awayTeam) {
-        return `❌ Não foi possível encontrar um ou ambos os times: ${homeTeamName} e ${awayTeamName}.`;
+      if (!homeTeamResult.team || !awayTeamResult.team) {
+        let errorMessage = `❌ Não foi possível encontrar um ou ambos os times.`;
+        
+        if (!homeTeamResult.team) {
+          errorMessage += `\n\n🏠 Time da casa "${homeTeamName}" não encontrado.`;
+          if (homeTeamResult.suggestions && homeTeamResult.suggestions.length > 0) {
+            errorMessage += '\n🤔 Você quis dizer:\n';
+            homeTeamResult.suggestions.forEach((suggestion, index) => {
+              errorMessage += `${index + 1}. ${suggestion.name}`;
+              if (suggestion.city && suggestion.state) {
+                errorMessage += ` (${suggestion.city}-${suggestion.state})`;
+              }
+              errorMessage += '\n';
+            });
+          }
+        }
+        
+        if (!awayTeamResult.team) {
+          errorMessage += `\n\n✈️ Time visitante "${awayTeamName}" não encontrado.`;
+          if (awayTeamResult.suggestions && awayTeamResult.suggestions.length > 0) {
+            errorMessage += '\n🤔 Você quis dizer:\n';
+            awayTeamResult.suggestions.forEach((suggestion, index) => {
+              errorMessage += `${index + 1}. ${suggestion.name}`;
+              if (suggestion.city && suggestion.state) {
+                errorMessage += ` (${suggestion.city}-${suggestion.state})`;
+              }
+              errorMessage += '\n';
+            });
+          }
+        }
+        
+        errorMessage += '\n💡 Tente usar o nome completo dos times.';
+        return errorMessage;
       }
+
+      const homeTeam = homeTeamResult.team;
+      const awayTeam = awayTeamResult.team;
+      
+      console.log(`🏈 Times encontrados para broadcast específico: ${homeTeam.name} vs ${awayTeam.name}`);
 
       // Buscar a partida específica entre esses times
       const match = await this.matchesRepository

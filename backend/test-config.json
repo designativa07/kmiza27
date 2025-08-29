@@ -1,0 +1,74 @@
+{
+  "testConfig": {
+    "baseUrl": "http://localhost:3000",
+    "endpoints": {
+      "chatbot": "/chatbot/simulate-whatsapp",
+      "status": "/chatbot/status"
+    },
+    "testUsers": {
+      "site": "site-test-123",
+      "whatsapp": "whatsapp-test-456",
+      "admin": "admin-test-789"
+    },
+    "testCases": {
+      "queryAdapter": [
+        "onde vai passar botafogo?",
+        "copa do brasil",
+        "tabela de classificação",
+        "artilheiros",
+        "jogos de hoje"
+      ],
+      "teamExtraction": [
+        "onde vai passar botafogo e bragantino?",
+        "onde vai passar o criciuma?",
+        "qual canal vai passar santos x corinthians?",
+        "em que canal passa o flamengo hoje?"
+      ],
+      "competitions": [
+        "copa do brasil",
+        "brasileirao",
+        "libertadores",
+        "serie a",
+        "serie b"
+      ],
+      "confirmations": [
+        "sim",
+        "yes",
+        "claro",
+        "quero",
+        "queria"
+      ],
+      "errorCases": [
+        "competicao inexistente 12345",
+        "onde vai passar time inexistente?",
+        "tabela de competicao inexistente"
+      ]
+    },
+    "expectedPatterns": {
+      "competitionInfo": {
+        "title": "🏆",
+        "season": "📅 Temporada:",
+        "upcomingGames": "📅 PRÓXIMOS JOGOS:",
+        "topTable": "📊 TOP 5 DA TABELA:",
+        "riskTeams": "⚠️ TIMES EM RISCO:",
+        "nextRound": "📅 PRÓXIMA RODADA:",
+        "link": "📱 Info completa: http://localhost:3001/",
+        "confirmation": "🔍 Quer saber mais sobre jogos específicos desta competição?"
+      },
+      "broadcastInfo": {
+        "channels": "📺",
+        "teams": "🆚"
+      },
+      "errorMessages": {
+        "notFound": "❌",
+        "notUnderstood": "não entendi",
+        "competitionNotFound": "não encontrada"
+      }
+    },
+    "performance": {
+      "concurrentRequests": 5,
+      "maxResponseTime": 3000,
+      "teamExtractionIterations": 100
+    }
+  }
+}
