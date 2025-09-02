@@ -245,3 +245,6 @@ async function checkCorrectedResults() {
 
 // Executar a verificação
 checkCorrectedResults();
+
+
+

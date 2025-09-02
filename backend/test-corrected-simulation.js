@@ -133,3 +133,6 @@ async function testCorrectedSimulation() {
 
 // Executar o teste
 testCorrectedSimulation();
+
+
+

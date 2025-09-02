@@ -162,3 +162,6 @@ async function debugSimulationDeletion() {
 
 // Executar o debug
 debugSimulationDeletion();
+
+
+

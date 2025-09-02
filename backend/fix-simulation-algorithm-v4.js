@@ -173,3 +173,6 @@ async function fixSimulationAlgorithmV4() {
 
 // Executar a análise
 fixSimulationAlgorithmV4();
+
+
+

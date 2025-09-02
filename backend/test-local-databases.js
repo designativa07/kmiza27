@@ -86,3 +86,6 @@ async function testLocalDatabases() {
 
 // Executar o teste
 testLocalDatabases();
+
+
+

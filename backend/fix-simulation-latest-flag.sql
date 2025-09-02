@@ -82,3 +82,6 @@ WHERE event_object_table = 'simulation_results';
 -- 6. Testar o trigger com uma atualização
 -- (opcional - apenas para verificar se está funcionando)
 -- UPDATE simulation_results SET execution_date = execution_date WHERE id = 1;
+
+
+

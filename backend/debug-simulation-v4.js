@@ -207,3 +207,6 @@ async function debugSimulationV4() {
 
 // Executar o debug
 debugSimulationV4();
+
+
+

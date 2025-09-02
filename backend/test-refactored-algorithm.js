@@ -173,3 +173,6 @@ async function testRefactoredAlgorithm() {
 
 // Executar o teste
 testRefactoredAlgorithm();
+
+
+
