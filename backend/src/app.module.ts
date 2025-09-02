@@ -64,6 +64,7 @@ import { AmateurModule } from './modules/amateur/amateur.module';
 import { PoolsModule } from './modules/pools/pools.module';
 import { SimulationsModule } from './modules/simulations/simulations.module';
 import { AIResearchModule } from './modules/ai-research/ai-research.module';
+import { SyncModule } from './modules/sync/sync.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { AIResearchModule } from './modules/ai-research/ai-research.module';
     PoolsModule,
     SimulationsModule,
     AIResearchModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [

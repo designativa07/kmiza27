@@ -27,7 +27,8 @@ import {
   CpuChipIcon,
   ComputerDesktopIcon,
   HomeIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 import StatsCards from './StatsCards'
 
@@ -54,6 +55,7 @@ import PoolsManager from './PoolsManager'
 import HomepagePage from '../app/homepage/page'
 import SimulationsPage from '../app/simulations/page'
 import AIAnalyticsPage from '../app/ai-research/page'
+import SyncPage from '../app/sync/page'
 
 import { API_ENDPOINTS } from '../config/api'
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -117,6 +119,7 @@ export default function Dashboard() {
         'simulacoes': 'Simulações',
         'artilharia': 'Artilharia',
         'boloes': 'Bolões',
+        'sincronizacao': 'Sincronização',
         'canais': 'Canais',
         'usuarios': 'Usuários',
         'administradores': 'Administradores',
@@ -597,6 +600,8 @@ export default function Dashboard() {
         return <TitlesPage />
       case 'Simulações':
         return <SimulationsPage />
+      case 'Sincronização':
+        return <SyncPage />
       case 'Perfil':
         return <ProfilePage />
       case 'Configurações':
@@ -630,6 +635,7 @@ export default function Dashboard() {
     { name: 'Classificações', icon: ChartPieIcon, page: 'Classificações' },
     { name: 'Simulações', icon: CalculatorIcon, page: 'Simulações' },
     { name: 'Bolões', icon: TrophyIcon, page: 'Bolões' },
+    { name: 'Sincronização', icon: ArrowDownTrayIcon, page: 'Sincronização' },
     { name: 'Canais', icon: TvIcon, page: 'Canais' },
     { 
       name: 'Usuários', 
