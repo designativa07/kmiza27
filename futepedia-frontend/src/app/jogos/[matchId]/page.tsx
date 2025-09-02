@@ -110,14 +110,23 @@ async function getMatchData(matchId: string): Promise<MatchData | null> {
 // Função para formatar data
 function formatMatchDate(dateString: string) {
   const date = new Date(dateString);
+  
+  // Dias da semana em português
+  const weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const weekday = weekdays[date.getDay()];
+  
+  // Capitalizar primeira letra do dia da semana
+  const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  
+  // Formato DD/MM/AAAA
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  
+  const formattedDate = `${capitalizedWeekday}, ${day}/${month}/${year}`;
+  
   return {
-    date: date.toLocaleDateString('pt-BR', { 
-      weekday: 'long',
-      day: '2-digit', 
-      month: 'long', 
-      year: 'numeric',
-      timeZone: 'America/Sao_Paulo' 
-    }).replace(/De/g, 'de').replace(/De/g, 'de'),
+    date: formattedDate,
     time: date.toLocaleTimeString('pt-BR', { 
       hour: '2-digit', 
       minute: '2-digit',

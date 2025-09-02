@@ -228,7 +228,29 @@ const JogosHojePage: NextPage = () => {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-4 border-b border-gray-100">
-            <h1 className="text-xl font-bold text-gray-900">Jogos de Hoje</h1>
+            <h1 className="text-xl font-bold text-gray-900 mb-4">Jogos de Hoje</h1>
+            
+            {/* Abas de Navegação */}
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+              <Link 
+                href="/jogos-hoje" 
+                className="flex-1 text-center py-2 px-3 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm"
+              >
+                Hoje
+              </Link>
+              <Link 
+                href="/jogos-semana" 
+                className="flex-1 text-center py-2 px-3 text-sm font-medium rounded-md transition-colors hover:bg-white hover:text-gray-900"
+              >
+                Semana
+              </Link>
+              <Link 
+                href="/ultimos-jogos" 
+                className="flex-1 text-center py-2 px-3 text-sm font-medium rounded-md transition-colors hover:bg-white hover:text-gray-900"
+              >
+                Últimos
+              </Link>
+            </div>
           </div>
           <div className="p-4">
             {matches.length === 0 ? (
