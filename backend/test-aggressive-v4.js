@@ -153,3 +153,6 @@ async function testAggressiveV4() {
 
 // Executar o teste
 testAggressiveV4();
+
+
+

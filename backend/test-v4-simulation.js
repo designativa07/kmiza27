@@ -212,3 +212,6 @@ async function testV4Simulation() {
 
 // Executar o teste
 testV4Simulation();
+
+
+

@@ -80,7 +80,7 @@ export default function TeamsManager() {
   const [showAliasesModal, setShowAliasesModal] = useState(false)
   const [managingTeamAliases, setManagingTeamAliases] = useState<Team | null>(null)
   
-  const [activeTab, setActiveTab] = useState('serie-a')
+  const [activeTab, setActiveTab] = useState('todos')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300)
   const [stateFilter, setStateFilter] = useState('')
@@ -214,7 +214,7 @@ export default function TeamsManager() {
     setSearchTerm('')
     setStateFilter('')
     setCountryFilter('')
-    setActiveTab('serie-a') // Resetar para primeira aba
+    setActiveTab('todos') // Resetar para aba "Todos"
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
@@ -264,33 +264,12 @@ export default function TeamsManager() {
     
     // Depois aplicar filtro da aba
     switch (activeTab) {
-      case 'serie-a':
-        // Filtrar times da Série A (Brasil)
-        filtered = filtered.filter(team => 
-          team.country === 'Brasil' && 
-          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
-        )
+      case 'todos':
+        // Mostrar todos os times sem filtro adicional
         break
-      case 'serie-b':
-        // Filtrar times da Série B (Brasil)
-        filtered = filtered.filter(team => 
-          team.country === 'Brasil' && 
-          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
-        )
-        break
-      case 'serie-c':
-        // Filtrar times da Série C (Brasil)
-        filtered = filtered.filter(team => 
-          team.country === 'Brasil' && 
-          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
-        )
-        break
-      case 'serie-d':
-        // Filtrar times da Série D (Brasil)
-        filtered = filtered.filter(team => 
-          team.country === 'Brasil' && 
-          (team.state === 'SP' || team.state === 'RJ' || team.state === 'MG' || team.state === 'RS' || team.state === 'SC' || team.state === 'PR' || team.state === 'BA' || team.state === 'CE' || team.state === 'GO' || team.state === 'MT' || team.state === 'AM')
-        )
+      case 'nacional':
+        // Filtrar times nacionais (Brasil)
+        filtered = filtered.filter(team => team.country === 'Brasil')
         break
       case 'internacional':
         // Filtrar times internacionais (não Brasil)
@@ -800,44 +779,24 @@ export default function TeamsManager() {
       <div className="mt-6 border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('serie-a')}
+            onClick={() => setActiveTab('todos')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'serie-a'
+              activeTab === 'todos'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Série A
+            Todos
           </button>
           <button
-            onClick={() => setActiveTab('serie-b')}
+            onClick={() => setActiveTab('nacional')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'serie-b'
+              activeTab === 'nacional'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Série B
-          </button>
-          <button
-            onClick={() => setActiveTab('serie-c')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'serie-c'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Série C
-          </button>
-          <button
-            onClick={() => setActiveTab('serie-d')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'serie-d'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Série D
+            Nacional
           </button>
           <button
             onClick={() => setActiveTab('internacional')}
@@ -853,21 +812,24 @@ export default function TeamsManager() {
       </div>
 
       <div className="mt-4 mb-4 grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="relative lg:col-span-2">
-          <input
-            type="text"
-            name="search"
-            id="search"
-            className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-            placeholder="Buscar times..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+        <div className="lg:col-span-2">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700">Busca</label>
+          <div className="relative mt-1">
+            <input
+              type="text"
+              name="search"
+              id="search"
+              className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              placeholder="Buscar times..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
           </div>
         </div>
         
@@ -904,7 +866,7 @@ export default function TeamsManager() {
 
       <div className="mb-4 flex justify-between items-center">
         <p className="text-sm text-gray-700">
-          Mostrando {paginatedTeams.length} de {filteredTeams.length} times na aba {activeTab === 'serie-a' ? 'Série A' : activeTab === 'serie-b' ? 'Série B' : activeTab === 'serie-c' ? 'Série C' : activeTab === 'serie-d' ? 'Série D' : 'Internacional'}
+          Mostrando {paginatedTeams.length} de {filteredTeams.length} times na aba {activeTab === 'todos' ? 'Todos' : activeTab === 'nacional' ? 'Nacional' : 'Internacional'}
         </p>
         <button
           onClick={clearFilters}

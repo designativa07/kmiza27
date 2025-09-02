@@ -181,3 +181,6 @@ async function fixTriggerLoop() {
 
 // Executar a correção
 fixTriggerLoop();
+
+
+

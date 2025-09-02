@@ -214,3 +214,6 @@ async function deepAnalysisSimulation() {
 
 // Executar a análise
 deepAnalysisSimulation();
+
+
+
