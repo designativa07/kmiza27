@@ -214,14 +214,24 @@ export default function MatchPage({ params }: Props) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <Trophy className="h-5 w-5 text-yellow-600" />
-                <span className="text-lg font-semibold text-gray-900">
-                  {match.competition.name}
-                </span>
-                {match.competition.season && (
-                  <span className="text-sm text-gray-500">
-                    {match.competition.season}
+                <button
+                  onClick={() => {
+                    if (match.competition.slug) {
+                      router.push(`/${match.competition.slug}/jogos`);
+                    }
+                  }}
+                  className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                  disabled={!match.competition.slug}
+                >
+                  <span className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                    {match.competition.name}
                   </span>
-                )}
+                  {match.competition.season && (
+                    <span className="text-sm text-gray-500">
+                      {match.competition.season}
+                    </span>
+                  )}
+                </button>
               </div>
               <MatchStatus 
                 status={match.status} 
@@ -337,13 +347,14 @@ export default function MatchPage({ params }: Props) {
                 Estádio
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Informações do Estádio */}
                 <div>
                   <h4 className="text-xl font-bold text-gray-900 mb-2">
                     {match.stadium.name}
                   </h4>
                   
-                  <div className="space-y-2 text-gray-600">
+                  <div className="space-y-2 text-gray-600 mb-4">
                     {match.stadium.city && (
                       <p className="flex items-center">
                         <MapPin className="h-4 w-4 mr-2" />
@@ -359,44 +370,44 @@ export default function MatchPage({ params }: Props) {
                       </p>
                     )}
                   </div>
+
+                  {/* Imagem do Estádio - Agora abaixo da capacidade */}
+                  {match.stadium.image_url && (
+                    <div>
+                      <img
+                        src={getStadiumImageUrl(match.stadium.image_url)}
+                        alt={`${match.stadium.name} - Estádio`}
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Imagem do Estádio */}
-                {match.stadium.image_url && (
+                {/* Mapa do Estádio - Agora à direita */}
+                {match.stadium.latitude && 
+                 match.stadium.longitude && 
+                 !isNaN(Number(match.stadium.latitude)) && 
+                 !isNaN(Number(match.stadium.longitude)) && (
                   <div>
-                    <img
-                      src={getStadiumImageUrl(match.stadium.image_url)}
-                      alt={`${match.stadium.name} - Estádio`}
-                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                      Localização
+                    </h4>
+                    <SingleStadiumMap 
+                      stadium={{
+                        id: match.stadium.id,
+                        name: match.stadium.name,
+                        city: match.stadium.city || '',
+                        state: match.stadium.state,
+                        latitude: Number(match.stadium.latitude),
+                        longitude: Number(match.stadium.longitude),
+                        capacity: match.stadium.capacity
+                      }}
+                      height="h-80"
                     />
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Mapa do Estádio */}
-            {match.stadium.latitude && 
-             match.stadium.longitude && 
-             !isNaN(Number(match.stadium.latitude)) && 
-             !isNaN(Number(match.stadium.longitude)) && (
-              <div className="border-t border-gray-200 p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                  Localização
-                </h4>
-                <SingleStadiumMap 
-                  stadium={{
-                    id: match.stadium.id,
-                    name: match.stadium.name,
-                    city: match.stadium.city || '',
-                    state: match.stadium.state,
-                    latitude: Number(match.stadium.latitude),
-                    longitude: Number(match.stadium.longitude),
-                    capacity: match.stadium.capacity
-                  }}
-                  height="h-48"
-                />
-              </div>
-            )}
           </div>
         )}
 

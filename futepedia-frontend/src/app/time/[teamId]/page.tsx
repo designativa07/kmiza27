@@ -183,9 +183,9 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
               </div>
             ) : (
               <div className="text-center py-6 md:py-8">
-                <h3 className="text-lg md:text-xl font-medium text-gray-900">Elenco Indisponível</h3>
+                <h3 className="text-lg md:text-xl font-medium text-gray-900">Elenco em Construção</h3>
                 <p className="mt-2 text-sm md:text-md text-gray-500">
-                  Não foi possível carregar o elenco deste time no momento.
+                  Estamos trabalhando, informações do elenco estarão disponíveis em breve.
                 </p>
               </div>
             )}
@@ -244,27 +244,12 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
               Estádio
             </h2>
             
-            <div className="flex flex-col md:flex-row md:space-x-6">
-              {/* Imagem do estádio */}
-              <div className="md:w-1/3 mb-4 md:mb-0">
-                {team.stadium.image_url ? (
-                  <img 
-                    src={getStadiumImageUrl(team.stadium.image_url)} 
-                    alt={`${team.stadium.name}`} 
-                    className="w-full h-36 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-36 bg-gray-200 flex items-center justify-center">
-                    <MapPin className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-              </div>
-              
-              {/* Informações do estádio */}
-              <div className="md:w-2/3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Informações do Estádio */}
+              <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{team.stadium.name}</h3>
                 
-                <div className="space-y-2 text-sm text-gray-600">
+                <div className="space-y-2 text-sm text-gray-600 mb-4">
                   {(team.stadium.city || team.stadium.state) && (
                     <p className="flex items-center">
                       <MapPin className="h-4 w-4 mr-1" />
@@ -287,6 +272,19 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
                     </p>
                   )}
                 </div>
+
+                {/* Imagem do estádio - Agora abaixo das informações */}
+                {team.stadium.image_url ? (
+                  <img 
+                    src={getStadiumImageUrl(team.stadium.image_url)} 
+                    alt={`${team.stadium.name}`} 
+                    className="w-full h-64 object-cover rounded-lg border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg border border-gray-200">
+                    <MapPin className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
                 
                 {team.stadium.history && (
                   <div className="mt-4">
@@ -295,32 +293,32 @@ const TeamTabs = ({ team, players }: { team: Team; players: PlayerHistory[] }) =
                   </div>
                 )}
               </div>
+
+              {/* Mapa do estádio - Agora à direita */}
+              {team.stadium.latitude && team.stadium.longitude &&
+                !isNaN(Number(team.stadium.latitude)) && !isNaN(Number(team.stadium.longitude)) &&
+                Number(team.stadium.latitude) >= -90 && Number(team.stadium.latitude) <= 90 &&
+                Number(team.stadium.longitude) >= -180 && Number(team.stadium.longitude) <= 180 && (
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Localização
+                  </h4>
+                  <SingleStadiumMap 
+                    stadium={{
+                      id: team.stadium.id,
+                      name: team.stadium.name,
+                      city: team.stadium.city,
+                      state: team.stadium.state,
+                      latitude: Number(team.stadium.latitude),
+                      longitude: Number(team.stadium.longitude),
+                      capacity: team.stadium.capacity
+                    }}
+                    height="h-80"
+                  />
+                </div>
+              )}
             </div>
-            
-            {/* Mapa do estádio (se tiver coordenadas) */}
-            {team.stadium.latitude && team.stadium.longitude &&
-              !isNaN(Number(team.stadium.latitude)) && !isNaN(Number(team.stadium.longitude)) &&
-              Number(team.stadium.latitude) >= -90 && Number(team.stadium.latitude) <= 90 &&
-              Number(team.stadium.longitude) >= -180 && Number(team.stadium.longitude) <= 180 && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  Localização
-                </h4>
-                <SingleStadiumMap 
-                  stadium={{
-                    id: team.stadium.id,
-                    name: team.stadium.name,
-                    city: team.stadium.city,
-                    state: team.stadium.state,
-                    latitude: Number(team.stadium.latitude),
-                    longitude: Number(team.stadium.longitude),
-                    capacity: team.stadium.capacity
-                  }}
-                  height="h-48"
-                />
-              </div>
-            )}
           </div>
         ) : (
           <div className="bg-white p-3 md:p-6 border-t border-gray-300">

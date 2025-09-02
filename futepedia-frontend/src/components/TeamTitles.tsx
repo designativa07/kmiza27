@@ -54,9 +54,9 @@ export default function TeamTitles({ teamId }: TeamTitlesProps) {
     return (
       <div className="text-center py-8">
         <TrophyIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum título registrado</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Títulos em Construção</h3>
         <p className="text-sm text-gray-500">
-          Este time ainda não possui títulos registrados no sistema.
+          Estamos trabalhando nisso, informações dos títulos estarão disponíveis em breve.
         </p>
       </div>
     );
