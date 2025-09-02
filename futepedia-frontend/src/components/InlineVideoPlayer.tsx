@@ -16,13 +16,19 @@ interface VideoEmbedInfo {
 }
 
 export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo', className = '' }: InlineVideoPlayerProps) {
-  const [isExpanded, setIsExpanded] = useState(true); // Começar expandido por padrão
+  const [isExpanded, setIsExpanded] = useState(true); // Sempre começar com vídeo visível
   const [embedInfo, setEmbedInfo] = useState<VideoEmbedInfo | null>(null);
+  const [embedError, setEmbedError] = useState(false); // Para detectar quando o embed falha
 
   useEffect(() => {
     if (url) {
       const info = parseVideoUrl(url);
       setEmbedInfo(info);
+      
+      // Para YouTube Live, assumir que pode ser bloqueado
+      if (info.type === 'youtube' && url.includes('/live/')) {
+        setEmbedError(true);
+      }
     }
   }, [url]);
 
@@ -36,6 +42,9 @@ export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo',
         
         if (urlObj.hostname.includes('youtu.be')) {
           videoId = urlObj.pathname.slice(1);
+        } else if (urlObj.pathname.includes('/live/')) {
+          // YouTube Live URLs
+          videoId = urlObj.pathname.split('/live/')[1];
         } else if (urlObj.searchParams.has('v')) {
           videoId = urlObj.searchParams.get('v') || '';
         }
@@ -114,16 +123,38 @@ export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo',
         {/* Player de vídeo inline */}
         {isExpanded && (
           <div className="bg-gray-900 rounded-lg overflow-hidden shadow-xl">
-            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-              <iframe
-                src={embedInfo.embedUrl}
-                className="absolute top-0 left-0 w-full h-full"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title={title}
-              />
-            </div>
+            {!embedError ? (
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  src={embedInfo.embedUrl}
+                  className="absolute top-0 left-0 w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={title}
+                />
+              </div>
+            ) : (
+              /* Mensagem de erro quando o embed é bloqueado */
+              <div className="relative w-full flex items-center justify-center" style={{ paddingBottom: '56.25%' }}>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-8 text-center">
+                  <div className="text-6xl mb-4">📺</div>
+                  <h3 className="text-xl font-bold mb-2">Transmissão Disponível</h3>
+                  <p className="text-gray-300 mb-6 max-w-md">
+                    Esta transmissão não pode ser exibida diretamente no site devido a restrições de direitos autorais.
+                  </p>
+                  <a
+                    href={embedInfo.originalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-flex items-center space-x-2"
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    <span>Assistir no YouTube</span>
+                  </a>
+                </div>
+              </div>
+            )}
             
             {/* Footer com controles e link original */}
             <div className="p-3 bg-gray-800 border-t border-gray-700">
@@ -192,18 +223,55 @@ export default function InlineVideoPlayer({ url, title = 'Transmissão ao Vivo',
     );
   }
 
-  // Para outros tipos, mostrar apenas link direto
+  // Para outros tipos, tentar mostrar embed primeiro
   return (
     <div className={`${className}`}>
-      <a
-        href={embedInfo.originalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 group"
-      >
-        <ExternalLink className="h-5 w-5 group-hover:scale-110 transition-transform" />
-        <span>ASSISTIR</span>
-      </a>
+      {/* Tentar mostrar embed para outros tipos de URL */}
+      {isExpanded ? (
+        <div className="bg-gray-900 rounded-lg overflow-hidden shadow-xl">
+          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+            <iframe
+              src={embedInfo.embedUrl}
+              className="absolute top-0 left-0 w-full h-full"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={title}
+            />
+          </div>
+          
+          {/* Footer com controles */}
+          <div className="p-3 bg-gray-800 border-t border-gray-700">
+            <div className="flex items-center justify-between">
+              <a
+                href={embedInfo.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-sm text-gray-300 hover:text-white transition-colors"
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Abrir em nova aba
+              </a>
+              
+              <button
+                onClick={handleToggle}
+                className="inline-flex items-center px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs font-medium rounded transition-colors"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Ocultar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={handleToggle}
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 group"
+        >
+          <Play className="h-5 w-5 group-hover:scale-110 transition-transform" />
+          <span>MOSTRAR TRANSMISSÃO</span>
+        </button>
+      )}
     </div>
   );
 }

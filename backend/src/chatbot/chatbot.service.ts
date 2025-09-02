@@ -376,6 +376,12 @@ export class ChatbotService {
           shouldSendMenu = true;
           break;
 
+        case 'favorite_team_summary':
+          console.log(`✅ DEBUG: Intent favorite_team_summary detectado!`);
+          response = await this.getFavoriteTeamSummary(phoneNumber);
+          shouldSendMenu = true;
+          break;
+
         case 'unknown':
           // Mensagem não reconhecida - tentar IA primeiro
           console.log(`🔍 DEBUG: Tentando pesquisa com IA para mensagem não reconhecida (intent: unknown)`);
@@ -404,13 +410,17 @@ export class ChatbotService {
         default:
           // Verificar se é uma solicitação de "meu time" ou similar
           const lowerMessage = message.toLowerCase().trim();
+          console.log(`🔍 DEBUG: Verificando comando "MEU TIME" - mensagem: "${lowerMessage}"`);
           if (lowerMessage === 'meu time' || 
               lowerMessage === 'time favorito' || 
               lowerMessage === 'meu time favorito' ||
               lowerMessage === 'favorito') {
+            console.log(`✅ DEBUG: Comando "MEU TIME" detectado! Chamando getFavoriteTeamSummary`);
             response = await this.getFavoriteTeamSummary(phoneNumber);
             shouldSendMenu = true;
             break;
+          } else {
+            console.log(`❌ DEBUG: Comando "MEU TIME" NÃO detectado. Mensagem: "${lowerMessage}"`);
           }
 
           // Se confiança baixa ou intenção desconhecida, sugerir alternativas

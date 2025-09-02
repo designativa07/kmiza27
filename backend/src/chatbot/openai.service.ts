@@ -72,6 +72,18 @@ export class OpenAIService implements OnModuleInit {
       const lowerMessage = this.removeAccents(message.toLowerCase());
       console.log(`🔍 Analisando mensagem: "${message}" -> "${lowerMessage}"`);
       
+      // Detectar comando "meu time" ou similar
+      if (lowerMessage === 'meu time' || 
+          lowerMessage === 'time favorito' || 
+          lowerMessage === 'meu time favorito' ||
+          lowerMessage === 'favorito') {
+        console.log(`✅ Detectado comando "meu time"`);
+        return {
+          intent: 'favorite_team_summary',
+          confidence: 0.95
+        };
+      }
+      
       // Detectar intenção de próximo jogo
       if ((lowerMessage.includes('próximo') && lowerMessage.includes('jogo')) || 
           (lowerMessage.includes('proximo') && lowerMessage.includes('jogo'))) {
