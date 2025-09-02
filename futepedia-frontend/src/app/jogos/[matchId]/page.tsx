@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Clock, Users, TrendingUp } from 'lucide-react';
 import { HeaderWithLogo } from '@/components/HeaderWithLogo';
 import { getTeamLogoUrl, getStadiumImageUrl } from '@/lib/cdn-simple';
@@ -165,6 +166,7 @@ const MatchStatus = ({ status, homeScore, awayScore }: {
 export default function MatchPage({ params }: Props) {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -194,6 +196,11 @@ export default function MatchPage({ params }: Props) {
   const { date, time } = formatMatchDate(match.match_date);
   const hasScore = match.home_score !== null && match.away_score !== null;
   const hasPenalties = match.home_score_penalties !== null && match.away_score_penalties !== null;
+
+  // Função para navegar para a página do time
+  const handleTeamClick = (teamId: number) => {
+    router.push(`/time/${teamId}`);
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -236,13 +243,17 @@ export default function MatchPage({ params }: Props) {
             <div className="text-center mb-6">
               <div className="flex items-center justify-center space-x-4 sm:space-x-8 mb-4">
                                  {/* Time da Casa */}
-                 <div className="flex flex-col items-center space-y-2">
+                 <div 
+                   className="flex flex-col items-center space-y-2 cursor-pointer hover:opacity-80 transition-opacity"
+                   onClick={() => handleTeamClick(match.home_team.id)}
+                   title={`Ver detalhes do ${match.home_team.name}`}
+                 >
                    <img
                      src={getTeamLogoUrl(match.home_team.logo_url)}
                      alt={`${match.home_team.name} logo`}
                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                    />
-                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center">
+                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center hover:text-blue-600 transition-colors">
                      {match.home_team.name}
                    </h2>
                    {match.home_team.city && (
@@ -271,13 +282,17 @@ export default function MatchPage({ params }: Props) {
                  </div>
 
                  {/* Time Visitante */}
-                 <div className="flex flex-col items-center space-y-2">
+                 <div 
+                   className="flex flex-col items-center space-y-2 cursor-pointer hover:opacity-80 transition-opacity"
+                   onClick={() => handleTeamClick(match.away_team.id)}
+                   title={`Ver detalhes do ${match.away_team.name}`}
+                 >
                    <img
                      src={getTeamLogoUrl(match.away_team.logo_url)}
                      alt={`${match.away_team.name} logo`}
                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                    />
-                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center">
+                   <h2 className="text-base sm:text-xl font-bold text-gray-900 text-center hover:text-blue-600 transition-colors">
                      {match.away_team.name}
                    </h2>
                    {match.away_team.city && (
