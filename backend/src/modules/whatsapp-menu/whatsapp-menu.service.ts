@@ -282,7 +282,7 @@ export class WhatsAppMenuService {
       {
         title: '👥 Times, Jogadores e Estádios',
         rows: [
-          { id: 'CMD_INFO_TIME', title: 'ℹ️ Informações do Time', description: 'Dados gerais de um time' },
+
           { id: 'CMD_ELENCO_TIME', title: '👥 Elenco do Time', description: 'Ver elenco de um time' },
           { id: 'CMD_INFO_JOGADOR', title: '👤 Informações do Jogador', description: 'Dados de um jogador' },
           { id: 'CMD_POSICAO_TIME', title: '📍 Posição na Tabela', description: 'Posição do time na competição' },
@@ -324,7 +324,7 @@ export class WhatsAppMenuService {
       { section_id: 'informacoes_partidas', section_title: '⚽ Informações de Partidas', section_order: 2, item_id: 'CMD_TRANSMISSAO', item_title: '📺 Transmissão', item_description: 'Onde passa o jogo de um time', item_order: 3 },
       
       // Seção 3: Times, Jogadores e Estádios
-      { section_id: 'times_jogadores_estadios', section_title: '👥 Times, Jogadores e Estádios', section_order: 3, item_id: 'CMD_INFO_TIME', item_title: 'ℹ️ Informações do Time', item_description: 'Dados gerais de um time', item_order: 1 },
+
       { section_id: 'times_jogadores_estadios', section_title: '👥 Times, Jogadores e Estádios', section_order: 3, item_id: 'CMD_ELENCO_TIME', item_title: '👥 Elenco do Time', item_description: 'Ver elenco de um time', item_order: 2 },
       { section_id: 'times_jogadores_estadios', section_title: '👥 Times, Jogadores e Estádios', section_order: 3, item_id: 'CMD_INFO_JOGADOR', item_title: '👤 Informações do Jogador', item_description: 'Dados de um jogador', item_order: 3 },
       { section_id: 'times_jogadores_estadios', section_title: '👥 Times, Jogadores e Estádios', section_order: 3, item_id: 'CMD_POSICAO_TIME', item_title: '📍 Posição na Tabela', item_description: 'Posição do time na competição', item_order: 4 },

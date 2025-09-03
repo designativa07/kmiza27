@@ -407,8 +407,6 @@ export class FootballDataService {
       return `📊 ESTATÍSTICAS - ${competition.name.toUpperCase()} 📊
 
 🏆 Informações Gerais:
-📅 Temporada: ${competition.season}
-🌍 País: ${competition.country || 'Internacional'}
 👥 Times participantes: ${teamsCount}
 
 ⚽ Estatísticas de Jogos:
@@ -421,7 +419,7 @@ export class FootballDataService {
 📊 Média por jogo: ${avgGoalsPerMatch}
 🔥 Jogo com mais gols: ${highestScoringInfo}
 
-📈 Status: ${competition.is_active ? 'Ativa' : 'Inativa'}`;
+`;
 
     } catch (error) {
       console.error('Erro ao buscar estatísticas da competição:', error);
