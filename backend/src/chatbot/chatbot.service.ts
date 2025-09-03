@@ -641,7 +641,7 @@ export class ChatbotService {
 🏷️ Sigla: ${team.short_name || 'A definir'}
 🏙️ Cidade: ${team.city || 'A definir'}
 🗺️ Estado: ${team.state || 'A definir'}
-🌍 País: ${team.country || 'A definir'}
+
 📅 Fundação: ${team.founded_year || 'A definir'}
 
 🌐 *Página do time:* https://futepedia.kmiza27.com/time/${team.id}
@@ -1011,9 +1011,15 @@ ${shortUrl}
     try {
       console.log(`🏆 Buscando informações da competição: ${competitionName}`);
       
+      // Lógica específica para "serie a" - sempre buscar pelo Brasileirão
+      let searchName = competitionName;
+      if (competitionName.toLowerCase().includes('serie a') || competitionName.toLowerCase().includes('série a')) {
+        searchName = 'brasileirão';
+      }
+
       const competition = await this.competitionsRepository
         .createQueryBuilder('competition')
-        .where('LOWER(competition.name) LIKE LOWER(:name)', { name: `%${competitionName}%` })
+        .where('LOWER(competition.name) LIKE LOWER(:name)', { name: `%${searchName}%` })
         .getOne();
 
       if (!competition) {
@@ -1036,37 +1042,42 @@ ${shortUrl}
         .limit(5)
         .getMany();
 
-      // Buscar tabela de classificação (top 5 + times em risco)
-      const topTeams = await this.competitionTeamsRepository
-        .createQueryBuilder('ct')
-        .leftJoinAndSelect('ct.team', 'team')
-        .where('ct.competition = :competitionId', { competitionId: competition.id })
-        .orderBy('ct.points', 'DESC')
-        .addOrderBy('ct.goals_for', 'DESC')
-        .addOrderBy('ct.goals_against', 'ASC')
-        .limit(5)
-        .getMany();
+      // Verificar se é competição mata-mata (não deve mostrar tabela de classificação)
+      const isKnockoutCompetition = ['mata_mata', 'copa'].includes(competition.type) || 
+                                   competition.name.toLowerCase().includes('copa do brasil');
 
-      // Buscar times em risco de rebaixamento (últimos 3)
-      const bottomTeams = await this.competitionTeamsRepository
-        .createQueryBuilder('ct')
-        .leftJoinAndSelect('ct.team', 'team')
-        .where('ct.competition = :competitionId', { competitionId: competition.id })
-        .orderBy('ct.points', 'ASC')
-        .addOrderBy('ct.goals_for', 'ASC')
-        .addOrderBy('ct.goals_against', 'DESC')
-        .limit(3)
-        .getMany();
+      // Buscar tabela de classificação apenas para competições de pontos corridos
+      let topTeams: any[] = [];
+      let bottomTeams: any[] = [];
+      
+      if (!isKnockoutCompetition) {
+        topTeams = await this.competitionTeamsRepository
+          .createQueryBuilder('ct')
+          .leftJoinAndSelect('ct.team', 'team')
+          .where('ct.competition = :competitionId', { competitionId: competition.id })
+          .orderBy('ct.points', 'DESC')
+          .addOrderBy('ct.goals_for', 'DESC')
+          .addOrderBy('ct.goals_against', 'ASC')
+          .limit(5)
+          .getMany();
+
+        // Buscar times em risco de rebaixamento (últimos 3)
+        bottomTeams = await this.competitionTeamsRepository
+          .createQueryBuilder('ct')
+          .leftJoinAndSelect('ct.team', 'team')
+          .where('ct.competition = :competitionId', { competitionId: competition.id })
+          .orderBy('ct.points', 'ASC')
+          .addOrderBy('ct.goals_for', 'ASC')
+          .addOrderBy('ct.goals_against', 'DESC')
+          .limit(3)
+          .getMany();
+      }
 
 
 
       let response = `🏆 ${competition.name.toUpperCase()} 🏆\n\n`;
       
-      // Informações básicas da competição
-      response += `📅 Temporada: ${competition.season}\n`;
-      if (competition.country && competition.country !== 'Brasil') {
-        response += `🌍 País/Região: ${competition.country}\n`;
-      }
+      // Informações básicas da competição (removidas temporada, país e status)
       response += '\n';
 
       // Próximos jogos
@@ -1099,27 +1110,7 @@ ${shortUrl}
         response += '\n';
       }
 
-      // Tabela de classificação (top 5 + times em risco)
-      if (topTeams.length > 0) {
-        response += `📊 TOP 5 DA TABELA:\n`;
-        topTeams.forEach((ct, index) => {
-          const emoji = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index];
-          response += `\n${emoji} ${ct.team.name}\n`;
-          response += `   📊 ${ct.points || 0} pts | ${ct.goals_for || 0}⚽ | ${ct.goals_against || 0}🥅\n`;
-        });
-        response += '\n';
-      }
-
-      // Times em risco de rebaixamento
-      if (bottomTeams.length > 0) {
-        response += `⚠️ TIMES EM RISCO:\n`;
-        bottomTeams.forEach((ct, index) => {
-          const emoji = ['🔴', '🟠', '🟡'][index];
-          response += `\n${emoji} ${ct.team.name}\n`;
-          response += `   📊 ${ct.points || 0} pts | ${ct.goals_for || 0}⚽ | ${ct.goals_against || 0}🥅\n`;
-        });
-        response += '\n';
-      }
+      // Tabela de classificação removida - usuário pode acessar via link
 
       // Próxima rodada programada
       if (upcomingMatches.length > 0) {
@@ -1132,9 +1123,9 @@ ${shortUrl}
       // Call to action
       response += `🔍 Quer saber mais sobre jogos específicos desta competição?\n\n`;
       
-      // Link para página da competição usando o slug da base
-      const competitionUrl = this.generateCompetitionUrl(competition.slug);
-      response += `📱 TABELA COMPLETA: ${competitionUrl}`;
+      // Link para classificação da competição
+      const classificationUrl = `https://futepedia.kmiza27.com/${competition.slug}/classificacao`;
+      response += `📱 CLASSIFICAÇÃO: ${classificationUrl}`;
 
       return response;
 
@@ -1766,6 +1757,12 @@ ${shortUrl}
     try {
       console.log(`🏆 Buscando jogos da competição: ${competitionName}`);
       
+      // Lógica específica para "serie a" - sempre buscar pelo Brasileirão
+      let searchName = competitionName;
+      if (competitionName.toLowerCase().includes('serie a') || competitionName.toLowerCase().includes('série a')) {
+        searchName = 'brasileirão';
+      }
+      
       // Buscar jogos da competição
       const matches = await this.matchesRepository
         .createQueryBuilder('match')
@@ -1773,7 +1770,7 @@ ${shortUrl}
         .leftJoinAndSelect('match.home_team', 'home_team')
         .leftJoinAndSelect('match.away_team', 'away_team')
         .leftJoinAndSelect('match.round', 'round')
-        .where('competition.name ILIKE :competitionName', { competitionName: `%${competitionName}%` })
+        .where('competition.name ILIKE :competitionName', { competitionName: `%${searchName}%` })
         .andWhere('match.match_date >= :today', { today: new Date() })
         .orderBy('match.match_date', 'ASC')
         .limit(10)
@@ -2303,9 +2300,7 @@ Digite sua pergunta ou comando! ⚽`;
           await this.setUserConversationState(phoneNumber, 'waiting_team_for_broadcast');
           return '📺 Para qual time você gostaria de saber onde passa o jogo?\n\nPor favor, digite o nome do time:';
 
-        case 'CMD_INFO_TIME':
-          await this.setUserConversationState(phoneNumber, 'waiting_team_for_info');
-          return 'ℹ️ Para qual time você gostaria de ver as informações?\n\nPor favor, digite o nome do time:';
+
 
         case 'CMD_ELENCO_TIME':
           await this.setUserConversationState(phoneNumber, 'waiting_team_for_squad');
@@ -2432,9 +2427,7 @@ Digite sua pergunta ou comando! ⚽`;
           response = await this.getBroadcastInfo(message);
           break;
 
-        case 'waiting_team_for_info':
-          response = await this.getTeamInfo(message);
-          break;
+
 
         case 'waiting_team_for_squad':
           response = await this.getTeamSquad(message);
@@ -3333,7 +3326,7 @@ Time Atual: ${teamInfo}
 Posição: ${position}
 Nacionalidade: ${player.nationality || 'A definir'}
 Data de Nascimento: ${dateOfBirth}
-Status: ${player.state === 'active' ? 'Ativo' : 'Inativo/Aposentado'}`;
+`;
   }
 
   private async getTopScorers(competitionName?: string): Promise<string> {
