@@ -207,10 +207,13 @@ const InstagramGridCardPage: NextPage = () => {
                   src={getFutepediaLogoUrl(futepediaLogoUrl)}
                   alt="Kmiza27 Logo" 
                   className="h-4 sm:h-6 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling.style.display = 'block';
-                  }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (nextElement) {
+                    nextElement.style.display = 'block';
+                  }
+                }}
                 />
               ) : (
                 <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 rounded animate-pulse"></div>
