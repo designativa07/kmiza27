@@ -802,6 +802,42 @@ export class MatchesService {
     }
   }
 
+  async getTomorrowMatches(): Promise<Match[]> {
+    try {
+      console.log('🔍 Buscando jogos de amanhã...');
+
+      // Usar query SQL direta com timezone do Brasil para maior precisão
+      // Buscar jogos do dia seguinte ao atual no timezone de São Paulo
+      const tomorrowMatches = await this.matchRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.competition', 'competition')
+        .leftJoinAndSelect('match.home_team', 'homeTeam')
+        .leftJoinAndSelect('match.away_team', 'awayTeam')
+        .leftJoinAndSelect('match.stadium', 'stadium')
+        .where(`DATE(match.match_date AT TIME ZONE 'America/Sao_Paulo') = DATE((NOW() + INTERVAL '1 day') AT TIME ZONE 'America/Sao_Paulo')`)
+        .orderBy('match.match_date', 'ASC')
+        .getMany();
+
+      // Carregar broadcasts separadamente para evitar problemas de relação
+      for (const match of tomorrowMatches) {
+        const broadcasts = await this.matchRepository.manager
+          .createQueryBuilder('MatchBroadcast', 'broadcast')
+          .leftJoinAndSelect('broadcast.channel', 'channel')
+          .where('broadcast.match_id = :matchId', { matchId: match.id })
+          .getMany();
+        
+        (match as any).broadcasts = broadcasts;
+      }
+
+      console.log(`⚽ Encontrados ${tomorrowMatches.length} jogos para amanhã`);
+      return tomorrowMatches;
+    } catch (error) {
+      console.error('❌ Erro ao buscar jogos de amanhã:', error);
+      console.error('Stack trace:', error.stack);
+      return [];
+    }
+  }
+
   async getWeekMatches(): Promise<Match[]> {
     try {
       console.log('🔍 Buscando jogos da semana...');

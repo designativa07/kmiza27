@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ClientOnly from "@/components/ClientOnly";
-import FutebotChat from "@/components/FutebotChat";
+import ConditionalFutebotChat from "@/components/ConditionalFutebotChat";
 import { getApiUrl } from "@/lib/config";
 import { getFutepediaOgImageUrl } from "@/lib/cdn";
 import { GoogleAnalytics } from '@next/third-parties/google';
@@ -54,11 +54,8 @@ export default function RootLayout({
             <AuthProvider>
               {children}
               
-              {/* Widget do Futebot - aparece em todas as páginas */}
-              <FutebotChat 
-                isWidget={true} 
-                apiUrl={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'} 
-              />
+              {/* Widget do Futebot - aparece em todas as páginas exceto Instagram */}
+              <ConditionalFutebotChat />
             </AuthProvider>
           </ClientOnly>
         </ErrorBoundary>

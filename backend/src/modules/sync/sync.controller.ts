@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, HttpCode, HttpStatus, Body } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
@@ -31,5 +31,14 @@ export class SyncController {
   @Get('environment-info')
   async getEnvironmentInfo() {
     return await this.syncService.getEnvironmentInfo();
+  }
+
+  /**
+   * Testa sincronização de uma tabela específica (para debug)
+   */
+  @Post('test-table')
+  @HttpCode(HttpStatus.OK)
+  async testTable(@Body() body: { tableName: string }) {
+    return await this.syncService.testTableSync(body.tableName);
   }
 }
