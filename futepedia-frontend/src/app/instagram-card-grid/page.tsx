@@ -101,30 +101,17 @@ const InstagramGridMatchCard: React.FC<{ match: Match }> = ({ match }) => {
       {((match.broadcasts && match.broadcasts.length > 0) || (match.broadcast_channels)) && (
         <div className="text-center mt-2 mb-2">
           <div className="flex flex-wrap gap-1 justify-center">
-            {/* Canais de Transmissão */}
-            {match.broadcasts && match.broadcasts.length > 0 && (
-              match.broadcasts.map((broadcast: any, index: number) => (
-                <div key={broadcast.channel.id} className="flex items-center gap-1">
-                  {index > 0 && <span className="text-xs text-gray-400">•</span>}
-                  <span className="text-xs text-gray-600">
-                    {broadcast.channel.name}
-                  </span>
-                </div>
-              ))
-            )}
-            {/* Canais de Transmissão */}
-            {typeof match.broadcast_channels === 'string' && match.broadcast_channels.trim() !== '' && (
-              <span className="text-xs text-gray-600">
-                {(match.broadcasts && match.broadcasts.length > 0) && '• '}
-                {match.broadcast_channels}
-              </span>
-            )}
-            {Array.isArray(match.broadcast_channels) && match.broadcast_channels.length > 0 && (
-              <span className="text-xs text-gray-600">
-                {(match.broadcasts && match.broadcasts.length > 0) && '• '}
-                {match.broadcast_channels.join(' • ')}
-              </span>
-            )}
+             {/* Canais de Transmissão */}
+             {match.broadcasts && match.broadcasts.length > 0 && (
+               match.broadcasts.map((broadcast: any, index: number) => (
+                 <div key={broadcast.channel.id} className="flex items-center gap-1">
+                   {index > 0 && <span className="text-xs text-gray-400">•</span>}
+                   <span className="text-xs text-gray-600">
+                     {broadcast.channel.name}
+                   </span>
+                 </div>
+               ))
+             )}
           </div>
         </div>
       )}
