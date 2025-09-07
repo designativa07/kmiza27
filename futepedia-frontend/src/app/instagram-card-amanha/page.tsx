@@ -224,7 +224,10 @@ const InstagramCardAmanhaPage: NextPage = () => {
                 className="h-4 sm:h-6 object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling.style.display = 'block';
+                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (nextElement) {
+                    nextElement.style.display = 'block';
+                  }
                 }}
               />
             ) : (
