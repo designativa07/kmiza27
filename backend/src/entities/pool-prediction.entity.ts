@@ -31,14 +31,14 @@ export class PoolPrediction {
   match_id: number;
 
   // Palpite do usuário
-  @Column({ type: 'int' })
+  @Column({ type: 'int', name: 'home_score_prediction' })
   predicted_home_score: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', name: 'away_score_prediction' })
   predicted_away_score: number;
 
   // Pontuação obtida neste palpite
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'int', nullable: true, name: 'score' })
   points_earned: number;
 
   // Tipo de acerto (para estatísticas)
@@ -46,9 +46,9 @@ export class PoolPrediction {
   prediction_type: string; // 'exact', 'result', 'goal_difference', 'none'
 
   // Data/hora do palpite
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'predicted_at' })
   predicted_at: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
 }

@@ -4,7 +4,7 @@ async function checkStadiumColumns() {
   const client = new Client({
     host: process.env.DB_HOST || 'h4xd66.easypanel.host',
     port: parseInt(process.env.DB_PORT || '5433', 10),
-    user: process.env.DB_USERNAME || 'postgres',
+    user: process.env.DB_USERNAME || 'admin',
     password: process.env.DB_PASSWORD || '8F1DC9A7F9CE32C4D32E88A1C5FF7',
     database: process.env.DB_DATABASE || 'kmiza27',
     ssl: false

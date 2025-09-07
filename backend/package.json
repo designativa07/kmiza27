@@ -22,7 +22,12 @@
     "typeorm:generate": "npm run typeorm -- migration:generate -d src/data-source.ts",
     "typeorm:run": "npm run typeorm -- migration:run -d src/data-source.ts",
     "typeorm:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
-    "migration:run": "node ./node_modules/typeorm/cli.js migration:run -d dist/data-source.js"
+    "migration:run": "node ./node_modules/typeorm/cli.js migration:run -d dist/data-source.js",
+    "sync:fix": "node scripts/fix-sync-foreign-keys.js",
+    "sync:test": "node scripts/test-sync-fix.js",
+    "sync:full": "node scripts/fix-and-sync.js",
+    "sync:improved": "node scripts/sync-improved.js",
+    "sync:robust": "node scripts/sync-robust.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",

@@ -96,12 +96,24 @@ DB_DATABASE=kmiza27_dev
 1. **Verificação de Ambiente**: Confirma que está em desenvolvimento
 2. **Conexão com Produção**: Estabelece conexão com banco de produção
 3. **Listagem de Tabelas**: Obtém todas as tabelas do banco de produção
-4. **Processamento por Tabela**:
+4. **Ordenação por Dependências**: Ordena tabelas para respeitar chaves estrangeiras
+5. **Desabilitação de Constraints**: Desabilita temporariamente as constraints de FK
+6. **Processamento por Tabela**:
    - Obtém estrutura da tabela
    - Busca todos os dados da tabela origem
+   - Processa dados específicos (JSON, campos problemáticos)
    - Limpa tabela destino (`TRUNCATE CASCADE`)
    - Insere dados na tabela destino
-5. **Relatório Final**: Mostra estatísticas e erros por tabela
+7. **Reabilitação de Constraints**: Reabilita as constraints de FK
+8. **Relatório Final**: Mostra estatísticas e erros por tabela
+
+### Melhorias Implementadas
+
+- **✅ Ordem de Sincronização**: Tabelas são sincronizadas na ordem correta das dependências
+- **✅ Desabilitação de Constraints**: Constraints de FK são desabilitadas temporariamente
+- **✅ Tratamento de Dados Específicos**: Problemas conhecidos são tratados automaticamente
+- **✅ Tratamento de Erros**: Sistema continua mesmo com erros em tabelas específicas
+- **✅ Logs Detalhados**: Logs completos para debug e monitoramento
 
 ## Tratamento de Erros
 
@@ -118,6 +130,8 @@ Todos os logs são registrados no console do backend com nível `INFO` e `ERROR`
 
 ## Exemplo de Uso
 
+### Método 1: Via Interface Web (Recomendado)
+
 ```bash
 # 1. Configurar variáveis de ambiente
 echo "PROD_DB_PASSWORD=minha_senha_secreta" >> backend/.env
@@ -129,15 +143,100 @@ npm run dev
 # http://localhost:3002
 
 # 4. Navegar para Sincronização
-# 5. Verificar conexão
-# 6. Executar sincronização
 ```
 
+### Método 2: Via Script de Teste
+
+```bash
+# 1. Preparar banco de desenvolvimento (opcional)
+psql -h localhost -p 5432 -U postgres -d kmiza27_dev -f backend/scripts/prepare-dev-db.sql
+
+# 2. Executar teste da versão corrigida
+cd backend
+node scripts/test-sync-fixed.js
+
+# 3. Executar teste com fallback de credenciais (se o anterior falhar)
+node scripts/test-sync-with-fallback.js
+
+# 4. Executar teste simples de sincronização (alternativo)
+node scripts/simple-sync-test.js
+
+# 5. Verificar configurações do ambiente (se houver erros de conexão)
+node scripts/check-env-config.js
+
+# 6. Verificar dados reais de produção (se muitas tabelas vazias)
+node scripts/check-production-data.js
+
+# 7. Verificar contagens diretas no banco de produção
+node scripts/verify-production-counts.js
+
+# 8. Executar debug detalhado de erros (se necessário)
+node scripts/debug-sync-errors.js
+```
+
+### Método 3: Via API Direta
+
+```bash
+# 1. Verificar conexão
+curl -X GET http://localhost:3000/sync/check-production
+
+# 2. Executar sincronização
+curl -X POST http://localhost:3000/sync/from-production \
+  -H "Authorization: Bearer SEU_JWT_TOKEN"
+```
 ## Troubleshooting
 
 ### Problema: "Credenciais de produção não configuradas"
 
 **Solução**: Adicione `PROD_DB_PASSWORD` ao arquivo `.env` do backend.
+
+### Problema: "Token de acesso não fornecido"
+
+**Causa**: Endpoints de sincronização requerem autenticação de administrador.
+
+**Solução**: Use o script `test-sync-fixed.js` que faz login automaticamente com as credenciais:
+- **Usuário**: `antonioddd48@gmail.com`
+- **Senha**: `@toni123`
+
+### Problema: "Muitos erros na tabela X"
+
+**Causa**: Constraints de chave estrangeira ou incompatibilidade de dados entre produção e desenvolvimento.
+
+**Soluções**:
+1. **Executar script de preparação**:
+   ```bash
+   psql -h localhost -p 5432 -U postgres -d kmiza27_dev -f backend/scripts/prepare-dev-db.sql
+   ```
+
+2. **Testar tabelas individualmente**:
+   ```bash
+   cd backend
+   node scripts/simple-sync-test.js
+   ```
+
+3. **Verificar logs detalhados** no console do backend para identificar erros específicos.
+
+### Problema: "Tabela teams com erro de JSON"
+
+**Causa**: Campos JSON malformados na tabela teams.
+
+**Solução**: O sistema agora processa automaticamente campos JSON problemáticos, convertendo-os para string válida.
+
+### Problema: "Coluna retention_days não existe"
+
+**Causa**: Estrutura da tabela simulation_results diferente entre produção e desenvolvimento.
+
+**Solução**: O script de preparação adiciona automaticamente a coluna se não existir.
+
+### Problema: "Banco local fica vazio após sincronização"
+
+**Causa**: Muitos erros impedem a sincronização completa.
+
+**Soluções**:
+1. **Verificar logs** do backend para identificar tabelas com erro
+2. **Executar preparação** do banco de desenvolvimento
+3. **Testar sincronização** com logs detalhados
+4. **Verificar constraints** de chave estrangeira
 
 ### Problema: "Sincronização só é permitida em ambiente de desenvolvimento"
 

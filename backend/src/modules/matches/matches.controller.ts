@@ -62,6 +62,23 @@ export class MatchesController {
     }
   }
 
+  @Get('tomorrow')
+  async getTomorrowMatches(@Res() res: Response) {
+    try {
+      const matches = await this.matchesService.getTomorrowMatches();
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': new Date().toUTCString()
+      });
+      return res.json(matches);
+    } catch (error) {
+      console.error('❌ Controller: Erro ao buscar jogos de amanhã:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
   @Get('week')
   async getWeekMatches(@Res() res: Response) {
     try {

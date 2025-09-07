@@ -82,6 +82,7 @@ export default function Dashboard() {
   const searchParams = useSearchParams()
   const [currentPage, setCurrentPage] = useState('Dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showInstagramMenu, setShowInstagramMenu] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['Usuários', 'Jogadores'])
   const [stats, setStats] = useState({
@@ -151,12 +152,15 @@ export default function Dashboard() {
     window.location.href = '/login'
   }
 
-  // Fechar menu do usuário quando clicar fora
+  // Fechar menus quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element
       if (!target.closest('#user-menu-button') && !target.closest('#user-menu')) {
         setShowUserMenu(false)
+      }
+      if (!target.closest('[data-instagram-menu]')) {
+        setShowInstagramMenu(false)
       }
     }
 
@@ -552,6 +556,85 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </dd>
+              </div>
+
+              {/* Card Instagram - Unificado */}
+              <div className="relative" data-instagram-menu>
+                <div 
+                  className="relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 px-4 pb-12 pt-5 shadow hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => setShowInstagramMenu(!showInstagramMenu)}
+                >
+                  <dt>
+                    <div className="absolute rounded-md bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 p-3">
+                      <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                      </svg>
+                    </div>
+                    <p className="ml-16 truncate text-sm font-medium text-gray-900 dark:text-white">Cards Instagram</p>
+                  </dt>
+                  <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">📱</p>
+                    <p className="ml-2 flex items-baseline text-sm font-semibold text-purple-600">
+                      3 Opções
+                    </p>
+                    <div className="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-slate-700 px-4 py-4 sm:px-6">
+                      <div className="text-sm">
+                        <span className="font-medium text-purple-600 hover:text-purple-500">
+                          Escolher card →
+                        </span>
+                      </div>
+                    </div>
+                  </dd>
+                </div>
+
+                {/* Dropdown Menu */}
+                {showInstagramMenu && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          window.open('https://futepedia.kmiza27.com/instagram-card', '_blank', 'noopener,noreferrer');
+                          setShowInstagramMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center"
+                      >
+                        <div className="w-3 h-3 rounded-full bg-purple-500 mr-3"></div>
+                        <div>
+                          <div className="font-medium">Card Individual</div>
+                          <div className="text-xs text-gray-500">Jogos de hoje</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          window.open('https://futepedia.kmiza27.com/instagram-card-grid', '_blank', 'noopener,noreferrer');
+                          setShowInstagramMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center"
+                      >
+                        <div className="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                        <div>
+                          <div className="font-medium">Card em Grade</div>
+                          <div className="text-xs text-gray-500">Layout em grid</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          window.open('https://futepedia.kmiza27.com/instagram-card-amanha', '_blank', 'noopener,noreferrer');
+                          setShowInstagramMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center rounded-b-lg"
+                      >
+                        <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                        <div>
+                          <div className="font-medium">Jogos de Amanhã</div>
+                          <div className="text-xs text-gray-500">Próximos jogos</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
