@@ -1,6 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { BotConfigService } from '../modules/bot-config/bot-config.service';
 import { TeamsService } from '../modules/teams/teams.service';
+import OpenAI from 'openai';
 
 export interface MessageAnalysis {
   intent: string;
@@ -10,6 +12,21 @@ export interface MessageAnalysis {
   homeTeam?: string;
   awayTeam?: string;
   confidence: number;
+  reasoning?: string;
+  usedAI?: boolean;
+}
+
+export interface IntentClassification {
+  intent: string;
+  confidence: number;
+  entities?: {
+    team?: string;
+    competition?: string;
+    player?: string;
+    homeTeam?: string;
+    awayTeam?: string;
+  };
+  reasoning: string;
 }
 
 export interface Suggestion {
@@ -21,12 +38,36 @@ export interface Suggestion {
 
 @Injectable()
 export class OpenAIService implements OnModuleInit {
+  private readonly logger = new Logger(OpenAIService.name);
   private teamNames: string[] = [];
+  private openai: OpenAI | null = null;
+  
+  // 🎯 Cache para padrões comuns (evita chamadas desnecessárias à API)
+  private readonly quickPatternCache = new Map<string, MessageAnalysis>();
+  
+  // 📊 Métricas de performance
+  private metrics = {
+    totalRequests: 0,
+    cacheHits: 0,
+    aiCalls: 0,
+    aiSuccessRate: 0,
+    avgLatency: 0
+  };
 
   constructor(
     private botConfigService: BotConfigService,
     private teamsService: TeamsService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    // Inicializar OpenAI se a chave estiver disponível
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    if (apiKey) {
+      this.openai = new OpenAI({ apiKey });
+      this.logger.log('✅ OpenAI inicializado com sucesso para classificação de intenções');
+    } else {
+      this.logger.warn('⚠️ OPENAI_API_KEY não encontrada - usando apenas pattern matching');
+    }
+  }
 
   async onModuleInit() {
     await this.loadTeamNames();
@@ -64,315 +105,410 @@ export class OpenAIService implements OnModuleInit {
     return result;
   }
 
+  /**
+   * 🎯 NOVO MÉTODO: Classificação de intenção usando IA
+   * 
+   * Fluxo inteligente:
+   * 1. Cache de padrões ultra-comuns (instantâneo, gratuito)
+   * 2. Classificação com IA (GPT-4o-mini, ~$0.0001/msg)
+   * 3. Fallback para pattern matching legado
+   */
+  async classifyIntentWithAI(message: string): Promise<IntentClassification | null> {
+    try {
+      if (!this.openai) {
+        this.logger.debug('IA não disponível, usando pattern matching legado');
+        return null;
+      }
+
+      const startTime = Date.now();
+      this.metrics.aiCalls++;
+
+      // Definir os intents disponíveis no sistema
+      const availableIntents = [
+        'next_match',           // Próximo jogo de um time
+        'last_match',           // Último jogo realizado
+        'current_match',        // Jogo ao vivo/acontecendo agora
+        'team_position',        // Posição do time na tabela
+        'broadcast_info',       // Onde assistir (canais/transmissão)
+        'specific_match_broadcast', // Transmissão de partida específica
+        'matches_week',         // Jogos da semana
+        'matches_today',        // Jogos de hoje
+        'team_statistics',      // Estatísticas de um time
+        'competition_stats',    // Estatísticas de uma competição
+        'top_scorers',          // Artilheiros
+        'team_squad',           // Elenco do time
+        'player_info',          // Informações de jogador
+        'team_info',            // Informações do time
+        'channels_info',        // Lista de canais
+        'table',                // Tabela/classificação
+        'competition_info',     // Info sobre competição
+        'favorite_team_summary',// Resumo do time favorito
+        'greeting',             // Saudação
+        'general_question',     // Pergunta geral sobre futebol
+        'unknown'               // Não reconhecido
+      ];
+
+      const systemPrompt = `Você é um classificador de intenções especializado em futebol brasileiro.
+
+**SUA TAREFA:** Analisar a mensagem do usuário e classificar em um dos intents disponíveis.
+
+**INTENTS DISPONÍVEIS:**
+${availableIntents.map((intent, i) => `${i + 1}. ${intent}`).join('\n')}
+
+**REGRAS IMPORTANTES:**
+1. Retorne APENAS um JSON válido, sem texto adicional
+2. Seja flexível com gírias e apelidos de times (Mengão = Flamengo, Tricolor = vários times, etc)
+3. Entenda variações de linguagem informal ("qnd" = quando, "joga hj" = joga hoje)
+4. Se detectar nome de time, jogador ou competição, extraia-os
+5. Para partidas específicas (Time A x Time B), use 'specific_match_broadcast' se envolver transmissão
+6. Confiança alta (>0.8) para perguntas claras, baixa (<0.6) para ambíguas
+
+**EXEMPLOS:**
+Usuário: "o mengão joga quando?"
+Resposta: {"intent": "next_match", "confidence": 0.92, "entities": {"team": "Flamengo"}, "reasoning": "Pergunta sobre próximo jogo do Flamengo (mengão = apelido)"}
+
+Usuário: "onde passa bahia x fluminense"
+Resposta: {"intent": "specific_match_broadcast", "confidence": 0.95, "entities": {"homeTeam": "Bahia", "awayTeam": "Fluminense"}, "reasoning": "Pergunta sobre transmissão de partida específica"}
+
+Usuário: "artilheiros do brasileirão"
+Resposta: {"intent": "top_scorers", "confidence": 0.90, "entities": {"competition": "brasileirão"}, "reasoning": "Solicitação de artilheiros da competição"}
+
+**FORMATO DE RESPOSTA:**
+{
+  "intent": "nome_do_intent",
+  "confidence": 0.85,
+  "entities": {
+    "team": "Nome do Time",
+    "competition": "nome da competição",
+    "player": "nome do jogador",
+    "homeTeam": "Time A",
+    "awayTeam": "Time B"
+  },
+  "reasoning": "Breve explicação da classificação"
+}`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3, // Baixa temperatura para respostas mais consistentes
+        max_tokens: 300
+      });
+
+      const latency = Date.now() - startTime;
+      this.updateMetrics(latency);
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        this.logger.warn('IA retornou resposta vazia');
+        return null;
+      }
+
+      // Parse e validação
+      const classification = JSON.parse(content) as IntentClassification;
+      
+      // Validar se o intent retornado é válido
+      if (!availableIntents.includes(classification.intent)) {
+        this.logger.warn(`IA retornou intent inválido: ${classification.intent}`);
+        classification.intent = 'unknown';
+        classification.confidence = 0.3;
+      }
+
+      this.logger.log(`🧠 IA Classificou: "${message}" → ${classification.intent} (${(classification.confidence * 100).toFixed(0)}%) [${latency}ms]`);
+      
+      return classification;
+
+    } catch (error) {
+      this.logger.error(`❌ Erro na classificação IA: ${error.message}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * 📊 Atualizar métricas de performance
+   */
+  private updateMetrics(latency: number): void {
+    this.metrics.totalRequests++;
+    
+    // Calcular média móvel de latência
+    const alpha = 0.2; // Fator de suavização
+    this.metrics.avgLatency = this.metrics.avgLatency === 0 
+      ? latency 
+      : (alpha * latency) + ((1 - alpha) * this.metrics.avgLatency);
+  }
+
+  /**
+   * 📈 Obter métricas de performance
+   */
+  getMetrics() {
+    return {
+      ...this.metrics,
+      cacheHitRate: this.metrics.totalRequests > 0 
+        ? (this.metrics.cacheHits / this.metrics.totalRequests * 100).toFixed(1) + '%'
+        : '0%',
+      avgLatencyMs: Math.round(this.metrics.avgLatency)
+    };
+  }
+
+  /**
+   * ⚡ Padrões ultra-rápidos para mensagens 100% previsíveis
+   * (evita chamada à IA para casos triviais)
+   */
+  private checkQuickPatterns(lowerMessage: string): MessageAnalysis | null {
+    // Saudações exatas
+    const greetings = ['oi', 'ola', 'olá', 'oie', 'hey', 'opa', 'menu', 'inicio'];
+    if (greetings.includes(lowerMessage.trim())) {
+      return { intent: 'greeting', confidence: 0.95, usedAI: false };
+    }
+
+    // Comandos diretos
+    if (lowerMessage === 'meu time' || lowerMessage === 'time favorito' || lowerMessage === 'favorito') {
+      return { intent: 'favorite_team_summary', confidence: 0.95, usedAI: false };
+    }
+
+    if (lowerMessage === 'tabela' || lowerMessage === 'classificacao' || lowerMessage === 'classificação') {
+      return { intent: 'table', confidence: 0.90, competition: 'brasileirao', usedAI: false };
+    }
+
+    if (lowerMessage === 'artilheiros') {
+      return { intent: 'top_scorers', confidence: 0.90, usedAI: false };
+    }
+
+    if (lowerMessage === 'jogos de hoje' || lowerMessage === 'jogos hoje') {
+      return { intent: 'matches_today', confidence: 0.90, usedAI: false };
+    }
+
+    return null;
+  }
+
+  /**
+   * 🔄 MÉTODO PRINCIPAL REFORMULADO: Usa IA quando necessário
+   */
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
     try {
-      console.log(`🔍 analyzeMessage chamada com: "${message}"`);
+      this.metrics.totalRequests++;
+      this.logger.log(`🔍 analyzeMessage: "${message}"`);
       
-      // Análise simples por enquanto (pode ser expandida com OpenAI real)
       const lowerMessage = this.removeAccents(message.toLowerCase());
-      console.log(`🔍 Analisando mensagem: "${message}" -> "${lowerMessage}"`);
       
-      // Detectar comando "meu time" ou similar
-      if (lowerMessage === 'meu time' || 
-          lowerMessage === 'time favorito' || 
-          lowerMessage === 'meu time favorito' ||
-          lowerMessage === 'favorito') {
-        console.log(`✅ Detectado comando "meu time"`);
-        return {
-          intent: 'favorite_team_summary',
-          confidence: 0.95
-        };
-      }
-      
-      // Detectar intenção de próximo jogo
-      if ((lowerMessage.includes('próximo') && lowerMessage.includes('jogo')) || 
-          (lowerMessage.includes('proximo') && lowerMessage.includes('jogo'))) {
-        const team = this.extractTeamName(lowerMessage);
-        console.log(`✅ Detectado próximo jogo para time: ${team}`);
-        return {
-          intent: 'next_match',
-          team,
-          confidence: 0.95
-        };
+      // ⚡ FASE 1: Cache de padrões ultra-comuns (instantâneo, gratuito)
+      const cacheKey = lowerMessage.trim();
+      if (this.quickPatternCache.has(cacheKey)) {
+        this.metrics.cacheHits++;
+        const cached = this.quickPatternCache.get(cacheKey)!;
+        this.logger.log(`⚡ Cache hit: "${message}" → ${cached.intent}`);
+        return cached;
       }
 
-      // Detectar último jogo
-      if ((lowerMessage.includes('último') && lowerMessage.includes('jogo')) || 
-          (lowerMessage.includes('ultimo') && lowerMessage.includes('jogo')) ||
-          (lowerMessage.includes('última') && lowerMessage.includes('partida')) ||
-          (lowerMessage.includes('ultima') && lowerMessage.includes('partida'))) {
-        const team = this.extractTeamName(lowerMessage);
-        console.log(`✅ Detectado último jogo para time: ${team}`);
-        return {
-          intent: 'last_match',
-          team,
-          confidence: 0.95
-        };
+      // 🎯 FASE 2: Padrões ultra-simples (100% previsíveis)
+      const quickPattern = this.checkQuickPatterns(lowerMessage);
+      if (quickPattern) {
+        this.quickPatternCache.set(cacheKey, quickPattern);
+        this.logger.log(`✅ Pattern match: "${message}" → ${quickPattern.intent}`);
+        return quickPattern;
       }
 
-      // Detectar jogo atual/em andamento/ao vivo
-      if ((lowerMessage.includes('jogo') && (lowerMessage.includes('atual') || lowerMessage.includes('agora') || lowerMessage.includes('andamento'))) ||
-          (lowerMessage.includes('ao vivo') || lowerMessage.includes('live')) ||
-          (lowerMessage.includes('está jogando') || lowerMessage.includes('esta jogando')) ||
-          (lowerMessage.includes('jogando agora') || lowerMessage.includes('jogo de agora'))) {
-        const team = this.extractTeamName(lowerMessage);
-        console.log(`✅ Detectado jogo atual/ao vivo para time: ${team}`);
-        return {
-          intent: 'current_match',
-          team,
-          confidence: 0.95
-        };
-      }
-
-      // Detectar posição do time
-      if (lowerMessage.includes('posição') || lowerMessage.includes('posicao') ||
-          lowerMessage.includes('classificação') || lowerMessage.includes('classificacao') ||
-          lowerMessage.includes('colocação') || lowerMessage.includes('colocacao')) {
-        const team = this.extractTeamName(lowerMessage);
-        console.log(`✅ Detectado posição para time: ${team}`);
-        return {
-          intent: 'team_position',
-          team,
-          confidence: 0.90
-        };
-      }
-
-      // Detectar informações de transmissão
-      if (lowerMessage.includes('onde passa') || lowerMessage.includes('transmissão') ||
-          lowerMessage.includes('transmissao') || lowerMessage.includes('canal') ||
-          lowerMessage.includes('canais') || lowerMessage.includes('tv') || 
-          lowerMessage.includes('streaming') || lowerMessage.includes('assistir') || 
-          lowerMessage.includes('onde assistir')) {
+      // 🧠 FASE 3: Classificação com IA (quando OpenAI está disponível)
+      if (this.openai) {
+        const aiClassification = await this.classifyIntentWithAI(message);
         
-        console.log(`🔍 DEBUG: Detectada intenção de transmissão para mensagem: "${lowerMessage}"`);
-        
-        // Verificar se é uma pergunta sobre partida específica (ex: "Bahia x Fluminense")
-        const specificMatch = this.extractSpecificMatch(lowerMessage);
-        console.log(`🔍 DEBUG: Resultado extractSpecificMatch:`, specificMatch);
-        
-        if (specificMatch) {
-          console.log(`✅ Detectado transmissão para partida específica: ${specificMatch.homeTeam} x ${specificMatch.awayTeam}`);
-          return {
-            intent: 'specific_match_broadcast',
-            homeTeam: specificMatch.homeTeam,
-            awayTeam: specificMatch.awayTeam,
-            confidence: 0.95
+        if (aiClassification && aiClassification.confidence >= 0.6) {
+          // Extrair entidades adicionais usando os métodos legados (mais precisos para times brasileiros)
+          const entities = aiClassification.entities || {};
+          
+          // Tentar extrair time da mensagem (nosso extrator é melhor que a IA para apelidos locais)
+          if (!entities.team && (
+            aiClassification.intent === 'next_match' ||
+            aiClassification.intent === 'last_match' ||
+            aiClassification.intent === 'current_match' ||
+            aiClassification.intent === 'team_position' ||
+            aiClassification.intent === 'broadcast_info' ||
+            aiClassification.intent === 'team_statistics' ||
+            aiClassification.intent === 'team_squad' ||
+            aiClassification.intent === 'team_info'
+          )) {
+            entities.team = this.extractTeamName(lowerMessage);
+          }
+
+          // Extrair partida específica se for sobre transmissão
+          if (aiClassification.intent === 'specific_match_broadcast' || aiClassification.intent === 'broadcast_info') {
+            const specificMatch = this.extractSpecificMatch(lowerMessage);
+            if (specificMatch) {
+              entities.homeTeam = specificMatch.homeTeam;
+              entities.awayTeam = specificMatch.awayTeam;
+            }
+          }
+
+          // Extrair competição
+          if (!entities.competition && (
+            aiClassification.intent === 'top_scorers' ||
+            aiClassification.intent === 'table' ||
+            aiClassification.intent === 'competition_stats' ||
+            aiClassification.intent === 'competition_info'
+          )) {
+            entities.competition = this.extractCompetitionName(lowerMessage);
+          }
+
+          const result: MessageAnalysis = {
+            intent: aiClassification.intent,
+            confidence: aiClassification.confidence,
+            reasoning: aiClassification.reasoning,
+            usedAI: true,
+            ...entities
           };
-        }
-        
-        console.log(`🔍 DEBUG: Nenhuma partida específica detectada, buscando time individual`);
-        const team = this.extractTeamName(lowerMessage);
-        console.log(`✅ Detectado transmissão para time: ${team}`);
-        return {
-          intent: 'broadcast_info',
-          team,
-          confidence: 0.90
-        };
-      }
 
-      // Detectar jogos da semana
-      if ((lowerMessage.includes('jogos') && lowerMessage.includes('semana')) ||
-          (lowerMessage.includes('partidas') && lowerMessage.includes('semana'))) {
-        console.log(`✅ Detectado jogos da semana`);
-        return {
-          intent: 'matches_week',
-          confidence: 0.85
-        };
-      }
-
-      // Detectar estatísticas do time
-      if (lowerMessage.includes('estatísticas') || lowerMessage.includes('estatisticas') ||
-          lowerMessage.includes('stats') || lowerMessage.includes('números') ||
-          lowerMessage.includes('numeros') || lowerMessage.includes('desempenho')) {
-        console.log(`🔍 Detecção de estatísticas ativada para: "${lowerMessage}"`);
-        
-        const team = this.extractTeamName(lowerMessage);
-        const competition = this.extractCompetitionName(lowerMessage);
-        
-        console.log(`🔍 Debug estatísticas - team: ${team}, competition: ${competition}`);
-        
-        if (team) {
-          console.log(`✅ Detectado estatísticas para time: ${team}`);
-          return {
-            intent: 'team_statistics',
-            team,
-            confidence: 0.90
-          };
-        } else if (competition) {
-          console.log(`✅ Detectado estatísticas para competição: ${competition}`);
-          return {
-            intent: 'competition_stats',
-            competition,
-            confidence: 0.90
-          };
-        }
-        
-        console.log(`❌ Nenhum time ou competição detectado para estatísticas`);
-      }
-
-      // Detectar artilheiros
-      if (lowerMessage.includes('artilheiro') || lowerMessage.includes('goleador') ||
-          lowerMessage.includes('artilharia') || lowerMessage.includes('gols') ||
-          (lowerMessage.includes('quem') && lowerMessage.includes('mais') && lowerMessage.includes('gol'))) {
-        const competition = this.extractCompetitionName(lowerMessage);
-        console.log(`✅ Detectado artilheiros para competição: ${competition}`);
-        return {
-          intent: 'top_scorers',
-          competition,
-          confidence: 0.85
-        };
-      }
-
-      // Detectar elenco do time
-      if ((lowerMessage.includes('elenco') || lowerMessage.includes('jogadores')) && lowerMessage.includes('do')) {
-        const team = this.extractTeamName(lowerMessage);
-        if (team) {
-          console.log(`✅ Detectado solicitação de elenco para o time: ${team}`);
-          return {
-            intent: 'team_squad',
-            team,
-            confidence: 0.90
-          };
+          this.logger.log(`✅ IA result: ${aiClassification.intent} (conf: ${(aiClassification.confidence * 100).toFixed(0)}%)`);
+          return result;
+        } else if (aiClassification) {
+          this.logger.warn(`⚠️ IA com baixa confiança (${(aiClassification.confidence * 100).toFixed(0)}%) - usando fallback`);
         }
       }
 
-      // Detectar informações de jogador - PRIORIDADE ALTA quando contém "jogador"
-      if (lowerMessage.includes('jogador')) {
-        // Extrair nome do jogador removendo palavras de contexto
-        const playerName = lowerMessage
-          .replace(/jogador\s+/g, '')
-          .replace(/informações\s+(do|da)\s+/g, '')
-          .replace(/info\s+(do|da)\s+/g, '')
-          .replace(/dados\s+(do|da)\s+/g, '')
-          .trim();
-        
-        if (playerName.length > 2) {
-          console.log(`✅ Detectado solicitação de informações do jogador: ${playerName}`);
-          return {
-            intent: 'player_info',
-            player: playerName,
-            confidence: 0.95
-          };
-        }
-      }
-
-      // Detectar informações genéricas (info/dados) - só se NÃO contém "jogador"
-      if (!lowerMessage.includes('jogador') && (lowerMessage.includes('info') || lowerMessage.includes('dados') || lowerMessage.includes('informações')) && (lowerMessage.includes('do') || lowerMessage.includes('da')) && lowerMessage.length > 10) {
-        // Para mensagens genéricas, verificar se é um time conhecido
-        const teamName = this.extractTeamName(lowerMessage);
-        if (teamName) {
-          console.log(`✅ Detectado informações do time: ${teamName}`);
-          return {
-            intent: 'team_info',
-            team: teamName,
-            confidence: 0.90
-          };
-        }
-        
-        // Se não é time, tentar como jogador
-        const player = this.extractPlayerName(lowerMessage);
-        if (player) {
-          console.log(`✅ Detectado solicitação de informações do jogador: ${player}`);
-          return {
-            intent: 'player_info',
-            player,
-            confidence: 0.85
-          };
-        }
-      }
-
-      // Detectar informações de canais
-      if (lowerMessage.includes('canais') || lowerMessage.includes('lista') ||
-          (lowerMessage.includes('quais') && lowerMessage.includes('canal')) ||
-          lowerMessage.includes('onde assistir') || lowerMessage.includes('como assistir')) {
-        console.log(`✅ Detectado informações de canais`);
-        return {
-          intent: 'channels_info',
-          confidence: 0.80
-        };
-      }
-      
-      // Detectar apenas nome do time (como "Flamengo")
-      const teamName = this.extractTeamName(lowerMessage);
-      if (teamName && lowerMessage.trim().length <= 15) { // Mensagem curta com nome do time
-        console.log(`✅ Detectado nome do time: ${teamName} - assumindo próximo jogo`);
-        return {
-          intent: 'next_match',
-          team: teamName,
-          confidence: 0.90
-        };
-      }
-      
-      // Detectar "quando joga"
-      if (lowerMessage.includes('quando') && lowerMessage.includes('joga')) {
-        const team = this.extractTeamName(lowerMessage);
-        return {
-          intent: 'next_match',
-          team,
-          confidence: 0.90
-        };
-      }
-      
-      // Detectar informações do time
-      if (lowerMessage.includes('informações') || lowerMessage.includes('info')) {
-        const team = this.extractTeamName(lowerMessage);
-        return {
-          intent: 'team_info',
-          team,
-          confidence: 0.85
-        };
-      }
-      
-      // Detectar tabela
-      if (lowerMessage.includes('tabela') || lowerMessage.includes('classificação')) {
-        const competition = this.extractCompetitionName(lowerMessage);
-        return {
-          intent: 'table',
-          competition: competition || 'brasileirao',
-          confidence: 0.85
-        };
-      }
-      
-      // Detectar jogos de hoje
-      if (lowerMessage.includes('jogos') && lowerMessage.includes('hoje')) {
-        return {
-          intent: 'matches_today',
-          confidence: 0.80
-        };
-      }
-      
-      // Detectar competições
-      if (lowerMessage.includes('libertadores') || lowerMessage.includes('copa')) {
-        return {
-          intent: 'competition_info',
-          competition: this.extractCompetitionName(lowerMessage),
-          confidence: 0.75
-        };
-      }
-      
-      // Detectar saudações explícitas
-      if (this.isGreeting(lowerMessage)) {
-        console.log(`👋 Saudação detectada: "${message}"`);
-        return {
-          intent: 'greeting',
-          confidence: 0.95
-        };
-      }
-
-      // Mensagem não reconhecida
-      console.log(`❓ Nenhuma intenção específica detectada para: "${message}"`);
-      return {
-        intent: 'unknown',
-        confidence: 0.30
-      };
+      // 🔄 FASE 4: Fallback legado (se IA não disponível ou baixa confiança)
+      this.logger.log(`🔄 Usando pattern matching legado como fallback`);
+      const fallbackResult = this.legacyPatternMatching(lowerMessage, message);
+      return fallbackResult;
       
     } catch (error) {
-      console.error('Erro na análise da mensagem:', error);
+      this.logger.error(`❌ Erro no analyzeMessage: ${error.message}`, error.stack);
       return {
-        intent: 'greeting',
-        confidence: 0.30
+        intent: 'unknown',
+        confidence: 0.30,
+        usedAI: false
       };
     }
+  }
+
+  /**
+   * 🔄 FALLBACK: Pattern matching legado (mantido para compatibilidade)
+   */
+  private legacyPatternMatching(lowerMessage: string, originalMessage: string): MessageAnalysis {
+    // Saudações
+    if (this.isGreeting(lowerMessage)) {
+      return { intent: 'greeting', confidence: 0.90, usedAI: false };
+    }
+
+    // Próximo jogo
+    if (lowerMessage.includes('proximo') || lowerMessage.includes('próximo')) {
+      if (lowerMessage.includes('jogo') || lowerMessage.includes('partida')) {
+        return {
+          intent: 'next_match',
+          team: this.extractTeamName(lowerMessage),
+          confidence: 0.85,
+          usedAI: false
+        };
+      }
+    }
+
+    // Último jogo
+    if (lowerMessage.includes('ultimo') || lowerMessage.includes('última')) {
+      if (lowerMessage.includes('jogo') || lowerMessage.includes('partida')) {
+        return {
+          intent: 'last_match',
+          team: this.extractTeamName(lowerMessage),
+          confidence: 0.85,
+          usedAI: false
+        };
+      }
+    }
+
+    // Transmissão
+    if (lowerMessage.includes('onde') || lowerMessage.includes('transmissao') || 
+        lowerMessage.includes('canal') || lowerMessage.includes('assistir')) {
+      const specificMatch = this.extractSpecificMatch(lowerMessage);
+      if (specificMatch) {
+        return {
+          intent: 'specific_match_broadcast',
+          homeTeam: specificMatch.homeTeam,
+          awayTeam: specificMatch.awayTeam,
+          confidence: 0.85,
+          usedAI: false
+        };
+      }
+      return {
+        intent: 'broadcast_info',
+        team: this.extractTeamName(lowerMessage),
+        confidence: 0.80,
+        usedAI: false
+      };
+    }
+
+    // Posição/Classificação
+    if (lowerMessage.includes('posicao') || lowerMessage.includes('classificacao') ||
+        lowerMessage.includes('colocacao')) {
+      const team = this.extractTeamName(lowerMessage);
+      if (team) {
+        return { intent: 'team_position', team, confidence: 0.80, usedAI: false };
+      }
+      return { 
+        intent: 'table', 
+        competition: this.extractCompetitionName(lowerMessage) || 'brasileirao',
+        confidence: 0.75,
+        usedAI: false
+      };
+    }
+
+    // Tabela
+    if (lowerMessage.includes('tabela')) {
+      return {
+        intent: 'table',
+        competition: this.extractCompetitionName(lowerMessage) || 'brasileirao',
+        confidence: 0.80,
+        usedAI: false
+      };
+    }
+
+    // Artilheiros
+    if (lowerMessage.includes('artilheiro') || lowerMessage.includes('goleador')) {
+      return {
+        intent: 'top_scorers',
+        competition: this.extractCompetitionName(lowerMessage),
+        confidence: 0.80,
+        usedAI: false
+      };
+    }
+
+    // Jogos de hoje
+    if (lowerMessage.includes('hoje') && lowerMessage.includes('jogo')) {
+      return { intent: 'matches_today', confidence: 0.80, usedAI: false };
+    }
+
+    // Jogos da semana
+    if (lowerMessage.includes('semana') && lowerMessage.includes('jogo')) {
+      return { intent: 'matches_week', confidence: 0.75, usedAI: false };
+    }
+
+    // Quando joga
+    if (lowerMessage.includes('quando') && lowerMessage.includes('joga')) {
+      return {
+        intent: 'next_match',
+        team: this.extractTeamName(lowerMessage),
+        confidence: 0.75,
+        usedAI: false
+      };
+    }
+
+    // Apenas nome do time (mensagem curta)
+    const teamName = this.extractTeamName(lowerMessage);
+    if (teamName && lowerMessage.trim().length <= 15) {
+      return {
+        intent: 'next_match',
+        team: teamName,
+        confidence: 0.70,
+        usedAI: false
+      };
+    }
+
+    // Não reconhecido
+    this.logger.warn(`❓ Nenhum pattern reconhecido: "${originalMessage}"`);
+    return {
+      intent: 'unknown',
+      confidence: 0.30,
+      usedAI: false
+    };
   }
 
   // Calcula similaridade simples baseada em interseção/união de tokens
