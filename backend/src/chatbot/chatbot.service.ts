@@ -206,14 +206,27 @@ export class ChatbotService {
           console.log(`✅ Query adaptada: "${message}" → intent: ${queryAdaptation.intent} (confiança: ${queryAdaptation.confidence})`);
           console.log(`🔍 Motivo: ${queryAdaptation.reasoning}`);
           
-          // Sobrescrever a análise do OpenAI com a adaptação
-          if (queryAdaptation.intent) {
-            analysis.intent = queryAdaptation.intent;
-          }
-          analysis.confidence = queryAdaptation.confidence;
+          // 🧠 PRIORIDADE À IA: Só sobrescrever se:
+          // 1. A IA não foi usada (usedAI === false), OU
+          // 2. A confiança do QueryAdapter é maior que a da IA, OU
+          // 3. A IA tem baixa confiança (<0.7)
+          const shouldOverride = 
+            !analysis.usedAI ||                                    // IA não foi usada
+            queryAdaptation.confidence > analysis.confidence ||    // QueryAdapter mais confiante
+            analysis.confidence < 0.7;                             // IA com baixa confiança
           
-          // Para transmissões, extrair times usando o QueryAdapterService
-          if (queryAdaptation.intent === 'broadcast_info') {
+          if (shouldOverride && queryAdaptation.intent) {
+            console.log(`🔄 Sobrescrevendo intent da IA: ${analysis.intent} → ${queryAdaptation.intent}`);
+            analysis.intent = queryAdaptation.intent;
+            analysis.confidence = queryAdaptation.confidence;
+          } else if (analysis.usedAI && analysis.confidence >= 0.7) {
+            console.log(`🧠 IA tem alta confiança (${(analysis.confidence * 100).toFixed(0)}%) - mantendo intent: ${analysis.intent}`);
+            console.log(`⏭️ Ignorando QueryAdapter (${queryAdaptation.intent} com ${(queryAdaptation.confidence * 100).toFixed(0)}%)`);
+          }
+          
+          // 🏈 Para transmissões, extrair times usando o QueryAdapterService
+          // (somente se foi aceito o intent do QueryAdapter)
+          if (analysis.intent === 'broadcast_info' && queryAdaptation.intent === 'broadcast_info') {
             const extractedTeams = await this.queryAdapterService.extractTeamsWithAI(message);
             if (extractedTeams && extractedTeams.length > 0) {
               // Para broadcast_info, usar o primeiro time encontrado
@@ -230,14 +243,15 @@ export class ChatbotService {
             }
           }
           
-          // Para competições, usar o nome extraído pelo QueryAdapter
-          if (queryAdaptation.intent === 'competition_info' && queryAdaptation.extractedCompetition) {
+          // 🏆 Para competições, usar o nome extraído pelo QueryAdapter
+          // (somente se foi aceito o intent do QueryAdapter)
+          if (analysis.intent === 'competition_info' && queryAdaptation.intent === 'competition_info' && queryAdaptation.extractedCompetition) {
             analysis.competition = queryAdaptation.extractedCompetition;
             console.log(`🏆 Competição extraída pelo QueryAdapter: "${analysis.competition}"`);
           }
           
-          // Adicionar mensagem de adaptação
-          if (queryAdaptation.adaptedMessage) {
+          // 📝 Adicionar mensagem de adaptação (somente se realmente sobrescreveu)
+          if (shouldOverride && queryAdaptation.adaptedMessage) {
             console.log(`📝 Mensagem de adaptação: ${queryAdaptation.adaptedMessage}`);
           }
         } else {
@@ -352,7 +366,34 @@ export class ChatbotService {
           break;
 
         case 'top_scorers':
-          response = await this.getTopScorers(analysis.competition);
+          // Artilheiros - tentar banco primeiro, se não tiver buscar via IA
+          console.log(`⚽ DEBUG: Intent top_scorers detectado para competição: ${analysis.competition}`);
+          try {
+            response = await this.getTopScorers(analysis.competition);
+            
+            // Se não encontrou dados no banco, buscar via IA
+            if (response.includes('Não há dados de gols disponíveis')) {
+              console.log(`🔍 Sem dados no banco, consultando IA para artilheiros...`);
+              
+              const competitionName = analysis.competition || 'Brasileirão';
+              const aiQuestion = `Quem são os artilheiros do ${competitionName} atualmente? Liste os 10 principais com número de gols.`;
+              
+              const aiResult = await this.aiResearchService.researchQuestion(aiQuestion, {
+                userId: phoneNumber
+              });
+
+              if (aiResult.success && aiResult.answer) {
+                console.log(`✅ IA encontrou artilheiros via ${aiResult.source}`);
+                response = `⚽ *ARTILHEIROS${competitionName ? ` - ${competitionName.toUpperCase()}` : ''}*\n\n${aiResult.answer}\n\n_Fonte: ${aiResult.source === 'web_search' ? 'pesquisa atualizada 🌐' : 'inteligência artificial 🤖'}_`;
+              } else {
+                console.log(`❌ IA não conseguiu responder sobre artilheiros`);
+                response = `Desculpe, ainda não tenho dados de artilheiros${competitionName ? ` do ${competitionName}` : ''}. Estamos trabalhando nisso! ⚽`;
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar artilheiros:`, error);
+            response = `Desculpe, tive um problema ao buscar os artilheiros. Tente novamente! ⚽`;
+          }
           shouldSendMenu = true;
           break;
 
@@ -367,12 +408,66 @@ export class ChatbotService {
           break;
 
         case 'team_squad':
-          response = await this.getTeamSquad(analysis.team ?? '');
+          // Elenco - tentar banco primeiro, se não tiver buscar via IA
+          console.log(`👥 DEBUG: Intent team_squad detectado para time: ${analysis.team}`);
+          try {
+            response = await this.getTeamSquad(analysis.team ?? '');
+            
+            // Se não encontrou no banco, buscar via IA
+            if (response.includes('não encontrado') || response.includes('Não foi possível')) {
+              console.log(`🔍 Sem dados no banco, consultando IA para elenco...`);
+              
+              const teamName = analysis.team || 'time';
+              const aiQuestion = `Qual é o elenco atual do ${teamName}? Liste os principais jogadores com suas posições.`;
+              
+              const aiResult = await this.aiResearchService.researchQuestion(aiQuestion, {
+                userId: phoneNumber
+              });
+
+              if (aiResult.success && aiResult.answer) {
+                console.log(`✅ IA encontrou elenco via ${aiResult.source}`);
+                response = `👥 *ELENCO - ${teamName.toUpperCase()}*\n\n${aiResult.answer}\n\n_Fonte: ${aiResult.source === 'web_search' ? 'pesquisa atualizada 🌐' : 'inteligência artificial 🤖'}_`;
+              } else {
+                console.log(`❌ IA não conseguiu responder sobre elenco`);
+                response = `Desculpe, ainda não tenho dados do elenco${teamName !== 'time' ? ` do ${teamName}` : ''}. Estamos trabalhando nisso! 👥`;
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar elenco:`, error);
+            response = `Desculpe, tive um problema ao buscar o elenco. Tente novamente! 👥`;
+          }
           shouldSendMenu = true;
           break;
 
         case 'player_info':
-          response = await this.getPlayerInfo(analysis.player ?? '');
+          // Informações de jogador - buscar via IA diretamente
+          console.log(`🎯 DEBUG: Intent player_info detectado para jogador: ${analysis.player}`);
+          try {
+            const playerName = analysis.player || 'jogador';
+            
+            if (playerName === 'jogador') {
+              response = `❌ Por favor, especifique o nome do jogador que você quer saber informações.`;
+            } else {
+              console.log(`🔍 Consultando IA para informações do jogador: ${playerName}`);
+              
+              const aiQuestion = `Me dê informações sobre o jogador ${playerName}: time atual, posição, idade, nacionalidade e principais conquistas.`;
+              
+              const aiResult = await this.aiResearchService.researchQuestion(aiQuestion, {
+                userId: phoneNumber
+              });
+
+              if (aiResult.success && aiResult.answer) {
+                console.log(`✅ IA encontrou informações do jogador via ${aiResult.source}`);
+                response = `🎯 *INFORMAÇÕES - ${playerName.toUpperCase()}*\n\n${aiResult.answer}\n\n_Fonte: ${aiResult.source === 'web_search' ? 'pesquisa atualizada 🌐' : 'inteligência artificial 🤖'}_`;
+              } else {
+                console.log(`❌ IA não conseguiu responder sobre o jogador`);
+                response = `Desculpe, não consegui encontrar informações sobre o jogador ${playerName}. Verifique se o nome está correto! 🎯`;
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar informações do jogador:`, error);
+            response = `Desculpe, tive um problema ao buscar as informações. Tente novamente! 🎯`;
+          }
           shouldSendMenu = true;
           break;
 
@@ -380,6 +475,52 @@ export class ChatbotService {
           console.log(`✅ DEBUG: Intent favorite_team_summary detectado!`);
           response = await this.getFavoriteTeamSummary(phoneNumber);
           shouldSendMenu = true;
+          break;
+
+        case 'team_achievements':
+          // Títulos e conquistas históricas - buscar via IA/Web
+          console.log(`🏆 DEBUG: Intent team_achievements detectado para time: ${analysis.team}`);
+          try {
+            const teamName = analysis.team || 'time não identificado';
+            const competitionName = analysis.competition || '';
+            
+            // Construir pergunta contextualizada
+            let contextualQuestion = message;
+            if (teamName !== 'time não identificado' && competitionName) {
+              contextualQuestion = `Quantos títulos do ${competitionName} o ${teamName} conquistou? Liste os anos.`;
+            } else if (teamName !== 'time não identificado') {
+              contextualQuestion = `Quais são os principais títulos e conquistas do ${teamName}? Liste os campeonatos mais importantes.`;
+            }
+            
+            console.log(`🔍 Consultando IA para: "${contextualQuestion}"`);
+            
+            const aiResult = await this.aiResearchService.researchQuestion(contextualQuestion, {
+              userId: phoneNumber
+            });
+
+            if (aiResult.success && aiResult.answer) {
+              console.log(`✅ IA encontrou resposta sobre conquistas via ${aiResult.source}`);
+              
+              let sourceEmoji = '🏆';
+              let sourceText = 'histórico de títulos';
+              
+              if (aiResult.source === 'web_search') {
+                sourceEmoji = '🌐';
+                sourceText = 'pesquisa atualizada';
+              }
+              
+              response = `${sourceEmoji} *TÍTULOS E CONQUISTAS*\n\n${aiResult.answer}\n\n_Fonte: ${sourceText}_`;
+              shouldSendMenu = true;
+            } else {
+              console.log(`❌ IA não conseguiu responder sobre conquistas`);
+              response = `Desculpe, não consegui encontrar informações sobre os títulos${teamName !== 'time não identificado' ? ` do ${teamName}` : ''}. Tente perguntar de outra forma ou escolha uma opção do menu! 🏆`;
+              shouldSendMenu = true;
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar conquistas via IA:`, error);
+            response = `Desculpe, tive um problema ao buscar essas informações. Tente novamente! 🏆`;
+            shouldSendMenu = true;
+          }
           break;
 
         case 'unknown':
@@ -3992,7 +4133,12 @@ ${competitionLine}ዙ Rodada: ${roundName}
       await this.userRepository.save(user);
 
       console.log(`✅ DEBUG setFavoriteTeam: Time favorito salvo com sucesso`);
-      return `✅ Time favorito definido com sucesso: ${team.name}!`;
+      
+      // Buscar o resumo do time favorito recém-cadastrado
+      const teamSummary = await this.getFavoriteTeamSummary(phoneNumber);
+      
+      // Retornar confirmação + resumo do time
+      return `✅ Time favorito definido com sucesso: ${team.name}!\n\n${teamSummary}`;
     } catch (error) {
       console.error('❌ DEBUG setFavoriteTeam: Erro:', error);
       return `❌ Erro ao definir time favorito: ${error.message}`;

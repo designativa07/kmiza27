@@ -139,6 +139,7 @@ export class OpenAIService implements OnModuleInit {
         'team_squad',           // Elenco do time
         'player_info',          // Informações de jogador
         'team_info',            // Informações do time
+        'team_achievements',    // Títulos e conquistas históricas ⭐ NOVO
         'channels_info',        // Lista de canais
         'table',                // Tabela/classificação
         'competition_info',     // Info sobre competição
@@ -162,6 +163,9 @@ ${availableIntents.map((intent, i) => `${i + 1}. ${intent}`).join('\n')}
 4. Se detectar nome de time, jogador ou competição, extraia-os
 5. Para partidas específicas (Time A x Time B), use 'specific_match_broadcast' se envolver transmissão
 6. Confiança alta (>0.8) para perguntas claras, baixa (<0.6) para ambíguas
+7. **CRÍTICO:** Diferencie perguntas HISTÓRICAS (passado/títulos) de perguntas sobre JOGOS FUTUROS
+   - "ganhou", "títulos", "campeão", "quantas vezes", "história" → team_achievements
+   - "joga", "vai jogar", "próximo", "quando joga" → next_match
 
 **EXEMPLOS:**
 Usuário: "o mengão joga quando?"
@@ -172,6 +176,15 @@ Resposta: {"intent": "specific_match_broadcast", "confidence": 0.95, "entities":
 
 Usuário: "artilheiros do brasileirão"
 Resposta: {"intent": "top_scorers", "confidence": 0.90, "entities": {"competition": "brasileirão"}, "reasoning": "Solicitação de artilheiros da competição"}
+
+Usuário: "quantas vezes o flamengo ganhou o brasileirão"
+Resposta: {"intent": "team_achievements", "confidence": 0.95, "entities": {"team": "Flamengo", "competition": "brasileirão"}, "reasoning": "Pergunta sobre histórico de títulos, não sobre jogos futuros"}
+
+Usuário: "o palmeiras é campeão de quê"
+Resposta: {"intent": "team_achievements", "confidence": 0.90, "entities": {"team": "Palmeiras"}, "reasoning": "Pergunta sobre conquistas e títulos históricos"}
+
+Usuário: "história do santos"
+Resposta: {"intent": "team_achievements", "confidence": 0.85, "entities": {"team": "Santos"}, "reasoning": "Pergunta sobre história e conquistas do time"}
 
 **FORMATO DE RESPOSTA:**
 {
@@ -328,7 +341,8 @@ Resposta: {"intent": "top_scorers", "confidence": 0.90, "entities": {"competitio
             aiClassification.intent === 'broadcast_info' ||
             aiClassification.intent === 'team_statistics' ||
             aiClassification.intent === 'team_squad' ||
-            aiClassification.intent === 'team_info'
+            aiClassification.intent === 'team_info' ||
+            aiClassification.intent === 'team_achievements'
           )) {
             entities.team = this.extractTeamName(lowerMessage);
           }
