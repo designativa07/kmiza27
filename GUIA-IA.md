@@ -110,12 +110,31 @@ const payload = {
 - **Preview:** Mostra como aparece no WhatsApp real
 - **Validação:** Apenas campos funcionais são expostos
 
-### 2.2. Sistema de IA Research e Query Adapter - NOVA IMPLEMENTAÇÃO
+### 2.2. Sistema de IA Research e Query Adapter - IMPLEMENTAÇÃO COMPLETA
 - **Localização Backend:** `src/modules/ai-research/`
 - **Componentes Principais:**
-  - `AIResearchService`: Serviço principal para pesquisa inteligente
+  - `AIResearchService`: Serviço principal para pesquisa inteligente com OpenAI real
   - `QueryAdapterService`: Serviço para adaptar perguntas naturais para intents específicos
   - `AIResearchModule`: Módulo NestJS que organiza os serviços
+
+#### Sistema de Fallback Inteligente em 4 Camadas:
+1. **Base de Conhecimento Local** 📚
+   - Busca em jogos, artilheiros, tabelas da base de dados
+   - Resposta instantânea, sem custo
+   
+2. **OpenAI (Conhecimento Geral)** 🤖
+   - Usa GPT-4o-mini para responder perguntas gerais sobre futebol
+   - Regras, história, curiosidades
+   - Custo: ~$0.0001 por pergunta
+   
+3. **Pesquisa Web + OpenAI** 🌐
+   - DuckDuckGo API para buscar informações atualizadas
+   - OpenAI sintetiza a resposta baseada nos resultados
+   - Notícias, transferências, eventos recentes
+   
+4. **Fallback Amigável** 🤔
+   - Oferece menu de opções
+   - Nunca responde "não entendi"
 
 #### Query Adapter Service - Funcionalidade Principal
 - **Objetivo:** Mapear perguntas em linguagem natural para intents específicos do chatbot

@@ -663,22 +663,39 @@ export class OpenAIService implements OnModuleInit {
   private isGreeting(message: string): boolean {
     const lowerMessage = message.toLowerCase().trim();
     const greetings = [
-      'oi', 'olá', 'ola', 'oie', 'opa', 'opa!',
+      'oi', 'olá', 'ola', 'oie', 'opa',
       'bom dia', 'boa tarde', 'boa noite',
-      'e aí', 'e ai', 'eai', 'salve', 'fala', 'fala aí', 'fala ai',
+      'e aí', 'e ai', 'eai', 'salve',
       'hello', 'hi', 'hey', 'hola',
       'menu', 'inicio', 'começar', 'comecar', 'start',
       'oi bot', 'ola bot', 'oi kmiza', 'ola kmiza',
       'tchau', 'valeu', 'obrigado', 'obrigada', 'brigado'
     ];
     
-    // Verificar correspondência exata ou com espaços
+    // Verificar se é uma pergunta (contém palavras interrogativas)
+    const questionWords = ['quem', 'qual', 'quando', 'onde', 'como', 'por que', 'porque', 'o que', 'quantos', 'quantas'];
+    if (questionWords.some(word => lowerMessage.includes(word))) {
+      return false; // Não é saudação, é uma pergunta
+    }
+    
+    // Verificar correspondência exata de saudações (palavras completas)
     return greetings.some(greeting => {
-      return lowerMessage === greeting || 
-             lowerMessage === greeting + '!' ||
-             lowerMessage.startsWith(greeting + ' ') ||
-             lowerMessage.endsWith(' ' + greeting) ||
-             (lowerMessage.length <= 15 && lowerMessage.includes(greeting));
+      // Correspondência exata
+      if (lowerMessage === greeting || lowerMessage === greeting + '!' || lowerMessage === greeting + '?') {
+        return true;
+      }
+      
+      // Saudação no início da frase seguida de espaço ou pontuação
+      if (lowerMessage.startsWith(greeting + ' ') || lowerMessage.startsWith(greeting + ',')) {
+        return true;
+      }
+      
+      // Mensagens muito curtas (até 10 caracteres) e que são EXATAMENTE uma saudação
+      if (lowerMessage.length <= 10 && lowerMessage === greeting) {
+        return true;
+      }
+      
+      return false;
     });
   }
 

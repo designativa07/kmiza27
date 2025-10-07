@@ -391,18 +391,34 @@ export class ChatbotService {
             });
 
             if (aiResult.success && aiResult.answer) {
-              console.log(`🤖 IA encontrou resposta: ${aiResult.source}`);
-              response = `🔍 Não tenho essa informação na minha base, mas pesquisei e a resposta é:\n\n${aiResult.answer}`;
+              console.log(`🤖 IA encontrou resposta via ${aiResult.source}`);
+              
+              // Mensagem amigável baseada na fonte
+              let sourceEmoji = '🤖';
+              let sourceText = 'inteligência artificial';
+              
+              if (aiResult.source === 'knowledge_base') {
+                sourceEmoji = '📚';
+                sourceText = 'minha base de conhecimento';
+              } else if (aiResult.source === 'web_search') {
+                sourceEmoji = '🌐';
+                sourceText = 'pesquisa na internet';
+              } else if (aiResult.source === 'openai') {
+                sourceEmoji = '🤖';
+                sourceText = 'inteligência artificial';
+              }
+              
+              response = `${sourceEmoji} Encontrei a resposta usando ${sourceText}:\n\n${aiResult.answer}`;
               shouldSendMenu = true;
             } else {
-              // IA não conseguiu ajudar, usar fallback padrão
-              console.log(`❌ IA não conseguiu ajudar, usando fallback padrão`);
-              response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+              // IA não conseguiu ajudar, sugerir menu
+              console.log(`❌ IA não conseguiu ajudar, oferecendo menu`);
+              response = '🤔 Não consegui encontrar uma resposta específica para isso. Posso te ajudar com outras informações! Veja as opções:';
               shouldSendMenu = true;
             }
           } catch (aiError) {
-            console.log(`❌ Erro na pesquisa com IA: ${aiError.message}, usando fallback padrão`);
-            response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+            console.log(`❌ Erro na pesquisa com IA: ${aiError.message}, oferecendo menu`);
+            response = '😅 Tive um problema ao processar sua pergunta. Veja o que posso fazer por você:';
             shouldSendMenu = true;
           }
           break;
@@ -456,18 +472,34 @@ export class ChatbotService {
             });
 
             if (aiResult.success && aiResult.answer) {
-              console.log(`🤖 IA encontrou resposta no default: ${aiResult.source}`);
-              response = `🔍 Não tenho essa informação na minha base, mas pesquisei e a resposta é:\n\n${aiResult.answer}`;
+              console.log(`🤖 IA encontrou resposta no default via ${aiResult.source}`);
+              
+              // Mensagem amigável baseada na fonte
+              let sourceEmoji = '🤖';
+              let sourceText = 'inteligência artificial';
+              
+              if (aiResult.source === 'knowledge_base') {
+                sourceEmoji = '📚';
+                sourceText = 'minha base de conhecimento';
+              } else if (aiResult.source === 'web_search') {
+                sourceEmoji = '🌐';
+                sourceText = 'pesquisa na internet';
+              } else if (aiResult.source === 'openai') {
+                sourceEmoji = '🤖';
+                sourceText = 'inteligência artificial';
+              }
+              
+              response = `${sourceEmoji} Encontrei a resposta usando ${sourceText}:\n\n${aiResult.answer}`;
               shouldSendMenu = true;
             } else {
-              // IA não conseguiu ajudar, usar fallback padrão
-              console.log(`❌ IA não conseguiu ajudar no default, usando fallback padrão`);
-              response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+              // IA não conseguiu ajudar, sugerir menu
+              console.log(`❌ IA não conseguiu ajudar no default, oferecendo menu`);
+              response = '🤔 Não consegui encontrar uma resposta específica para isso. Posso te ajudar com outras informações! Veja as opções:';
               shouldSendMenu = true;
             }
           } catch (aiError) {
-            console.log(`❌ Erro na pesquisa com IA no default: ${aiError.message}, usando fallback padrão`);
-            response = '❓ Não entendi sua pergunta. Aqui estão algumas opções que posso te ajudar:';
+            console.log(`❌ Erro na pesquisa com IA no default: ${aiError.message}, oferecendo menu`);
+            response = '😅 Tive um problema ao processar sua pergunta. Veja o que posso fazer por você:';
             shouldSendMenu = true;
           }
       }
